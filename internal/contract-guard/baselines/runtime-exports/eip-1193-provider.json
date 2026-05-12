@@ -1,0 +1,11 @@
+{
+  "name": "@0xkey-io/eip-1193-provider",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "createEIP1193Provider",
+      "kind": "function",
+      "arity": 1
+    }
+  ]
+}

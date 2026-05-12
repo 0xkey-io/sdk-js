@@ -1,0 +1,37 @@
+import { ZeroXKey as ZeroXKeySDKServer } from "@0xkey-io/sdk-server";
+import * as path from "path";
+import * as dotenv from "dotenv";
+
+// Load environment variables from `.env.local`
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+
+export function getZeroXKeyClient() {
+  return new ZeroXKeySDKServer({
+    apiBaseUrl: process.env.BASE_URL! ?? "https://api.0xkey.com",
+    apiPublicKey: process.env.API_PUBLIC_KEY!,
+    apiPrivateKey: process.env.API_PRIVATE_KEY!,
+    defaultOrganizationId: process.env.ORGANIZATION_ID!,
+  });
+}
+
+export async function pollTransactionStatus({
+  apiClient,
+  organizationId,
+  sendTransactionStatusId,
+  intervalMs = 200,
+  timeoutMs = 60_000,
+}: {
+  apiClient: any;
+  organizationId: string;
+  sendTransactionStatusId: string;
+  intervalMs?: number;
+  timeoutMs?: number;
+}): Promise<{ eth?: { txHash?: string }; txStatus: string }> {
+  console.log(`Polling transaction status for ${sendTransactionStatusId}...`);
+  return apiClient.pollTransactionStatus({
+    organizationId,
+    sendTransactionStatusId,
+    pollingIntervalMs: intervalMs,
+    timeoutMs,
+  });
+}

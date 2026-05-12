@@ -1,0 +1,73 @@
+{
+  "name": "@0xkey-io/sdk-types",
+  "exports": [
+    {
+      "kind": "enum",
+      "name": "AuthAction"
+    },
+    {
+      "kind": "interface",
+      "name": "BaseAuthResult"
+    },
+    {
+      "kind": "enum",
+      "name": "FiatOnRampBlockchainNetwork"
+    },
+    {
+      "kind": "enum",
+      "name": "FiatOnRampCryptoCurrency"
+    },
+    {
+      "kind": "enum",
+      "name": "FiatOnRampCurrency"
+    },
+    {
+      "kind": "enum",
+      "name": "FiatOnRampPaymentMethod"
+    },
+    {
+      "kind": "enum",
+      "name": "FiatOnRampProvider"
+    },
+    {
+      "kind": "enum",
+      "name": "OAuthProviders"
+    },
+    {
+      "kind": "interface",
+      "name": "PasskeyAuthResult"
+    },
+    {
+      "kind": "type",
+      "name": "Session"
+    },
+    {
+      "kind": "type",
+      "name": "SessionResponse"
+    },
+    {
+      "kind": "enum",
+      "name": "SessionType"
+    },
+    {
+      "kind": "type",
+      "name": "VerificationToken"
+    },
+    {
+      "kind": "interface",
+      "name": "WalletAuthResult"
+    },
+    {
+      "kind": "class",
+      "name": "ZeroXKeyError"
+    },
+    {
+      "kind": "enum",
+      "name": "ZeroXKeyErrorCodes"
+    },
+    {
+      "kind": "class",
+      "name": "ZeroXKeyNetworkError"
+    }
+  ]
+}

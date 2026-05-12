@@ -1,0 +1,81 @@
+{
+  "name": "@0xkey-io/react-native-wallet-kit",
+  "version": "0.1.0",
+  "description": "The easiest and most powerful way to integrate 0xkey's Embedded Wallets into your React Native applications.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "author": {
+    "name": "0xkey",
+    "url": "https://0xkey.com/"
+  },
+  "homepage": "https://github.com/0xkey-io/sdk-js/tree/main/packages/react-native-wallet-kit",
+  "bugs": {
+    "url": "https://github.com/0xkey-io/sdk-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xkey-io/sdk-js.git",
+    "directory": "packages/react-native-wallet-kit"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "test": "jest"
+  },
+  "keywords": [
+    "0xkey",
+    "react-native",
+    "wallet",
+    "embedded-wallets"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@noble/hashes": "^1.8.0",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@0xkey-io/crypto": "workspace:*",
+    "@0xkey-io/core": "workspace:*",
+    "@0xkey-io/encoding": "workspace:*",
+    "@0xkey-io/react-native-passkey-stamper": "workspace:*",
+    "@0xkey-io/sdk-types": "workspace:*",
+    "react-native-device-info": "^11.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "7.26.9",
+    "@rollup/plugin-babel": "5.3.0",
+    "typescript": "5.4.3"
+  },
+  "peerDependencies": {
+    "@types/react": ">=16.8.0 <20",
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-native": ">=0.70.0",
+    "react-native-gesture-handler": ">=2.0.0",
+    "react-native-inappbrowser-reborn": ">=3.7.0",
+    "react-native-safe-area-context": ">=4.0.0",
+    "react-native-svg": ">=13.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,3229 @@
+import {
+  isValidSession,
+  SESSION_WARNING_THRESHOLD_MS,
+  withZeroXKeyErrorHandling,
+  ZEROXKEY_OAUTH_REDIRECT_URL,
+  generateChallengePair,
+  exchangeCodeForToken,
+  buildOAuthUrl,
+  storePKCEVerifier,
+  handlePKCEFlow,
+  completeOAuthFlow,
+  parseInAppBrowserResult,
+  type TimerMap,
+  clearKey,
+  clearAll,
+  setCappedTimeoutInMap,
+  setTimeoutInMap,
+  clearKeys,
+} from "../utils";
+
+import {
+  getAuthProxyConfig,
+  DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+  OtpType,
+  ZeroXKeyClient,
+  type AddOauthProviderParams,
+  type AddPasskeyParams,
+  type ClearSessionParams,
+  type CompleteOauthParams,
+  type CompleteOtpParams,
+  type CreateApiKeyPairParams,
+  type CreatePasskeyParams,
+  type CreatePasskeyResult,
+  type CreateWalletAccountsParams,
+  type CreateWalletParams,
+  type DeleteSubOrganizationParams,
+  type ExportBundle,
+  type FetchOrCreateP256ApiKeyUserParams,
+  type FetchOrCreatePoliciesParams,
+  type FetchOrCreatePoliciesResult,
+  type FetchPrivateKeysParams,
+  type FetchUserParams,
+  type FetchWalletAccountsParams,
+  type FetchWalletsParams,
+  type GetSessionParams,
+  type InitOtpParams,
+  type InitOtpResult,
+  type LoginWithOauthParams,
+  type LoginWithOtpParams,
+  type LoginWithPasskeyParams,
+  type LogoutParams,
+  type RefreshSessionParams,
+  type RemoveOauthProvidersParams,
+  type RemovePasskeyParams,
+  type RemoveUserEmailParams,
+  type RemoveUserPhoneNumberParams,
+  type SetActiveSessionParams,
+  type EthSendErc20TransferParams,
+  type EthSendTransactionParams,
+  type SignMessageParams,
+  type SignTransactionParams,
+  type SignUpWithOauthParams,
+  type SignUpWithOtpParams,
+  type SignUpWithPasskeyParams,
+  type StoreSessionParams,
+  type UpdateUserEmailParams,
+  type UpdateUserNameParams,
+  type UpdateUserPhoneNumberParams,
+  type VerifyOtpParams,
+  type Wallet,
+  type WalletAccount,
+  type VerifyOtpResult,
+  type CreateHttpClientParams,
+  type ZeroXKeySDKClientBase,
+  type FetchBootProofForAppProofParams,
+  type VerifyAppProofsParams,
+  type SignAndSendTransactionParams,
+  type PollTransactionStatusParams,
+  type SolSendTransactionParams,
+} from "@0xkey-io/core";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
+import DeviceInfo from "react-native-device-info";
+import { InAppBrowser } from "react-native-inappbrowser-reborn";
+import { sha256 } from "@noble/hashes/sha2";
+import { bytesToHex } from "@noble/hashes/utils";
+
+import {
+  ZeroXKeyError,
+  ZeroXKeyErrorCodes,
+  ZeroXKeyNetworkError,
+  type Session,
+  type TDeleteSubOrganizationResponse,
+  type TStampLoginResponse,
+  type ProxyTGetWalletKitConfigResponse,
+  type v1SignRawPayloadResult,
+  type v1User,
+  type v1PrivateKey,
+  type BaseAuthResult,
+  AuthAction,
+  type PasskeyAuthResult,
+  v1BootProof,
+  TGetSendTransactionStatusResponse,
+  OAuthProviders,
+} from "@0xkey-io/sdk-types";
+
+import {
+  type ZeroXKeyCallbacks,
+  type ZeroXKeyProviderConfig,
+  AuthMethod,
+  AuthState,
+  ClientState,
+} from "../types/base";
+
+import type {
+  HandleAppleOauthParams,
+  HandleDiscordOauthParams,
+  HandleFacebookOauthParams,
+  HandleGoogleOauthParams,
+  HandleXOauthParams,
+  RefreshUserParams,
+  RefreshWalletsParams,
+  ExportWalletParams,
+  ExportPrivateKeyParams,
+  ExportWalletAccountParams,
+  ImportWalletParams,
+  ImportPrivateKeyParams,
+} from "../types/method-types";
+import { ClientContext } from "./Types";
+import { decryptExportBundle, generateP256KeyPair } from "@0xkey-io/crypto";
+import {
+  encryptWalletToBundle,
+  encryptPrivateKeyToBundle,
+} from "@0xkey-io/crypto";
+
+/**
+ * @inline
+ */
+interface ZeroXKeyProviderProps {
+  children: ReactNode;
+  config: ZeroXKeyProviderConfig;
+  callbacks?: ZeroXKeyCallbacks | undefined;
+}
+
+/**
+ * Provides ZeroXKey client authentication, session management, wallet operations, and user profile management
+ * for the React Native Wallet Kit SDK. This context provider encapsulates all core authentication flows (Passkey, OTP, OAuth),
+ * session lifecycle (creation, expiration, refresh), wallet import/export, and user profile updates (email, phone, name).
+ *
+ * The provider automatically initializes the ZeroXKey client, fetches configuration (including proxy auth config if needed),
+ * and synchronizes session and authentication state. It exposes a comprehensive set of methods for authentication flows,
+ * wallet management, and user profile operations, as well as UI handlers for modal-driven flows.
+ *
+ * Features:
+ * - Passkey, OTP (Email/SMS), and OAuth (Google, Apple, Facebook, Discord, X) authentication and sign-up flows.
+ * - React Native-specific OAuth: opens an in-app browser (Custom Tabs/Safari View Controller) and deep-links back via the configured app scheme.
+ * - Session management: creation, expiration scheduling, refresh, and clearing.
+ * - Wallet management: fetch, import, export, account management.
+ * - User profile management: email, phone, name, OAuth provider, and passkey linking/removal.
+ * - Error handling and callback integration for custom error and event responses.
+ *
+ * Usage:
+ * Wrap your application with `ZeroXKeyProvider` to enable authentication and wallet features via context.
+ *
+ * @param config - The ZeroXKey provider configuration object.
+ * @param children - React children to be rendered within the provider.
+ * @param callbacks - Optional callbacks for error handling and session events.
+ *
+ * @returns A React context provider exposing authentication, wallet, and user management methods and state.
+ */
+export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
+  config,
+  children,
+  callbacks,
+}) => {
+  const [client, setClient] = useState<ZeroXKeyClient | undefined>(undefined);
+  const [session, setSession] = useState<Session | undefined>(undefined);
+  const [masterConfig, setMasterConfig] = useState<
+    ZeroXKeyProviderConfig | undefined
+  >(undefined);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [user, setUser] = useState<v1User | undefined>(undefined);
+  const [clientState, setClientState] = useState<ClientState>();
+  const [authState, setAuthState] = useState<AuthState>(
+    AuthState.Unauthenticated,
+  );
+
+  const expiryTimeoutsRef = useRef<TimerMap>({});
+  const proxyAuthConfigRef = useRef<ProxyTGetWalletKitConfigResponse | null>(
+    null,
+  );
+
+  const [allSessions, setAllSessions] = useState<
+    Record<string, Session> | undefined
+  >(undefined);
+
+  // if there is no authProxyConfigId or if autoFetchWalletKitConfig is specifically
+  // set to false, we don't need to fetch the config
+  const shouldFetchWalletKitConfig =
+    config.authProxyConfigId != null &&
+    config.authProxyConfigId !== "" &&
+    config.autoFetchWalletKitConfig !== false;
+
+  const buildConfig = (
+    proxyAuthConfig?: ProxyTGetWalletKitConfigResponse | undefined,
+  ) => {
+    // Juggle the local overrides with the values set in the dashboard (proxyAuthConfig).
+    // Normalize potentially empty string values coming from the app-level config
+    const sanitizedAuthProxyUrl =
+      config.authProxyUrl && config.authProxyUrl.trim()
+        ? config.authProxyUrl
+        : undefined;
+    // Resolve OTP enablement
+    const emailOtpEnabled =
+      config.auth?.otp?.email ??
+      proxyAuthConfig?.enabledProviders.includes("email") ??
+      false;
+    const smsOtpEnabled =
+      config.auth?.otp?.sms ??
+      proxyAuthConfig?.enabledProviders.includes("sms") ??
+      false;
+
+    // Resolve shared redirect; do NOT attach scheme here. We'll attach in handler on demand.
+    const appScheme = config.auth?.oauth?.appScheme ?? undefined;
+    const redirectUrl =
+      config.auth?.oauth?.redirectUri ??
+      proxyAuthConfig?.oauthRedirectUrl ??
+      ZEROXKEY_OAUTH_REDIRECT_URL;
+
+    // Warn if they are trying to set auth proxy only settings directly
+    if (proxyAuthConfig) {
+      if (config.auth?.sessionExpirationSeconds) {
+        console.warn(
+          "ZeroXKey SDK warning. You have set sessionExpirationSeconds directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure session expiration in the ZeroXKey dashboard.",
+        );
+      }
+      if (
+        config.auth?.otp?.alphanumeric !== undefined &&
+        shouldFetchWalletKitConfig
+      ) {
+        console.warn(
+          "ZeroXKey SDK warning. You have set otpAlphanumeric directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure OTP settings in the ZeroXKey dashboard.",
+        );
+      }
+      if (config.auth?.otp?.length && shouldFetchWalletKitConfig) {
+        console.warn(
+          "ZeroXKey SDK warning. You have set otpLength directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure OTP settings in the ZeroXKey dashboard.",
+        );
+      }
+    }
+
+    // These are settings that can only be set via the auth proxy config
+    const authProxyPrioSettings = {
+      sessionExpirationSeconds:
+        proxyAuthConfig?.sessionExpirationSeconds ??
+        config.auth?.sessionExpirationSeconds,
+      otp: {
+        alphanumeric:
+          proxyAuthConfig?.otpAlphanumeric ??
+          config.auth?.otp?.alphanumeric ??
+          true,
+        length: proxyAuthConfig?.otpLength ?? config.auth?.otp?.length ?? "6",
+      },
+    };
+
+    return {
+      ...config,
+      // Ensure empty strings are not forwarded as URLs
+      authProxyUrl: sanitizedAuthProxyUrl,
+
+      // Overrides:
+      auth: {
+        ...config.auth,
+        // Proxy-controlled settings
+        sessionExpirationSeconds:
+          authProxyPrioSettings.sessionExpirationSeconds,
+        otp: {
+          ...config.auth?.otp,
+          // Enablement flags
+          email: emailOtpEnabled,
+          sms: smsOtpEnabled,
+          // Proxy-only settings
+          alphanumeric: authProxyPrioSettings.otp.alphanumeric,
+          length: authProxyPrioSettings.otp.length,
+        },
+        // OAuth shared settings
+        oauth: {
+          ...config.auth?.oauth,
+          ...(appScheme && { appScheme }),
+          redirectUri: redirectUrl,
+        },
+        autoRefreshSession: config.auth?.autoRefreshSession ?? true,
+      },
+      autoRefreshManagedState: config.autoRefreshManagedState ?? true,
+    } as ZeroXKeyProviderConfig;
+  };
+
+  const getOauthProviderSettings = (provider: OAuthProviders) => {
+    const oauth = masterConfig?.auth?.oauth;
+    const providerConfig = oauth ? (oauth as any)[provider] : undefined;
+    const providerObjectConfig =
+      providerConfig && typeof providerConfig === "object"
+        ? (providerConfig as { clientId?: string; redirectUri?: string })
+        : undefined;
+
+    const proxyClientIds = proxyAuthConfigRef.current?.oauthClientIds as
+      | Record<string, string | undefined>
+      | undefined;
+
+    const clientId =
+      providerObjectConfig?.clientId ??
+      (proxyClientIds ? proxyClientIds[provider] : undefined);
+
+    const appScheme = oauth?.appScheme;
+
+    // For Discord and X, default to scheme-based deep link if not explicitly provided.
+    const redirectUri =
+      providerObjectConfig?.redirectUri ??
+      ((provider === "discord" || provider === "x") && appScheme
+        ? `${appScheme}://`
+        : (oauth?.redirectUri ??
+          proxyAuthConfigRef.current?.oauthRedirectUrl ??
+          ZEROXKEY_OAUTH_REDIRECT_URL));
+
+    return { clientId, redirectUri, appScheme } as const;
+  };
+
+  /**
+   * Initializes the ZeroXKey client with the provided configuration.
+   * This function sets up the client, fetches the proxy auth config if needed,
+   * and prepares the client for use in authentication and wallet operations.
+   *
+   * @internal
+   */
+  const initializeClient = async () => {
+    if (!masterConfig || client || clientState == ClientState.Loading) return;
+
+    try {
+      setClientState(ClientState.Loading);
+      const zeroXKeyClient = new ZeroXKeyClient({
+        apiBaseUrl: masterConfig.apiBaseUrl,
+        authProxyUrl: masterConfig.authProxyUrl,
+        authProxyConfigId: masterConfig.authProxyConfigId,
+        organizationId: masterConfig.organizationId,
+        defaultStamperType: masterConfig.defaultStamperType,
+
+        // Define passkey and wallet config here. If we don't pass it into the client, Mr. Client will assume that we don't want to use passkeys/wallets and not create the stamper!
+        passkeyConfig: {
+          rpId: masterConfig.passkeyConfig?.rpId,
+          timeout: masterConfig.passkeyConfig?.timeout || 60000, // 60 seconds
+          userVerification:
+            masterConfig.passkeyConfig?.userVerification || "preferred",
+          allowCredentials: masterConfig.passkeyConfig?.allowCredentials || [],
+        },
+      });
+
+      await zeroXKeyClient.init();
+      setClient(zeroXKeyClient);
+
+      // Don't set clientState to ready until we fetch the proxy auth config (See other fetchProxyAuthConfig useEffect)
+    } catch (error) {
+      setClientState(ClientState.Error);
+      if (
+        error instanceof ZeroXKeyError ||
+        error instanceof ZeroXKeyNetworkError
+      ) {
+        callbacks?.onError?.(error);
+      } else {
+        callbacks?.onError?.(
+          new ZeroXKeyError(
+            `Failed to initialize ZeroXKey client`,
+            ZeroXKeyErrorCodes.INITIALIZE_CLIENT_ERROR,
+            error,
+          ),
+        );
+      }
+    }
+  };
+
+  /**
+   * @internal
+   * Schedules a session expiration and warning timer for the given session key.
+   *
+   * - Sets up two timers: one for warning before expiry and one for actual expiry.
+   * - Uses capped timeouts under the hood so delays > 24.8 days are safe (see utils/timers.ts).
+   *
+   * @param params.sessionKey - The key of the session to schedule expiration for.
+   * @param params.expiry - The expiration time in seconds since epoch.
+   * @throws {ZeroXKeyError} If an error occurs while scheduling the session expiration.
+   */
+  async function scheduleSessionExpiration(params: {
+    sessionKey: string;
+    expiry: number; // seconds since epoch
+  }) {
+    const { sessionKey, expiry } = params;
+
+    try {
+      const warnKey = `${sessionKey}-warning`;
+
+      // Replace any prior timers for this session
+      clearKey(expiryTimeoutsRef.current, sessionKey);
+      clearKey(expiryTimeoutsRef.current, warnKey);
+
+      const now = Date.now();
+      const expiryMs = expiry * 1000;
+      const timeUntilExpiry = expiryMs - now;
+
+      const beforeExpiry = async () => {
+        const activeSession = await getSession();
+
+        if (!activeSession && expiryTimeoutsRef.current[warnKey]) {
+          // Keep nudging until session materializes (short 10s timer is fine)
+          setTimeoutInMap(
+            expiryTimeoutsRef.current,
+            warnKey,
+            beforeExpiry,
+            10_000,
+          );
+          return;
+        }
+
+        const session = await getSession({ sessionKey });
+        if (!session) return;
+
+        callbacks?.beforeSessionExpiry?.({ sessionKey });
+
+        if (masterConfig?.auth?.autoRefreshSession) {
+          await refreshSession({
+            expirationSeconds: session.expirationSeconds!,
+            sessionKey,
+          });
+        }
+      };
+
+      const expireSession = async () => {
+        const expiredSession = await getSession({ sessionKey });
+        if (!expiredSession) return;
+
+        callbacks?.onSessionExpired?.({ sessionKey });
+
+        if ((await getActiveSessionKey()) === sessionKey) {
+          setSession(undefined);
+        }
+
+        setAllSessions((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev };
+          delete next[sessionKey];
+          return next;
+        });
+
+        await clearSession({ sessionKey });
+
+        // Remove timers for this session
+        clearKey(expiryTimeoutsRef.current, sessionKey);
+        clearKey(expiryTimeoutsRef.current, warnKey);
+
+        await logout();
+      };
+
+      // Already expired → expire immediately
+      if (timeUntilExpiry <= 0) {
+        await expireSession();
+        return;
+      }
+
+      // Warning timer (if threshold is in the future)
+      const warnAt = expiryMs - SESSION_WARNING_THRESHOLD_MS;
+      if (warnAt <= now) {
+        void beforeExpiry(); // fire-and-forget is fine
+      } else {
+        setCappedTimeoutInMap(
+          expiryTimeoutsRef.current,
+          warnKey,
+          beforeExpiry,
+          warnAt - now,
+        );
+      }
+
+      // Actual expiry timer (safe for long delays)
+      setCappedTimeoutInMap(
+        expiryTimeoutsRef.current,
+        sessionKey,
+        expireSession,
+        timeUntilExpiry,
+      );
+    } catch (error) {
+      if (
+        error instanceof ZeroXKeyError ||
+        error instanceof ZeroXKeyNetworkError
+      ) {
+        callbacks?.onError?.(error);
+      } else {
+        callbacks?.onError?.(
+          new ZeroXKeyError(
+            `Failed to schedule session expiration for ${sessionKey}`,
+            ZeroXKeyErrorCodes.SCHEDULE_SESSION_EXPIRY_ERROR,
+            error,
+          ),
+        );
+      }
+    }
+  }
+
+  /**
+   * Clears all scheduled session timers (warning + expiry).
+   *
+   * - Removes all active timers managed by this client.
+   * - Useful on re-init or logout to avoid stale timers.
+   *
+   * @throws {ZeroXKeyError} If an error occurs while clearing the timers.
+   */
+  function clearSessionTimeouts(sessionKeys?: string[]) {
+    try {
+      if (sessionKeys) {
+        clearKeys(expiryTimeoutsRef.current, sessionKeys);
+      } else {
+        clearAll(expiryTimeoutsRef.current); // clears & deletes everything
+      }
+    } catch (error) {
+      if (
+        error instanceof ZeroXKeyError ||
+        error instanceof ZeroXKeyNetworkError
+      ) {
+        callbacks?.onError?.(error);
+      } else {
+        callbacks?.onError?.(
+          new ZeroXKeyError(
+            "Failed to clear session timeouts",
+            ZeroXKeyErrorCodes.CLEAR_SESSION_TIMEOUTS_ERROR,
+            error,
+          ),
+        );
+      }
+    }
+  }
+
+  /**
+   * Initializes the user sessions by fetching all active sessions and setting up their state.
+   * @internal
+   */
+  const initializeSessions = async () => {
+    setSession(undefined);
+    setAllSessions(undefined);
+    try {
+      const allLocalStorageSessions = await getAllSessions();
+      if (!allLocalStorageSessions) return;
+
+      await Promise.all(
+        Object.keys(allLocalStorageSessions).map(async (sessionKey) => {
+          const s = allLocalStorageSessions?.[sessionKey];
+          if (!isValidSession(s)) {
+            await clearSession({ sessionKey });
+            if (sessionKey === (await getActiveSessionKey())) {
+              setSession(undefined);
+            }
+            delete allLocalStorageSessions[sessionKey];
+            return;
+          }
+
+          await scheduleSessionExpiration({
+            sessionKey,
+            expiry: s!.expiry,
+          });
+        }),
+      );
+
+      setAllSessions(allLocalStorageSessions || undefined);
+      const activeSessionKey = await client?.getActiveSessionKey();
+      if (activeSessionKey) {
+        if (!allLocalStorageSessions[activeSessionKey]) {
+          return;
+        }
+        setSession(allLocalStorageSessions[activeSessionKey]);
+        await maybeRefreshUser();
+        await maybeRefreshWallets();
+        return;
+      }
+    } catch (error) {
+      if (
+        error instanceof ZeroXKeyError ||
+        error instanceof ZeroXKeyNetworkError
+      ) {
+        callbacks?.onError?.(error);
+      } else {
+        callbacks?.onError?.(
+          new ZeroXKeyError(
+            `Failed to initialize sessions`,
+            ZeroXKeyErrorCodes.INITIALIZE_SESSION_ERROR,
+            error,
+          ),
+        );
+      }
+    }
+  };
+
+  /**
+   * @internal
+   * Handles the post-authentication flow.
+   *
+   * - This function is called after a successful authentication (login or sign-up) via any supported method (Passkey, Wallet, OTP, OAuth).
+   * - It fetches the active session and all sessions, updates the session state, and schedules session expiration and warning timeouts.
+   * - It also refreshes the user's wallets and profile information to ensure the provider state is up to date.
+   * - This function is used internally after all authentication flows to synchronize state and trigger any necessary callbacks.
+   *
+   * @returns A void promise.
+   * @throws {ZeroXKeyError} If the client is not initialized or if there is an error during the process.
+   */
+  const handlePostAuth = async (params: {
+    method: AuthMethod;
+    action: AuthAction;
+    identifier: string;
+  }) => {
+    const { method, action, identifier } = params;
+    try {
+      const sessionKey = await getActiveSessionKey();
+      const session = await getSession({
+        ...(sessionKey && { sessionKey }),
+      });
+
+      if (session && sessionKey)
+        await scheduleSessionExpiration({
+          sessionKey,
+          expiry: session.expiry,
+        });
+
+      const allSessions = await client!.getAllSessions();
+
+      setSession(session);
+      setAllSessions(allSessions);
+
+      await maybeRefreshWallets();
+      await maybeRefreshUser();
+
+      callbacks?.onAuthenticationSuccess?.({
+        session,
+        method,
+        action,
+        identifier,
+      });
+    } catch (error) {
+      if (
+        error instanceof ZeroXKeyError ||
+        error instanceof ZeroXKeyNetworkError
+      ) {
+        callbacks?.onError?.(error);
+      } else {
+        callbacks?.onError?.(
+          new ZeroXKeyError(
+            `Failed to handle post-authentication`,
+            ZeroXKeyErrorCodes.HANDLE_POST_AUTH_ERROR,
+            error,
+          ),
+        );
+      }
+    }
+  };
+
+  /**
+   * @internal
+   * Handles the post-logout flow.
+   *
+   * - This function is called after a successful logout or session clear.
+   * - It clears all scheduled session expiration and warning timeouts associated to the session key to prevent memory leaks.
+   * - It resets the session state, removes user data from memory, the logged out session from all sessions state, and clears the wallets list.
+   * - This ensures that all sensitive information is removed from the provider state after logout.
+   * - Called internally after logout or when all sessions are cleared.
+   *
+   * @returns void
+   * @throws {ZeroXKeyError} If there is an error during the post-logout process.
+   */
+  const handlePostLogout = (sessionKey?: string) => {
+    try {
+      clearSessionTimeouts(
+        sessionKey ? [sessionKey, `${sessionKey}-warning`] : undefined,
+      );
+      setAllSessions((prev) => {
+        if (!prev) return prev;
+        if (sessionKey) {
+          const next = { ...prev };
+          delete next[sessionKey];
+          return next;
+        }
+        return {};
+      });
+      setSession(undefined);
+      setUser(undefined);
+      setWallets([]);
+    } catch (error) {
+      callbacks?.onError?.(
+        new ZeroXKeyError(
+          `Failed to initialize sessions`,
+          ZeroXKeyErrorCodes.HANDLE_POST_LOGOUT_ERROR,
+          error,
+        ),
+      );
+    }
+  };
+
+  const createPasskey = useCallback(
+    async (params?: CreatePasskeyParams): Promise<CreatePasskeyResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      return withZeroXKeyErrorHandling(
+        () => client.createPasskey({ ...params }),
+        () => logout(),
+        callbacks,
+        "Failed to create passkey",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const createHttpClient = useCallback(
+    (params?: CreateHttpClientParams): ZeroXKeySDKClientBase => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      return client.createHttpClient(params);
+    },
+    [client],
+  );
+
+  const logout: (params?: LogoutParams) => Promise<void> = useCallback(
+    async (params?: { sessionKey?: string }): Promise<void> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      await withZeroXKeyErrorHandling(
+        async () => {
+          // If no sessionKey is provided, we try to get the active one.
+          let sessionKey = params?.sessionKey;
+          if (!sessionKey) sessionKey = await getActiveSessionKey();
+          await client.logout(params);
+          // We only handle post logout if the sessionKey is defined since that means we actually logged out of a session.
+          if (sessionKey) handlePostLogout(sessionKey);
+        },
+        () => logout(),
+        callbacks,
+        "Failed to logout",
+      );
+
+      return;
+    },
+    [client, callbacks],
+  );
+
+  const loginWithPasskey = useCallback(
+    async (params?: LoginWithPasskeyParams): Promise<PasskeyAuthResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+
+      const expirationSeconds =
+        params?.expirationSeconds ??
+        masterConfig?.auth?.sessionExpirationSeconds ??
+        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const res = await withZeroXKeyErrorHandling(
+        () => client.loginWithPasskey({ ...params, expirationSeconds }),
+        () => logout(),
+        callbacks,
+        "Failed to login with passkey",
+      );
+      if (res) {
+        await handlePostAuth({
+          method: AuthMethod.Passkey,
+          action: AuthAction.LOGIN,
+          identifier: res.credentialId,
+        });
+      }
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const signUpWithPasskey = useCallback(
+    async (params?: SignUpWithPasskeyParams): Promise<PasskeyAuthResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      if (!masterConfig) {
+        throw new ZeroXKeyError(
+          "Config is not ready yet!",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+      // If createSubOrgParams is not provided, use the default from masterConfig
+      let createSubOrgParams =
+        params?.createSubOrgParams ??
+        masterConfig.auth?.createSuborgParams?.passkeyAuth;
+      params =
+        createSubOrgParams !== undefined
+          ? { ...params, createSubOrgParams }
+          : { ...params };
+
+      const expirationSeconds =
+        params.expirationSeconds ??
+        masterConfig?.auth?.sessionExpirationSeconds ??
+        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+
+      const websiteName =
+        Platform.OS === "web" && typeof window !== "undefined"
+          ? window.location.hostname
+          : DeviceInfo.getApplicationName() ||
+            DeviceInfo.getBundleId() ||
+            "mobile-app";
+      const timestamp =
+        new Date().toLocaleDateString() +
+        "-" +
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+      // We allow passkeyName to be passed in thru the provider or thru the params of this function directly.
+      // This is because signUpWithPasskey will create a new passkey using that name.
+      // Any extra authenticators will be created after the first one. (see core implementation)
+      const passkeyName =
+        params?.passkeyDisplayName ??
+        masterConfig.auth?.createSuborgParams?.passkeyAuth?.passkeyName ??
+        `${websiteName}-${timestamp}`;
+
+      const res = await withZeroXKeyErrorHandling(
+        () =>
+          client.signUpWithPasskey({
+            ...params,
+            passkeyDisplayName: passkeyName,
+            expirationSeconds,
+          }),
+        () => logout(),
+        callbacks,
+        "Failed to sign up with passkey",
+      );
+      if (res) {
+        await handlePostAuth({
+          method: AuthMethod.Passkey,
+          action: AuthAction.SIGNUP,
+          identifier: res.credentialId,
+        });
+      }
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const initOtp = useCallback(
+    async (params: InitOtpParams): Promise<InitOtpResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      return withZeroXKeyErrorHandling(
+        () => client.initOtp(params),
+        () => logout(),
+        callbacks,
+        "Failed to initialize OTP",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const verifyOtp = useCallback(
+    async (params: VerifyOtpParams): Promise<VerifyOtpResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      return withZeroXKeyErrorHandling(
+        () => client.verifyOtp(params),
+        () => logout(),
+        callbacks,
+        "Failed to verify OTP",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const loginWithOtp = useCallback(
+    async (params: LoginWithOtpParams): Promise<BaseAuthResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+
+      const res = await withZeroXKeyErrorHandling(
+        () => client.loginWithOtp(params),
+        () => logout(),
+        callbacks,
+        "Failed to login with OTP",
+      );
+      if (res) {
+        await handlePostAuth({
+          method: AuthMethod.Otp,
+          action: AuthAction.LOGIN,
+          identifier: params.verificationToken,
+        });
+      }
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const signUpWithOtp = useCallback(
+    async (params: SignUpWithOtpParams): Promise<BaseAuthResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      if (!masterConfig) {
+        throw new ZeroXKeyError(
+          "Config is not ready yet!",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+      // If createSubOrgParams is not provided, use the default from masterConfig
+      let createSubOrgParams = params.createSubOrgParams;
+      if (!createSubOrgParams && masterConfig?.auth?.createSuborgParams) {
+        if (params.otpType === OtpType.Email) {
+          createSubOrgParams =
+            masterConfig.auth.createSuborgParams.emailOtpAuth;
+        } else if (params.otpType === OtpType.Sms) {
+          createSubOrgParams = masterConfig.auth.createSuborgParams.smsOtpAuth;
+        }
+      }
+      params =
+        createSubOrgParams !== undefined
+          ? { ...params, createSubOrgParams }
+          : { ...params };
+
+      const res = await withZeroXKeyErrorHandling(
+        () => client.signUpWithOtp(params),
+        () => logout(),
+        callbacks,
+        "Failed to sign up with OTP",
+      );
+      if (res) {
+        await handlePostAuth({
+          method: AuthMethod.Otp,
+          action: AuthAction.SIGNUP,
+          identifier: params.verificationToken,
+        });
+      }
+      return res;
+    },
+    [client, callbacks, masterConfig],
+  );
+
+  const completeOtp = useCallback(
+    async (
+      params: CompleteOtpParams,
+    ): Promise<
+      BaseAuthResult & { verificationToken: string; action: AuthAction }
+    > => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      if (!masterConfig) {
+        throw new ZeroXKeyError(
+          "Config is not ready yet!",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+
+      // If createSubOrgParams is not provided, use the default from masterConfig
+      let createSubOrgParams = params.createSubOrgParams;
+      if (!createSubOrgParams && masterConfig?.auth?.createSuborgParams) {
+        if (params.otpType === OtpType.Email) {
+          createSubOrgParams =
+            masterConfig.auth.createSuborgParams.emailOtpAuth;
+        } else if (params.otpType === OtpType.Sms) {
+          createSubOrgParams = masterConfig.auth.createSuborgParams.smsOtpAuth;
+        }
+      }
+      params =
+        createSubOrgParams !== undefined
+          ? { ...params, createSubOrgParams }
+          : { ...params };
+
+      const res = await withZeroXKeyErrorHandling(
+        () => client.completeOtp(params),
+        () => logout(),
+        callbacks,
+        "Failed to complete OTP",
+      );
+      if (res) {
+        await handlePostAuth({
+          method: AuthMethod.Otp,
+          action: res.action,
+          identifier: res.verificationToken,
+        });
+      }
+      return res;
+    },
+    [client, callbacks, masterConfig],
+  );
+
+  const loginWithOauth = useCallback(
+    async (params: LoginWithOauthParams): Promise<BaseAuthResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+
+      const res = await withZeroXKeyErrorHandling(
+        () => client.loginWithOauth(params),
+        () => logout(),
+        callbacks,
+        "Failed to login with OAuth",
+      );
+      if (res) {
+        await handlePostAuth({
+          method: AuthMethod.Oauth,
+          action: AuthAction.LOGIN,
+          identifier: params.oidcToken,
+        });
+      }
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const signUpWithOauth = useCallback(
+    async (params: SignUpWithOauthParams): Promise<BaseAuthResult> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      if (!masterConfig) {
+        throw new ZeroXKeyError(
+          "Config is not ready yet!",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+      // If createSubOrgParams is not provided, use the default from masterConfig
+      let createSubOrgParams =
+        params.createSubOrgParams ??
+        masterConfig.auth?.createSuborgParams?.oauth;
+      params =
+        createSubOrgParams !== undefined
+          ? { ...params, createSubOrgParams }
+          : { ...params };
+
+      const res = await withZeroXKeyErrorHandling(
+        () => client.signUpWithOauth(params),
+        () => logout(),
+        callbacks,
+        "Failed to sign up with OAuth",
+      );
+      if (res) {
+        await handlePostAuth({
+          method: AuthMethod.Oauth,
+          action: AuthAction.SIGNUP,
+          identifier: params.oidcToken,
+        });
+      }
+      return res;
+    },
+    [client, callbacks, masterConfig],
+  );
+
+  const completeOauth = useCallback(
+    async (
+      params: CompleteOauthParams,
+    ): Promise<BaseAuthResult & { action: AuthAction }> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      if (!masterConfig) {
+        throw new ZeroXKeyError(
+          "Config is not ready yet!",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+
+      // If createSubOrgParams is not provided, use the default from masterConfig
+      const createSubOrgParams =
+        params.createSubOrgParams ??
+        masterConfig.auth?.createSuborgParams?.oauth;
+
+      params =
+        createSubOrgParams !== undefined
+          ? { ...params, createSubOrgParams }
+          : { ...params };
+
+      const res = await withZeroXKeyErrorHandling(
+        () => client.completeOauth(params),
+        () => logout(),
+        callbacks,
+        "Failed to complete OAuth",
+      );
+      if (res) {
+        await handlePostAuth({
+          method: AuthMethod.Oauth,
+          action: res.action,
+          identifier: params.oidcToken,
+        });
+      }
+      return res;
+    },
+    [client, callbacks, masterConfig],
+  );
+
+  const fetchWallets = useCallback(
+    async (params?: FetchWalletsParams): Promise<Wallet[]> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      return withZeroXKeyErrorHandling(
+        () => client.fetchWallets(params),
+        () => logout(),
+        callbacks,
+        "Failed to fetch wallets",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const fetchWalletAccounts = useCallback(
+    async (params: FetchWalletAccountsParams): Promise<WalletAccount[]> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      return withZeroXKeyErrorHandling(
+        () => client.fetchWalletAccounts(params),
+        () => logout(),
+        callbacks,
+        "Failed to fetch wallet accounts",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const fetchPrivateKeys = useCallback(
+    async (params?: FetchPrivateKeysParams): Promise<v1PrivateKey[]> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+      return withZeroXKeyErrorHandling(
+        () => client.fetchPrivateKeys(params),
+        () => logout(),
+        callbacks,
+        "Failed to fetch private keys",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const fetchBootProofForAppProof = useCallback(
+    async (params: FetchBootProofForAppProofParams): Promise<v1BootProof> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.fetchBootProofForAppProof(params),
+        () => logout(),
+        callbacks,
+        "Failed to fetch or create delegated access user",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const signMessage = useCallback(
+    async (params: SignMessageParams): Promise<v1SignRawPayloadResult> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.signMessage(params),
+        () => logout(),
+        callbacks,
+        "Failed to sign message",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const signTransaction = useCallback(
+    async (params: SignTransactionParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.signTransaction(params),
+        () => logout(),
+        callbacks,
+        "Failed to sign transaction",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const solSendTransaction = useCallback(
+    async (params: SolSendTransactionParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.solSendTransaction(params),
+        () => logout(),
+        callbacks,
+        "Failed to send sol transaction",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const ethSendTransaction = useCallback(
+    async (params: EthSendTransactionParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.ethSendTransaction(params),
+        () => logout(),
+        callbacks,
+        "Failed to send eth transaction",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const ethSendErc20Transfer = useCallback(
+    async (params: EthSendErc20TransferParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.ethSendErc20Transfer(params),
+        () => logout(),
+        callbacks,
+        "Failed to send ERC20 transfer",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const signAndSendTransaction = useCallback(
+    async (params: SignAndSendTransactionParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.signAndSendTransaction(params),
+        () => logout(),
+        callbacks,
+        "Failed to sign and send raw transaction",
+      );
+    },
+    [client, callbacks, logout],
+  );
+
+  const pollTransactionStatus = useCallback(
+    async (
+      params: PollTransactionStatusParams,
+    ): Promise<TGetSendTransactionStatusResponse> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.pollTransactionStatus(params),
+        () => logout(),
+        callbacks,
+        "Failed to poll transaction status",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const fetchUser = useCallback(
+    async (params?: FetchUserParams): Promise<v1User> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.fetchUser(params),
+        () => logout(),
+        callbacks,
+        "Failed to fetch user",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const fetchOrCreateP256ApiKeyUser = useCallback(
+    async (params: FetchOrCreateP256ApiKeyUserParams): Promise<v1User> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.fetchOrCreateP256ApiKeyUser(params),
+        () => logout(),
+        callbacks,
+        "Failed to fetch or create delegated access user",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const fetchOrCreatePolicies = useCallback(
+    async (
+      params: FetchOrCreatePoliciesParams,
+    ): Promise<FetchOrCreatePoliciesResult> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.fetchOrCreatePolicies(params),
+        () => logout(),
+        callbacks,
+        "Failed to fetch or create delegated access user",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const updateUserEmail = useCallback(
+    async (params: UpdateUserEmailParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.updateUserEmail(params),
+        () => logout(),
+        callbacks,
+        "Failed to update user email",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const removeUserEmail = useCallback(
+    async (params?: RemoveUserEmailParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.removeUserEmail(params),
+        () => logout(),
+        callbacks,
+        "Failed to remove user email",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const updateUserPhoneNumber = useCallback(
+    async (params: UpdateUserPhoneNumberParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.updateUserPhoneNumber(params),
+        () => logout(),
+        callbacks,
+        "Failed to update user phone number",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const removeUserPhoneNumber = useCallback(
+    async (params?: RemoveUserPhoneNumberParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.removeUserPhoneNumber(params),
+        () => logout(),
+        callbacks,
+        "Failed to remove user phone number",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const updateUserName = useCallback(
+    async (params: UpdateUserNameParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.updateUserName(params),
+        () => logout(),
+        callbacks,
+        "Failed to update user name",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const addOauthProvider = useCallback(
+    async (params: AddOauthProviderParams): Promise<string[]> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.addOauthProvider(params),
+        () => logout(),
+        callbacks,
+        "Failed to add OAuth provider",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const removeOauthProviders = useCallback(
+    async (params: RemoveOauthProvidersParams): Promise<string[]> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.removeOauthProviders(params),
+        () => logout(),
+        callbacks,
+        "Failed to remove OAuth providers",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const addPasskey = useCallback(
+    async (params?: AddPasskeyParams): Promise<string[]> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.addPasskey(params),
+        () => logout(),
+        callbacks,
+        "Failed to add passkey",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const removePasskeys = useCallback(
+    async (params: RemovePasskeyParams): Promise<string[]> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.removePasskeys(params),
+        () => logout(),
+        callbacks,
+        "Failed to remove passkeys",
+      );
+      if (res)
+        await maybeRefreshUser({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params?.userId && { userId: params.userId }),
+        });
+      return res;
+    },
+    [client, callbacks],
+  );
+
+  const createWallet = useCallback(
+    async (params: CreateWalletParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.createWallet(params),
+        () => logout(),
+        callbacks,
+        "Failed to create wallet",
+      );
+      const s = await getSession();
+      if (res && s)
+        await maybeRefreshWallets({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+        });
+      return res;
+    },
+    [client, session, callbacks],
+  );
+
+  const createWalletAccounts = useCallback(
+    async (params: CreateWalletAccountsParams): Promise<string[]> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const res = await withZeroXKeyErrorHandling(
+        () => client.createWalletAccounts(params),
+        () => logout(),
+        callbacks,
+        "Failed to create wallet accounts",
+      );
+      const s = await getSession();
+      if (res && s)
+        await maybeRefreshWallets({
+          stampWith: params?.stampWith,
+          ...(params?.organizationId && {
+            organizationId: params.organizationId,
+          }),
+        });
+      return res;
+    },
+    [client, session, callbacks],
+  );
+
+  const exportWallet = useCallback(
+    async (params: ExportWalletParams): Promise<ExportBundle | string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+
+      // Default: decrypt unless explicitly disabled
+      const shouldDecrypt = params?.decrypt !== false;
+
+      if (!shouldDecrypt) {
+        const res = await withZeroXKeyErrorHandling(
+          () =>
+            client.exportWallet({
+              walletId: params.walletId,
+              targetPublicKey: params.targetPublicKey!,
+              ...(params.organizationId && {
+                organizationId: params.organizationId,
+              }),
+              ...(params.stampWith && { stampWith: params.stampWith }),
+            }),
+          () => logout(),
+          callbacks,
+          "Failed to export wallet",
+        );
+        const s = await getSession();
+        if (res && s)
+          await maybeRefreshWallets({
+            stampWith: params?.stampWith,
+            ...(params?.organizationId && {
+              organizationId: params.organizationId,
+            }),
+          });
+        return res;
+      }
+
+      // Decrypting path: generate P-256 keypair, export, then decrypt to mnemonic
+      try {
+        const { privateKey, publicKeyUncompressed } = generateP256KeyPair();
+        const targetPublicKey = publicKeyUncompressed;
+
+        const exportParams = {
+          walletId: params.walletId,
+          targetPublicKey,
+          ...(params.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params.stampWith && { stampWith: params.stampWith }),
+        };
+
+        const bundle = await withZeroXKeyErrorHandling(
+          () => client.exportWallet(exportParams),
+          () => logout(),
+          callbacks,
+          "Failed to export wallet",
+        );
+
+        const session = await getSession();
+
+        const orgId = session?.organizationId;
+        if (!orgId) {
+          throw new ZeroXKeyError(
+            "Missing organizationId in session for decryption",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+
+        const mnemonic = await decryptExportBundle({
+          exportBundle: bundle as string,
+          embeddedKey: privateKey,
+          organizationId: orgId,
+          returnMnemonic: true,
+          keyFormat: "HEXADECIMAL",
+        });
+
+        return mnemonic;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [client, session, callbacks],
+  );
+
+  const exportPrivateKey = useCallback(
+    async (params: ExportPrivateKeyParams): Promise<ExportBundle | string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+
+      const shouldDecrypt = params?.decrypt !== false;
+      if (!shouldDecrypt) {
+        const res = await withZeroXKeyErrorHandling(
+          () =>
+            client.exportPrivateKey({
+              privateKeyId: params.privateKeyId,
+              targetPublicKey: params.targetPublicKey!,
+              ...(params.organizationId && {
+                organizationId: params.organizationId,
+              }),
+              ...(params.stampWith && { stampWith: params.stampWith }),
+            }),
+          () => logout(),
+          callbacks,
+          "Failed to export private key",
+        );
+        return res;
+      }
+
+      try {
+        const { privateKey, publicKeyUncompressed } = generateP256KeyPair();
+        const targetPublicKey = publicKeyUncompressed;
+
+        const exportParams = {
+          privateKeyId: params.privateKeyId,
+          targetPublicKey,
+          ...(params.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params.stampWith && { stampWith: params.stampWith }),
+        };
+
+        const bundle = await withZeroXKeyErrorHandling(
+          () => client.exportPrivateKey(exportParams),
+          () => logout(),
+          callbacks,
+          "Failed to export private key",
+        );
+
+        const session = await getSession();
+        const orgId = session?.organizationId;
+        if (!orgId) {
+          throw new ZeroXKeyError(
+            "Missing organizationId in session for decryption",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+
+        const rawPrivateKey = await decryptExportBundle({
+          exportBundle: bundle as string,
+          embeddedKey: privateKey,
+          organizationId: orgId,
+          returnMnemonic: false,
+          keyFormat: "HEXADECIMAL",
+        });
+
+        return rawPrivateKey;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [client, callbacks],
+  );
+
+  const exportWalletAccount = useCallback(
+    async (
+      params: ExportWalletAccountParams,
+    ): Promise<ExportBundle | string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+
+      const shouldDecrypt = params?.decrypt !== false;
+      if (!shouldDecrypt) {
+        const res = await withZeroXKeyErrorHandling(
+          () =>
+            client.exportWalletAccount({
+              address: params.address,
+              targetPublicKey: params.targetPublicKey!,
+              ...(params.organizationId && {
+                organizationId: params.organizationId,
+              }),
+              ...(params.stampWith && { stampWith: params.stampWith }),
+            }),
+          () => logout(),
+          callbacks,
+          "Failed to export wallet accounts",
+        );
+        return res;
+      }
+
+      try {
+        const { privateKey, publicKeyUncompressed } = generateP256KeyPair();
+        const targetPublicKey = publicKeyUncompressed;
+
+        const exportParams = {
+          address: params.address,
+          targetPublicKey,
+          ...(params.organizationId && {
+            organizationId: params.organizationId,
+          }),
+          ...(params.stampWith && { stampWith: params.stampWith }),
+        };
+
+        const bundle = await withZeroXKeyErrorHandling(
+          () => client.exportWalletAccount(exportParams),
+          () => logout(),
+          callbacks,
+          "Failed to export wallet accounts",
+        );
+
+        const session = await getSession();
+        const orgId = session?.organizationId;
+        if (!orgId) {
+          throw new ZeroXKeyError(
+            "Missing organizationId in session for decryption",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+
+        const decryptedKey = await decryptExportBundle({
+          exportBundle: bundle as string,
+          embeddedKey: privateKey,
+          organizationId: orgId,
+          returnMnemonic: false,
+          keyFormat: "HEXADECIMAL",
+        });
+
+        return decryptedKey;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const importWallet = useCallback(
+    async (params: ImportWalletParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+
+      const {
+        mnemonic,
+        walletName,
+        accounts,
+        organizationId,
+        userId,
+        stampWith,
+      } = params;
+
+      // Resolve org/user from params or current session
+      const currentSession = await getSession();
+      const effectiveOrgId = organizationId ?? currentSession?.organizationId;
+      const effectiveUserId = userId ?? currentSession?.userId;
+      if (!effectiveOrgId || !effectiveUserId) {
+        throw new ZeroXKeyError(
+          "Missing organizationId or userId for wallet import",
+          ZeroXKeyErrorCodes.INVALID_REQUEST,
+        );
+      }
+
+      // Step 1: init import to obtain importBundle
+      const initRes = await withZeroXKeyErrorHandling(
+        () =>
+          client.httpClient?.initImportWallet(
+            {
+              organizationId: effectiveOrgId,
+              userId: effectiveUserId,
+            },
+            stampWith,
+          ),
+        () => logout(),
+        callbacks,
+        "Failed to init wallet import",
+      );
+
+      const importBundle = initRes?.importBundle;
+      if (!importBundle) {
+        throw new ZeroXKeyError(
+          "Failed to retrieve import bundle",
+          ZeroXKeyErrorCodes.IMPORT_WALLET_ERROR,
+        );
+      }
+
+      // Step 2: encrypt mnemonic to encryptedBundle
+      const encryptedBundle = await encryptWalletToBundle({
+        mnemonic,
+        importBundle,
+        userId: effectiveUserId,
+        organizationId: effectiveOrgId,
+      });
+
+      // Step 3: call importWallet with encrypted bundle
+      const res = await withZeroXKeyErrorHandling(
+        () =>
+          client.importWallet({
+            encryptedBundle,
+            walletName,
+            ...(accounts && { accounts }),
+            organizationId: effectiveOrgId,
+            userId: effectiveUserId,
+            ...(stampWith && { stampWith }),
+          }),
+        () => logout(),
+        callbacks,
+        "Failed to import wallet",
+      );
+
+      // Refresh state after import
+      if (res)
+        await maybeRefreshWallets({
+          ...(stampWith && { stampWith }),
+          organizationId: effectiveOrgId,
+          userId: effectiveUserId,
+        });
+      return res;
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const importPrivateKey = useCallback(
+    async (params: ImportPrivateKeyParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+
+      const {
+        privateKey,
+        privateKeyName,
+        addressFormats,
+        curve,
+        keyFormat = "HEXADECIMAL",
+        organizationId,
+        userId,
+        stampWith,
+      } = params;
+
+      // Resolve org/user
+      const currentSession = await getSession();
+      const effectiveOrgId = organizationId ?? currentSession?.organizationId;
+      const effectiveUserId = userId ?? currentSession?.userId;
+      if (!effectiveOrgId || !effectiveUserId) {
+        throw new ZeroXKeyError(
+          "Missing organizationId or userId for private key import",
+          ZeroXKeyErrorCodes.INVALID_REQUEST,
+        );
+      }
+
+      // Init import to get bundle
+      const initRes = await withZeroXKeyErrorHandling(
+        () =>
+          client.httpClient?.initImportPrivateKey(
+            {
+              organizationId: effectiveOrgId,
+              userId: effectiveUserId,
+            },
+            stampWith,
+          ),
+        () => logout(),
+        callbacks,
+        "Failed to init private key import",
+      );
+
+      const importBundle = initRes?.importBundle;
+      if (!importBundle) {
+        throw new ZeroXKeyError(
+          "Failed to retrieve import bundle",
+          ZeroXKeyErrorCodes.IMPORT_WALLET_ERROR,
+        );
+      }
+
+      // Encrypt provided private key to bundle
+      const encryptedBundle = await encryptPrivateKeyToBundle({
+        privateKey,
+        keyFormat,
+        importBundle,
+        userId: effectiveUserId,
+        organizationId: effectiveOrgId,
+      });
+
+      // Import
+      const res = await withZeroXKeyErrorHandling(
+        () =>
+          client.importPrivateKey({
+            encryptedBundle,
+            privateKeyName,
+            addressFormats,
+            curve: curve ?? "CURVE_SECP256K1",
+            organizationId: effectiveOrgId,
+            userId: effectiveUserId,
+            ...(stampWith && { stampWith }),
+          }),
+        () => logout(),
+        callbacks,
+        "Failed to import private key",
+      );
+      return res;
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const deleteSubOrganization = useCallback(
+    async (
+      params?: DeleteSubOrganizationParams,
+    ): Promise<TDeleteSubOrganizationResponse> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.deleteSubOrganization(params),
+        () => logout(),
+        callbacks,
+        "Failed to delete sub-organization",
+      );
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const storeSession = useCallback(
+    async (params: StoreSessionParams): Promise<void> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      await withZeroXKeyErrorHandling(
+        () => client.storeSession(params),
+        () => logout(),
+        callbacks,
+        "Failed to store session",
+      );
+      const sessionKey = await getActiveSessionKey();
+      const session = await getSession({
+        ...(sessionKey && { sessionKey }),
+      });
+
+      if (session && sessionKey)
+        await scheduleSessionExpiration({ sessionKey, expiry: session.expiry });
+
+      const allSessions = await getAllSessions();
+
+      setSession(session);
+      setAllSessions(allSessions);
+
+      await maybeRefreshWallets();
+      await maybeRefreshUser();
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const clearSession = useCallback(
+    async (params?: ClearSessionParams): Promise<void> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      await withZeroXKeyErrorHandling(
+        async () => client.clearSession(params),
+        () => logout(),
+        callbacks,
+        "Failed to clear session",
+      );
+      const sessionKey = params?.sessionKey ?? (await getActiveSessionKey());
+      if (!sessionKey) return;
+      if (!params?.sessionKey) {
+        setSession(undefined);
+      }
+      clearSessionTimeouts([sessionKey]);
+      // clear only the cleared session from allSessions
+      const newAllSessions = { ...allSessions };
+      if (newAllSessions) {
+        delete newAllSessions[sessionKey];
+      }
+      setAllSessions(newAllSessions);
+      return;
+    },
+    [client, callbacks, session, user, masterConfig],
+  );
+
+  const clearAllSessions = useCallback(async (): Promise<void> => {
+    if (!client)
+      throw new ZeroXKeyError(
+        "Client is not initialized.",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
+    setSession(undefined);
+    setAllSessions(undefined);
+    clearSessionTimeouts();
+    return await withZeroXKeyErrorHandling(
+      () => client.clearAllSessions(),
+      () => logout(),
+      callbacks,
+      "Failed to clear all sessions",
+    );
+  }, [client, callbacks, session, user, masterConfig]);
+
+  const refreshSession = useCallback(
+    async (
+      params?: RefreshSessionParams,
+    ): Promise<TStampLoginResponse | undefined> => {
+      if (!client) {
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      }
+
+      const activeSessionKey = await client.getActiveSessionKey();
+      if (!activeSessionKey) {
+        throw new ZeroXKeyError(
+          "No active session found.",
+          ZeroXKeyErrorCodes.NO_SESSION_FOUND,
+        );
+      }
+
+      const sessionKey = params?.sessionKey ?? activeSessionKey;
+
+      const res = await withZeroXKeyErrorHandling(
+        () => client.refreshSession({ ...params }),
+        () => logout(),
+        callbacks,
+        "Failed to refresh session",
+      );
+      const session = await getSession({ sessionKey });
+
+      if (session && sessionKey) {
+        await scheduleSessionExpiration({
+          sessionKey,
+          expiry: session.expiry,
+          ...(params?.expirationSeconds && {
+            expirationSeconds: params?.expirationSeconds,
+          }),
+        });
+      }
+
+      const allSessions = await getAllSessions();
+      setSession(session);
+      setAllSessions(allSessions);
+      return res;
+    },
+    [client, callbacks, scheduleSessionExpiration, session, user, masterConfig],
+  );
+
+  const getSession = useCallback(
+    async (params?: GetSessionParams): Promise<Session | undefined> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.getSession(params),
+        () => logout(),
+        callbacks,
+        "Failed to get session",
+      );
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const getAllSessions = useCallback(async (): Promise<
+    Record<string, Session> | undefined
+  > => {
+    if (!client)
+      throw new ZeroXKeyError(
+        "Client is not initialized.",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
+    return withZeroXKeyErrorHandling(
+      () => client.getAllSessions(),
+      () => logout(),
+      callbacks,
+      "Failed to get all sessions",
+    );
+  }, [client, callbacks, masterConfig, session, user]);
+
+  const setActiveSession = useCallback(
+    async (params: SetActiveSessionParams): Promise<void> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const session = await withZeroXKeyErrorHandling(
+        () => client.getSession({ sessionKey: params.sessionKey }),
+        () => logout(),
+        callbacks,
+        "Failed to get session",
+      );
+      const s = await getSession();
+      if (!s) {
+        throw new ZeroXKeyError(
+          "Session not found.",
+          ZeroXKeyErrorCodes.NOT_FOUND,
+        );
+      }
+      await withZeroXKeyErrorHandling(
+        () => client.setActiveSession(params),
+        () => logout(),
+        callbacks,
+        "Failed to set active session",
+      );
+      setSession(session);
+      await withZeroXKeyErrorHandling(
+        async () => {
+          await maybeRefreshWallets();
+          await maybeRefreshUser();
+        },
+        () => logout(),
+        callbacks,
+        "Failed to refresh data after setting active session",
+      );
+      return;
+    },
+    [client, callbacks, session, user, masterConfig],
+  );
+
+  const getActiveSessionKey = useCallback(async (): Promise<
+    string | undefined
+  > => {
+    if (!client)
+      throw new ZeroXKeyError(
+        "Client is not initialized.",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
+    return withZeroXKeyErrorHandling(
+      () => client.getActiveSessionKey(),
+      () => logout(),
+      callbacks,
+      "Failed to get active session key",
+    );
+  }, [client, callbacks, masterConfig, session, user]);
+
+  const clearUnusedKeyPairs = useCallback(async (): Promise<void> => {
+    if (!client)
+      throw new ZeroXKeyError(
+        "Client is not initialized.",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
+    return withZeroXKeyErrorHandling(
+      () => client.clearUnusedKeyPairs(),
+      () => logout(),
+      callbacks,
+      "Failed to clear unused key pairs",
+    );
+  }, [client, callbacks, masterConfig, session, user]);
+
+  const createApiKeyPair = useCallback(
+    async (params?: CreateApiKeyPairParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.createApiKeyPair(params),
+        () => logout(),
+        callbacks,
+        "Failed to create API key pair",
+      );
+    },
+    [client, callbacks, session, user, masterConfig],
+  );
+
+  const getProxyAuthConfig =
+    useCallback(async (): Promise<ProxyTGetWalletKitConfigResponse> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.getProxyAuthConfig(),
+        () => logout(),
+        callbacks,
+        "Failed to get proxy auth config",
+      );
+    }, [client, callbacks, masterConfig, session, user]);
+
+  const verifyAppProofs = useCallback(
+    async (params: VerifyAppProofsParams): Promise<void> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.verifyAppProofs(params),
+        () => logout(),
+        callbacks,
+        "Failed to verify app proofs",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const refreshUser = useCallback(
+    async (params?: RefreshUserParams): Promise<void> => {
+      const { stampWith, organizationId, userId } = params || {};
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      const user = await withZeroXKeyErrorHandling(
+        () =>
+          fetchUser({
+            stampWith,
+            ...(organizationId && { organizationId }),
+            ...(userId && { userId }),
+          }),
+        () => logout(),
+        callbacks,
+        "Failed to refresh user",
+      );
+      if (user) {
+        setUser(user);
+      }
+    },
+    [client, callbacks, fetchUser, session, user],
+  );
+
+  /**
+   * @internal
+   * Auto-refresh user only if enabled in config. This is only used internally.
+   *
+   * @param params.organizationId - organization ID to specify the sub-organization (defaults to the current session's organizationId).
+   * @param params.userId - user ID to fetch specific user details (defaults to the current session's userId).
+   * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
+   * @returns A promise that resolves when the user is refreshed, or does nothing if auto-refresh is disabled
+   */
+  const maybeRefreshUser = useCallback(
+    async (params?: RefreshUserParams): Promise<void> => {
+      if (!masterConfig?.autoRefreshManagedState) return;
+      return refreshUser(params);
+    },
+    [masterConfig, refreshUser],
+  );
+
+  const refreshWallets = useCallback(
+    async (params?: RefreshWalletsParams): Promise<Wallet[]> => {
+      const { stampWith, organizationId, userId } = params || {};
+
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+
+      const wallets = await withZeroXKeyErrorHandling(
+        () =>
+          fetchWallets({
+            stampWith,
+            ...(organizationId && { organizationId }),
+            ...(userId && { userId }),
+          }),
+        () => logout(),
+        callbacks,
+        "Failed to refresh wallets",
+      );
+      if (wallets) {
+        setWallets(wallets);
+      }
+
+      return wallets;
+    },
+    [client, callbacks, fetchWallets, session, user],
+  );
+
+  /**
+   * @internal
+   * Auto-refresh wallets only if enabled in config. This is only used internally.
+   *
+   * @param params.organizationId - organization ID to specify the sub-organization (defaults to the current session's organizationId).
+   * @param params.userId - user ID to fetch specific user details (defaults to the current session's userId).
+   * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
+   * @returns A promise that resolves to an array of wallets, or an empty array if auto-refresh is disabled
+   */
+  const maybeRefreshWallets = useCallback(
+    async (params?: RefreshWalletsParams): Promise<Wallet[]> => {
+      if (!masterConfig?.autoRefreshManagedState) return [];
+      return refreshWallets(params);
+    },
+    [masterConfig, refreshWallets],
+  );
+
+  const handleDiscordOauth = useCallback(
+    async (params?: HandleDiscordOauthParams): Promise<void> => {
+      const { additionalState: additionalParameters } = params || {};
+      const {
+        clientId,
+        redirectUri,
+        appScheme: scheme,
+      } = getOauthProviderSettings(OAuthProviders.DISCORD);
+      try {
+        if (!masterConfig) {
+          throw new ZeroXKeyError(
+            "Config is not ready yet!",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!clientId) {
+          throw new ZeroXKeyError(
+            "Discord Client ID is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!redirectUri) {
+          throw new ZeroXKeyError(
+            "OAuth Redirect URI is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!scheme) {
+          throw new ZeroXKeyError(
+            "Missing appScheme. Please set auth.oauth.appScheme.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        // Create key pair and generate nonce
+        const publicKey = await createApiKeyPair();
+        if (!publicKey) {
+          throw new ZeroXKeyError(
+            "Failed to create public key for OAuth.",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+        const nonce = bytesToHex(sha256(publicKey));
+
+        // Generate PKCE challenge pair and store verifier
+        const { verifier, codeChallenge } = await generateChallengePair();
+        await storePKCEVerifier(OAuthProviders.DISCORD, verifier);
+
+        // Build OAuth URL (direct Discord URL, not proxy)
+        const discordAuthUrl = buildOAuthUrl({
+          provider: OAuthProviders.DISCORD,
+          clientId,
+          redirectUri,
+          publicKey,
+          nonce,
+          codeChallenge,
+          additionalState: additionalParameters,
+          useOauthProxyOrigin: false,
+        });
+
+        if (!(await InAppBrowser.isAvailable())) {
+          throw new ZeroXKeyError(
+            "InAppBrowser is not available",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const result = await InAppBrowser.openAuth(discordAuthUrl, scheme, {
+          dismissButtonStyle: "cancel",
+          animated: true,
+          modalPresentationStyle: "fullScreen",
+          modalTransitionStyle: "coverVertical",
+          modalEnabled: true,
+          enableBarCollapsing: false,
+          showTitle: true,
+          enableUrlBarHiding: true,
+          enableDefaultShare: true,
+        });
+
+        if (!result || result.type !== "success" || !result.url) {
+          throw new ZeroXKeyError(
+            "OAuth flow did not complete successfully",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Parse the deep link result
+        const parsed = parseInAppBrowserResult(result.url);
+        if (!parsed.authCode) {
+          throw new ZeroXKeyError(
+            "Missing authorization code from Discord OAuth",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Handle PKCE flow: exchange code for token and complete
+        await handlePKCEFlow({
+          provider: OAuthProviders.DISCORD,
+          publicKey,
+          authCode: parsed.authCode,
+          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
+          ...(callbacks && { callbacks }),
+          completeOauth,
+          exchangeCodeForToken: async (codeVerifier) => {
+            const resp = await client?.httpClient?.proxyOAuth2Authenticate({
+              provider: "OAUTH2_PROVIDER_DISCORD",
+              authCode: parsed.authCode!,
+              redirectUri,
+              codeVerifier,
+              clientId,
+              nonce,
+            });
+            const oidcToken = resp?.oidcToken as string;
+            if (!oidcToken) {
+              throw new ZeroXKeyError(
+                "Missing oidcToken from OAuth exchange",
+                ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+              );
+            }
+            return oidcToken;
+          },
+        });
+        return;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const handleXOauth = useCallback(
+    async (params?: HandleXOauthParams): Promise<void> => {
+      const { additionalState: additionalParameters } = params || {};
+      const {
+        clientId,
+        redirectUri,
+        appScheme: scheme,
+      } = getOauthProviderSettings(OAuthProviders.X);
+      try {
+        if (!masterConfig) {
+          throw new ZeroXKeyError(
+            "Config is not ready yet!",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!clientId) {
+          throw new ZeroXKeyError(
+            "Twitter Client ID is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!redirectUri) {
+          throw new ZeroXKeyError(
+            "OAuth Redirect URI is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!scheme) {
+          throw new ZeroXKeyError(
+            "Missing appScheme. Please set auth.oauth.appScheme.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const publicKey = await createApiKeyPair();
+        if (!publicKey) {
+          throw new ZeroXKeyError(
+            "Failed to create public key for OAuth.",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+        const nonce = bytesToHex(sha256(publicKey));
+
+        // Generate PKCE challenge pair and store verifier
+        const { verifier, codeChallenge } = await generateChallengePair();
+        await storePKCEVerifier(OAuthProviders.X, verifier);
+
+        // Build OAuth URL (direct X/Twitter URL, not proxy)
+        const twitterAuthUrl = buildOAuthUrl({
+          provider: OAuthProviders.X,
+          clientId,
+          redirectUri,
+          publicKey,
+          nonce,
+          codeChallenge,
+          additionalState: additionalParameters,
+          useOauthProxyOrigin: false,
+        });
+
+        if (!(await InAppBrowser.isAvailable())) {
+          throw new ZeroXKeyError(
+            "InAppBrowser is not available",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const result = await InAppBrowser.openAuth(twitterAuthUrl, scheme, {
+          dismissButtonStyle: "cancel",
+          animated: true,
+          modalPresentationStyle: "fullScreen",
+          modalTransitionStyle: "coverVertical",
+          modalEnabled: true,
+          enableBarCollapsing: false,
+          showTitle: true,
+          enableUrlBarHiding: true,
+          enableDefaultShare: true,
+        });
+
+        if (!result || result.type !== "success" || !result.url) {
+          throw new ZeroXKeyError(
+            "OAuth flow did not complete successfully",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Parse the deep link result
+        const parsed = parseInAppBrowserResult(result.url);
+        if (!parsed.authCode) {
+          throw new ZeroXKeyError(
+            "Missing authorization code from Twitter OAuth",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Handle PKCE flow: exchange code for token and complete
+        await handlePKCEFlow({
+          provider: OAuthProviders.X,
+          publicKey,
+          authCode: parsed.authCode,
+          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
+          ...(callbacks && { callbacks }),
+          completeOauth,
+          exchangeCodeForToken: async (codeVerifier) => {
+            const resp = await client?.httpClient?.proxyOAuth2Authenticate({
+              provider: "OAUTH2_PROVIDER_X",
+              authCode: parsed.authCode!,
+              redirectUri,
+              codeVerifier,
+              clientId,
+              nonce,
+            });
+            const oidcToken = resp?.oidcToken as string;
+            if (!oidcToken) {
+              throw new ZeroXKeyError(
+                "Missing oidcToken from OAuth exchange",
+                ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+              );
+            }
+            return oidcToken;
+          },
+        });
+        return;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const handleGoogleOauth = useCallback(
+    async (params?: HandleGoogleOauthParams): Promise<void> => {
+      const {} = params || {};
+      const {
+        clientId,
+        redirectUri,
+        appScheme: scheme,
+      } = getOauthProviderSettings(OAuthProviders.GOOGLE);
+
+      try {
+        if (!masterConfig) {
+          throw new ZeroXKeyError(
+            "Config is not ready yet!",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!clientId) {
+          throw new ZeroXKeyError(
+            "Google Client ID is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!redirectUri) {
+          throw new ZeroXKeyError(
+            "OAuth Redirect URI is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!scheme) {
+          throw new ZeroXKeyError(
+            "Missing appScheme. Please set auth.oauth.appScheme.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const finalRedirectUri = `${redirectUri}?scheme=${encodeURIComponent(scheme)}`;
+
+        // Create key pair and generate nonce
+        const publicKey = await createApiKeyPair();
+        if (!publicKey) {
+          throw new ZeroXKeyError(
+            "Failed to create public key for OAuth.",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+        const nonce = bytesToHex(sha256(publicKey));
+
+        // Build OAuth URL using ZeroXKey OAuth proxy
+        const oauthUrl = buildOAuthUrl({
+          provider: OAuthProviders.GOOGLE,
+          clientId,
+          redirectUri: finalRedirectUri,
+          publicKey,
+          nonce,
+          useOauthProxyOrigin: true,
+        });
+
+        if (!(await InAppBrowser.isAvailable())) {
+          throw new ZeroXKeyError(
+            "InAppBrowser is not available",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const result = await InAppBrowser.openAuth(oauthUrl, scheme, {
+          dismissButtonStyle: "cancel",
+          animated: true,
+          modalPresentationStyle: "fullScreen",
+          modalTransitionStyle: "coverVertical",
+          modalEnabled: true,
+          enableBarCollapsing: false,
+          showTitle: true,
+          enableUrlBarHiding: true,
+          enableDefaultShare: true,
+        });
+
+        if (!result || result.type !== "success" || !result.url) {
+          throw new ZeroXKeyError(
+            "OAuth flow did not complete successfully",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Parse the deep link result
+        const parsed = parseInAppBrowserResult(result.url);
+        if (!parsed.idToken) {
+          throw new ZeroXKeyError(
+            "oidcToken not found in the response",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Complete OAuth flow
+        await completeOAuthFlow({
+          provider: OAuthProviders.GOOGLE,
+          publicKey,
+          oidcToken: parsed.idToken,
+          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
+          ...(callbacks && { callbacks }),
+          completeOauth,
+        });
+        return;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const handleAppleOauth = useCallback(
+    async (params?: HandleAppleOauthParams): Promise<void> => {
+      const { additionalState: additionalParameters } = params || {};
+      const {
+        clientId,
+        redirectUri,
+        appScheme: scheme,
+      } = getOauthProviderSettings(OAuthProviders.APPLE);
+
+      try {
+        if (!masterConfig) {
+          throw new ZeroXKeyError(
+            "Config is not ready yet!",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!clientId) {
+          throw new ZeroXKeyError(
+            "Apple Client ID is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!redirectUri) {
+          throw new ZeroXKeyError(
+            "OAuth Redirect URI is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!scheme) {
+          throw new ZeroXKeyError(
+            "Missing appScheme. Please set auth.oauth.appScheme.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const finalRedirectUri = `${redirectUri}?scheme=${encodeURIComponent(scheme)}`;
+
+        // Create key pair and generate nonce
+        const publicKey = await createApiKeyPair();
+        if (!publicKey) {
+          throw new ZeroXKeyError(
+            "Failed to create public key for OAuth.",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+        const nonce = bytesToHex(sha256(publicKey));
+
+        // Build OAuth URL using ZeroXKey OAuth proxy
+        const oauthUrl = buildOAuthUrl({
+          provider: OAuthProviders.APPLE,
+          clientId,
+          redirectUri: finalRedirectUri,
+          publicKey,
+          nonce,
+          additionalState: additionalParameters,
+          useOauthProxyOrigin: true,
+        });
+
+        if (!(await InAppBrowser.isAvailable())) {
+          throw new ZeroXKeyError(
+            "InAppBrowser is not available",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const result = await InAppBrowser.openAuth(oauthUrl, scheme, {
+          dismissButtonStyle: "cancel",
+          animated: true,
+          modalPresentationStyle: "fullScreen",
+          modalTransitionStyle: "coverVertical",
+          modalEnabled: true,
+          enableBarCollapsing: false,
+          showTitle: true,
+          enableUrlBarHiding: true,
+          enableDefaultShare: true,
+        });
+
+        if (!result || result.type !== "success" || !result.url) {
+          throw new ZeroXKeyError(
+            "OAuth flow did not complete successfully",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Parse the deep link result
+        const parsed = parseInAppBrowserResult(result.url);
+        if (!parsed.idToken) {
+          throw new ZeroXKeyError(
+            "oidcToken not found in the response",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Complete OAuth flow
+        await completeOAuthFlow({
+          provider: OAuthProviders.APPLE,
+          publicKey,
+          oidcToken: parsed.idToken,
+          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
+          ...(callbacks && { callbacks }),
+          completeOauth,
+        });
+        return;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  const handleFacebookOauth = useCallback(
+    async (params?: HandleFacebookOauthParams): Promise<void> => {
+      const { additionalState: additionalParameters } = params || {};
+      const {
+        clientId,
+        redirectUri,
+        appScheme: scheme,
+      } = getOauthProviderSettings(OAuthProviders.FACEBOOK);
+
+      try {
+        if (!masterConfig) {
+          throw new ZeroXKeyError(
+            "Config is not ready yet!",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!clientId) {
+          throw new ZeroXKeyError(
+            "Facebook Client ID is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!redirectUri) {
+          throw new ZeroXKeyError(
+            "OAuth Redirect URI is not configured.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        if (!scheme) {
+          throw new ZeroXKeyError(
+            "Missing appScheme. Please set auth.oauth.appScheme.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const finalRedirectUri = `${redirectUri}?scheme=${encodeURIComponent(scheme)}`;
+
+        // Create key pair and generate nonce
+        const publicKey = await createApiKeyPair();
+        if (!publicKey) {
+          throw new ZeroXKeyError(
+            "Failed to create public key for OAuth.",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+        const nonce = bytesToHex(sha256(publicKey));
+
+        // Generate PKCE challenge pair and store verifier
+        const { verifier, codeChallenge } = await generateChallengePair();
+        await storePKCEVerifier(OAuthProviders.FACEBOOK, verifier);
+
+        // Build OAuth URL using ZeroXKey OAuth proxy
+        const oauthUrl = buildOAuthUrl({
+          provider: OAuthProviders.FACEBOOK,
+          clientId,
+          redirectUri: finalRedirectUri,
+          publicKey,
+          nonce,
+          codeChallenge,
+          additionalState: additionalParameters,
+          useOauthProxyOrigin: true,
+        });
+
+        if (!(await InAppBrowser.isAvailable())) {
+          throw new ZeroXKeyError(
+            "InAppBrowser is not available",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+
+        const result = await InAppBrowser.openAuth(oauthUrl, scheme, {
+          dismissButtonStyle: "cancel",
+          animated: true,
+          modalPresentationStyle: "fullScreen",
+          modalTransitionStyle: "coverVertical",
+          modalEnabled: true,
+          enableBarCollapsing: false,
+          showTitle: true,
+          enableUrlBarHiding: true,
+          enableDefaultShare: true,
+        });
+
+        if (!result || result.type !== "success" || !result.url) {
+          throw new ZeroXKeyError(
+            "OAuth flow did not complete successfully",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Parse the deep link result
+        const parsed = parseInAppBrowserResult(result.url);
+        if (!parsed.authCode) {
+          throw new ZeroXKeyError(
+            "Missing authorization code from Facebook OAuth",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          );
+        }
+
+        // Handle PKCE flow: exchange code for token and complete
+        await handlePKCEFlow({
+          provider: OAuthProviders.FACEBOOK,
+          publicKey,
+          authCode: parsed.authCode,
+          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
+          ...(callbacks && { callbacks }),
+          completeOauth,
+          exchangeCodeForToken: async (codeVerifier) => {
+            const tokenData = await exchangeCodeForToken(
+              clientId,
+              finalRedirectUri,
+              parsed.authCode!,
+              codeVerifier,
+            );
+            const idToken = tokenData?.id_token as string;
+            if (!idToken) {
+              throw new ZeroXKeyError(
+                "Missing oidcToken from OAuth exchange",
+                ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+              );
+            }
+            return idToken;
+          },
+        });
+        return;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [client, callbacks, masterConfig, session, user],
+  );
+
+  useEffect(() => {
+    if (proxyAuthConfigRef.current) return;
+
+    // Only fetch the proxy auth config once. Use that to build the master config.
+    const fetchProxyAuthConfig = async () => {
+      try {
+        let proxyAuthConfig: ProxyTGetWalletKitConfigResponse | undefined;
+        if (shouldFetchWalletKitConfig) {
+          // Only fetch the proxy auth config if we have an authProxyId and the autoFetchWalletKitConfig param is enabled or not passed in.
+          const sanitizedAuthProxyUrl =
+            config.authProxyUrl && config.authProxyUrl.trim()
+              ? config.authProxyUrl
+              : undefined;
+          proxyAuthConfig = await getAuthProxyConfig(
+            config.authProxyConfigId!, // Can assert safely. See shouldFetchWalletKitConfig definition.
+            sanitizedAuthProxyUrl,
+          );
+          proxyAuthConfigRef.current = proxyAuthConfig;
+        }
+
+        setMasterConfig(buildConfig(proxyAuthConfig));
+      } catch {
+        setClientState(ClientState.Error);
+      }
+    };
+
+    fetchProxyAuthConfig();
+  }, []);
+
+  useEffect(() => {
+    // Start the client initialization process once we have the master config.
+    if (!masterConfig) return;
+    initializeClient();
+  }, [masterConfig]);
+
+  useEffect(() => {
+    // Handle changes to the passed in config prop -- update the master config
+    // Rebuild the master config with the updated config and stored proxyAuthConfig
+    // If we don't have a stored proxyAuthConfig and we need to fetch it, we wait until that fetch is done in the other useEffect.
+    // If shouldFetchWalletKitConfig is false, we'll never have a proxyAuthConfig to build the master config with, so this useEffect should always run.
+    if (!proxyAuthConfigRef.current && shouldFetchWalletKitConfig) return;
+
+    setMasterConfig(buildConfig(proxyAuthConfigRef.current ?? undefined));
+  }, [config, proxyAuthConfigRef.current]);
+
+  useEffect(() => {
+    // authState must be consistent with session state. We found during testing that there are cases where the session and authState can be out of sync in very rare edge cases.
+    // This will ensure that they are always in sync and remove the need to setAuthState manually in other places.
+    if (session && isValidSession(session)) {
+      setAuthState(AuthState.Authenticated);
+    } else {
+      setAuthState(AuthState.Unauthenticated);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    // After client and config are ready, initialize sessions then mark client ready.
+    if (!client || !masterConfig) return;
+
+    clearSessionTimeouts();
+
+    initializeSessions().finally(() => {
+      setClientState(ClientState.Ready);
+    });
+
+    return () => {
+      clearSessionTimeouts();
+    };
+  }, [client]);
+
+  return (
+    <ClientContext.Provider
+      value={{
+        session,
+        allSessions,
+        clientState,
+        authState,
+        user,
+        wallets,
+        config: masterConfig,
+        httpClient: client?.httpClient,
+        createHttpClient,
+        createPasskey,
+        logout,
+        loginWithPasskey,
+        signUpWithPasskey,
+        initOtp,
+        verifyOtp,
+        loginWithOtp,
+        signUpWithOtp,
+        completeOtp,
+        loginWithOauth,
+        signUpWithOauth,
+        completeOauth,
+        fetchWallets,
+        fetchWalletAccounts,
+        fetchPrivateKeys,
+        verifyAppProofs,
+        refreshWallets,
+        signMessage,
+        signTransaction,
+        signAndSendTransaction,
+        ethSendTransaction,
+        ethSendErc20Transfer,
+        solSendTransaction,
+        pollTransactionStatus,
+        fetchUser,
+        fetchOrCreateP256ApiKeyUser,
+        fetchOrCreatePolicies,
+        refreshUser,
+        updateUserEmail,
+        removeUserEmail,
+        updateUserPhoneNumber,
+        removeUserPhoneNumber,
+        updateUserName,
+        addOauthProvider,
+        removeOauthProviders,
+        addPasskey,
+        removePasskeys,
+        createWallet,
+        createWalletAccounts,
+        exportWallet,
+        exportPrivateKey,
+        exportWalletAccount,
+        importWallet,
+        importPrivateKey,
+        deleteSubOrganization,
+        storeSession,
+        clearSession,
+        clearAllSessions,
+        refreshSession,
+        getSession,
+        getAllSessions,
+        setActiveSession,
+        clearUnusedKeyPairs,
+        getActiveSessionKey,
+        createApiKeyPair,
+        getProxyAuthConfig,
+        handleGoogleOauth,
+        handleXOauth,
+        handleDiscordOauth,
+        handleAppleOauth,
+        handleFacebookOauth,
+        fetchBootProofForAppProof,
+      }}
+    >
+      {children}
+    </ClientContext.Provider>
+  );
+};

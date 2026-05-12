@@ -1,0 +1,367 @@
+[
+  {
+    "dirName": "api-key-stamper",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/api-key-stamper",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "core",
+    "exports": null,
+    "files": ["dist", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/core",
+    "sideEffects": false,
+    "types": "dist/index.d.ts"
+  },
+  {
+    "dirName": "cosmjs",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/cosmjs",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "crypto",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/crypto",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "eip-1193-provider",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/eip-1193-provider",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "encoding",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/encoding",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "ethers",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/ethers",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "gas-station",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist"],
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "name": "@0xkey-io/gas-station",
+    "sideEffects": false,
+    "types": "dist/index.d.ts"
+  },
+  {
+    "dirName": "http",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/http",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "iframe-stamper",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/iframe-stamper",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "indexed-db-stamper",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/indexed-db-stamper",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "react-native-passkey-stamper",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/react-native-passkey-stamper",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "react-native-wallet-kit",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/react-native-wallet-kit",
+    "sideEffects": false,
+    "types": "dist/index.d.ts"
+  },
+  {
+    "dirName": "react-wallet-kit",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      },
+      "./styles.css": "./dist/styles.css"
+    },
+    "files": ["dist", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/react-wallet-kit",
+    "sideEffects": false,
+    "types": "dist/index.d.ts"
+  },
+  {
+    "dirName": "sdk-browser",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/sdk-browser",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "sdk-server",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/sdk-server",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "sdk-types",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/**/*", "CHANGELOG.md", "README.md"],
+    "main": "dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/sdk-types",
+    "sideEffects": false,
+    "types": "dist/index.d.ts"
+  },
+  {
+    "dirName": "solana",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/solana",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "telegram-cloud-storage-stamper",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/telegram-cloud-storage-stamper",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "viem",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/viem",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "wallet-stamper",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/wallet-stamper",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
+    "dirName": "webauthn-stamper",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/webauthn-stamper",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  }
+]

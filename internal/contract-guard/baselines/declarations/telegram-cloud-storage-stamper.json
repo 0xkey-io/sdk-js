@@ -1,0 +1,21 @@
+{
+  "name": "@0xkey-io/telegram-cloud-storage-stamper",
+  "exports": [
+    {
+      "kind": "type",
+      "name": "CloudStorageAPIKey"
+    },
+    {
+      "kind": "const",
+      "name": "DEFAULT_ZEROXKEY_CLOUD_STORAGE_KEY"
+    },
+    {
+      "kind": "class",
+      "name": "TelegramCloudStorageStamper"
+    },
+    {
+      "kind": "type",
+      "name": "TTelegramCloudStorageStamperConfig"
+    }
+  ]
+}

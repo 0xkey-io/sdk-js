@@ -1,0 +1,19 @@
+{
+  "name": "@0xkey-io/contract-guard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public API contract baselines and compatibility guards for sdk-js",
+  "scripts": {
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules ./scripts/run-guards.mjs",
+    "audit:surfaces": "node ./scripts/audit-package-surfaces.mjs",
+    "audit:leaks": "node ./scripts/check-internal-leaks.mjs",
+    "audit:exports": "node ./scripts/audit-runtime-exports.mjs",
+    "audit:declarations": "node ./scripts/audit-declarations.mjs",
+    "audit:all": "node ./scripts/run-guards.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.4.3"
+  }
+}

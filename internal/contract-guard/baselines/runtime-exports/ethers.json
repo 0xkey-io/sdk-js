@@ -1,0 +1,26 @@
+{
+  "name": "@0xkey-io/ethers",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "ZeroXKeyActivityError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "ZeroXKeyRequestError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "ZeroXKeySigner",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "serializeSignature",
+      "kind": "class",
+      "arity": 1
+    }
+  ]
+}

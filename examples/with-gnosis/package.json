@@ -1,0 +1,25 @@
+{
+  "name": "@0xkey-io/example-with-gnosis",
+  "version": "0.1.4",
+  "private": true,
+  "scripts": {
+    "start": "pnpm -w run build-all && tsx src/index.ts",
+    "clean": "rimraf ./dist ./.cache"
+  },
+  "dependencies": {
+    "@safe-global/protocol-kit": "^3.0.1",
+    "@safe-global/safe-core-sdk-types": "^4.0.1",
+    "@safe-global/safe-ethers-lib": "^1.9.2",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "@0xkey-io/ethers": "workspace:*",
+    "dotenv": "^16.0.3",
+    "ethers": "^6.10.0"
+  },
+  "overrides": {
+    "@safe-global/protocol-kit": {
+      "web3": ">=4.2.1",
+      "web3-core": ">=4.2.1",
+      "web3-utils": ">=4.2.1"
+    }
+  }
+}

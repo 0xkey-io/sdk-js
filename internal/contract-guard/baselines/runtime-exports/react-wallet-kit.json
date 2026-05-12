@@ -1,0 +1,120 @@
+{
+  "name": "@0xkey-io/react-wallet-kit",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "AuthMethod",
+      "kind": "object"
+    },
+    {
+      "name": "AuthState",
+      "kind": "object"
+    },
+    {
+      "name": "Chain",
+      "kind": "object"
+    },
+    {
+      "name": "ClientState",
+      "kind": "object"
+    },
+    {
+      "name": "Curve",
+      "kind": "object"
+    },
+    {
+      "name": "ExportType",
+      "kind": "object"
+    },
+    {
+      "name": "FilterType",
+      "kind": "object"
+    },
+    {
+      "name": "ImportType",
+      "kind": "object"
+    },
+    {
+      "name": "KeyFormat",
+      "kind": "object"
+    },
+    {
+      "name": "OtpType",
+      "kind": "object"
+    },
+    {
+      "name": "OtpTypeToFilterTypeMap",
+      "kind": "object"
+    },
+    {
+      "name": "SessionKey",
+      "kind": "object"
+    },
+    {
+      "name": "SignIntent",
+      "kind": "object"
+    },
+    {
+      "name": "StamperType",
+      "kind": "object"
+    },
+    {
+      "name": "WalletInterfaceType",
+      "kind": "object"
+    },
+    {
+      "name": "WalletSource",
+      "kind": "object"
+    },
+    {
+      "name": "ZeroXKeyClient",
+      "kind": "class",
+      "arity": 4
+    },
+    {
+      "name": "ZeroXKeyProvider",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "decodeVerificationToken",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "getClientSignatureMessageForLogin",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "getClientSignatureMessageForSignup",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "isEthereumProvider",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "isSolanaProvider",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "sendSignedRequest",
+      "kind": "function",
+      "arity": 1
+    },
+    {
+      "name": "useModal",
+      "kind": "function",
+      "arity": 0
+    },
+    {
+      "name": "useZeroXKey",
+      "kind": "function",
+      "arity": 0
+    }
+  ]
+}

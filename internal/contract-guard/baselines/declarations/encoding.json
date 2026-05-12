@@ -1,0 +1,17 @@
+{
+  "name": "@0xkey-io/encoding",
+  "exports": [
+    {
+      "kind": "re-export",
+      "name": "bs58"
+    },
+    {
+      "kind": "re-export",
+      "name": "bs58check"
+    },
+    {
+      "kind": "const",
+      "name": "DEFAULT_JWK_MEMBER_BYTE_LENGTH"
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+import type { StamperType } from "@0xkey-io/core";
+import type {
+  v1WalletAccountParams,
+  v1AddressFormat,
+  v1Curve,
+} from "@0xkey-io/sdk-types";
+
+export type RefreshUserParams = {
+  stampWith?: StamperType | undefined;
+  organizationId?: string;
+  userId?: string;
+};
+
+export type RefreshWalletsParams = {
+  stampWith?: StamperType | undefined;
+  organizationId?: string;
+  userId?: string;
+};
+
+export type HandleDiscordOauthParams = {
+  clientId?: string;
+  additionalState?: Record<string, string>;
+  onOauthSuccess?: (params: {
+    oidcToken: string;
+    providerName: string;
+    publicKey?: string;
+    sessionKey?: string;
+  }) => void;
+};
+
+export type HandleXOauthParams = {
+  clientId?: string;
+  additionalState?: Record<string, string>;
+  onOauthSuccess?: (params: {
+    oidcToken: string;
+    providerName: string;
+    publicKey?: string;
+    sessionKey?: string;
+  }) => void;
+};
+
+export type HandleGoogleOauthParams = {
+  clientId?: string;
+  additionalState?: Record<string, string>;
+  onOauthSuccess?: (params: {
+    oidcToken: string;
+    providerName: string;
+    publicKey?: string;
+    sessionKey?: string;
+  }) => void;
+};
+
+export type HandleAppleOauthParams = {
+  clientId?: string;
+  additionalState?: Record<string, string>;
+  onOauthSuccess?: (params: {
+    oidcToken: string;
+    providerName: string;
+    publicKey?: string;
+    sessionKey?: string;
+  }) => void;
+};
+
+export type HandleFacebookOauthParams = {
+  clientId?: string;
+  additionalState?: Record<string, string>;
+  onOauthSuccess?: (params: {
+    oidcToken: string;
+    providerName: string;
+    publicKey?: string;
+    sessionKey?: string;
+  }) => void;
+};
+
+// Export helpers
+export type ExportWalletParams = {
+  walletId: string;
+  targetPublicKey?: string;
+  organizationId?: string;
+  stampWith?: StamperType | undefined;
+  decrypt?: boolean;
+};
+
+export type ExportPrivateKeyParams = {
+  privateKeyId: string;
+  targetPublicKey?: string;
+  organizationId?: string;
+  stampWith?: StamperType | undefined;
+  decrypt?: boolean;
+};
+
+export type ExportWalletAccountParams = {
+  address: string;
+  targetPublicKey?: string;
+  organizationId?: string;
+  stampWith?: StamperType | undefined;
+  decrypt?: boolean;
+};
+
+// Import helpers
+export type ImportWalletParams = {
+  mnemonic: string;
+  walletName: string;
+  accounts?: v1WalletAccountParams[];
+  organizationId?: string;
+  userId?: string;
+  stampWith?: StamperType | undefined;
+};
+
+export type ImportPrivateKeyParams = {
+  privateKey: string;
+  privateKeyName: string;
+  addressFormats: v1AddressFormat[];
+  curve?: v1Curve;
+  keyFormat?: "HEXADECIMAL" | "SOLANA";
+  organizationId?: string;
+  userId?: string;
+  stampWith?: StamperType | undefined;
+};

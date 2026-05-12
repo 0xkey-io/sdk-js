@@ -1,0 +1,56 @@
+name: "Setup JS"
+description: "Install JS toolchain and dependencies (node_modules)"
+
+runs:
+  using: "composite"
+
+  steps:
+    # https://github.com/actions/setup-node
+    - name: Install Node.js
+      uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      with:
+        node-version-file: ".nvmrc"
+
+    - name: Use recent version of npm
+      run: npm install -g npm@11.5.1
+      shell: bash
+
+    - name: Use corepack to activate pnpm
+      run: npm i -g corepack@0.34.1 && corepack enable
+      shell: bash
+
+    - name: Get pnpm store directory (for caching)
+      id: pnpm-cache-dir
+      run: |
+        echo "dir=$(pnpm store path)" >> $GITHUB_OUTPUT
+      shell: bash
+
+    # https://github.com/actions/cache
+    - name: Setup pnpm store cache
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ${{ steps.pnpm-cache-dir.outputs.dir }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+      env:
+        SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+
+    - name: Audit the lockfiles to catch peer dependency issues
+      run: pnpm install -r --lockfile-only
+      shell: bash
+
+    - name: Install dependencies
+      run: pnpm install -r --frozen-lockfile
+      shell: bash
+
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d # v1.8.0
+      with:
+        cache: true
+        version: "stable"
+        cache-key: ${{ github.job }}-${{ github.sha }}
+        cache-restore-keys: |
+          ${{ github.job }}-${{ github.sha }}
+          ${{ github.job }}-
+          ${{ runner.os }}-foundry-toolchain

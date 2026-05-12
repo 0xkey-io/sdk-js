@@ -1,0 +1,11 @@
+{
+  "name": "@0xkey-io/webauthn-stamper",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "WebauthnStamper",
+      "kind": "class",
+      "arity": 1
+    }
+  ]
+}

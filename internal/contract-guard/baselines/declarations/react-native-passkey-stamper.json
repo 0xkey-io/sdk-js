@@ -1,0 +1,37 @@
+{
+  "name": "@0xkey-io/react-native-passkey-stamper",
+  "exports": [
+    {
+      "kind": "enum",
+      "name": "AuthenticatorTransport"
+    },
+    {
+      "kind": "function",
+      "name": "createPasskey"
+    },
+    {
+      "kind": "function",
+      "name": "isSupported"
+    },
+    {
+      "kind": "class",
+      "name": "PasskeyStamper"
+    },
+    {
+      "kind": "interface",
+      "name": "PublicKeyCredentialDescriptor"
+    },
+    {
+      "kind": "type",
+      "name": "TPasskeyRegistrationConfig"
+    },
+    {
+      "kind": "type",
+      "name": "TPasskeyStamperConfig"
+    },
+    {
+      "kind": "type",
+      "name": "ZeroXKeyAuthenticatorParams"
+    }
+  ]
+}

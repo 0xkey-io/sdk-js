@@ -1,0 +1,34 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "name": "http",
+  "exclude": [
+    "src/0xkey-helpers.ts",
+    "src/__generated__/services/coordinator/public/v1/public_api.fetcher.ts",
+    "src/__generated__/services/coordinator/public/v1/public_api.client.ts",
+    "src/__generated__/services/coordinator/public/v1/public_api.types.ts",
+    "src/__generated__/services/coordinator/public/v1/public_api.swagger.json",
+    "src/__generated__/services/coordinator/public/v1/sdk_api_types.ts",
+    "src/__generated__/barrel.ts",
+    "src/__inputs__/public_api.types.ts",
+    "src/__inputs__/public_api.swagger.json",
+    "src/__types__/base.ts",
+    "**/webauthn-json/**",
+    "**/__generated__/**",
+    "**/__inputs__/**",
+    "**/__types__/**",
+    "**/node_modules/**"
+  ],
+  "excludeInternal": true,
+  "includeVersion": true,
+  "alwaysCreateEntryPointModule": true,
+  "gitRevision": "main",
+  "router": "structure-dir",
+  "projectDocuments": ["documents/*.md", "CHANGELOG.md"],
+  "outputs": [
+    {
+      "name": "json",
+      "path": "./generated-docs/sdks",
+      "fileExtension": "json"
+    }
+  ]
+}

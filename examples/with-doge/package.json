@@ -1,0 +1,17 @@
+{
+  "name": "@0xkey-io/example-with-doge",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/createDogeTx.ts",
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@0xkey-io/sdk-server": "workspace:*",
+    "axios": "^1.13.5",
+    "bitcoinjs-lib": "6.1.6",
+    "dotenv": "16.0.3",
+    "path": "0.12.7"
+  }
+}

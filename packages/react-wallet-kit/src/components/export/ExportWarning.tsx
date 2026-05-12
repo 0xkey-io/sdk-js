@@ -1,0 +1,204 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTriangleExclamation,
+  IconDefinition,
+  faUnlock,
+  faEye,
+} from "@fortawesome/free-solid-svg-icons";
+import type { StamperType } from "@0xkey-io/core";
+import {
+  type Address,
+  type WalletId,
+  type PrivateKeyId,
+  KeyFormat,
+  ExportType,
+} from "../../types/base";
+import { useZeroXKey } from "../../providers/client/Hook";
+import { ZeroXKeyError, ZeroXKeyErrorCodes } from "@0xkey-io/sdk-types";
+import { ActionButton } from "../design/Buttons";
+import type { IframeStamper } from "@0xkey-io/iframe-stamper";
+import { useState } from "react";
+
+export function ExportWarning(props: {
+  target: WalletId | PrivateKeyId | Address;
+  exportIframeClient?: IframeStamper | null; // Replace with actual type if available
+  targetPublicKey?: string | undefined;
+  exportType: ExportType;
+  keyFormat?: KeyFormat | undefined;
+  setExportIframeVisible?: (visible: boolean) => void;
+  stampWith?: StamperType | undefined;
+  organizationId?: string | undefined;
+  onError: (error: any) => void;
+}) {
+  const {
+    target,
+    exportIframeClient,
+    targetPublicKey,
+    exportType,
+    keyFormat,
+    stampWith,
+    onError,
+  } = props;
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { exportWallet, exportPrivateKey, exportWalletAccount, session } =
+    useZeroXKey();
+
+  const warnings: Record<ExportType, string[]> = {
+    [ExportType.Wallet]: [
+      "Keep your seed phrase private.",
+      "Anyone who has your seed phrase can access your wallet.",
+      "Make sure nobody can see your screen when viewing your seed phrase.",
+    ],
+    [ExportType.PrivateKey]: [
+      "Keep your private key private.",
+      "Anyone who has your private key can access your wallet.",
+      "Make sure nobody can see your screen when viewing your private key.",
+    ],
+    [ExportType.WalletAccount]: [
+      "Keep your account details private.",
+      "Anyone who has your account details can access your wallet.",
+      "Make sure nobody can see your screen when viewing your account details.",
+    ],
+  };
+
+  const organizationId = props.organizationId || session?.organizationId;
+
+  if (!organizationId) {
+    throw new ZeroXKeyError(
+      "Organization ID is required for exporting.",
+      ZeroXKeyErrorCodes.EXPORT_WALLET_ERROR,
+    );
+  }
+
+  return (
+    <div className="flex flex-col w-full px-10">
+      <div className="flex flex-col gap-4 py-6 text-icon-text-light dark:text-icon-text-dark">
+        <IconText
+          icon={faTriangleExclamation}
+          text={warnings[exportType][0]!}
+        />
+        <IconText icon={faUnlock} text={warnings[exportType][1]!} />
+        <IconText icon={faEye} text={warnings[exportType][2]!} />
+      </div>
+      <ActionButton
+        name="confirm-export-warning-button"
+        loading={isLoading}
+        spinnerClassName="text-primary-text-light dark:text-primary-text-dark"
+        className="text-primary-text-light dark:text-primary-text-dark bg-primary-light dark:bg-primary-dark"
+        onClick={async () => {
+          setIsLoading(true);
+          try {
+            const resolvedTargetPublicKey =
+              targetPublicKey || exportIframeClient?.iframePublicKey;
+            if (!resolvedTargetPublicKey) {
+              throw new ZeroXKeyError(
+                "Export iframe is not ready. Please wait for the iframe to initialize or provide a targetPublicKey.",
+                ZeroXKeyErrorCodes.EXPORT_WALLET_ERROR,
+              );
+            }
+            let exportBundle;
+            switch (exportType) {
+              case ExportType.Wallet:
+                exportBundle = await exportWallet({
+                  walletId: target,
+                  targetPublicKey: resolvedTargetPublicKey,
+                  ...(stampWith && { stampWith: stampWith }),
+                  organizationId,
+                });
+                if (!exportBundle) {
+                  onError(
+                    new ZeroXKeyError(
+                      "Failed to retrieve export bundle",
+                      ZeroXKeyErrorCodes.EXPORT_WALLET_ERROR,
+                    ),
+                  );
+                }
+                await exportIframeClient?.injectWalletExportBundle(
+                  exportBundle,
+                  organizationId,
+                );
+                break;
+              case ExportType.PrivateKey:
+                exportBundle = await exportPrivateKey({
+                  privateKeyId: target,
+                  targetPublicKey: resolvedTargetPublicKey,
+                  ...(stampWith && { stampWith: stampWith }),
+                  organizationId,
+                });
+                if (!exportBundle) {
+                  onError(
+                    new ZeroXKeyError(
+                      "Failed to retrieve export bundle",
+                      ZeroXKeyErrorCodes.EXPORT_WALLET_ERROR,
+                    ),
+                  );
+                }
+                await exportIframeClient?.injectKeyExportBundle(
+                  exportBundle,
+                  session?.organizationId!,
+                  keyFormat,
+                );
+                break;
+              case ExportType.WalletAccount:
+                exportBundle = await exportWalletAccount({
+                  address: target,
+                  targetPublicKey: resolvedTargetPublicKey,
+                  ...(stampWith && { stampWith: stampWith }),
+                  organizationId,
+                });
+                if (!exportBundle) {
+                  onError(
+                    new ZeroXKeyError(
+                      "Failed to retrieve export bundle",
+                      ZeroXKeyErrorCodes.EXPORT_WALLET_ERROR,
+                    ),
+                  );
+                }
+                await exportIframeClient?.injectKeyExportBundle(
+                  exportBundle,
+                  session?.organizationId!,
+                  keyFormat,
+                );
+                break;
+              default:
+                throw new ZeroXKeyError(
+                  "Invalid export type",
+                  ZeroXKeyErrorCodes.EXPORT_WALLET_ERROR,
+                );
+            }
+            if (props.setExportIframeVisible) {
+              props.setExportIframeVisible(true);
+            }
+          } catch (error) {
+            onError(
+              new ZeroXKeyError(
+                `Error exporting wallet`,
+                ZeroXKeyErrorCodes.EXPORT_WALLET_ERROR,
+                error,
+              ),
+            );
+          } finally {
+            setIsLoading(false);
+          }
+        }}
+      >
+        {exportType === ExportType.PrivateKey
+          ? "Export Private Key"
+          : "Export Wallet"}
+      </ActionButton>
+    </div>
+  );
+}
+
+function IconText(props: { icon: IconDefinition; text: string }) {
+  return (
+    <div className="flex items-center gap-4">
+      <div className="w-6 h-fit shrink-0 flex items-center justify-center">
+        <FontAwesomeIcon size={"lg"} icon={props.icon} />
+      </div>
+      <span className="text-sm">{props.text}</span>
+    </div>
+  );
+}

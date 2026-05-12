@@ -1,0 +1,112 @@
+import * as dotenv from "dotenv";
+import * as path from "path";
+import prompts from "prompts";
+import { ZeroXKey } from "@0xkey-io/sdk-server";
+import { Crypto } from "@peculiar/webcrypto";
+import {
+  encryptPrivateKeyToBundle,
+  encryptWalletToBundle,
+} from "@0xkey-io/crypto";
+if (typeof crypto === "undefined") {
+  global.crypto = new Crypto();
+}
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+
+async function main() {
+  const organizationId = process.env.ORGANIZATION_ID!;
+  const userId = process.env.USER_ID!;
+  const zeroXKeyClient = new ZeroXKey({
+    apiBaseUrl: process.env.BASE_URL!,
+    apiPublicKey: process.env.API_PUBLIC_KEY!,
+    apiPrivateKey: process.env.API_PRIVATE_KEY!,
+    defaultOrganizationId: organizationId,
+  });
+  const { importType } = await prompts([
+    {
+      type: "text",
+      name: "importType",
+      message: `Enter Import Type, either "wallet" or "key"`,
+    },
+  ]);
+  let initResult;
+  if (importType == "wallet") {
+    initResult = await zeroXKeyClient.apiClient().initImportWallet({
+      userId,
+    });
+  } else if (importType == "key") {
+    initResult = await zeroXKeyClient.apiClient().initImportPrivateKey({
+      userId,
+    });
+  } else {
+    throw new Error(`Invalid import type. Please enter "wallet" or "key"`);
+  }
+
+  if (importType == "wallet") {
+    const { mnemonic } = await prompts([
+      {
+        type: "text",
+        name: "mnemonic",
+        message: "Enter mnemonic seed phrase for wallet to import",
+      },
+    ]);
+    const walletBundle = await encryptWalletToBundle({
+      mnemonic,
+      importBundle: initResult.importBundle,
+      userId,
+      organizationId,
+    });
+    const walletImportResult = await zeroXKeyClient.apiClient().importWallet({
+      userId: userId,
+      walletName: `example-import-wallet-node-${Date.now()}`,
+      encryptedBundle: walletBundle,
+      accounts: [],
+    });
+    console.log(
+      `Successfully imported wallet with id: ${walletImportResult.walletId}`,
+    );
+  }
+  if (importType == "key") {
+    const { privateKey } = await prompts([
+      {
+        type: "text",
+        name: "privateKey",
+        message: "Enter Private Key to import",
+      },
+    ]);
+    const { keyFormat } = await prompts([
+      {
+        type: "text",
+        name: "keyFormat",
+        message: "Enter Key Format, either HEXADECIMAL or SOLANA",
+      },
+    ]);
+    const privateKeyBundle = await encryptPrivateKeyToBundle({
+      privateKey,
+      keyFormat,
+      importBundle: initResult.importBundle,
+      userId,
+      organizationId,
+    });
+    const privateKeyImportResult = await zeroXKeyClient
+      .apiClient()
+      .importPrivateKey({
+        userId: userId,
+        privateKeyName: `example-import-private-key-node-${Date.now()}`,
+        encryptedBundle: privateKeyBundle,
+        curve: keyFormat == "SOLANA" ? "CURVE_ED25519" : "CURVE_SECP256K1",
+        addressFormats:
+          keyFormat == "SOLANA"
+            ? ["ADDRESS_FORMAT_SOLANA"]
+            : ["ADDRESS_FORMAT_ETHEREUM"],
+      });
+    console.log(
+      `Successfully imported private key with id: ${privateKeyImportResult.privateKeyId}`,
+    );
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

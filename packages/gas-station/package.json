@@ -1,0 +1,61 @@
+{
+  "name": "@0xkey-io/gas-station",
+  "version": "0.1.0",
+  "description": "0xkey Gas Station SDK for EIP-7702 delegated execution",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "author": {
+    "name": "0xkey",
+    "url": "https://0xkey.com/"
+  },
+  "homepage": "https://github.com/0xkey-io/sdk-js/tree/main/packages/gas-station",
+  "bugs": {
+    "url": "https://github.com/0xkey-io/sdk-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xkey-io/sdk-js.git",
+    "directory": "packages/gas-station"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c ../../rollup.config.base.mjs",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf ./dist ./.cache"
+  },
+  "keywords": [
+    "0xkey",
+    "gas-station",
+    "eip-7702",
+    "delegated-execution",
+    "paymaster",
+    "ethereum",
+    "viem"
+  ],
+  "dependencies": {
+    "viem": "^2.34.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.2",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "viem": "^2.24.0",
+    "@0xkey-io/sdk-server": "workspace:*"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}

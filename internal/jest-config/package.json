@@ -1,0 +1,17 @@
+{
+  "name": "@0xkey-io/jest-config",
+  "version": "0.1.3",
+  "private": true,
+  "scripts": {
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@babel/core": "7.26.9",
+    "@babel/preset-env": "7.20.2",
+    "@babel/preset-flow": "7.23.3",
+    "@babel/preset-react": "7.18.6",
+    "@babel/preset-typescript": "7.18.6",
+    "babel-jest": "29.4.3"
+  }
+}

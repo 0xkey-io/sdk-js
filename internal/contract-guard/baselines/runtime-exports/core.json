@@ -1,0 +1,170 @@
+{
+  "name": "@0xkey-io/core",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "ApiKeyStamper",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "AuthAction",
+      "kind": "object"
+    },
+    {
+      "name": "Chain",
+      "kind": "object"
+    },
+    {
+      "name": "Curve",
+      "kind": "object"
+    },
+    {
+      "name": "DEFAULT_SESSION_EXPIRATION_IN_SECONDS",
+      "kind": "string"
+    },
+    {
+      "name": "FiatOnRampBlockchainNetwork",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampCryptoCurrency",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampCurrency",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampPaymentMethod",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampProvider",
+      "kind": "object"
+    },
+    {
+      "name": "FilterType",
+      "kind": "object"
+    },
+    {
+      "name": "OAuthProviders",
+      "kind": "object"
+    },
+    {
+      "name": "OtpType",
+      "kind": "object"
+    },
+    {
+      "name": "OtpTypeToFilterTypeMap",
+      "kind": "object"
+    },
+    {
+      "name": "SessionKey",
+      "kind": "object"
+    },
+    {
+      "name": "SessionType",
+      "kind": "object"
+    },
+    {
+      "name": "SignIntent",
+      "kind": "object"
+    },
+    {
+      "name": "StamperType",
+      "kind": "object"
+    },
+    {
+      "name": "TERMINAL_ACTIVITY_STATUSES",
+      "kind": "object",
+      "tag": "[object Array]"
+    },
+    {
+      "name": "WalletInterfaceType",
+      "kind": "object"
+    },
+    {
+      "name": "WalletSource",
+      "kind": "object"
+    },
+    {
+      "name": "WebauthnStamper",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "ZeroXKeyClient",
+      "kind": "class",
+      "arity": 4
+    },
+    {
+      "name": "ZeroXKeyError",
+      "kind": "class",
+      "arity": 3
+    },
+    {
+      "name": "ZeroXKeyErrorCodes",
+      "kind": "object"
+    },
+    {
+      "name": "ZeroXKeyNetworkError",
+      "kind": "class",
+      "arity": 4
+    },
+    {
+      "name": "ZeroXKeyRequestError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "addressFormatConfig",
+      "kind": "object"
+    },
+    {
+      "name": "decodeVerificationToken",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "generateWalletAccountsFromAddressFormat",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "getAuthProxyConfig",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "getClientSignatureMessageForLogin",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "getClientSignatureMessageForSignup",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "isEthereumProvider",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "isSolanaProvider",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "sendSignedRequest",
+      "kind": "function",
+      "arity": 1
+    },
+    {
+      "name": "signWithApiKey",
+      "kind": "function",
+      "arity": 2
+    }
+  ]
+}

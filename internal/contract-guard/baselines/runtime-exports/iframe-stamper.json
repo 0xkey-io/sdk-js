@@ -1,0 +1,27 @@
+{
+  "name": "@0xkey-io/iframe-stamper",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "IframeEventType",
+      "kind": "object"
+    },
+    {
+      "name": "IframeStamper",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "KeyFormat",
+      "kind": "object"
+    },
+    {
+      "name": "MessageType",
+      "kind": "object"
+    },
+    {
+      "name": "TransactionType",
+      "kind": "object"
+    }
+  ]
+}

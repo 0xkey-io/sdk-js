@@ -1,0 +1,28 @@
+{
+  "installCommand": "csb:install",
+  "buildCommand": "csb:build",
+  "packages": [
+    "packages/cosmjs",
+    "packages/eip-1193-provider",
+    "packages/encoding",
+    "packages/ethers",
+    "packages/http",
+    "packages/sdk-browser",
+    "packages/sdk-server",
+    "packages/solana",
+    "packages/viem",
+    "packages/webauthn-stamper",
+    "packages/api-key-stamper",
+    "packages/wallet-stamper",
+    "packages/iframe-stamper",
+    "packages/crypto",
+    "packages/react-native-passkey-stamper",
+    "packages/telegram-cloud-storage-stamper",
+    "packages/core",
+    "packages/react-wallet-kit",
+    "packages/sdk-types",
+    "packages/react-native-wallet-kit"
+  ],
+  "sandboxes": ["/examples/react-wallet-kit"],
+  "node": "20"
+}

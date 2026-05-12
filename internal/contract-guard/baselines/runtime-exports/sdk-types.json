@@ -1,0 +1,52 @@
+{
+  "name": "@0xkey-io/sdk-types",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "AuthAction",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampBlockchainNetwork",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampCryptoCurrency",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampCurrency",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampPaymentMethod",
+      "kind": "object"
+    },
+    {
+      "name": "FiatOnRampProvider",
+      "kind": "object"
+    },
+    {
+      "name": "OAuthProviders",
+      "kind": "object"
+    },
+    {
+      "name": "SessionType",
+      "kind": "object"
+    },
+    {
+      "name": "ZeroXKeyError",
+      "kind": "class",
+      "arity": 3
+    },
+    {
+      "name": "ZeroXKeyErrorCodes",
+      "kind": "object"
+    },
+    {
+      "name": "ZeroXKeyNetworkError",
+      "kind": "class",
+      "arity": 4
+    }
+  ]
+}

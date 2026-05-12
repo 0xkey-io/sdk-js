@@ -1,0 +1,15 @@
+{
+  "name": "@0xkey-io/telegram-cloud-storage-stamper",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "DEFAULT_ZEROXKEY_CLOUD_STORAGE_KEY",
+      "kind": "string"
+    },
+    {
+      "name": "TelegramCloudStorageStamper",
+      "kind": "class",
+      "arity": 0
+    }
+  ]
+}

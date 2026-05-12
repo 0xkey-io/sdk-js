@@ -1,0 +1,75 @@
+{
+  "name": "@0xkey-io/ethers",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "license": "Apache-2.0",
+  "description": "0xkey Signer for Ethers",
+  "keywords": [
+    "0xkey",
+    "Ethers",
+    "ethers.js"
+  ],
+  "author": {
+    "name": "0xkey",
+    "url": "https://0xkey.com/"
+  },
+  "homepage": "https://github.com/0xkey-io/sdk-js/tree/main/packages/ethers",
+  "bugs": {
+    "url": "https://github.com/0xkey-io/sdk-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xkey-io/sdk-js.git",
+    "directory": "packages/ethers"
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "build": "rollup -c",
+    "clean": "rimraf ./dist ./.cache",
+    "hardhat:clean": "hardhat clean",
+    "compile:contracts": "hardhat compile",
+    "test": "jest",
+    "typecheck": "tsc -p tsconfig.typecheck.json"
+  },
+  "peerDependencies": {
+    "ethers": "^6.10.0"
+  },
+  "dependencies": {
+    "@0xkey-io/api-key-stamper": "workspace:*",
+    "@0xkey-io/http": "workspace:*",
+    "@0xkey-io/sdk-browser": "workspace:*",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "@0xkey-io/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "3.0.5",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "ethers": "^6.10.0",
+    "hardhat": "^2.19.4",
+    "typechain": "^8.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

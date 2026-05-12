@@ -1,0 +1,6 @@
+{
+    "apiBaseUrl": "https://api.0xkey.com",
+    "apiPublicKey": "<ZeroXKey API Public Key (that starts with 02 or 03)>",
+    "apiPrivateKey": "<ZeroXKey API Private Key>",
+    "defaultOrganizationId": "<ZeroXKey Organization ID>"
+}

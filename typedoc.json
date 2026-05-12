@@ -1,0 +1,23 @@
+{
+  "entryPoints": ["packages/*"],
+  "entryPointStrategy": "packages",
+  "includeVersion": true,
+  "excludeExternals": true,
+  "alwaysCreateEntryPointModule": true,
+  "router": "structure-dir",
+  "outputs": [
+    {
+      "name": "json",
+      "path": "./generated-docs/sdks.json",
+      "fileExtension": ".json"
+    }
+  ],
+  "hideGenerator": true,
+  "headings": {
+    "readme": false,
+    "document": false
+  },
+  "packageOptions": {
+    "gitRevision": "main"
+  }
+}

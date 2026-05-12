@@ -1,0 +1,21 @@
+{
+  "name": "@0xkey-io/with-yield",
+  "version": "0.0.1",
+  "private": "true",
+  "scripts": {
+    "build": "pnpm -w run build-all",
+    "createPolicies": "tsx src/createPolicies.ts",
+    "enter": "tsx src/enter.ts",
+    "exit": "tsx src/exit.ts",
+    "balance": "tsx src/balance.ts",
+    "discover": "tsx src/discover.ts",
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@0xkey-io/ethers": "workspace:*",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "dotenv": "^16.0.3",
+    "ethers": "^6.10.0"
+  }
+}

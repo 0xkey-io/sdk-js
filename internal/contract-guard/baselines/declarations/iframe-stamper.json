@@ -1,0 +1,45 @@
+{
+  "name": "@0xkey-io/iframe-stamper",
+  "exports": [
+    {
+      "kind": "enum",
+      "name": "IframeEventType"
+    },
+    {
+      "kind": "class",
+      "name": "IframeStamper"
+    },
+    {
+      "kind": "enum",
+      "name": "KeyFormat"
+    },
+    {
+      "kind": "enum",
+      "name": "MessageType"
+    },
+    {
+      "kind": "type",
+      "name": "TIframeSettings"
+    },
+    {
+      "kind": "type",
+      "name": "TIframeStamperConfig"
+    },
+    {
+      "kind": "type",
+      "name": "TIframeStyles"
+    },
+    {
+      "kind": "enum",
+      "name": "TransactionType"
+    },
+    {
+      "kind": "type",
+      "name": "TSignableMessage"
+    },
+    {
+      "kind": "type",
+      "name": "TSignableTransaction"
+    }
+  ]
+}

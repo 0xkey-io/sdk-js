@@ -1,0 +1,56 @@
+{
+  "name": "@0xkey-io/webauthn-stamper",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "license": "Apache-2.0",
+  "description": "Webauthn stamper for @0xkey-io/http",
+  "keywords": [
+    "0xkey",
+    "http",
+    "stamper"
+  ],
+  "author": {
+    "name": "0xkey",
+    "url": "https://0xkey.com/"
+  },
+  "homepage": "https://github.com/0xkey-io/sdk-js/tree/main/packages/webauthn-stamper",
+  "bugs": {
+    "url": "https://github.com/0xkey-io/sdk-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xkey-io/sdk-js.git",
+    "directory": "packages/webauthn-stamper"
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "build": "rollup -c",
+    "clean": "rimraf ./dist ./.cache",
+    "test": "jest",
+    "typecheck": "tsc -p tsconfig.typecheck.json"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "sha256-uint8array": "^0.10.7"
+  }
+}

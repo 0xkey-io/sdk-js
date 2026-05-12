@@ -1,0 +1,232 @@
+{
+  "name": "@0xkey-io/crypto",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "AES_KEY_INFO",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "AWS_ROOT_CERT_PEM",
+      "kind": "string"
+    },
+    {
+      "name": "AWS_ROOT_CERT_SHA256",
+      "kind": "string"
+    },
+    {
+      "name": "Enclave",
+      "kind": "object"
+    },
+    {
+      "name": "HPKE_VERSION",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "IV_INFO",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "LABEL_EAE_PRK",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "LABEL_SECRET",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "LABEL_SHARED_SECRET",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "PRODUCTION_NOTARIZER_SIGN_PUBLIC_KEY",
+      "kind": "string"
+    },
+    {
+      "name": "PRODUCTION_ON_RAMP_CREDENTIALS_ENCRYPTION_PUBLIC_KEY",
+      "kind": "string"
+    },
+    {
+      "name": "PRODUCTION_SIGNER_SIGN_PUBLIC_KEY",
+      "kind": "string"
+    },
+    {
+      "name": "PRODUCTION_TLS_FETCHER_ENCRYPT_PUBLIC_KEY",
+      "kind": "string"
+    },
+    {
+      "name": "QOS_ENCRYPTION_HMAC_MESSAGE",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "QUORUM_ENCRYPT_NONCE_LENGTH_BYTES",
+      "kind": "number"
+    },
+    {
+      "name": "SUITE_ID_1",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "SUITE_ID_2",
+      "kind": "object",
+      "tag": "[object Uint8Array]"
+    },
+    {
+      "name": "UNCOMPRESSED_PUB_KEY_LENGTH_BYTES",
+      "kind": "number"
+    },
+    {
+      "name": "buildAdditionalAssociatedData",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "compressRawPublicKey",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "decryptCredentialBundle",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "decryptExportBundle",
+      "kind": "function",
+      "arity": 1
+    },
+    {
+      "name": "encryptOauth2ClientSecret",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "encryptOnRampSecret",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "encryptPrivateKeyToBundle",
+      "kind": "function",
+      "arity": 1
+    },
+    {
+      "name": "encryptToEnclave",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "encryptWalletToBundle",
+      "kind": "function",
+      "arity": 1
+    },
+    {
+      "name": "extractPrivateKeyFromPKCS8Bytes",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "formatHpkeBuf",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "fromDerSignature",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "generateP256KeyPair",
+      "kind": "class",
+      "arity": 0
+    },
+    {
+      "name": "getCryptoInstance",
+      "kind": "function",
+      "arity": 0
+    },
+    {
+      "name": "getPublicKey",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "hpkeAuthEncrypt",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "hpkeDecrypt",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "hpkeEncrypt",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "modSqrt",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "quorumKeyEncrypt",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "testBit",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "toDerSignature",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "uncompressRawPublicKey",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "verify",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "verifyAppProofSignature",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "verifyCertificateChain",
+      "kind": "function",
+      "arity": 4
+    },
+    {
+      "name": "verifyCoseSign1Sig",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "verifySessionJwtSignature",
+      "kind": "function",
+      "arity": 2
+    },
+    {
+      "name": "verifyStampSignature",
+      "kind": "function",
+      "arity": 3
+    }
+  ]
+}

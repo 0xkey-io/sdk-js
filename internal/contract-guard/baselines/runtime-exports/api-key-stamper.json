@@ -1,0 +1,30 @@
+{
+  "name": "@0xkey-io/api-key-stamper",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "ApiKeyStamper",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "SignatureFormat",
+      "kind": "object"
+    },
+    {
+      "name": "detectRuntime",
+      "kind": "function",
+      "arity": 0
+    },
+    {
+      "name": "pointDecode",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "signWithApiKey",
+      "kind": "function",
+      "arity": 2
+    }
+  ]
+}

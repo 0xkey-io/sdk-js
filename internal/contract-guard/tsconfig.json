@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  },
+  "include": ["scripts/**/*.mjs", "scripts/**/*.ts", "fixtures/**/*.ts"]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@0xkey-io/example-with-biconomy-aa",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "start-ethers": "tsx src/ethers.ts",
+    "start-viem": "tsx src/viem.ts",
+    "start-nexus-viem": "tsx src/nexus-viem.ts",
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@biconomy/account": "^4.5.6",
+    "@biconomy/sdk": "^0.0.10",
+    "@rhinestone/module-sdk": "^0.1.28",
+    "@0xkey-io/ethers": "workspace:*",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "@0xkey-io/viem": "workspace:*",
+    "dotenv": "^16.0.3",
+    "ethers": "^6.10.0",
+    "prompts": "^2.4.2",
+    "viem": "^2.24.2"
+  },
+  "devDependencies": {
+    "@types/prompts": "^2.4.2"
+  },
+  "peerDependencies": {
+    "viem": "2.24.2"
+  }
+}

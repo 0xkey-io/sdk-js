@@ -1,0 +1,77 @@
+{
+  "name": "@0xkey-io/viem",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "license": "Apache-2.0",
+  "description": "0xkey Helpers to work with Viem",
+  "keywords": [
+    "0xkey",
+    "Viem",
+    "custom account",
+    "account",
+    "wallet",
+    "signer"
+  ],
+  "author": {
+    "name": "0xkey",
+    "url": "https://0xkey.com/"
+  },
+  "homepage": "https://github.com/0xkey-io/sdk-js/tree/main/packages/viem",
+  "bugs": {
+    "url": "https://github.com/0xkey-io/sdk-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xkey-io/sdk-js.git",
+    "directory": "packages/viem"
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "build": "rollup -c",
+    "clean": "rimraf ./dist ./.cache",
+    "test": "jest --detectOpenHandles",
+    "anvil": "anvil",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "compile:contracts": "hardhat compile"
+  },
+  "peerDependencies": {
+    "viem": "^1.16.6 || ^2.24.2"
+  },
+  "dependencies": {
+    "@noble/curves": "1.8.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@0xkey-io/api-key-stamper": "workspace:*",
+    "@0xkey-io/http": "workspace:*",
+    "@0xkey-io/sdk-browser": "workspace:*",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "@0xkey-io/core": "workspace:*",
+    "cross-fetch": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.3",
+    "jest": "^29.3.1",
+    "typescript": "5.4.3",
+    "viem": "^2.24.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

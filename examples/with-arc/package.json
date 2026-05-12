@@ -1,0 +1,23 @@
+{
+  "name": "@0xkey-io/example-with-arc",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@0xkey-io/api-key-stamper": "workspace:*",
+    "@0xkey-io/ethers": "workspace:*",
+    "@0xkey-io/http": "workspace:*",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "dotenv": "^16.0.3",
+    "ethers": "^6.10.0",
+    "prompts": "^2.4.2",
+    "viem": "2.38.0"
+  },
+  "devDependencies": {
+    "@types/prompts": "^2.4.2"
+  }
+}

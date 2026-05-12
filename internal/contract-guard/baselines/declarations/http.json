@@ -1,0 +1,109 @@
+{
+  "name": "@0xkey-io/http",
+  "exports": [
+    {
+      "kind": "re-export",
+      "name": "assertActivityCompleted"
+    },
+    {
+      "kind": "re-export",
+      "name": "assertNonNull"
+    },
+    {
+      "kind": "re-export",
+      "name": "browserInit"
+    },
+    {
+      "kind": "re-export",
+      "name": "createActivityPoller"
+    },
+    {
+      "kind": "re-export",
+      "name": "getSignatureFromActivity"
+    },
+    {
+      "kind": "re-export",
+      "name": "getSignaturesFromActivity"
+    },
+    {
+      "kind": "re-export",
+      "name": "getSignedTransactionFromActivity"
+    },
+    {
+      "kind": "re-export",
+      "name": "getWebAuthnAttestation"
+    },
+    {
+      "kind": "re-export",
+      "name": "init"
+    },
+    {
+      "kind": "re-export",
+      "name": "InvalidArgumentError"
+    },
+    {
+      "kind": "re-export",
+      "name": "isHttpClient"
+    },
+    {
+      "kind": "re-export",
+      "name": "sealAndStampRequestBody"
+    },
+    {
+      "kind": "re-export",
+      "name": "TERMINAL_ACTIVITY_STATUSES"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TActivity"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TActivityId"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TActivityResponse"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TActivityStatus"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TActivityType"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TSignature"
+    },
+    {
+      "kind": "re-export",
+      "name": "VERSION"
+    },
+    {
+      "kind": "re-export",
+      "name": "withAsyncPolling"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyActivityConsensusNeededError"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyActivityError"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyApi"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyClient"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyRequestError"
+    }
+  ]
+}

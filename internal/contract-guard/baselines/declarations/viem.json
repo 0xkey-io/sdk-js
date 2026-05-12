@@ -1,0 +1,61 @@
+{
+  "name": "@0xkey-io/viem",
+  "exports": [
+    {
+      "kind": "function",
+      "name": "createAccount"
+    },
+    {
+      "kind": "function",
+      "name": "createAccountWithAddress"
+    },
+    {
+      "kind": "function",
+      "name": "createApiKeyAccount"
+    },
+    {
+      "kind": "function",
+      "name": "isZeroXKeyActivityConsensusNeededError"
+    },
+    {
+      "kind": "function",
+      "name": "isZeroXKeyActivityError"
+    },
+    {
+      "kind": "function",
+      "name": "serializeSignature"
+    },
+    {
+      "kind": "function",
+      "name": "signAuthorization"
+    },
+    {
+      "kind": "function",
+      "name": "signMessage"
+    },
+    {
+      "kind": "function",
+      "name": "signTransaction"
+    },
+    {
+      "kind": "function",
+      "name": "signTypedData"
+    },
+    {
+      "kind": "type",
+      "name": "TZeroXKeyActivityErrorType"
+    },
+    {
+      "kind": "type",
+      "name": "TZeroXKeyConsensusNeededErrorType"
+    },
+    {
+      "kind": "class",
+      "name": "ZeroXKeyActivityError"
+    },
+    {
+      "kind": "class",
+      "name": "ZeroXKeyConsensusNeededError"
+    }
+  ]
+}

@@ -1,0 +1,235 @@
+import { CrossPlatformWalletStamper } from "../stamper";
+import { CrossPlatformWalletConnector } from "../connector";
+import { EthereumWallet } from "./native/ethereum";
+import { SolanaWallet } from "./native/solana";
+import {
+  TWalletManagerConfig,
+  WalletInterface,
+  WalletProvider,
+  WalletInterfaceType,
+  Chain,
+} from "../../__types__";
+import { WalletConnectClient } from "../wallet-connect/client";
+import { WalletConnectWallet } from "../wallet-connect/base";
+import { withTimeout } from "@utils";
+
+export class WebWalletManager {
+  // queue of async initialization functions
+  private initializers: Array<() => Promise<void>> = [];
+
+  // WalletConnect client instance
+  private wcClient?: WalletConnectClient;
+
+  // mapping of wallet interface types to their wallet instances
+  readonly wallets: Partial<Record<WalletInterfaceType, WalletInterface>> = {};
+
+  // maps a blockchain chain to its corresponding wallet interface types
+  private chainToInterfaces: Partial<Record<Chain, WalletInterfaceType[]>> = {};
+
+  // responsible for stamping messages using wallets
+  readonly stamper?: CrossPlatformWalletStamper;
+
+  // handles signature flows for authentication
+  readonly connector?: CrossPlatformWalletConnector;
+
+  /**
+   * Constructs a WebWalletManager instance based on the provided configuration.
+   *
+   * - Enables native Ethereum and/or Solana wallet support if configured.
+   * - Enables WalletConnect support for Ethereum and/or Solana chains if namespaces are provided.
+   * - Sets up `CrossPlatformWalletStamper` and `CrossPlatformWalletConnector` if auth or connecting features are enabled.
+   *
+   * @param cfg - Wallet manager configuration.
+   */
+  constructor(cfg: TWalletManagerConfig) {
+    const enableNativeEvm = cfg.chains.ethereum?.native ?? false;
+    const enableNativeSol = cfg.chains.solana?.native ?? false;
+
+    const ethereumNamespaces =
+      cfg.chains.ethereum?.walletConnectNamespaces ?? [];
+    const solanaNamespaces = cfg.chains.solana?.walletConnectNamespaces ?? [];
+
+    const enableWalletConnectEvm = ethereumNamespaces.length > 0;
+    const enableWalletConnectSol = solanaNamespaces.length > 0;
+
+    const enableWalletConnect =
+      enableWalletConnectEvm || enableWalletConnectSol;
+
+    // set up native Ethereum wallet support
+    if (enableNativeEvm) {
+      this.wallets[WalletInterfaceType.Ethereum] = new EthereumWallet();
+      this.addChainInterface(Chain.Ethereum, WalletInterfaceType.Ethereum);
+    }
+
+    // set up native Solana wallet support
+    if (enableNativeSol) {
+      this.wallets[WalletInterfaceType.Solana] = new SolanaWallet();
+      this.addChainInterface(Chain.Solana, WalletInterfaceType.Solana);
+    }
+
+    // if WalletConnect is configured, set it up
+    if (cfg.walletConnect && enableWalletConnect) {
+      this.wcClient = new WalletConnectClient();
+      const wcUnified = new WalletConnectWallet(
+        this.wcClient,
+        () => this.ensureWalletConnectReady(),
+        { ethereumNamespaces, solanaNamespaces },
+      );
+
+      this.wallets[WalletInterfaceType.WalletConnect] = wcUnified;
+
+      // add async init step to the initializer queue
+      this.initializers.push(() =>
+        withTimeout(wcUnified.init(), 15000, "WalletConnect wallet").catch(
+          (err) => {
+            // WalletConnect can be a bit unreliable, we don't want to load forever
+            // so we limit the initialization time to 15 seconds. After that we emit a
+            // failure event and remove WalletConnect from the available wallets
+            wcUnified.abortInit(err);
+            this.removeWalletInterface(WalletInterfaceType.WalletConnect);
+          },
+        ),
+      );
+
+      // register WalletConnect as a wallet interface for each enabled chain
+      if (enableWalletConnectEvm)
+        this.addChainInterface(
+          Chain.Ethereum,
+          WalletInterfaceType.WalletConnect,
+        );
+      if (enableWalletConnectSol)
+        this.addChainInterface(Chain.Solana, WalletInterfaceType.WalletConnect);
+    }
+
+    if (cfg.features?.auth) {
+      this.stamper = new CrossPlatformWalletStamper(this.wallets);
+    }
+
+    if (cfg.features?.connecting) {
+      this.connector = new CrossPlatformWalletConnector(this.wallets);
+    }
+  }
+
+  // promise that resolves when WalletConnect is fully initialized
+  private wcInitPromise?: Promise<void>;
+
+  /**
+   * Initializes WalletConnect components and any registered wallet interfaces.
+   *
+   * - Initializes the low-level WalletConnect client with the provided config.
+   * - Runs any registered async wallet initializers (currently only `WalletConnectWallet`).
+   * - WalletConnect initialization happens in the background and does not block this method.
+   *
+   * @param cfg - Wallet manager configuration used for initializing the WalletConnect client.
+   */
+  async init(cfg: TWalletManagerConfig): Promise<void> {
+    if (this.wcClient) {
+      // we start WalletConnect initialization in the background (this is non-blocking)
+      this.wcInitPromise = (async () => {
+        try {
+          await this.wcClient!.init(cfg.walletConnect!);
+          // initialize the high-level WalletConnectWallet after client is ready
+          await Promise.all(this.initializers.map((fn) => fn()));
+        } catch (error) {
+          // WalletConnect can be a bit unreliable, so instead of throwing an error
+          // we handle failures silently to avoid blocking the rest of the client
+          // from initializing. If setup fails, we also remove WalletConnect
+          // from the available wallets list
+          console.error("Failed to initialize WalletConnect", error);
+          this.removeWalletInterface(WalletInterfaceType.WalletConnect);
+        }
+      })();
+    }
+  }
+
+  /**
+   * Ensures WalletConnect is fully initialized before proceeding.
+   * This should be called before any WalletConnect operations.
+   *
+   * @returns A promise that resolves when WalletConnect is ready.
+   */
+  async ensureWalletConnectReady(): Promise<void> {
+    if (this.wcInitPromise) {
+      await this.wcInitPromise;
+    }
+  }
+
+  /**
+   * Retrieves available wallet providers, optionally filtered by chain.
+   *
+   * - If a chain is specified, filters wallet interfaces that support that chain.
+   * - Aggregates providers across all wallet interfaces and filters WalletConnect results accordingly.
+   * - Returns native wallet providers immediately without waiting for WalletConnect.
+   * - WalletConnect providers will only be included if WalletConnect has already initialized.
+   *
+   * @param chain - Optional chain to filter providers by (e.g., Ethereum, Solana).
+   * @returns A promise that resolves to an array of `WalletProvider` objects.
+   * @throws {Error} If no wallet interface is registered for the given chain.
+   */
+  async getProviders(chain?: Chain): Promise<WalletProvider[]> {
+    if (chain) {
+      const interfaceTypes = this.chainToInterfaces[chain];
+      if (!interfaceTypes || interfaceTypes.length === 0)
+        throw new Error(`No wallet supports chain: ${chain}`);
+
+      const walletsToQuery = interfaceTypes
+        .map((iface) => this.wallets[iface])
+        .filter(Boolean) as WalletInterface[];
+
+      const providersArrays = await Promise.all(
+        walletsToQuery.map((wallet) => wallet.getProviders()),
+      );
+
+      // we still need to filter by chain because WalletConnect can return providers for multiple chains
+      return providersArrays
+        .flat()
+        .filter((p) => p.chainInfo.namespace === chain);
+    }
+
+    // collect all providers from all initialized wallets
+    const providersArrays = await Promise.all(
+      Object.values(this.wallets).map((wallet) => wallet.getProviders()),
+    );
+
+    return providersArrays.flat();
+  }
+
+  /**
+   * Registers a wallet interface type as supporting a specific blockchain chain.
+   *
+   * @param chain - Chain (e.g., Ethereum, Solana).
+   * @param interfaceType - Wallet interface type to associate with the chain.
+   */
+  private addChainInterface = (
+    chain: Chain,
+    interfaceType: WalletInterfaceType,
+  ) => {
+    if (!this.chainToInterfaces[chain]) this.chainToInterfaces[chain] = [];
+    this.chainToInterfaces[chain]!.push(interfaceType);
+  };
+
+  /**
+   * Removes a wallet interface from the manager.
+   *
+   * - Deletes the wallet instance from the wallets map.
+   * - Cleans up references to the wallet interface in chainToInterfaces.
+   * - Removes the chain entry entirely if no interfaces remain.
+   *
+   * @param type - The WalletInterfaceType to remove.
+   */
+  private removeWalletInterface(type: WalletInterfaceType) {
+    delete this.wallets[type];
+
+    for (const chain of Object.keys(this.chainToInterfaces) as Chain[]) {
+      const filtered = (this.chainToInterfaces[chain] ?? []).filter(
+        (interfaceType) => interfaceType !== type,
+      );
+
+      if (filtered.length > 0) {
+        this.chainToInterfaces[chain] = filtered;
+      } else {
+        delete this.chainToInterfaces[chain];
+      }
+    }
+  }
+}

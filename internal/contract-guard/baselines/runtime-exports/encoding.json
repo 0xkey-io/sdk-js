@@ -1,0 +1,73 @@
+{
+  "name": "@0xkey-io/encoding",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "DEFAULT_JWK_MEMBER_BYTE_LENGTH",
+      "kind": "number"
+    },
+    {
+      "name": "atob",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "base64StringToBase64UrlEncodedString",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "base64UrlToBase64",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "bs58",
+      "kind": "object"
+    },
+    {
+      "name": "bs58check",
+      "kind": "object"
+    },
+    {
+      "name": "decodeBase64urlToString",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "hexStringToBase64url",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "hexToAscii",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "normalizePadding",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "pointEncode",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "stringToBase64urlString",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "uint8ArrayFromHexString",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "uint8ArrayToHexString",
+      "kind": "class",
+      "arity": 1
+    }
+  ]
+}

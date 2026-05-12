@@ -1,0 +1,104 @@
+{
+  "name": "@0xkey-io/http",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "InvalidArgumentError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "TERMINAL_ACTIVITY_STATUSES",
+      "kind": "object",
+      "tag": "[object Array]"
+    },
+    {
+      "name": "VERSION",
+      "kind": "string"
+    },
+    {
+      "name": "ZeroXKeyActivityConsensusNeededError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "ZeroXKeyActivityError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "ZeroXKeyApi",
+      "kind": "object"
+    },
+    {
+      "name": "ZeroXKeyClient",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "ZeroXKeyRequestError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "assertActivityCompleted",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "assertNonNull",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "browserInit",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "createActivityPoller",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "getSignatureFromActivity",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "getSignaturesFromActivity",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "getSignedTransactionFromActivity",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "getWebAuthnAttestation",
+      "kind": "function",
+      "arity": 1
+    },
+    {
+      "name": "init",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "isHttpClient",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "sealAndStampRequestBody",
+      "kind": "function",
+      "arity": 1
+    },
+    {
+      "name": "withAsyncPolling",
+      "kind": "class",
+      "arity": 1
+    }
+  ]
+}

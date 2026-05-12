@@ -1,0 +1,11 @@
+{
+  "name": "@0xkey-io/solana",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "ZeroXKeySigner",
+      "kind": "class",
+      "arity": 1
+    }
+  ]
+}

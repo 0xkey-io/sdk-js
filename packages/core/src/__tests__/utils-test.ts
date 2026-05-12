@@ -1,0 +1,1233 @@
+import { describe, expect, jest, afterEach, it } from "@jest/globals";
+import {
+  externaldatav1Timestamp,
+  ZeroXKeyError,
+  ZeroXKeyErrorCodes,
+  v1Wallet,
+  type v1AddressFormat,
+  type v1User,
+  type v1WalletAccount,
+} from "@0xkey-io/sdk-types";
+import {
+  getHashFunction,
+  getEncodingType,
+  getEncodedMessage,
+  isWalletAccountArray,
+  createWalletAccountFromAddressFormat,
+  generateWalletAccountsFromAddressFormat,
+  getPublicKeyFromStampHeader,
+  isEthereumProvider,
+  isSolanaProvider,
+  getCurveTypeFromProvider,
+  getSignatureSchemeFromProvider,
+  findWalletProviderFromAddress,
+  addressFromPublicKey,
+  getAuthenticatorAddresses,
+  withZeroXKeyErrorHandling,
+  assertValidP256ECDSAKeyPair,
+  isValidPasskeyName,
+  mapAccountsToWallet,
+} from "../utils";
+import * as utils from "../utils";
+import { stringToBase64urlString } from "@0xkey-io/encoding";
+import {
+  Chain,
+  EmbeddedWallet,
+  EvmChainInfo,
+  SolanaChainInfo,
+  WalletInterfaceType,
+  WalletProvider,
+  WalletSource,
+} from "../__types__";
+
+// mock the bs58 library
+jest.mock("bs58", () => ({
+  encode: jest.fn(() => "base58-encoded"),
+}));
+import { bs58 } from "@0xkey-io/encoding";
+
+// For deterministic ETH behavior, mock the heavy crypto/EC parts.
+
+// Mock ethers keccak256, and toUtf8Bytes
+jest.mock("ethers", () => {
+  const actual = jest.requireActual("ethers") as typeof import("ethers");
+  return {
+    ...actual,
+    keccak256: jest.fn(
+      () => "11".repeat(12) + "1234567890abcdef1234567890abcdef12345678",
+    ),
+  };
+});
+import { keccak256, toUtf8Bytes } from "ethers";
+
+// Mock uncompressRawPublicKey
+jest.mock("@0xkey-io/crypto", () => {
+  const { uint8ArrayFromHexString } = jest.requireActual(
+    "@0xkey-io/encoding",
+  ) as typeof import("@0xkey-io/encoding");
+
+  return {
+    uncompressRawPublicKey: jest.fn(() =>
+      uint8ArrayFromHexString("04" + "aa".repeat(64)),
+    ),
+  };
+});
+import { uncompressRawPublicKey } from "@0xkey-io/crypto";
+import { ZeroXKeyRequestError } from "@0xkey-io/http";
+
+describe("address format helpers", () => {
+  const ETH: v1AddressFormat = "ADDRESS_FORMAT_ETHEREUM";
+  const COSMOS: v1AddressFormat = "ADDRESS_FORMAT_COSMOS";
+  const SOLANA: v1AddressFormat = "ADDRESS_FORMAT_SOLANA";
+  const UNCOMPRESSED: v1AddressFormat = "ADDRESS_FORMAT_UNCOMPRESSED";
+
+  describe("getHashFunction", () => {
+    it("returns KECCAK256 for Ethereum", () => {
+      expect(getHashFunction(ETH)).toBe("HASH_FUNCTION_KECCAK256");
+    });
+
+    it("returns SHA256 for Cosmos and Uncompressed", () => {
+      expect(getHashFunction(COSMOS)).toBe("HASH_FUNCTION_SHA256");
+      expect(getHashFunction(UNCOMPRESSED)).toBe("HASH_FUNCTION_SHA256");
+    });
+
+    it("returns NOT_APPLICABLE for Solana", () => {
+      expect(getHashFunction(SOLANA)).toBe("HASH_FUNCTION_NOT_APPLICABLE");
+    });
+
+    it("throws for unsupported formats", () => {
+      const BAD = "ADDRESS_FORMAT_UNKNOWN" as unknown as v1AddressFormat;
+      expect(() => getHashFunction(BAD)).toThrow(
+        /Unsupported address format: ADDRESS_FORMAT_UNKNOWN/,
+      );
+    });
+  });
+
+  describe("getEncodingType", () => {
+    it("returns HEXADECIMAL for Ethereum and Uncompressed", () => {
+      expect(getEncodingType(ETH)).toBe("PAYLOAD_ENCODING_HEXADECIMAL");
+      expect(getEncodingType(UNCOMPRESSED)).toBe(
+        "PAYLOAD_ENCODING_HEXADECIMAL",
+      );
+    });
+
+    it("returns TEXT_UTF8 for Cosmos", () => {
+      expect(getEncodingType(COSMOS)).toBe("PAYLOAD_ENCODING_TEXT_UTF8");
+    });
+
+    it("throws for unsupported formats", () => {
+      const BAD = "ADDRESS_FORMAT_UNKNOWN" as unknown as v1AddressFormat;
+      expect(() => getEncodingType(BAD)).toThrow(
+        /Unsupported address format: ADDRESS_FORMAT_UNKNOWN/,
+      );
+    });
+  });
+
+  describe("getEncodedMessage", () => {
+    it("hex-encodes ASCII with 0x prefix when encoding is HEX (e.g., Ethereum)", () => {
+      // "Hello" => 48 65 6c 6c 6f
+      expect(
+        getEncodedMessage("PAYLOAD_ENCODING_HEXADECIMAL", toUtf8Bytes("Hello")),
+      ).toBe("0x48656c6c6f");
+    });
+
+    it("hex-encodes multibyte UTF-8 correctly (e.g., 'é' => c3 a9)", () => {
+      expect(
+        getEncodedMessage("PAYLOAD_ENCODING_HEXADECIMAL", toUtf8Bytes("é")),
+      ).toBe("0xc3a9");
+    });
+
+    it("returns raw message when encoding is TEXT_UTF8 (e.g., Cosmos)", () => {
+      expect(
+        getEncodedMessage(
+          "PAYLOAD_ENCODING_TEXT_UTF8",
+          toUtf8Bytes("plain text"),
+        ),
+      ).toBe("plain text");
+    });
+
+    it("returns '0x' for empty string when HEX encoding", () => {
+      expect(
+        getEncodedMessage("PAYLOAD_ENCODING_HEXADECIMAL", new Uint8Array([])),
+      ).toBe("0x");
+    });
+
+    it("does not hex-encode for formats with TEXT_UTF8 (control case)", () => {
+      expect(
+        getEncodedMessage("PAYLOAD_ENCODING_TEXT_UTF8", toUtf8Bytes("é")),
+      ).toBe("é");
+    });
+  });
+});
+
+describe("wallet account helpers (with real config)", () => {
+  const ETH = "ADDRESS_FORMAT_ETHEREUM";
+  const COSMOS = "ADDRESS_FORMAT_COSMOS";
+
+  describe("isWalletAccountArray", () => {
+    it("true for empty array", () => {
+      expect(isWalletAccountArray([])).toBe(true);
+    });
+
+    it("true for a valid wallet account", () => {
+      const acc = createWalletAccountFromAddressFormat(ETH);
+      expect(isWalletAccountArray([acc])).toBe(true);
+    });
+
+    it("false for invalid object", () => {
+      expect(isWalletAccountArray([{ foo: "bar" } as any])).toBe(false);
+    });
+  });
+
+  describe("createWalletAccountFromAddressFormat", () => {
+    it("returns a default ETH account", () => {
+      const acc = createWalletAccountFromAddressFormat(ETH);
+      expect(acc).toMatchObject({
+        addressFormat: ETH,
+        pathFormat: "PATH_FORMAT_BIP32",
+      });
+    });
+
+    it("throws for an unsupported format", () => {
+      expect(() =>
+        createWalletAccountFromAddressFormat("ADDRESS_FORMAT_UNKNOWN" as any),
+      ).toThrow(/Unsupported address format/);
+    });
+  });
+
+  describe("generateWalletAccountsFromAddressFormat", () => {
+    it("generates from scratch", () => {
+      const accounts = generateWalletAccountsFromAddressFormat({
+        addresses: [ETH, COSMOS],
+      });
+      expect(accounts).toHaveLength(2);
+      expect(accounts[0]!.addressFormat).toBe(ETH);
+      expect(accounts[1]!.addressFormat).toBe(COSMOS);
+    });
+
+    it("increments index for duplicates", () => {
+      const accounts = generateWalletAccountsFromAddressFormat({
+        addresses: [ETH, ETH, ETH],
+      });
+      expect(accounts.map((a) => a.path)).toEqual([
+        "m/44'/60'/0'/0/0",
+        "m/44'/60'/1'/0/0",
+        "m/44'/60'/2'/0/0",
+      ]);
+    });
+
+    it("resumes from existing max index", () => {
+      const existing = [
+        {
+          addressFormat: ETH,
+          curve: "CURVE_SECP256K1",
+          path: "m/44'/60'/5'/0/0",
+          pathFormat: "PATH_FORMAT_BIP32",
+        },
+      ] as v1WalletAccount[];
+      const accounts = generateWalletAccountsFromAddressFormat({
+        addresses: [ETH, ETH],
+        existingWalletAccounts: existing,
+      });
+      expect(accounts.map((a) => a.path)).toEqual([
+        "m/44'/60'/6'/0/0",
+        "m/44'/60'/7'/0/0",
+      ]);
+    });
+  });
+});
+
+const makeStamp = (
+  overrides?: Partial<{ publicKey: string; scheme: string; signature: string }>,
+) => {
+  const base = {
+    publicKey: "abcdef012345",
+    scheme: "SCHEME",
+    signature: "deadbeef",
+  };
+  return { ...base, ...overrides };
+};
+
+describe("getPublicKeyFromStampHeader", () => {
+  it("extracts publicKey from a valid base64url-encoded JSON stamp", () => {
+    const header = stringToBase64urlString(
+      JSON.stringify(makeStamp({ publicKey: "0123abcd" })),
+    );
+    expect(getPublicKeyFromStampHeader(header)).toBe("0123abcd");
+  });
+
+  it("throws a descriptive error for invalid base64/JSON", () => {
+    expect(() => getPublicKeyFromStampHeader("%%%not-base64%%%")).toThrow(
+      /Failed to extract public key from stamp header:/,
+    );
+
+    const looksB64Url = stringToBase64urlString("not-json"); // valid base64url string, not JSON after decode
+    expect(() => getPublicKeyFromStampHeader(looksB64Url)).toThrow(
+      /Failed to extract public key from stamp header:/,
+    );
+  });
+});
+
+const evmProvider = (
+  addresses: string[] = [],
+): WalletProvider & { chainInfo: EvmChainInfo } => ({
+  chainInfo: { namespace: Chain.Ethereum } as EvmChainInfo,
+  connectedAddresses: addresses,
+  interfaceType: WalletInterfaceType.Ethereum,
+  info: { name: "TestProvider" },
+  provider: {} as any,
+});
+
+const solProvider = (
+  addresses: string[] = [],
+): WalletProvider & { chainInfo: SolanaChainInfo } => ({
+  chainInfo: { namespace: Chain.Solana } as SolanaChainInfo,
+  connectedAddresses: addresses,
+  interfaceType: WalletInterfaceType.Solana,
+  info: { name: "TestProvider" },
+  provider: {} as any,
+});
+
+describe("provider type guards", () => {
+  it("isEthereumProvider true for Ethereum, false for Solana", () => {
+    expect(isEthereumProvider(evmProvider())).toBe(true);
+    expect(isEthereumProvider(solProvider())).toBe(false);
+  });
+
+  it("isSolanaProvider true for Solana, false for Ethereum", () => {
+    expect(isSolanaProvider(solProvider())).toBe(true);
+    expect(isSolanaProvider(evmProvider())).toBe(false);
+  });
+});
+
+describe("getCurveTypeFromProvider", () => {
+  it("returns SECP256K1 for Ethereum", () => {
+    expect(getCurveTypeFromProvider(evmProvider())).toBe(
+      "API_KEY_CURVE_SECP256K1",
+    );
+  });
+
+  it("returns ED25519 for Solana", () => {
+    expect(getCurveTypeFromProvider(solProvider())).toBe(
+      "API_KEY_CURVE_ED25519",
+    );
+  });
+
+  it("throws for unsupported namespaces", () => {
+    const weird = {
+      chainInfo: { namespace: "Other" },
+      connectedAddresses: [],
+    } as unknown as WalletProvider;
+    expect(() => getCurveTypeFromProvider(weird)).toThrow(
+      /Unsupported provider namespace: Other/,
+    );
+  });
+});
+
+describe("getSignatureSchemeFromProvider", () => {
+  it("returns EIP-191 scheme for Ethereum", () => {
+    expect(getSignatureSchemeFromProvider(evmProvider())).toBe(
+      "SIGNATURE_SCHEME_TK_API_SECP256K1_EIP191",
+    );
+  });
+
+  it("returns ED25519 scheme for Solana", () => {
+    expect(getSignatureSchemeFromProvider(solProvider())).toBe(
+      "SIGNATURE_SCHEME_TK_API_ED25519",
+    );
+  });
+
+  it("throws for unsupported namespaces", () => {
+    const weird = {
+      chainInfo: { namespace: "Other" },
+      connectedAddresses: [],
+    } as unknown as WalletProvider;
+    expect(() => getSignatureSchemeFromProvider(weird)).toThrow(
+      /Unsupported provider namespace: Other/,
+    );
+  });
+});
+
+describe("findWalletProviderFromAddress", () => {
+  it("returns the first provider that contains the address", () => {
+    const A = evmProvider(["0x1", "0x2"]);
+    const B = solProvider(["solA"]);
+    const C = evmProvider(["0x3"]);
+
+    expect(findWalletProviderFromAddress("solA", [A, B, C])).toBe(B);
+    expect(findWalletProviderFromAddress("0x3", [A, B, C])).toBe(C);
+  });
+
+  it("returns undefined if no provider contains the address", () => {
+    const A = evmProvider(["0x1"]);
+    const B = solProvider(["solA"]);
+    expect(findWalletProviderFromAddress("nope", [A, B])).toBeUndefined();
+  });
+});
+
+describe("addressFromPublicKey", () => {
+  it("Ethereum: strips 0x04 after uncompress, keccak, last 20 bytes", () => {
+    const addr = addressFromPublicKey(Chain.Ethereum, "03deadbeef"); // input value irrelevant due to mocks
+    expect(addr).toBe("0x1234567890abcdef1234567890abcdef12345678");
+    expect(uncompressRawPublicKey).toHaveBeenCalled();
+    expect(keccak256).toHaveBeenCalled();
+  });
+
+  it("Solana: base58 encodes the raw bytes of the hex public key", () => {
+    const out = addressFromPublicKey(Chain.Solana, "a1b2c3");
+    expect(out).toBe("base58-encoded");
+    expect(bs58.encode).toHaveBeenCalled();
+  });
+
+  it("throws for unsupported chain", () => {
+    expect(() =>
+      addressFromPublicKey("Other" as unknown as Chain, "abcd"),
+    ).toThrow(/Unsupported chain:/);
+  });
+});
+
+describe("getAuthenticatorAddresses", () => {
+  it("routes SECP256K1 -> ethereum and ED25519 -> solana", () => {
+    // ✅ Valid hex inputs so we don't need to mock addressFromPublicKey itself
+    const secpCompressed = "02" + "ab".repeat(32); // 33 bytes, starts with 02/03
+    const ed25519 = "cd".repeat(32); // 32 bytes
+
+    const user: v1User = {
+      id: "user-1",
+      email: "x@y.z",
+      apiKeys: [
+        {
+          id: "k1",
+          credential: {
+            type: "CREDENTIAL_TYPE_API_KEY_SECP256K1",
+            publicKey: secpCompressed,
+          },
+        } as any,
+        {
+          id: "k2",
+          credential: {
+            type: "CREDENTIAL_TYPE_API_KEY_ED25519",
+            publicKey: ed25519,
+          },
+        } as any,
+      ],
+    } as any;
+
+    const out = getAuthenticatorAddresses(user);
+
+    // ETH: last 20 bytes of mocked keccak
+    expect(out.ethereum).toEqual([
+      "0x1234567890abcdef1234567890abcdef12345678",
+    ]);
+    // SOL: mocked base58 output
+    expect(out.solana).toEqual(["base58-encoded"]);
+  });
+
+  it("returns empty arrays when no apiKeys", () => {
+    const user: v1User = { id: "u", email: "e", apiKeys: [] } as any;
+    expect(getAuthenticatorAddresses(user)).toEqual({
+      ethereum: [],
+      solana: [],
+    });
+  });
+});
+
+/* ------- Error Handling ------- */
+
+describe("withZeroXKeyErrorHandling", () => {
+  const DEFAULT_MSG = "Default wrapped message";
+  const DEFAULT_CODE = ZeroXKeyErrorCodes.INVALID_REQUEST;
+
+  const ok =
+    <T>(v: T) =>
+    async () =>
+      v;
+  const failWith = (err: unknown) => async () => {
+    throw err;
+  };
+
+  it("returns value on success and calls finallyFn (but not catchFn)", async () => {
+    const result = 42;
+
+    const catchFn = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    const finallyFn = jest
+      .fn<() => Promise<void>>()
+      .mockResolvedValue(undefined);
+
+    const out = await withZeroXKeyErrorHandling(
+      ok(result),
+      { errorMessage: DEFAULT_MSG, errorCode: DEFAULT_CODE, catchFn },
+      { finallyFn },
+    );
+
+    expect(out).toBe(result);
+    expect(catchFn).not.toHaveBeenCalled();
+    expect(finallyFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls catchFn on error and always calls finallyFn", async () => {
+    const catchFn = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    const finallyFn = jest
+      .fn<() => Promise<void>>()
+      .mockResolvedValue(undefined);
+
+    await expect(
+      withZeroXKeyErrorHandling(
+        failWith(new Error("boom")),
+        { errorMessage: DEFAULT_MSG, errorCode: DEFAULT_CODE, catchFn },
+        { finallyFn },
+      ),
+    ).rejects.toBeInstanceOf(ZeroXKeyError);
+
+    expect(catchFn).toHaveBeenCalledTimes(1);
+    expect(finallyFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("includes original error in cause when thrown via message-map (throwMatchingMessage path)", async () => {
+    const original = new Error("db: ECONNREFUSED 127.0.0.1:5432");
+
+    await expect(
+      withZeroXKeyErrorHandling(
+        async () => {
+          throw original;
+        },
+        {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+          customErrorsByMessages: {
+            ECONNREFUSED: {
+              message: "Database unavailable",
+              code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+            },
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      // Ensure we don't hide the underlying error
+      cause: original,
+    });
+  });
+
+  it("includes original error in cause when wrapping a generic Error (no message-map hit)", async () => {
+    const original = new Error("S3 putObject timeout");
+
+    await expect(
+      withZeroXKeyErrorHandling(
+        async () => {
+          throw original;
+        },
+        {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+        },
+      ),
+    ).rejects.toMatchObject({
+      cause: original,
+    });
+  });
+
+  describe("catch global error messages", () => {
+    it("catches global error message while throwing in a message map", async () => {
+      const globalError = new ZeroXKeyRequestError({
+        message:
+          "ZeroXKey error 16: could not find public key in organization or its parent organization",
+        code: 16,
+        details: null,
+      });
+
+      await expect(
+        withZeroXKeyErrorHandling(
+          async () => {
+            throw globalError;
+          },
+          {
+            // throw in a dummy message map to make sure we hit that code path even with a passed-in message match
+            customErrorsByMessages: {
+              "test message": {
+                message: "test message",
+                code: ZeroXKeyErrorCodes.BAD_REQUEST,
+              },
+            },
+            errorMessage: DEFAULT_MSG,
+            errorCode: DEFAULT_CODE,
+          },
+        ),
+      ).rejects.toMatchObject({
+        code: ZeroXKeyErrorCodes.SESSION_EXPIRED,
+        message:
+          "Session public key could not be found in the sub-organization or parent organization",
+      });
+    });
+
+    it("catches second global error but without a message map passed in", async () => {
+      const globalError2 = new ZeroXKeyRequestError({
+        message:
+          "ZeroXKey error 17: Unauthenticated desc = expired api key publicKey",
+        code: 17,
+        details: null,
+      });
+      await expect(
+        withZeroXKeyErrorHandling(
+          async () => {
+            throw globalError2;
+          },
+          {
+            errorMessage: DEFAULT_MSG,
+            errorCode: DEFAULT_CODE,
+          },
+        ),
+      ).rejects.toMatchObject({
+        code: ZeroXKeyErrorCodes.SESSION_EXPIRED,
+        message: "Session API key has expired",
+      });
+    });
+
+    it("normal error message takes priority over global message map", async () => {
+      const normalError = new ZeroXKeyError(
+        "test message",
+        ZeroXKeyErrorCodes.UNKNOWN,
+      );
+
+      await expect(
+        withZeroXKeyErrorHandling(
+          async () => {
+            throw normalError;
+          },
+          {
+            // throw in a dummy message map to make sure we hit that code path even with a passed-in message match
+            customErrorsByMessages: {
+              "test message": {
+                message: "Thrown test message",
+                code: ZeroXKeyErrorCodes.INTERNAL_ERROR,
+              },
+            },
+            errorMessage: DEFAULT_MSG,
+            errorCode: DEFAULT_CODE,
+          },
+        ),
+      ).rejects.toMatchObject({
+        code: ZeroXKeyErrorCodes.INTERNAL_ERROR,
+        message: "Thrown test message",
+      });
+    });
+  });
+
+  describe("when thrown error is ZeroXKeyError", () => {
+    it("uses customMessageByCodes when the code matches (takes priority over message map)", async () => {
+      const original = new ZeroXKeyError("original message", DEFAULT_CODE);
+
+      await expect(
+        withZeroXKeyErrorHandling(failWith(original), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+          customErrorsByCodes: {
+            [DEFAULT_CODE]: {
+              message: "override via code",
+              code: DEFAULT_CODE,
+            },
+          },
+          customErrorsByMessages: {
+            original: { message: "message-map-hit", code: DEFAULT_CODE },
+          },
+        }),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          message: "override via code",
+          code: DEFAULT_CODE,
+        }),
+      );
+    });
+
+    it("uses customMessageByMessages when message substring matches and no code override", async () => {
+      const original = new ZeroXKeyError(
+        "something specific happened",
+        DEFAULT_CODE,
+      );
+
+      await expect(
+        withZeroXKeyErrorHandling(failWith(original), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+          // no customErrorByCodes hit
+          customErrorsByMessages: {
+            specific: { message: "mapped by message", code: DEFAULT_CODE },
+          },
+        }),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          message: "mapped by message",
+          code: DEFAULT_CODE,
+        }),
+      );
+    });
+
+    it("rethrows the original ZeroXKeyError when no custom mapping matches", async () => {
+      const original = new ZeroXKeyError("no matches here", DEFAULT_CODE);
+
+      try {
+        await withZeroXKeyErrorHandling(failWith(original), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+        });
+        throw new Error("should not reach");
+      } catch (e) {
+        // It should be the *same* instance rethrown
+        expect(e).toBe(original);
+      }
+    });
+  });
+
+  describe("when thrown error is ZeroXKeyRequestError", () => {
+    it("maps by message when customMessageByMessages matches", async () => {
+      const reqErr = new ZeroXKeyRequestError({
+        message: "token expired",
+        code: 1,
+        details: null,
+      });
+
+      await expect(
+        withZeroXKeyErrorHandling(failWith(reqErr), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+          customErrorsByMessages: {
+            expired: {
+              message: "Session expired, please re-auth",
+              code: DEFAULT_CODE,
+            },
+          },
+        }),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          message: "Session expired, please re-auth",
+          code: DEFAULT_CODE,
+        }),
+      );
+    });
+
+    it("wraps into ZeroXKeyError with default message/code when no mapping", async () => {
+      const reqErr = new ZeroXKeyRequestError({
+        message: "some request issue",
+        code: 1,
+        details: null,
+      });
+
+      await expect(
+        withZeroXKeyErrorHandling(failWith(reqErr), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+        }),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          message: DEFAULT_MSG,
+          code: DEFAULT_CODE,
+        }),
+      );
+    });
+  });
+
+  it("multiple nested ZeroXKeyErrors", async () => {
+    const first = new ZeroXKeyError("first error", DEFAULT_CODE);
+
+    try {
+      await withZeroXKeyErrorHandling(failWith(first), {
+        errorMessage: DEFAULT_MSG,
+        errorCode: DEFAULT_CODE,
+      });
+      throw new Error("should not reach");
+    } catch (e) {
+      try {
+        await withZeroXKeyErrorHandling(failWith(e), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+        });
+        throw new Error("should not reach");
+      } catch (e2) {
+        try {
+          await withZeroXKeyErrorHandling(failWith(e), {
+            errorMessage: DEFAULT_MSG,
+            errorCode: DEFAULT_CODE,
+          });
+          throw new Error("should not reach");
+        } catch (e3) {
+          // It should be the *same* instance as the first ZeroXKeyError
+          expect(e3).toBe(first);
+        }
+      }
+    }
+  });
+
+  describe("when thrown error is a generic Error", () => {
+    it("maps by message when customMessageByMessages matches", async () => {
+      const err = new Error("db connection refused");
+
+      await expect(
+        withZeroXKeyErrorHandling(failWith(err), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+          customErrorsByMessages: {
+            "connection refused": {
+              message: "Database unavailable",
+              code: DEFAULT_CODE,
+            },
+          },
+        }),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          message: "Database unavailable",
+          code: DEFAULT_CODE,
+        }),
+      );
+    });
+
+    it("wraps into ZeroXKeyError with default message/code when no mapping", async () => {
+      const err = new Error("unrecognized error");
+
+      await expect(
+        withZeroXKeyErrorHandling(failWith(err), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+        }),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          message: DEFAULT_MSG,
+          code: DEFAULT_CODE,
+        }),
+      );
+    });
+  });
+
+  describe("when a non-Error value is thrown", () => {
+    it("maps by message when customMessageByMessages matches", async () => {
+      await expect(
+        withZeroXKeyErrorHandling(failWith("timeout while fetching"), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+          customErrorsByMessages: {
+            timeout: { message: "Network timeout", code: DEFAULT_CODE },
+          },
+        }),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          message: "Network timeout",
+          code: DEFAULT_CODE,
+        }),
+      );
+    });
+
+    it("wraps into ZeroXKeyError(String(error), default code) when no mapping", async () => {
+      await expect(
+        withZeroXKeyErrorHandling(failWith(404), {
+          errorMessage: DEFAULT_MSG,
+          errorCode: DEFAULT_CODE,
+        }),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          // In this branch impl uses String(error) (not DEFAULT_MSG)
+          message: "404",
+          code: DEFAULT_CODE,
+        }),
+      );
+    });
+  });
+});
+
+describe("assertValidP256ECDSAKeyPair", () => {
+  // Helper to generate a P-256 ECDSA keypair with control over extractability/usages
+  const genECDSA = (opts?: {
+    extractable?: boolean;
+    usages?: KeyUsage[];
+    namedCurve?: "P-256" | "P-384";
+  }) => {
+    const {
+      extractable = false,
+      usages = ["sign", "verify"],
+      namedCurve = "P-256",
+    } = opts || {};
+    return crypto.subtle.generateKey(
+      { name: "ECDSA", namedCurve },
+      extractable,
+      usages,
+    ) as Promise<CryptoKeyPair>;
+  };
+
+  it("passes for a valid, non-extractable P-256 ECDSA pair", async () => {
+    const pair = await genECDSA();
+    await expect(assertValidP256ECDSAKeyPair(pair)).resolves.toBeUndefined();
+  });
+
+  it("throws if privateKey is extractable", async () => {
+    const pair = await genECDSA({ extractable: true });
+    await expect(assertValidP256ECDSAKeyPair(pair)).rejects.toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Provided privateKey must be non-extractable",
+        ),
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+  });
+
+  it("throws if privateKey.type is not 'private'", async () => {
+    const pair = await genECDSA();
+    const badPair: CryptoKeyPair = {
+      privateKey: pair.publicKey as unknown as CryptoKey,
+      publicKey: pair.publicKey,
+    };
+    await expect(assertValidP256ECDSAKeyPair(badPair)).rejects.toEqual(
+      expect.objectContaining({
+        message: "privateKey.type must be 'private'.",
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+  });
+
+  it("throws if publicKey.type is not 'public'", async () => {
+    const pair = await genECDSA();
+    const badPair: CryptoKeyPair = {
+      privateKey: pair.privateKey,
+      publicKey: pair.privateKey as unknown as CryptoKey,
+    };
+    await expect(assertValidP256ECDSAKeyPair(badPair)).rejects.toEqual(
+      expect.objectContaining({
+        message: "publicKey.type must be 'public'.",
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+  });
+
+  it("throws if privateKey lacks 'sign' usage", async () => {
+    // Generate ECDH keys to force missing 'sign' usage
+    const ecdhPair = (await crypto.subtle.generateKey(
+      { name: "ECDH", namedCurve: "P-256" },
+      false,
+      ["deriveKey"],
+    )) as CryptoKeyPair;
+
+    await expect(assertValidP256ECDSAKeyPair(ecdhPair)).rejects.toEqual(
+      expect.objectContaining({
+        message: "privateKey must have 'sign' in keyUsages.",
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+  });
+
+  it("throws if publicKey lacks 'verify' usage", async () => {
+    const pair = await genECDSA();
+    Object.defineProperty(pair.publicKey, "usages", {
+      value: [],
+      configurable: true,
+    });
+
+    await expect(assertValidP256ECDSAKeyPair(pair)).rejects.toEqual(
+      expect.objectContaining({
+        message: "publicKey must have 'verify' in keyUsages.",
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+  });
+
+  it("throws if algorithm is not ECDSA (name mismatch)", async () => {
+    const ecdhPair = (await crypto.subtle.generateKey(
+      { name: "ECDH", namedCurve: "P-256" },
+      false,
+      ["deriveKey"],
+    )) as CryptoKeyPair;
+
+    // Patch usages so we reach the algorithm check
+    Object.defineProperty(ecdhPair.privateKey, "usages", {
+      value: ["sign"],
+      configurable: true,
+    });
+    Object.defineProperty(ecdhPair.publicKey, "usages", {
+      value: ["verify"],
+      configurable: true,
+    });
+
+    await expect(assertValidP256ECDSAKeyPair(ecdhPair)).rejects.toEqual(
+      expect.objectContaining({
+        message: "Keys must be ECDSA keys.",
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+  });
+
+  it("throws if curve is not P-256 (e.g., ECDSA P-384)", async () => {
+    const pair = await genECDSA({ namedCurve: "P-384" });
+    await expect(assertValidP256ECDSAKeyPair(pair)).rejects.toEqual(
+      expect.objectContaining({
+        message: "Keys must be on the P-256 curve.",
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+  });
+
+  it("throws if exported public key is not uncompressed (65 bytes starting with 0x04)", async () => {
+    const pair = await genECDSA();
+
+    const exportSpy = jest
+      .spyOn(crypto.subtle, "exportKey")
+      .mockResolvedValue(new Uint8Array(64).buffer);
+
+    await expect(assertValidP256ECDSAKeyPair(pair)).rejects.toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Public key must be an uncompressed P-256 point (65 bytes, leading 0x04)",
+        ),
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+
+    exportSpy.mockRestore();
+  });
+
+  it("throws if the pair doesn't match (verify fails)", async () => {
+    const a = await genECDSA();
+    const b = await genECDSA();
+    const mixed: CryptoKeyPair = {
+      privateKey: a.privateKey,
+      publicKey: b.publicKey,
+    };
+
+    await expect(assertValidP256ECDSAKeyPair(mixed)).rejects.toEqual(
+      expect.objectContaining({
+        message: "publicKey does not match privateKey (verify failed).",
+        code: ZeroXKeyErrorCodes.INVALID_REQUEST,
+      }),
+    );
+  });
+});
+
+describe("isValidPasskeyName", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("web: accepts allowed characters and any length >= 1", () => {
+    // Default behavior (assume web): isReactNative() => false
+    jest.spyOn(utils, "isReactNative").mockReturnValue(false);
+
+    expect(isValidPasskeyName("A-Z a_z 0-9 -_:/.")).toBe("A-Z a_z 0-9 -_:/.");
+    // Long name is accepted on web because regex uses `+` (no 64 cap)
+    const long = "a".repeat(200);
+    expect(isValidPasskeyName(long)).toBe(long);
+  });
+
+  it("web: rejects empty or invalid characters (e.g., emoji)", () => {
+    jest.spyOn(utils, "isReactNative").mockReturnValue(false);
+    expect(() => isValidPasskeyName("")).toThrow(ZeroXKeyError);
+    expect(() => isValidPasskeyName("ok🙂")).toThrow(
+      /Passkey name must be 1-64 characters and only contain/i,
+    );
+  });
+
+  it("react-native: enforces 1–64 length and same allowed charset", () => {
+    // simulate React Native environment using RN-specific global
+    const g = globalThis as any;
+    const original = g.__fbBatchedBridge;
+    g.__fbBatchedBridge = {};
+
+    try {
+      expect(isValidPasskeyName("Name_01-/:.")).toBe("Name_01-/:.");
+
+      const max = "x".repeat(64);
+      expect(isValidPasskeyName(max)).toBe(max);
+
+      const over = "x".repeat(65);
+      expect(() => isValidPasskeyName(over)).toThrow(
+        /Passkey name must be 1-64 characters/i,
+      );
+    } finally {
+      // restore original
+      if (typeof original === "undefined") delete g.__fbBatchedBridge;
+      else g.__fbBatchedBridge = original;
+    }
+  });
+
+  it("react-native: rejects invalid characters", () => {
+    // simulate React Native environment using RN-specific global
+    const g = globalThis as any;
+    const original = g.__fbBatchedBridge;
+    g.__fbBatchedBridge = {};
+
+    try {
+      expect(() => isValidPasskeyName("bad*char")).toThrow(ZeroXKeyError);
+    } finally {
+      // restore original
+      if (typeof original === "undefined") delete g.__fbBatchedBridge;
+      else g.__fbBatchedBridge = original;
+    }
+  });
+});
+
+const mkDate: externaldatav1Timestamp = {
+  seconds: "1735689600", // 2025-01-01T00:00:00Z
+  nanos: "0",
+};
+
+const mkWallet = (over: Partial<v1Wallet> = {}): v1Wallet => ({
+  walletId: "w_1",
+  walletName: "Main",
+  createdAt: mkDate,
+  updatedAt: mkDate,
+  exported: false,
+  imported: false,
+  ...over,
+});
+
+const mkAccount = (over: Partial<v1WalletAccount> = {}): v1WalletAccount => ({
+  walletAccountId: `wa_${Math.random().toString(36).slice(2)}`,
+  organizationId: "org_1",
+  walletId: over.walletDetails?.walletId ?? "w_1",
+  curve: "CURVE_SECP256K1",
+  pathFormat: "PATH_FORMAT_BIP32",
+  path: "m/44'/60'/0'/0",
+  addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+  address: "0xabc",
+  createdAt: mkDate,
+  updatedAt: mkDate,
+  walletDetails: mkWallet(),
+  ...over,
+});
+
+describe("mapAccountsToWallet", () => {
+  it("returns an empty array for empty input", () => {
+    expect(mapAccountsToWallet([], new Map())).toEqual([]);
+  });
+
+  it("groups multiple accounts with the same walletId into one wallet", () => {
+    const w = mkWallet({ walletId: "w_A", walletName: "Alpha" });
+
+    const a1 = mkAccount({
+      address: "0x111",
+      path: "m/44'/60'/0'/0",
+      walletDetails: w,
+      walletId: "w_A",
+    });
+    const a2 = mkAccount({
+      address: "0x222",
+      path: "m/44'/60'/0'/1",
+      walletDetails: w,
+      walletId: "w_A",
+    });
+
+    const walletMap = new Map<string, EmbeddedWallet>([
+      ["w_A", { ...w, source: WalletSource.Embedded, accounts: [] }],
+    ]);
+
+    const out = mapAccountsToWallet([a1, a2], walletMap) as EmbeddedWallet[];
+    expect(out).toHaveLength(1);
+
+    const wallet = out[0];
+    expect(wallet!.walletId).toBe("w_A");
+    expect(wallet!.walletName).toBe("Alpha");
+    expect(wallet!.source).toBe(WalletSource.Embedded);
+    expect(wallet!.exported).toBe(w.exported);
+    expect(wallet!.imported).toBe(w.imported);
+
+    expect(wallet!.accounts).toHaveLength(2);
+    // Preserve original account props and set source on each account
+    expect(wallet!.accounts[0]).toMatchObject({
+      address: "0x111",
+      source: WalletSource.Embedded,
+    });
+    expect(wallet!.accounts[1]).toMatchObject({
+      address: "0x222",
+      source: WalletSource.Embedded,
+    });
+  });
+
+  it("creates separate wallets for different walletIds and preserves first-seen order", () => {
+    const wA = mkWallet({ walletId: "w_A", walletName: "Alpha" });
+    const wB = mkWallet({ walletId: "w_B", walletName: "Beta" });
+
+    const a1 = mkAccount({
+      address: "0xA1",
+      walletDetails: wA,
+      walletId: "w_A",
+    });
+    const b1 = mkAccount({
+      address: "0xB1",
+      walletDetails: wB,
+      walletId: "w_B",
+    });
+    const a2 = mkAccount({
+      address: "0xA2",
+      walletDetails: wA,
+      walletId: "w_A",
+    });
+
+    const walletMap = new Map<string, EmbeddedWallet>([
+      ["w_A", { ...wA, source: WalletSource.Embedded, accounts: [] }],
+      ["w_B", { ...wB, source: WalletSource.Embedded, accounts: [] }],
+    ]);
+
+    // First encounter: w_A, then w_B (order should follow first appearance)
+    const out = mapAccountsToWallet(
+      [a1, b1, a2],
+      walletMap,
+    ) as EmbeddedWallet[];
+    expect(out.map((w) => w.walletId)).toEqual(["w_A", "w_B"]);
+
+    const alpha = out[0];
+    const beta = out[1];
+
+    expect(alpha!.walletName).toBe("Alpha");
+    expect(alpha!.accounts.map((a) => a.address)).toEqual(["0xA1", "0xA2"]);
+
+    expect(beta!.walletName).toBe("Beta");
+    expect(beta!.accounts.map((a) => a.address)).toEqual(["0xB1"]);
+  });
+
+  it("preserves wallet-level metadata from walletDetails", () => {
+    const w = mkWallet({
+      walletId: "w_meta",
+      walletName: "Meta",
+      createdAt: mkDate,
+      updatedAt: mkDate,
+      exported: true,
+      imported: true,
+    });
+    const a = mkAccount({ walletDetails: w, walletId: "w_meta" });
+
+    const walletMap = new Map<string, EmbeddedWallet>([
+      ["w_meta", { ...w, source: WalletSource.Embedded, accounts: [] }],
+    ]);
+
+    const out = mapAccountsToWallet([a], walletMap) as EmbeddedWallet[];
+    expect(out[0]).toMatchObject({
+      walletId: "w_meta",
+      walletName: "Meta",
+      createdAt: mkDate,
+      updatedAt: mkDate,
+      exported: true,
+      imported: true,
+      source: WalletSource.Embedded,
+    });
+  });
+
+  it("handles accounts arriving out of order and still groups correctly", () => {
+    const w = mkWallet({ walletId: "w_mix", walletName: "Mixed" });
+
+    const a2 = mkAccount({
+      address: "0xM2",
+      path: "m/44'/60'/0'/1",
+      walletDetails: w,
+      walletId: "w_mix",
+    });
+    const a1 = mkAccount({
+      address: "0xM1",
+      path: "m/44'/60'/0'/0",
+      walletDetails: w,
+      walletId: "w_mix",
+    });
+
+    const walletMap = new Map<string, EmbeddedWallet>([
+      ["w_mix", { ...w, source: WalletSource.Embedded, accounts: [] }],
+    ]);
+
+    const out = mapAccountsToWallet([a2, a1], walletMap) as EmbeddedWallet[];
+    expect(out).toHaveLength(1);
+    // Keeps push order within that wallet (a2 then a1) since accounts are appended as seen
+    expect(out[0]!.accounts.map((a) => a.address)).toEqual(["0xM2", "0xM1"]);
+  });
+});

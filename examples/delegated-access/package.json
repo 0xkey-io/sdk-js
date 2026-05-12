@@ -1,0 +1,17 @@
+{
+  "name": "@0xkey-io/delegated-access",
+  "version": "0.1.18",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -w run build-all",
+    "start": "tsx src/index.ts",
+    "validate": "tsx src/validate.ts",
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@0xkey-io/sdk-server": "workspace:*",
+    "dotenv": "^16.0.3",
+    "viem": "^2.26.2"
+  }
+}

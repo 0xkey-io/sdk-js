@@ -1,0 +1,24 @@
+{
+  "name": "@0xkey-io/example-with-tron",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "createTronWallet": "tsx src/createTronWallet.ts",
+    "signRawPayload": "tsx src/signRawPayload.ts",
+    "transferTRXPolicy": "tsx src/transferTRXPolicy.ts",
+    "transferTRC20Policy": "tsx src/transferTRC20Policy.ts",
+    "clean": "rimraf ./dist ./.cache"
+  },
+  "dependencies": {
+    "@0xkey-io/api-key-stamper": "workspace:*",
+    "@0xkey-io/crypto": "workspace:^",
+    "@0xkey-io/http": "workspace:*",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "dotenv": "^16.0.3",
+    "tronweb": "^6.0.3"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "5.4.3"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "excludeInternal": true,
+  "includeVersion": true,
+  "projectDocuments": ["documents/*.md"],
+  "outputs": [
+    {
+      "name": "json",
+      "path": "./docs/json",
+      "fileExtension": "json"
+    }
+  ]
+}

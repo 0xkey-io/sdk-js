@@ -1,0 +1,13 @@
+{
+  "name": "@0xkey-io/eip-1193-provider",
+  "exports": [
+    {
+      "kind": "const",
+      "name": "createEIP1193Provider"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyEIP1193Provider"
+    }
+  ]
+}

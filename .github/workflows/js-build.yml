@@ -1,0 +1,215 @@
+name: js-build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_security_audit:
+        description: "Run pnpm audit as a non-blocking security signal"
+        required: false
+        type: boolean
+        default: false
+      run_integration_tests:
+        description: "Run 0xkey preprod/prod integration tests (requires configured secrets)"
+        required: false
+        type: boolean
+        default: false
+      run_e2e_tests:
+        description: "Run Playwright e2e tests against 0xkey preprod"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  basic-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Install and cache JS toolchain and dependencies (node_modules)
+      - name: Setup JS
+        uses: ./.github/actions/js-setup
+
+      - name: Build packages
+        run: pnpm run build-all
+
+      - name: Typecheck
+        run: pnpm run typecheck-all
+
+      - name: Prettier
+        run: pnpm run prettier-all:check
+
+      - name: Core unit tests
+        run: |
+          pnpm --filter @0xkey-io/crypto \
+            --filter @0xkey-io/encoding \
+            --filter @0xkey-io/api-key-stamper \
+            --filter @0xkey-io/react-wallet-kit \
+            test
+
+      - name: Contract guard
+        run: pnpm run contract-guard
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: build-artifacts-${{ github.sha }}
+          path: |
+            packages/*/dist/**
+          retention-days: 1
+
+  security-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_security_audit }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup JS
+        uses: ./.github/actions/js-setup
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high
+
+  test-prod:
+    runs-on: ubuntu-latest
+    needs: test-pre-prod
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_integration_tests }}
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Install and cache JS toolchain and dependencies (node_modules)
+      - name: Setup JS
+        uses: ./.github/actions/js-setup
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: build-artifacts-${{ github.sha }}
+          path: packages/
+
+      - name: Test (prod)
+        run: anvil & pnpm run test-all && lsof -t -i tcp:8545 | xargs kill
+        env:
+          API_PUBLIC_KEY: ${{ secrets.API_PUBLIC_KEY }}
+          API_PRIVATE_KEY: ${{ secrets.API_PRIVATE_KEY }}
+          BASE_URL: "https://api.0xkey.io"
+          ORGANIZATION_ID: ${{ secrets.ORGANIZATION_ID }}
+          PRIVATE_KEY_ID: ${{ secrets.PRIVATE_KEY_ID }}
+          EXPECTED_PRIVATE_KEY_ETH_ADDRESS: ${{ secrets.EXPECTED_PRIVATE_KEY_ETH_ADDRESS }}
+          EXPECTED_PRIVATE_KEY_ETH_ADDRESS_2: ${{ secrets.EXPECTED_PRIVATE_KEY_ETH_ADDRESS_2 }}
+          EXPECTED_WALLET_ACCOUNT_ETH_ADDRESS: ${{ secrets.EXPECTED_WALLET_ACCOUNT_ETH_ADDRESS }}
+          EXPECTED_WALLET_ACCOUNT_ETH_ADDRESS_2: ${{ secrets.EXPECTED_WALLET_ACCOUNT_ETH_ADDRESS_2 }}
+          BANNED_TO_ADDRESS: "0x6F72eDB2429820c2A0606a9FC3cA364f5E9b2375"
+          SOLANA_TEST_ORG_API_PRIVATE_KEY: ${{ secrets.SOLANA_TEST_ORG_API_PRIVATE_KEY }}
+          WALLET_ID: ${{ secrets.WALLET_ID }}
+
+  test-pre-prod:
+    runs-on: ubuntu-latest
+    needs: basic-ci
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_integration_tests }}
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Install and cache JS toolchain and dependencies (node_modules)
+      - name: Setup JS
+        uses: ./.github/actions/js-setup
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: build-artifacts-${{ github.sha }}
+          path: packages/
+
+      - name: Test (preprod)
+        run: anvil & pnpm run test-all && lsof -t -i tcp:8545 | xargs kill
+        env:
+          API_PUBLIC_KEY: ${{ secrets.PREPROD_API_PUBLIC_KEY }}
+          API_PRIVATE_KEY: ${{ secrets.PREPROD_API_PRIVATE_KEY }}
+          BASE_URL: ${{ secrets.PREPROD_BASE_URL }}
+          ORGANIZATION_ID: ${{ secrets.PREPROD_ORGANIZATION_ID }}
+          PRIVATE_KEY_ID: ${{ secrets.PREPROD_PRIVATE_KEY_ID }}
+          EXPECTED_PRIVATE_KEY_ETH_ADDRESS: ${{ secrets.PREPROD_EXPECTED_PRIVATE_KEY_ETH_ADDRESS }}
+          EXPECTED_PRIVATE_KEY_ETH_ADDRESS_2: ${{ secrets.PREPROD_EXPECTED_PRIVATE_KEY_ETH_ADDRESS_2 }}
+          EXPECTED_WALLET_ACCOUNT_ETH_ADDRESS: ${{ secrets.PREPROD_EXPECTED_WALLET_ACCOUNT_ETH_ADDRESS }}
+          EXPECTED_WALLET_ACCOUNT_ETH_ADDRESS_2: ${{ secrets.PREPROD_EXPECTED_WALLET_ACCOUNT_ETH_ADDRESS_2 }}
+          BANNED_TO_ADDRESS: ${{ secrets.PREPROD_BANNED_TO_ADDRESS }}
+          SOLANA_TEST_ORG_API_PRIVATE_KEY: ${{ secrets.SOLANA_TEST_ORG_API_PRIVATE_KEY }}
+          WALLET_ID: ${{ secrets.PREPROD_WALLET_ID }}
+  test-end-to-end:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: basic-ci
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_e2e_tests }}
+
+    env:
+      NEXT_PUBLIC_BASE_URL: https://api.preprod.0xkey.io
+      NEXT_PUBLIC_AUTH_PROXY_URL: https://authproxy.preprod.0xkey.io
+      NEXT_PUBLIC_ORGANIZATION_ID: 7f947121-11a0-4906-bf7c-76712396a20d
+      NEXT_PUBLIC_AUTH_PROXY_ID: 8ffb4198-a41e-4d14-b7b8-ada33f410d7a
+      NEXT_PUBLIC_AUTH_IFRAME_URL: https://auth.preprod.0xkey.io
+      NEXT_PUBLIC_EXPORT_IFRAME_URL: https://export.preprod.0xkey.io
+      NEXT_PUBLIC_IMPORT_IFRAME_URL: https://import.preprod.0xkey.io
+      NEXT_PUBLIC_OAUTH_REDIRECT_URI: http://127.0.0.1:3000/
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: <Google OIDC client ID>
+      NEXT_PUBLIC_APPLE_CLIENT_ID: <Apple OIDC client ID>
+      NEXT_PUBLIC_FACEBOOK_CLIENT_ID: <Facebook OIDC client ID>
+      NEXT_PUBLIC_DISCORD_CLIENT_ID: <Discord OIDC client ID>
+      NEXT_PUBLIC_X_CLIENT_ID: <X OIDC client ID>
+
+    defaults:
+      run:
+        working-directory: examples/with-sdk-js
+
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Install and cache JS toolchain and dependencies (node_modules)
+      - name: Setup JS
+        uses: ./.github/actions/js-setup
+
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      # Install workspace deps (uses root lockfile and links workspaces)
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # (Optional) Build any workspace packages example depends on
+      - name: Build workspace packages
+        working-directory: .
+        run: pnpm -r --filter "./packages/*" build
+
+      # Install Playwright browsers + system deps
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Run Playwright tests
+        env:
+          CI: "true"
+        run: pnpm exec playwright test --reporter=line,html
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: playwright-report
+          path: examples/with-sdk-js/playwright-report
+          retention-days: 30

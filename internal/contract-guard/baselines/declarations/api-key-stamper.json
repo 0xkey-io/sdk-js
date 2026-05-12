@@ -1,0 +1,33 @@
+{
+  "name": "@0xkey-io/api-key-stamper",
+  "exports": [
+    {
+      "kind": "re-export",
+      "name": "ApiKeyStamper"
+    },
+    {
+      "kind": "re-export",
+      "name": "detectRuntime"
+    },
+    {
+      "kind": "re-export",
+      "name": "pointDecode"
+    },
+    {
+      "kind": "re-export",
+      "name": "SignatureFormat"
+    },
+    {
+      "kind": "re-export",
+      "name": "signWithApiKey"
+    },
+    {
+      "kind": "re-export",
+      "name": "type Runtime"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TApiKeyStamperConfig"
+    }
+  ]
+}

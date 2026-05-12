@@ -1,0 +1,9 @@
+{
+  "name": "@0xkey-io/indexed-db-stamper",
+  "exports": [
+    {
+      "kind": "class",
+      "name": "IndexedDbStamper"
+    }
+  ]
+}

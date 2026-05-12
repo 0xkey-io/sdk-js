@@ -1,0 +1,13 @@
+{
+  "name": "@0xkey-io/webauthn-stamper",
+  "exports": [
+    {
+      "kind": "type",
+      "name": "TWebauthnStamperConfig"
+    },
+    {
+      "kind": "class",
+      "name": "WebauthnStamper"
+    }
+  ]
+}

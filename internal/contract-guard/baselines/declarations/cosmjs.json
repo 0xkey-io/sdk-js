@@ -1,0 +1,21 @@
+{
+  "name": "@0xkey-io/cosmjs",
+  "exports": [
+    {
+      "kind": "function",
+      "name": "fetchCompressedPublicKey"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyActivityError"
+    },
+    {
+      "kind": "class",
+      "name": "ZeroXKeyDirectWallet"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyRequestError"
+    }
+  ]
+}

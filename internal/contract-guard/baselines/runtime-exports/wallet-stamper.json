@@ -1,0 +1,47 @@
+{
+  "name": "@0xkey-io/wallet-stamper",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "BaseEthereumWallet",
+      "kind": "class",
+      "arity": 0
+    },
+    {
+      "name": "EthereumWallet",
+      "kind": "class",
+      "arity": 0
+    },
+    {
+      "name": "SIGNATURE_SCHEME_TK_API_ED25519",
+      "kind": "string"
+    },
+    {
+      "name": "SIGNATURE_SCHEME_TK_API_SECP256K1_EIP191",
+      "kind": "string"
+    },
+    {
+      "name": "STAMP_HEADER_NAME",
+      "kind": "string"
+    },
+    {
+      "name": "WalletStamper",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "WalletStamperError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "WalletType",
+      "kind": "object"
+    },
+    {
+      "name": "getCompressedPublicKey",
+      "kind": "function",
+      "arity": 2
+    }
+  ]
+}

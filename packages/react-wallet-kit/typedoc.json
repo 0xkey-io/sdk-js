@@ -1,0 +1,23 @@
+{
+  "entryPoints": ["src/typedoc-entry/index.ts"],
+  "name": "react-wallet-kit",
+  "exclude": ["src/utils.ts", "**/assets/**", "**/components/**"],
+  "excludeInternal": true,
+  "includeVersion": true,
+  // "fileExtension": "json",
+  "alwaysCreateEntryPointModule": false,
+  "router": "structure-dir",
+  "projectDocuments": ["documents/*.md", "CHANGELOG.md"],
+  "validation": {
+    "notExported": false,
+    "notDocumented": false
+  },
+  "outputs": [
+    {
+      // requires typedoc-plugin-markdown
+      "name": "json",
+      "path": "./generated-docs/sdks",
+      "fileExtension": "json"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@0xkey-io/internal-codec",
+  "version": "0.1.0",
+  "private": true,
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "clean": "rimraf ./dist ./.cache",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "bs58": "6.0.0",
+    "bs58check": "4.0.0"
+  },
+  "devDependencies": {
+    "@0xkey-io/jest-config": "workspace:*",
+    "jest": "29.4.3"
+  }
+}

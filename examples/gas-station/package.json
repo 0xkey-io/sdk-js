@@ -1,0 +1,42 @@
+{
+  "name": "@0xkey-io/example-gas-station",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Example demonstrating paymaster functionality with 0xkey SDK",
+  "scripts": {
+    "start-basic": "tsx src/basic-paymaster.ts",
+    "start-advanced": "tsx src/advanced-paymaster.ts",
+    "start-gasless": "tsx src/gasless-transaction.ts",
+    "start-7702-usdc": "tsx src/eip7702/transferUSDCDelegated.ts",
+    "eth-transfer": "tsx src/transferETHDelegated.ts",
+    "usdc-transfer": "tsx src/transferUSDCDelegated.ts",
+    "approve-then-execute": "tsx src/approveThenExecuteDemo.ts",
+    "swap-usdc-eth": "tsx src/swapUSDCForETH.ts",
+    "test:policies": "jest policyEnforcement",
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@0xkey-io/crypto": "workspace:*",
+    "@0xkey-io/ethers": "workspace:*",
+    "@0xkey-io/gas-station": "workspace:*",
+    "@0xkey-io/sdk-server": "workspace:*",
+    "@0xkey-io/viem": "workspace:*",
+    "@uniswap/sdk-core": "^6.0.0",
+    "@uniswap/universal-router-sdk": "^3.0.0",
+    "@uniswap/v3-sdk": "^3.9.0",
+    "dotenv": "^16.0.3",
+    "ethers": "^6.10.0",
+    "prompts": "^2.4.2",
+    "viem": "^2.34.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^24.6.2",
+    "@types/prompts": "^2.4.2",
+    "jest": "^29.7.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

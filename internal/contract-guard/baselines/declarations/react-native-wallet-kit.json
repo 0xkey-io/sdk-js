@@ -1,0 +1,29 @@
+{
+  "name": "@0xkey-io/react-native-wallet-kit",
+  "exports": [
+    {
+      "kind": "re-export",
+      "name": "isEthereumProvider"
+    },
+    {
+      "kind": "re-export",
+      "name": "isSolanaProvider"
+    },
+    {
+      "kind": "re-export",
+      "name": "sendSignedRequest"
+    },
+    {
+      "kind": "re-export",
+      "name": "type ZeroXKeyClientMethods"
+    },
+    {
+      "kind": "re-export",
+      "name": "type ZeroXKeySDKClientBase"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyClient"
+    }
+  ]
+}

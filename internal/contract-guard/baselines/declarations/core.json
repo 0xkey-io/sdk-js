@@ -1,0 +1,73 @@
+{
+  "name": "@0xkey-io/core",
+  "exports": [
+    {
+      "kind": "re-export",
+      "name": "addressFormatConfig"
+    },
+    {
+      "kind": "re-export",
+      "name": "ApiKeyStamper"
+    },
+    {
+      "kind": "re-export",
+      "name": "decodeVerificationToken"
+    },
+    {
+      "kind": "re-export",
+      "name": "generateWalletAccountsFromAddressFormat"
+    },
+    {
+      "kind": "re-export",
+      "name": "getAuthProxyConfig"
+    },
+    {
+      "kind": "re-export",
+      "name": "getClientSignatureMessageForLogin"
+    },
+    {
+      "kind": "re-export",
+      "name": "getClientSignatureMessageForSignup"
+    },
+    {
+      "kind": "re-export",
+      "name": "isEthereumProvider"
+    },
+    {
+      "kind": "re-export",
+      "name": "isSolanaProvider"
+    },
+    {
+      "kind": "re-export",
+      "name": "sendSignedRequest"
+    },
+    {
+      "kind": "re-export",
+      "name": "signWithApiKey"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TApiKeyStamperConfig"
+    },
+    {
+      "kind": "re-export",
+      "name": "type TWebauthnStamperConfig"
+    },
+    {
+      "kind": "re-export",
+      "name": "type ZeroXKeyClientMethods"
+    },
+    {
+      "kind": "re-export",
+      "name": "type ZeroXKeySDKClientBase"
+    },
+    {
+      "kind": "re-export",
+      "name": "WebauthnStamper"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyClient"
+    }
+  ]
+}
