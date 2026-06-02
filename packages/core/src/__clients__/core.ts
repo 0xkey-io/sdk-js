@@ -310,7 +310,7 @@ export class ZeroXKeyClient {
    * @param params - Optional configuration parameters to override the default client configuration.
    * @param params.apiBaseUrl - The base URL of the ZeroXKey API (defaults to `https://api.0xkey.com` if not provided).
    * @param params.organizationId - The organization ID to associate requests with.
-   * @param params.authProxyUrl - The base URL of the Auth Proxy (defaults to `https://authproxy.0xkey.com` if not provided).
+   * @param params.authProxyUrl - The base URL of the Auth Proxy (defaults to `https://authproxy.0xkey.io` if not provided).
    * @param params.authProxyConfigId - The configuration ID to use when making Auth Proxy requests.
    * @param params.defaultStamperType - The default stamper type to use for signing requests
    *   (overrides automatic detection of ApiKey, Passkey, or Wallet stampers).
@@ -326,7 +326,7 @@ export class ZeroXKeyClient {
     const authProxyUrl =
       params?.authProxyUrl ||
       this.config.authProxyUrl ||
-      "https://authproxy.0xkey.com";
+      "https://authproxy.0xkey.io";
 
     const organizationId = params?.organizationId || this.config.organizationId;
 

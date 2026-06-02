@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/encoding",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "exports": {
@@ -46,8 +46,10 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@0xkey-io/internal-codec": "workspace:*",
     "bs58": "6.0.0",
     "bs58check": "4.0.0"
+  },
+  "devDependencies": {
+    "@0xkey-io/internal-codec": "workspace:*"
   }
 }

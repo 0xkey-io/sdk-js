@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/example-export-in-node",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "start": "pnpm tsx src/index.ts",

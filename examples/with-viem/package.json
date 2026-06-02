@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/example-with-viem",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "scripts": {
     "start": "tsx src/index.ts",

@@ -957,7 +957,7 @@ export async function getAuthProxyConfig(
   authProxyUrl?: string | undefined,
 ): Promise<ProxyTGetWalletKitConfigResponse> {
   const fullUrl =
-    (authProxyUrl ?? "https://authproxy.0xkey.com") + "/v1/wallet_kit_config";
+    (authProxyUrl ?? "https://authproxy.0xkey.io") + "/v1/wallet_kit_config";
 
   var headers: Record<string, string> = {
     "Content-Type": "application/json",

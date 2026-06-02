@@ -67,6 +67,21 @@ function main() {
       );
     }
 
+    const packedPkg = JSON.parse(
+      fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"),
+    );
+    const runtimeDeps = {
+      ...packedPkg.dependencies,
+      ...packedPkg.peerDependencies,
+    };
+    for (const dep of Object.keys(runtimeDeps)) {
+      if (dep.startsWith("@0xkey-io/internal-")) {
+        failures.push(
+          `${pkgMeta.pkg.name}: internal dep "${dep}" leaked into published manifest`,
+        );
+      }
+    }
+
     /** @param {string} dir */
     const walk = (dir) => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

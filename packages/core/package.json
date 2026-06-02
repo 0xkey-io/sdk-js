@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A core JavaScript web and React Native package for interfacing with 0xkey's infrastructure.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

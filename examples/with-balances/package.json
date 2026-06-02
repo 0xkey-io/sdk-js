@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/example-with-balances",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "get-balances": "NODE_NO_WARNINGS=1 tsx src/index.ts",

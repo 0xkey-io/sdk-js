@@ -2981,9 +2981,6 @@ importers:
       '@0xkey-io/encoding':
         specifier: workspace:*
         version: link:../encoding
-      '@0xkey-io/internal-crypto-core':
-        specifier: workspace:*
-        version: link:../../internal/crypto-core
       '@0xkey-io/sdk-types':
         specifier: workspace:*
         version: link:../sdk-types
@@ -3006,6 +3003,9 @@ importers:
         specifier: 0.1.0
         version: 0.1.0
     devDependencies:
+      '@0xkey-io/internal-crypto-core':
+        specifier: workspace:*
+        version: link:../../internal/crypto-core
       '@types/cbor-js':
         specifier: ^0.1.1
         version: 0.1.1
@@ -3043,15 +3043,16 @@ importers:
 
   packages/encoding:
     dependencies:
-      '@0xkey-io/internal-codec':
-        specifier: workspace:*
-        version: link:../../internal/codec
       bs58:
         specifier: 6.0.0
         version: 6.0.0
       bs58check:
         specifier: 4.0.0
         version: 4.0.0
+    devDependencies:
+      '@0xkey-io/internal-codec':
+        specifier: workspace:*
+        version: link:../../internal/codec
 
   packages/ethers:
     dependencies:

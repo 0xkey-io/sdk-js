@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/otp-auth-without-backend",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "private": true,
   "scripts": {
     "dev": "next dev",
