@@ -620,14 +620,62 @@ describe("ZeroXKey Crypto Primitives", () => {
 });
 
 describe("Session JWT signature", () => {
-  test("verifies the provided JWT against its public key", async () => {
-    const jwt =
-      "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9." +
-      "eyJleHAiOjE3NDg4NzY4MzcsInB1YmxpY19rZXkiOiIwMzk5ZmUyYWNlNjIwOGFmMGFkZjg0OGY0NGJjNDgyMTBiNTk0YjdlNjllY2Q5MWVjOTY4ZmQ3NWIzYmI0NDgzMzYiLCJzZXNzaW9uX3R5cGUiOiJTRVNTSU9OX1RZUEVfUkVBRF9XUklURSIsInVzZXJfaWQiOiI2OTEyYjgxOS1mNGRmLTQwZjQtYTE5Mi0yMGVlNDMwOTA5NzQiLCJvcmdhbml6YXRpb25faWQiOiJjNzVlY2IwNy1jODRhLTRkZDUtOTMyYy01MzlkZmFmYzY4NjQifQ." +
-      "y6LPW1jlTwc9jFcvCwKJoKfleL_vHnGUr5tRVdMFUCnHvDspSPZ3DWK85tf1znCCBFQ6MYaFOl-1FLb0KcFxqQ";
+  // base64url-encode raw bytes (no padding), matching the JWT spec.
+  const base64UrlEncode = (bytes: Uint8Array): string =>
+    btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
 
-    const ok = await verifySessionJwtSignature(jwt);
+  // Mint a session JWT signed by `privateKey`, mirroring the notarizer:
+  // ES256 over sha256(sha256(`${header}.${payload}`)), r||s compact signature.
+  const mintSessionJwt = (privateKey: Uint8Array): string => {
+    const header = base64UrlEncode(
+      new TextEncoder().encode(JSON.stringify({ alg: "ES256", typ: "JWT" })),
+    );
+    const payload = base64UrlEncode(
+      new TextEncoder().encode(
+        JSON.stringify({
+          exp: 1748876837,
+          public_key:
+            "0399fe2ace6208af0adf848f44bc48210b594b7e69ecd91ec968fd75b3bb448336",
+          session_type: "SESSION_TYPE_READ_WRITE",
+          user_id: "6912b819-f4df-40f4-a192-20ee43090974",
+          organization_id: "c75ecb07-c84a-4dd5-932c-539dfafc6864",
+        }),
+      ),
+    );
+    const signingInput = `${header}.${payload}`;
+    const msgDigest = sha256(sha256(new TextEncoder().encode(signingInput)));
+    const signature = p256.sign(msgDigest, privateKey).toCompactRawBytes();
+    return `${signingInput}.${base64UrlEncode(signature)}`;
+  };
+
+  // Generate an ephemeral notarizer keypair at runtime so the test is
+  // self-contained: it exercises the verification logic without depending on
+  // the rotating production quorum key (whose private half we never hold).
+  test("verifies a JWT against an explicitly provided notarizer key", async () => {
+    const privateKey = p256.utils.randomPrivateKey();
+    const publicKeyHex = uint8ArrayToHexString(
+      p256.getPublicKey(privateKey, false),
+    );
+
+    const jwt = mintSessionJwt(privateKey);
+
+    const ok = await verifySessionJwtSignature(jwt, publicKeyHex);
     expect(ok).toBe(true);
+  });
+
+  test("rejects a JWT signed by a different key", async () => {
+    const signingKey = p256.utils.randomPrivateKey();
+    const wrongKeyHex = uint8ArrayToHexString(
+      p256.getPublicKey(p256.utils.randomPrivateKey(), false),
+    );
+
+    const jwt = mintSessionJwt(signingKey);
+
+    const ok = await verifySessionJwtSignature(jwt, wrongKeyHex);
+    expect(ok).toBe(false);
   });
 });
 
