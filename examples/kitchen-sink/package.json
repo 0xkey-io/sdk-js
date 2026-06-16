@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/kitchen-sink",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "scripts": {
     "start-sdk-server": "tsx sdkServerClient.ts",

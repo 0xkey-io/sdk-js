@@ -1,5 +1,11 @@
 # @0xkey-io/crypto
 
+## 0.2.0
+
+### Minor Changes
+
+- add webhook Ed25519 signature verification helpers (`verifyWebhook`, `verifyWebhookFromJWKS`)
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/with-aave",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "scripts": {
     "build": "pnpm -w run build-all",

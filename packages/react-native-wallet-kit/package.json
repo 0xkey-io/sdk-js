@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/react-native-wallet-kit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The easiest and most powerful way to integrate 0xkey's Embedded Wallets into your React Native applications.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

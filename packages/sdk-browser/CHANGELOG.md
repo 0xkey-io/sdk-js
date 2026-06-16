@@ -1,5 +1,16 @@
 # @0xkey-io/sdk-browser
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/crypto@0.2.0
+  - @0xkey-io/api-key-stamper@0.1.2
+  - @0xkey-io/wallet-stamper@0.1.2
+  - @0xkey-io/http@0.1.2
+  - @0xkey-io/indexed-db-stamper@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

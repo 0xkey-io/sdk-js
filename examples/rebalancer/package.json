@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/example-with-rebalancer",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "scripts": {
     "build": "pnpm -w run build-all",

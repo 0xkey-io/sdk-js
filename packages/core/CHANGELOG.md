@@ -1,5 +1,15 @@
 # @0xkey-io/core
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/crypto@0.2.0
+  - @0xkey-io/api-key-stamper@0.1.2
+  - @0xkey-io/http@0.1.2
+  - @0xkey-io/react-native-passkey-stamper@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
