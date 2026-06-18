@@ -42,9 +42,15 @@ export function createFacilitatorClient(opts: FacilitatorClientOptions) {
       headers: {
         "Content-Type": "application/json",
         ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
-        ...(opts.organizationId ? { "x-0xkey-organization-id": opts.organizationId } : {}),
+        ...(opts.organizationId
+          ? { "x-0xkey-organization-id": opts.organizationId }
+          : {}),
       },
-      body: JSON.stringify({ x402Version: X402_VERSION, paymentPayload, paymentRequirements }),
+      body: JSON.stringify({
+        x402Version: X402_VERSION,
+        paymentPayload,
+        paymentRequirements,
+      }),
     });
     return (await res.json()) as VerifyResponse;
   }
@@ -58,9 +64,15 @@ export function createFacilitatorClient(opts: FacilitatorClientOptions) {
       headers: {
         "Content-Type": "application/json",
         ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
-        ...(opts.organizationId ? { "x-0xkey-organization-id": opts.organizationId } : {}),
+        ...(opts.organizationId
+          ? { "x-0xkey-organization-id": opts.organizationId }
+          : {}),
       },
-      body: JSON.stringify({ x402Version: X402_VERSION, paymentPayload, paymentRequirements }),
+      body: JSON.stringify({
+        x402Version: X402_VERSION,
+        paymentPayload,
+        paymentRequirements,
+      }),
     });
     return (await res.json()) as SettleResponse;
   }
@@ -151,7 +163,11 @@ function buildRequirements(opts: PaywallOptions): PaymentRequirements {
 }
 
 function payment402(required: PaymentRequirements, reason?: string): Response {
-  const body: { x402Version: 2; error?: string; accepts: PaymentRequirements[] } = {
+  const body: {
+    x402Version: 2;
+    error?: string;
+    accepts: PaymentRequirements[];
+  } = {
     x402Version: X402_VERSION,
     accepts: [required],
   };
@@ -188,7 +204,10 @@ export async function handlePaywallRequest(
   const facilitator = createFacilitatorClient(opts.facilitator);
   const verifyResult = await facilitator.verify(payload, requirements);
   if (!verifyResult.isValid) {
-    return payment402(requirements, verifyResult.invalidReason ?? "verify failed");
+    return payment402(
+      requirements,
+      verifyResult.invalidReason ?? "verify failed",
+    );
   }
 
   const runHandler = async () => {
@@ -202,15 +221,14 @@ export async function handlePaywallRequest(
     }
     const receipt: PaymentReceipt = {
       success: true,
-      ...(settleResult.transaction ? { transaction: settleResult.transaction } : {}),
+      ...(settleResult.transaction
+        ? { transaction: settleResult.transaction }
+        : {}),
       ...(settleResult.network ? { network: settleResult.network } : {}),
       ...(settleResult.payer ? { payer: settleResult.payer } : {}),
     };
     const headers = new Headers(business.headers);
-    headers.set(
-      HEADER_PAYMENT_RESPONSE,
-      encodeBase64Json(receipt),
-    );
+    headers.set(HEADER_PAYMENT_RESPONSE, encodeBase64Json(receipt));
     return new Response(business.body, {
       status: business.status,
       statusText: business.statusText,
@@ -226,15 +244,14 @@ export async function handlePaywallRequest(
     const business = await handler();
     const receipt: PaymentReceipt = {
       success: true,
-      ...(settleResult.transaction ? { transaction: settleResult.transaction } : {}),
+      ...(settleResult.transaction
+        ? { transaction: settleResult.transaction }
+        : {}),
       ...(settleResult.network ? { network: settleResult.network } : {}),
       ...(settleResult.payer ? { payer: settleResult.payer } : {}),
     };
     const headers = new Headers(business.headers);
-    headers.set(
-      HEADER_PAYMENT_RESPONSE,
-      encodeBase64Json(receipt),
-    );
+    headers.set(HEADER_PAYMENT_RESPONSE, encodeBase64Json(receipt));
     return new Response(business.body, { status: business.status, headers });
   }
 
@@ -244,9 +261,15 @@ export async function handlePaywallRequest(
 /** Express middleware factory */
 export function paywallExpress(opts: PaywallOptions) {
   return async (
-    req: { headers: Record<string, string | string[] | undefined>; url?: string },
+    req: {
+      headers: Record<string, string | string[] | undefined>;
+      url?: string;
+    },
     res: {
-      status: (code: number) => { setHeader: (k: string, v: string) => void; send: (b: string) => void };
+      status: (code: number) => {
+        setHeader: (k: string, v: string) => void;
+        send: (b: string) => void;
+      };
       setHeader: (k: string, v: string) => void;
       send: (b: string) => void;
     },
@@ -255,11 +278,14 @@ export function paywallExpress(opts: PaywallOptions) {
     const request = new Request(`http://local${url}`, {
       headers: req.headers as HeadersInit,
     });
-    const response = await handlePaywallRequest(request, opts, async () =>
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    const response = await handlePaywallRequest(
+      request,
+      opts,
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     );
     if (response.status === 402) {
       const required = response.headers.get(HEADER_PAYMENT_REQUIRED);
@@ -274,7 +300,14 @@ export function paywallExpress(opts: PaywallOptions) {
 
 /** Hono middleware */
 export function paywallHono(opts: PaywallOptions) {
-  return async (c: { req: { raw: Request }; json: (data: unknown, status?: number, init?: { headers?: Record<string, string> }) => Response }) => {
+  return async (c: {
+    req: { raw: Request };
+    json: (
+      data: unknown,
+      status?: number,
+      init?: { headers?: Record<string, string> },
+    ) => Response;
+  }) => {
     return handlePaywallRequest(c.req.raw, opts, async () =>
       c.json({ ok: true }),
     );

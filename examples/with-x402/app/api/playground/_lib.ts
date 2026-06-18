@@ -293,7 +293,9 @@ export async function buildPaymentRequest(opts?: {
 }
 
 async function postFacilitator<T>(path: string, body: unknown): Promise<T> {
-  const headers: Record<string, string> = { "content-type": "application/json" };
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
   if (PLAYGROUND.organizationId) {
     headers["x-0xkey-organization-id"] = PLAYGROUND.organizationId;
   }

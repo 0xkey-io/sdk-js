@@ -142,7 +142,7 @@ export default function Home() {
     setSteps((s) => setStep(s, "Check config", "ok"));
 
     setSteps((s) => setStep(s, "Check balances", "running"));
-    const suffix = buyer ?? cfg.buyer ? `?buyer=${buyer ?? cfg.buyer}` : "";
+    const suffix = (buyer ?? cfg.buyer) ? `?buyer=${buyer ?? cfg.buyer}` : "";
     const nextBalances = await getJson<Balances>(
       `/api/playground/balances${suffix}`,
     );
@@ -159,20 +159,23 @@ export default function Home() {
     try {
       await loadConfigAndBalances(activeBuyer);
       setSteps((s) =>
-        setStep(
-          s,
-          "Sign with company wallet",
-          "running",
-          "0xkey API key",
-        ),
+        setStep(s, "Sign with company wallet", "running", "0xkey API key"),
       );
-      const response = await getJson<PlaygroundResult>("/api/playground/settle", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ scenario, verifyFirst: true, mode: "company" }),
-      });
+      const response = await getJson<PlaygroundResult>(
+        "/api/playground/settle",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            scenario,
+            verifyFirst: true,
+            mode: "company",
+          }),
+        },
+      );
       setResult(response);
-      if (response.paymentRequest) setLastPaymentRequest(response.paymentRequest);
+      if (response.paymentRequest)
+        setLastPaymentRequest(response.paymentRequest);
       setSteps((s) => setStep(s, "Sign with company wallet", "ok", "company"));
 
       if (response.verify && !response.verify.isValid) {
@@ -236,11 +239,14 @@ export default function Home() {
     setSteps(initialSteps.map((step) => ({ ...step, status: "ok" })));
     setSteps((s) => setStep(s, "Settle payment", "running", "repeat nonce"));
     try {
-      const payload = await getJson<PlaygroundResult>("/api/playground/settle", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ paymentRequest: lastPaymentRequest }),
-      });
+      const payload = await getJson<PlaygroundResult>(
+        "/api/playground/settle",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ paymentRequest: lastPaymentRequest }),
+        },
+      );
       setResult(payload);
       setSteps((s) => setStep(s, "Settle payment", "ok"));
       if (payload.settle?.transaction) {
@@ -327,7 +333,9 @@ export default function Home() {
             <dl className="mt-4 space-y-3 text-sm">
               <div>
                 <dt className="text-slate-400">Network</dt>
-                <dd className="font-mono">{config?.network ?? "eip155:84532"}</dd>
+                <dd className="font-mono">
+                  {config?.network ?? "eip155:84532"}
+                </dd>
               </div>
               <div>
                 <dt className="text-slate-400">Asset</dt>
@@ -367,7 +375,9 @@ export default function Home() {
               </div>
               <div>
                 <dt className="text-slate-400">Facilitator URL</dt>
-                <dd className="break-all font-mono">{config?.facilitatorUrl}</dd>
+                <dd className="break-all font-mono">
+                  {config?.facilitatorUrl}
+                </dd>
               </div>
             </dl>
 

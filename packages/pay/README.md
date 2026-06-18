@@ -16,5 +16,8 @@ const res = await pay.fetch("https://api.example.com/premium");
 ```ts
 import { paywall } from "@0xkey-io/pay/server";
 
-app.use("/premium", paywall({ price: "0.01", network: "eip155:84532", payTo, facilitator }));
+app.use(
+  "/premium",
+  paywall({ price: "0.01", network: "eip155:84532", payTo, facilitator }),
+);
 ```

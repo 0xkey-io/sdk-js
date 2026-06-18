@@ -13,11 +13,7 @@ import {
   X402Error,
 } from "./errors";
 import { buildTransferWithAuthorizationTypedData } from "./eip3009";
-import type {
-  PaymentPayload,
-  PaymentReceipt,
-  PaymentRequired,
-} from "./types";
+import type { PaymentPayload, PaymentReceipt, PaymentRequired } from "./types";
 
 export interface PayClientOptions {
   /** viem Account backed by @0xkey-io/viem createAccount */
@@ -81,8 +77,12 @@ export const Pay = {
       const required = decodePaymentRequiredHeader(requiredHeader);
       const accept = selectRequirement(required, allowedNetworks);
 
-      const extra = accept.extra as { name?: string; version?: string } | undefined;
-      const typedDataArgs: Parameters<typeof buildTransferWithAuthorizationTypedData>[0] = {
+      const extra = accept.extra as
+        | { name?: string; version?: string }
+        | undefined;
+      const typedDataArgs: Parameters<
+        typeof buildTransferWithAuthorizationTypedData
+      >[0] = {
         from: opts.account.address,
         to: accept.payTo as Hex,
         valueAtomic: accept.amount,
@@ -106,7 +106,9 @@ export const Pay = {
           message: typedData.message as unknown as Record<string, unknown>,
         });
       } catch (e) {
-        throw new X402Error("SIGN_FAILED", "signTypedData failed", { cause: e });
+        throw new X402Error("SIGN_FAILED", "signTypedData failed", {
+          cause: e,
+        });
       }
 
       const payload: PaymentPayload = {
@@ -121,16 +123,17 @@ export const Pay = {
       };
 
       const headers = new Headers(init?.headers);
-      headers.set(
-        HEADER_PAYMENT_SIGNATURE,
-        encodePaymentPayload(payload),
-      );
+      headers.set(HEADER_PAYMENT_SIGNATURE, encodePaymentPayload(payload));
 
       response = await baseFetch(input, { ...init, headers });
       if (response.status === 402) {
-        throw new X402Error("SETTLE_FAILED", "Payment still required after signature", {
-          paymentRequired: required,
-        });
+        throw new X402Error(
+          "SETTLE_FAILED",
+          "Payment still required after signature",
+          {
+            paymentRequired: required,
+          },
+        );
       }
 
       const receiptHeader = response.headers.get(HEADER_PAYMENT_RESPONSE);

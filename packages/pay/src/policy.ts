@@ -1,5 +1,10 @@
 import type { Hex } from "viem";
-import { USDC_BASE, USDC_BASE_SEPOLIA, NETWORK_BASE, NETWORK_BASE_SEPOLIA } from "./constants";
+import {
+  USDC_BASE,
+  USDC_BASE_SEPOLIA,
+  NETWORK_BASE,
+  NETWORK_BASE_SEPOLIA,
+} from "./constants";
 
 export interface X402PolicyOptions {
   maxPerTxAtomic: string;
@@ -33,16 +38,21 @@ export function createX402Policy(opts: X402PolicyOptions): X402PolicyBundle {
 
   let allowRecipients: string | undefined;
   if (opts.allowedRecipients?.length) {
-    const list = opts.allowedRecipients.map((a) => `'${a.toLowerCase()}'`).join(", ");
-    allowRecipients =
-      allowAmount + ` && eth.eip_712.message.to in [${list}]`;
+    const list = opts.allowedRecipients
+      .map((a) => `'${a.toLowerCase()}'`)
+      .join(", ");
+    allowRecipients = allowAmount + ` && eth.eip_712.message.to in [${list}]`;
   }
 
   const denyRawHash =
     `activity.type == 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2' && ` +
     `!(eth.has('eip_712'))`;
 
-  return { allowAmount, ...(allowRecipients ? { allowRecipients } : {}), denyRawHash };
+  return {
+    allowAmount,
+    ...(allowRecipients ? { allowRecipients } : {}),
+    denyRawHash,
+  };
 }
 
 export const DEFAULT_X402_POLICIES = {

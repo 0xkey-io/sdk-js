@@ -68,13 +68,17 @@ type TSignatureExtended = Omit<TSignature, "v"> & {
 
 type TSignMessageResult = Uint8Array | Hex | TSignatureExtended;
 
-function domainTypeFor(domain: Record<string, unknown> | undefined): TEip712DomainType[] {
+function domainTypeFor(
+  domain: Record<string, unknown> | undefined,
+): TEip712DomainType[] {
   if (!domain) return [];
 
   const fields: TEip712DomainType[] = [];
   if (domain.name !== undefined) fields.push({ name: "name", type: "string" });
-  if (domain.version !== undefined) fields.push({ name: "version", type: "string" });
-  if (domain.chainId !== undefined) fields.push({ name: "chainId", type: "uint256" });
+  if (domain.version !== undefined)
+    fields.push({ name: "version", type: "string" });
+  if (domain.chainId !== undefined)
+    fields.push({ name: "chainId", type: "uint256" });
   if (domain.verifyingContract !== undefined) {
     fields.push({ name: "verifyingContract", type: "address" });
   }
@@ -93,7 +97,9 @@ export function __serializeTypedDataForZeroXKey(
   return serializeTypedData({
     ...data,
     types: {
-      EIP712Domain: domainTypeFor(data.domain as Record<string, unknown> | undefined),
+      EIP712Domain: domainTypeFor(
+        data.domain as Record<string, unknown> | undefined,
+      ),
       ...types,
     },
   } as TSerializableTypedData);

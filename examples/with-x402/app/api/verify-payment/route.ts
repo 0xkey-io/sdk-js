@@ -18,9 +18,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const paymentPayload = decodePaymentPayloadHeader<PaymentPayload>(
-      paymentHeader,
-    );
+    const paymentPayload =
+      decodePaymentPayloadHeader<PaymentPayload>(paymentHeader);
 
     const facilitatorUrl =
       process.env.NEXT_PUBLIC_FACILITATOR_URL ||
@@ -29,7 +28,8 @@ export async function POST(req: Request) {
 
     const facilitator = createFacilitatorClient({
       baseUrl: facilitatorUrl,
-      apiKey: process.env.FACILITATOR_API_KEY ?? process.env.ZEROXKEY_PAY_API_KEY,
+      apiKey:
+        process.env.FACILITATOR_API_KEY ?? process.env.ZEROXKEY_PAY_API_KEY,
       organizationId:
         process.env.PAY_ORGANIZATION_ID ?? process.env.ZEROXKEY_ORGANIZATION_ID,
     });

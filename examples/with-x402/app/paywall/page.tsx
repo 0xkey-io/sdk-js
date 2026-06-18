@@ -4,9 +4,7 @@ export default function PaywallPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100">
       <section className="mx-auto max-w-3xl rounded-2xl border border-slate-800 bg-slate-900/70 p-8">
-        <p className="font-mono text-sm text-cyan-300">
-          0xkey Pay Playground
-        </p>
+        <p className="font-mono text-sm text-cyan-300">0xkey Pay Playground</p>
         <h1 className="mt-3 text-3xl font-semibold">
           Embedded Wallet mode has moved out of this demo
         </h1>

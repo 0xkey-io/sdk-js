@@ -20,9 +20,21 @@
   "types": "./dist/index.d.ts",
   "license": "Apache-2.0",
   "description": "0xkey x402 / stablecoin payment SDK for agents and merchants",
-  "keywords": ["0xkey", "x402", "payment", "stablecoin", "agent"],
-  "files": ["dist/", "CHANGELOG.md", "README.md"],
-  "publishConfig": { "access": "public" },
+  "keywords": [
+    "0xkey",
+    "x402",
+    "payment",
+    "stablecoin",
+    "agent"
+  ],
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "prepublishOnly": "pnpm run clean && pnpm run build",
     "build": "rollup -c",
@@ -44,5 +56,7 @@
     "typescript": "5.4.3",
     "viem": "^2.24.2"
   },
-  "engines": { "node": ">=18.0.0" }
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

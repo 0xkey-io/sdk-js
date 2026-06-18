@@ -55,9 +55,9 @@ export function buildTransferWithAuthorizationTypedData(opts: {
   const now = opts.nowSec ?? Math.floor(Date.now() / 1000);
   const nonceBytes = new Uint8Array(32);
   crypto.getRandomValues(nonceBytes);
-  const nonce = (`0x${Array.from(nonceBytes, (b) =>
+  const nonce = `0x${Array.from(nonceBytes, (b) =>
     b.toString(16).padStart(2, "0"),
-  ).join("")}`) as Hex;
+  ).join("")}` as Hex;
   return {
     domain: {
       name: opts.assetName ?? "USDC",
@@ -84,7 +84,7 @@ export function splitTypedDataSignature(signature: Hex): {
   s: Hex;
 } {
   const r = signature.slice(0, 66) as Hex;
-  const s = (`0x${signature.slice(66, 130)}`) as Hex;
+  const s = `0x${signature.slice(66, 130)}` as Hex;
   let v = parseInt(signature.slice(130, 132), 16);
   if (v < 27) v += 27;
   return { v, r, s };
