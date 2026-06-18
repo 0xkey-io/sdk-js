@@ -1,0 +1,48 @@
+{
+  "name": "@0xkey-io/pay",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.mjs",
+      "require": "./dist/server/index.js",
+      "default": "./dist/server/index.mjs"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "license": "Apache-2.0",
+  "description": "0xkey x402 / stablecoin payment SDK for agents and merchants",
+  "keywords": ["0xkey", "x402", "payment", "stablecoin", "agent"],
+  "files": ["dist/", "CHANGELOG.md", "README.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "build": "rollup -c",
+    "clean": "rimraf ./dist ./.cache",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "test": "jest --detectOpenHandles"
+  },
+  "peerDependencies": {
+    "viem": "^2.24.2"
+  },
+  "dependencies": {
+    "@0xkey-io/viem": "workspace:*",
+    "@0xkey-io/http": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.3",
+    "@types/express": "^4.17.21",
+    "jest": "^29.3.1",
+    "typescript": "5.4.3",
+    "viem": "^2.24.2"
+  },
+  "engines": { "node": ">=18.0.0" }
+}

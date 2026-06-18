@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@0xkey-io/react-wallet-kit": "workspace:*",
+    "@0xkey-io/pay": "workspace:*",
+    "@0xkey-io/sdk-server": "workspace:*",
     "@0xkey-io/viem": "workspace:^",
     "next": "15.5.10",
     "react": "18.2.0",

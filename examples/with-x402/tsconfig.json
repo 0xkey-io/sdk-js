@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -21,6 +21,10 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
+      "@0xkey-io/pay": ["../../packages/pay/src/index.ts"],
+      "@0xkey-io/pay/*": ["../../packages/pay/src/*"],
+      "@0xkey-io/sdk-server": ["../../packages/sdk-server/src/index.ts"],
+      "@0xkey-io/sdk-server/*": ["../../packages/sdk-server/src/*"],
       "react": ["./node_modules/@types/react"]
     }
   },
