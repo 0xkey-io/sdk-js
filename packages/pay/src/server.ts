@@ -12,6 +12,8 @@ import {
   encodePaymentRequired,
 } from "./errors";
 import type {
+  GasPayerBalanceParams,
+  GasPayerBalanceResponse,
   PaymentPayload,
   PaymentGetParams,
   PaymentListParams,
@@ -23,11 +25,93 @@ import type {
   VerifyResponse,
 } from "./types";
 
+/**
+ * Minimal stamper contract (satisfied by `@0xkey-io/api-key-stamper`'s
+ * `ApiKeyStamper`). Signs a payload string and returns the X-Stamp header to
+ * send. Kept as an interface so `@0xkey-io/pay` need not hard-depend on the
+ * stamper package.
+ */
+export interface Stamper {
+  stamp(
+    payload: string,
+  ): Promise<{ stampHeaderName: string; stampHeaderValue: string }>;
+}
+
 export interface FacilitatorClientOptions {
   baseUrl: string;
+  /**
+   * X-Stamp signer (P-256 API key). Preferred when talking to the PUBLIC
+   * pay-gateway (pay.staging.0xkey.io): the org is bound cryptographically.
+   * `organizationId` is then required and is embedded in the signed body.
+   */
+  stamper?: Stamper;
+  /**
+   * Bearer token for the INTERNAL facilitator (in-cluster, behind a trusted
+   * BFF). Ignored when `stamper` is set.
+   */
   apiKey?: string;
   organizationId?: string;
   fetch?: typeof fetch;
+}
+
+/**
+ * Build auth headers + the exact request body for a POST write. In stamper mode
+ * the organizationId is embedded in the signed body (so the gateway can read
+ * and authorize it) and the X-Stamp is computed over those exact bytes.
+ */
+async function buildSignedPost(
+  opts: FacilitatorClientOptions,
+  payload: object,
+): Promise<{ headers: Record<string, string>; body: string }> {
+  if (opts.stamper) {
+    if (!opts.organizationId) {
+      throw new Error(
+        "organizationId is required when using a stamper (it is embedded in the signed body)",
+      );
+    }
+    const body = JSON.stringify({
+      ...payload,
+      organizationId: opts.organizationId,
+    });
+    const { stampHeaderName, stampHeaderValue } =
+      await opts.stamper.stamp(body);
+    return {
+      headers: {
+        "Content-Type": "application/json",
+        [stampHeaderName]: stampHeaderValue,
+      },
+      body,
+    };
+  }
+  return {
+    headers: {
+      "Content-Type": "application/json",
+      ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
+      ...(opts.organizationId
+        ? { "x-0xkey-organization-id": opts.organizationId }
+        : {}),
+    },
+    body: JSON.stringify(payload),
+  };
+}
+
+/** Build auth headers for an org-scoped GET (org travels in the path). */
+async function buildReadHeaders(
+  opts: FacilitatorClientOptions,
+): Promise<Record<string, string>> {
+  if (opts.stamper) {
+    // The pay-gateway verifies the stamp over the (empty) body for GETs; the
+    // org is taken from the URL path. Replay protection comes from the stamp
+    // timestamp, not the body.
+    const { stampHeaderName, stampHeaderValue } = await opts.stamper.stamp("");
+    return { [stampHeaderName]: stampHeaderValue };
+  }
+  return {
+    ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
+    ...(opts.organizationId
+      ? { "x-0xkey-organization-id": opts.organizationId }
+      : {}),
+  };
 }
 
 export function createFacilitatorClient(opts: FacilitatorClientOptions) {
@@ -37,20 +121,15 @@ export function createFacilitatorClient(opts: FacilitatorClientOptions) {
     paymentPayload: PaymentPayload,
     paymentRequirements: PaymentRequirements,
   ): Promise<VerifyResponse> {
+    const { headers, body } = await buildSignedPost(opts, {
+      x402Version: X402_VERSION,
+      paymentPayload,
+      paymentRequirements,
+    });
     const res = await baseFetch(`${opts.baseUrl.replace(/\/$/, "")}/verify`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
-        ...(opts.organizationId
-          ? { "x-0xkey-organization-id": opts.organizationId }
-          : {}),
-      },
-      body: JSON.stringify({
-        x402Version: X402_VERSION,
-        paymentPayload,
-        paymentRequirements,
-      }),
+      headers,
+      body,
     });
     return (await res.json()) as VerifyResponse;
   }
@@ -59,20 +138,15 @@ export function createFacilitatorClient(opts: FacilitatorClientOptions) {
     paymentPayload: PaymentPayload,
     paymentRequirements: PaymentRequirements,
   ): Promise<SettleResponse> {
+    const { headers, body } = await buildSignedPost(opts, {
+      x402Version: X402_VERSION,
+      paymentPayload,
+      paymentRequirements,
+    });
     const res = await baseFetch(`${opts.baseUrl.replace(/\/$/, "")}/settle`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
-        ...(opts.organizationId
-          ? { "x-0xkey-organization-id": opts.organizationId }
-          : {}),
-      },
-      body: JSON.stringify({
-        x402Version: X402_VERSION,
-        paymentPayload,
-        paymentRequirements,
-      }),
+      headers,
+      body,
     });
     return (await res.json()) as SettleResponse;
   }
@@ -96,9 +170,6 @@ async function readJson<T>(res: Response): Promise<T> {
 export function createPayClient(opts: FacilitatorClientOptions) {
   const baseFetch = opts.fetch ?? globalThis.fetch.bind(globalThis);
   const baseUrl = opts.baseUrl.replace(/\/$/, "");
-  const headers = {
-    ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
-  };
 
   async function listPayments(
     params: PaymentListParams,
@@ -106,13 +177,19 @@ export function createPayClient(opts: FacilitatorClientOptions) {
     const search = new URLSearchParams();
     if (params.status) search.set("status", params.status);
     if (params.txHash) search.set("txHash", params.txHash);
+    if (params.network) search.set("network", params.network);
+    if (params.direction) search.set("direction", params.direction);
+    if (params.address) search.set("address", params.address);
+    if (params.createdAfter) search.set("createdAfter", params.createdAfter);
+    if (params.createdBefore) search.set("createdBefore", params.createdBefore);
     if (params.limit) search.set("limit", String(params.limit));
+    if (params.after) search.set("after", params.after);
     const query = search.toString();
     const res = await baseFetch(
       `${baseUrl}/v1/organizations/${params.organizationId}/payments${
         query ? `?${query}` : ""
       }`,
-      { headers },
+      { headers: await buildReadHeaders(opts) },
     );
     return readJson<PaymentListResponse>(res);
   }
@@ -120,15 +197,26 @@ export function createPayClient(opts: FacilitatorClientOptions) {
   async function getPayment(params: PaymentGetParams): Promise<PaymentRecord> {
     const res = await baseFetch(
       `${baseUrl}/v1/organizations/${params.organizationId}/payments/${params.paymentId}`,
-      { headers },
+      { headers: await buildReadHeaders(opts) },
     );
     return readJson<PaymentRecord>(res);
+  }
+
+  async function gasPayerBalance(
+    params: GasPayerBalanceParams,
+  ): Promise<GasPayerBalanceResponse> {
+    const res = await baseFetch(
+      `${baseUrl}/v1/organizations/${params.organizationId}/payments/gas-payer-balance`,
+      { headers: await buildReadHeaders(opts) },
+    );
+    return readJson<GasPayerBalanceResponse>(res);
   }
 
   return {
     payments: {
       list: listPayments,
       get: getPayment,
+      gasPayerBalance,
     },
   };
 }
