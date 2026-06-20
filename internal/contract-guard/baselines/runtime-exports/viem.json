@@ -13,6 +13,11 @@
       "arity": 1
     },
     {
+      "name": "__serializeTypedDataForZeroXKey",
+      "kind": "class",
+      "arity": 1
+    },
+    {
       "name": "createAccount",
       "kind": "function",
       "arity": 1

@@ -179,6 +179,29 @@
     "types": "./dist/index.d.ts"
   },
   {
+    "dirName": "pay",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      },
+      "./server": {
+        "default": "./dist/server/index.mjs",
+        "import": "./dist/server/index.mjs",
+        "require": "./dist/server/index.js",
+        "types": "./dist/server/index.d.ts"
+      }
+    },
+    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/pay",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
     "dirName": "react-native-passkey-stamper",
     "exports": {
       ".": {

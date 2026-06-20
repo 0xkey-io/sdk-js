@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { exact } from "x402/schemes";
+import {
+  createFacilitatorClient,
+  decodePaymentPayloadHeader,
+  type PaymentPayload,
+} from "@0xkey-io/pay";
 import { PAYMENT_REQUIREMENTS, COOKIE_TIMEOUT_SECONDS } from "../../constants";
 
 export async function POST(req: Request) {
@@ -14,49 +18,44 @@ export async function POST(req: Request) {
       );
     }
 
-    // Decode the payment header
-    const decodedPayment = exact.evm.decodePayment(paymentHeader);
+    const paymentPayload =
+      decodePaymentPayloadHeader<PaymentPayload>(paymentHeader);
 
     const facilitatorUrl =
       process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-      "https://www.x402.org/facilitator";
+      process.env.FACILITATOR_URL ||
+      "http://localhost:8090";
 
-    // Call facilitator to verify
-    const verifyResponse = await fetch(`${facilitatorUrl}/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentPayload: decodedPayment,
-        paymentRequirements: PAYMENT_REQUIREMENTS,
-      }),
+    const facilitator = createFacilitatorClient({
+      baseUrl: facilitatorUrl,
+      apiKey:
+        process.env.FACILITATOR_API_KEY ?? process.env.ZEROXKEY_PAY_API_KEY,
+      organizationId:
+        process.env.PAY_ORGANIZATION_ID ?? process.env.ZEROXKEY_ORGANIZATION_ID,
     });
 
-    const verifyResult = await verifyResponse.json();
+    const verifyResult = await facilitator.verify(
+      paymentPayload,
+      PAYMENT_REQUIREMENTS,
+    );
 
     if (!verifyResult.isValid) {
       return NextResponse.json(
         {
           success: false,
-          x402Version: 1,
+          x402Version: 2,
           error: verifyResult.invalidReason || "Payment verification failed",
           accepts: [PAYMENT_REQUIREMENTS],
           payer: verifyResult.payer,
         },
-        { status: 402 }, // Payment Required!
+        { status: 402 },
       );
     }
 
-    // Call facilitator to settle the payment
-    const settleResponse = await fetch(`${facilitatorUrl}/settle`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentPayload: decodedPayment,
-        paymentRequirements: PAYMENT_REQUIREMENTS,
-      }),
-    });
-
-    const settleResult = await settleResponse.json();
+    const settleResult = await facilitator.settle(
+      paymentPayload,
+      PAYMENT_REQUIREMENTS,
+    );
 
     if (!settleResult.success) {
       return NextResponse.json(
@@ -68,18 +67,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // Payment is valid and settled, set the cookie
     const cookieStore = await cookies();
-    // This should be a JWT signed by the server following best practices for a session token
-    // See: https://nextjs.org/docs/app/guides/authentication#stateless-sessions
     cookieStore.set("payment-session", paymentHeader, {
-      maxAge: COOKIE_TIMEOUT_SECONDS, // 5 minutes
+      maxAge: COOKIE_TIMEOUT_SECONDS,
     });
 
     return NextResponse.json(
       {
         success: true,
         payer: verifyResult.payer,
+        transaction: settleResult.transaction,
       },
       { status: 200 },
     );
@@ -88,7 +85,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: false,
-        x402Version: 1,
+        x402Version: 2,
         error: error instanceof Error ? error.message : "Internal server error",
         accepts: [PAYMENT_REQUIREMENTS],
       },

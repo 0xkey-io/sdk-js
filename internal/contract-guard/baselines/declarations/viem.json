@@ -3,6 +3,10 @@
   "exports": [
     {
       "kind": "function",
+      "name": "__serializeTypedDataForZeroXKey"
+    },
+    {
+      "kind": "function",
       "name": "createAccount"
     },
     {

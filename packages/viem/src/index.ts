@@ -17,7 +17,6 @@ import type {
   Hex,
   LocalAccount,
   SerializeTransactionFn,
-  SignTypedDataParameters,
   SignableMessage,
   TransactionSerializable,
   TypedData,
@@ -60,11 +59,51 @@ type TPayloadEncoding = ZeroXKeyApiTypes["v1PayloadEncoding"];
 
 type TTransactionType = ZeroXKeyApiTypes["v1TransactionType"];
 
+type TEip712DomainType = { name: string; type: string };
+type TSerializableTypedData = Parameters<typeof serializeTypedData>[0];
+
 type TSignatureExtended = Omit<TSignature, "v"> & {
   v: string | BigInt;
 };
 
 type TSignMessageResult = Uint8Array | Hex | TSignatureExtended;
+
+function domainTypeFor(
+  domain: Record<string, unknown> | undefined,
+): TEip712DomainType[] {
+  if (!domain) return [];
+
+  const fields: TEip712DomainType[] = [];
+  if (domain.name !== undefined) fields.push({ name: "name", type: "string" });
+  if (domain.version !== undefined)
+    fields.push({ name: "version", type: "string" });
+  if (domain.chainId !== undefined)
+    fields.push({ name: "chainId", type: "uint256" });
+  if (domain.verifyingContract !== undefined) {
+    fields.push({ name: "verifyingContract", type: "address" });
+  }
+  if (domain.salt !== undefined) fields.push({ name: "salt", type: "bytes32" });
+  return fields;
+}
+
+export function __serializeTypedDataForZeroXKey(
+  data: TSerializableTypedData,
+): string {
+  const types = data.types as Record<string, unknown>;
+  if (types.EIP712Domain !== undefined) {
+    return serializeTypedData(data);
+  }
+
+  return serializeTypedData({
+    ...data,
+    types: {
+      EIP712Domain: domainTypeFor(
+        data.domain as Record<string, unknown> | undefined,
+      ),
+      ...types,
+    },
+  } as TSerializableTypedData);
+}
 
 /**
  * Detects the transaction type from a serialized transaction payload.
@@ -496,7 +535,7 @@ export async function signTypedData(
 ): Promise<Hex> {
   return (await signMessageWithErrorWrapping(
     client,
-    serializeTypedData(data as SignTypedDataParameters),
+    __serializeTypedDataForZeroXKey(data as TSerializableTypedData),
     organizationId,
     signWith,
     "PAYLOAD_ENCODING_EIP712",

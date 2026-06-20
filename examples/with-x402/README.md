@@ -1,73 +1,187 @@
-# x402 with ZeroXKey Embedded Wallets
+# 0xkey Pay Playground
 
-This example demonstrates how to use Coinbase's x402 payment protocol with ZeroXKey's embedded wallets for seamless payment authentication.
+This example demonstrates the 0xkey Pay x402 flow on Base Sepolia with a local
+Orchestrator and a 0xkey Company Wallet signer:
+
+- `@0xkey-io/pay` builds x402 v2 EIP-3009 payment payloads.
+- `0xkey Orchestrator` verifies and settles through an `x402-rs` sidecar.
+- Base Sepolia USDC moves on-chain with the smallest smoke amount: `1` atomic USDC (`0.000001 USDC`).
+- The playground shows balances, tx hash, and merchant payment records via the Pay HTTP API.
 
 ## Overview
 
-This demo shows how to build a custom x402 middleware that integrates with ZeroXKey's embedded wallet system instead of relying on browser wallet extensions.
+The home page is a local interactive playground for the recommended product
+path:
+
+- **Company Wallet**: a server-side 0xkey API key signs EIP-3009 typed data
+  with a company wallet through `@0xkey-io/sdk-server` + `@0xkey-io/viem`,
+  then sends the x402 v2 payload through the local Orchestrator settlement
+  flow.
+
+Local key signing still exists only as a hidden API/CLI debug path. It is not
+shown in the page because it does not match the Company Wallet product story.
+
+It has four panels:
+
+- **Seller Panel**: network, asset, `payTo`, price, and resource.
+- **Buyer Panel**: buyer, facilitator signer, and scenario actions.
+- **Settlement Panel**: USDC balances, tx hash, and Basescan link.
+- **Debug Panel**: latest `/verify` / `/settle` response and merchant payment records.
+
+Covered scenarios:
+
+- Successful tiny settlement.
+- Invalid EIP-712 domain (`USD Coin` instead of `USDC`).
+- Repeat nonce / idempotent settle.
+- Excess amount / insufficient balance.
 
 ## How It Works
 
-### 1. Middleware-Based Access Control
+### 1. Orchestrator Flow
 
-The demo uses Next.js middleware to gate access to protected content. The middleware (`middleware.ts`) intercepts requests to `/protected/*` routes and checks for a `payment-session` cookie:
+The playground API routes call a local Orchestrator / Facilitator facade at
+`http://localhost:8090`. The Orchestrator delegates settlement to the local
+`x402-rs` sidecar.
 
-- **If the cookie exists**: The user has made a valid payment and can access the protected content
-- **If the cookie is missing**: The user is redirected to the paywall page to complete payment
+```text
+Playground UI
+  -> /api/playground/verify or /api/playground/settle
+  -> 0xkey Orchestrator
+  -> x402-rs sidecar
+  -> Base Sepolia USDC
+  -> merchant payments API
+```
 
-This means the server is responsible for gating the access to the protected page. The cookie only lasts for 5 minutes and can be cleared before if needed.
+### 2. Company Wallet Signing
 
-### 2. ZeroXKey-Powered Payment Authorization
+The playground signs server-side with a 0xkey company wallet:
 
-The payment page (`app/paywall/page.tsx`) uses ZeroXKey's embedded wallets to sign the payment authorization:
+```text
+API key stamper
+  -> ZeroXKeyServerClient
+  -> createAccount(client, organizationId, signWith)
+  -> account.signTypedData(EIP-3009)
+  -> /api/playground/settle
+  -> Orchestrator /verify + /settle
+```
 
-1. **Authentication**: Users log in to a ZeroXKey sub-org using the [`@0xkey-io/react-wallet-kit`](../../packages/react-native-wallet-kit/) package, which handles authentication with different methods
-2. **Sign EIP-712 Payload**: The user signs an EIP-3009 `TransferWithAuthorization` message for USDC on Base Sepolia using the [`@0xkey-io/viem`](../../packages/viem/) package. This is a gasless transfer authorization that includes:
-   - The sender (`from`) and recipient (`to`) addresses
-   - The payment amount (0.01 USDC in this demo)
-   - Validity period (5 minutes)
-   - A unique nonce to prevent replay attacks
-3. **Encode & Submit**: The signed authorization is encoded in x402 format using the [`x402`](https://www.npmjs.com/package/x402) package and submitted to the server for verification
+### 3. Smoke Script
 
-### 3. Payment Verification with Public Facilitator
+For a CLI version of the same flow, use:
 
-After the payload is signed, the [server route](./app/api/verify-payment/route.ts) uses a [public x402 facilitator](https://www.x402.org/facilitator) to verify the payment:
+```bash
+cd /Users/torben/codes/0xkey/repos/services
+scripts/x402-smoke-base-sepolia.sh
+```
 
-1. **Decode Payment**: The EIP-712 signed payment payload is decoded from the x402 format using the [`x402`](https://www.npmjs.com/package/x402) package
-2. **Verify**: The facilitator's `/verify` endpoint validates that:
-   - The signature is valid and signed by the claimed payer
-   - The payment meets the requirements (amount, asset, recipient, timing)
-   - The nonce hasn't been used before
-3. **Settle**: If valid, the facilitator's `/settle` endpoint records the payment as settled
-4. **Set Cookie**: Upon successful verification, a `payment-session` cookie is set with a 5-minute expiration
-
-The facilitator acts as a neutral third party that verifies payments without requiring the merchant to run their own verification infrastructure. You can also host your own facilitator.
+The detailed runbook lives in `docs/strategy/pay/base-sepolia-settlement-smoke.md`.
 
 ## Running The App
 
-To start, ensure you have a [ZeroXKey organization setup](https://docs.0xkey.com/getting-started/quickstart) with [Auth Proxy enabled.](https://docs.0xkey.com/sdks/react/getting-started#0xkey-organization-setup)
-
-### Configure your `.env.local` file
-
-Copy the [`.env.local.example`](./.env.local.example) file and rename it to `.env.local` then fill in the following fields:
-
-```
-NEXT_PUBLIC_ORGANIZATION_ID="your-0xkey-organization-id"
-NEXT_PUBLIC_AUTH_PROXY_ID="your-0xkey-auth-proxy-config-id"
-
-NEXT_PUBLIC_FACILITATOR_URL=https://www.x402.org/facilitator    # This is a public, free, community maintained facilitator URL for x402; replace if you have your own
-NEXT_PUBLIC_RESOURCE_WALLET_ADDRESS=0xYourResourceWalletAddressHere # This is the resource wallet address where payments will be sent. Replace with your own eth wallet address.
-```
-
-You can use any Ethereum wallet address to act as a resource wallet. The Base Sepolia USDC will go there.
-
-### Start the Development Server
-
-Install the packages and run the dev server:
+Start local services first:
 
 ```bash
-pnpm i
-pnpm run dev
+cd /Users/torben/codes/0xkey/repos/services
+
+docker compose --env-file .env.x402.local \
+  -f docker-compose.dev.yml \
+  up -d postgres redis x402-rs-facilitator
+
+make db-migrate
+
+ORG_ID=$(
+  PGPASSWORD=postgres psql -h localhost -U postgres -d 0xkey \
+    -tAc "SELECT id FROM organization_aggregates LIMIT 1"
+)
+
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/0xkey \
+DEFAULT_ORGANIZATION_ID="$ORG_ID" \
+FACILITATOR_PROVIDER=x402-rs \
+X402_RS_URL=http://localhost:8088 \
+LISTEN_ADDR=0.0.0.0:8090 \
+cargo run --bin facilitator
 ```
 
-You'll see the demo running on http://localhost:3000.
+Configure the example app for fully local testing:
+
+```bash
+cd /Users/torben/codes/0xkey/repos/sdk-js/examples/with-x402
+cp .env.local.example .env.local
+```
+
+Fill these local Company Wallet values:
+
+```bash
+PAY_ORGANIZATION_ID=<local-org-id-for-pay-records>
+ZEROXKEY_ORGANIZATION_ID=<local-company-wallet-org-id>
+ZEROXKEY_API_PUBLIC_KEY=<local-api-public-key>
+ZEROXKEY_API_PRIVATE_KEY=<local-api-private-key>
+ZEROXKEY_SIGN_WITH=<local-wallet-account-address-or-private-key-id>
+ZEROXKEY_ETHEREUM_ADDRESS=<local-wallet-account-address-if-sign-with-is-privateKeyId>
+ZEROXKEY_API_BASE_URL=http://localhost:8080
+```
+
+For staging Company Wallet signing, keep the Orchestrator local but point only
+wallet/signing requests at staging:
+
+```bash
+cd /Users/torben/codes/0xkey/repos/sdk-js/examples/with-x402
+cp .env.staging.example .env.staging.local
+cp .env.staging.local .env.local
+```
+
+The important hybrid endpoints are:
+
+```bash
+NEXT_PUBLIC_FACILITATOR_URL=http://localhost:8090
+ZEROXKEY_API_BASE_URL=https://api.staging.0xkey.io
+```
+
+`ZEROXKEY_ORGANIZATION_ID` is the staging organization used for wallet signing.
+`PAY_ORGANIZATION_ID` is only for the local Orchestrator's payment records and
+must exist in the local services database.
+
+Keep real staging secrets in `.env.staging.local` rather than committing them to
+`.env.staging.example`.
+
+To create a staging Company Wallet account from the API key, temporarily set:
+
+```bash
+ALLOW_COMPANY_WALLET_CREATE=true
+```
+
+Then, with the local Next app running, call:
+
+```bash
+curl -sS -X POST http://localhost:3000/api/playground/company-wallet/create
+```
+
+The response includes `ZEROXKEY_SIGN_WITH` / `ZEROXKEY_ETHEREUM_ADDRESS` values
+to copy into `.env.local`. Set `ALLOW_COMPANY_WALLET_CREATE=false` again after
+the one-shot creation.
+
+Start the Next app:
+
+```bash
+cd /Users/torben/codes/0xkey/repos/sdk-js
+pnpm --filter with-x402 dev
+```
+
+Open `http://localhost:3000`.
+
+If the full local 0xkey stack is already using port `3000` for the Dashboard,
+run the playground on another port:
+
+```bash
+pnpm --filter with-x402 exec next dev -p 3400
+```
+
+## Safety Notes
+
+- Do not paste private keys into chat, docs, or committed files.
+- Keep `.env.local` and `.env.x402.local` local-only.
+- Keep `.env.staging.local` local-only when staging API keys are involved.
+- Use fresh Base Sepolia test wallets only.
+- The page is intentionally Company Wallet only. Local key smoke is reserved for
+  CLI/API debugging.
+- Default amount is `1` atomic USDC to avoid accidental test token drain.
