@@ -84,9 +84,18 @@
       "kind": "number"
     },
     {
+      "name": "ZeroXKeyWebhookVerificationFailureReasons",
+      "kind": "object"
+    },
+    {
       "name": "buildAdditionalAssociatedData",
       "kind": "class",
       "arity": 2
+    },
+    {
+      "name": "buildSignedInput",
+      "kind": "class",
+      "arity": 1
     },
     {
       "name": "compressRawPublicKey",
@@ -227,6 +236,16 @@
       "name": "verifyStampSignature",
       "kind": "function",
       "arity": 3
+    },
+    {
+      "name": "verifyWebhook",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "verifyWebhookFromJWKS",
+      "kind": "function",
+      "arity": 1
     }
   ]
 }
