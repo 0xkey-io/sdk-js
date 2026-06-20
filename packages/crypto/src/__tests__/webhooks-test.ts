@@ -43,8 +43,12 @@ describe("webhook verification", () => {
       eventId: GOLDEN.eventId,
       body: GOLDEN.body,
     });
-    expect(new TextDecoder().decode(bytes.slice(0, prefix.length))).toBe(prefix);
-    expect(new TextDecoder().decode(bytes.slice(prefix.length))).toBe(GOLDEN.body);
+    expect(new TextDecoder().decode(bytes.slice(0, prefix.length))).toBe(
+      prefix,
+    );
+    expect(new TextDecoder().decode(bytes.slice(prefix.length))).toBe(
+      GOLDEN.body,
+    );
   });
 
   test("verifyWebhook accepts Rust webhook-contract golden vector", () => {
@@ -81,7 +85,9 @@ describe("webhook verification", () => {
       eventId,
       body,
     });
-    const signature = Buffer.from(ed25519.sign(signedInput, privateKey)).toString("hex");
+    const signature = Buffer.from(
+      ed25519.sign(signedInput, privateKey),
+    ).toString("hex");
 
     const result = verifyWebhook({
       headers: {
