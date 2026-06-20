@@ -120,7 +120,9 @@ export function verifyWebhook({
   nowMs = Date.now(),
 }: VerifyWebhookParams): ZeroXKeyWebhookVerificationResult {
   if (!Number.isFinite(maxTimestampAgeMs) || maxTimestampAgeMs < 0) {
-    return failure(ZeroXKeyWebhookVerificationFailureReasons.InvalidMaxTimestampAge);
+    return failure(
+      ZeroXKeyWebhookVerificationFailureReasons.InvalidMaxTimestampAge,
+    );
   }
   if (!Number.isFinite(nowMs)) {
     return failure(ZeroXKeyWebhookVerificationFailureReasons.InvalidNow);
@@ -154,10 +156,14 @@ export function verifyWebhook({
   }
 
   if (versionHeader.value !== SUPPORTED_VERSION) {
-    return failure(ZeroXKeyWebhookVerificationFailureReasons.UnsupportedSignatureVersion);
+    return failure(
+      ZeroXKeyWebhookVerificationFailureReasons.UnsupportedSignatureVersion,
+    );
   }
   if (algorithmHeader.value !== SUPPORTED_ALGORITHM) {
-    return failure(ZeroXKeyWebhookVerificationFailureReasons.UnsupportedSignatureAlgorithm);
+    return failure(
+      ZeroXKeyWebhookVerificationFailureReasons.UnsupportedSignatureAlgorithm,
+    );
   }
 
   const key = verificationKeys.find((k) => k.keyId === keyIdHeader.value);
@@ -166,7 +172,9 @@ export function verifyWebhook({
   }
 
   if (key.algorithm !== undefined && key.algorithm !== SUPPORTED_ALGORITHM) {
-    return failure(ZeroXKeyWebhookVerificationFailureReasons.InvalidVerificationKeyAlgorithm);
+    return failure(
+      ZeroXKeyWebhookVerificationFailureReasons.InvalidVerificationKeyAlgorithm,
+    );
   }
 
   const pubKeyResult = decodePublicKey(key.publicKey);
@@ -175,7 +183,7 @@ export function verifyWebhook({
   const sigResult = hexToBytes(
     signatureHeader.value,
     ED25519_SIGNATURE_BYTE_LENGTH,
-    ZeroXKeyWebhookVerificationFailureReasons.InvalidSignature
+    ZeroXKeyWebhookVerificationFailureReasons.InvalidSignature,
   );
   if (!sigResult.ok) return sigResult;
 
@@ -223,13 +231,19 @@ export async function verifyWebhookFromJWKS({
   const keyIdHeader = getRequiredHeader(headers, HEADER_KEY_ID);
   if (!keyIdHeader.ok) return keyIdHeader;
 
-  const keyResult = await fetchPublicKeyFromJWKS(jwksUrl, keyIdHeader.value, fetchImpl);
+  const keyResult = await fetchPublicKeyFromJWKS(
+    jwksUrl,
+    keyIdHeader.value,
+    fetchImpl,
+  );
   if (!keyResult.ok) return keyResult;
 
   return verifyWebhook({
     body,
     headers,
-    verificationKeys: [{ keyId: keyIdHeader.value, publicKey: keyResult.publicKey }],
+    verificationKeys: [
+      { keyId: keyIdHeader.value, publicKey: keyResult.publicKey },
+    ],
     maxTimestampAgeMs,
     ...(nowMs !== undefined ? { nowMs } : {}),
   });
@@ -259,7 +273,7 @@ export function buildSignedInput({
   body: ZeroXKeyWebhookBody;
 }): Uint8Array {
   const prefix = new TextEncoder().encode(
-    `${version}.${algorithm}.${keyId}.${timestampMs}.${eventId}.`
+    `${version}.${algorithm}.${keyId}.${timestampMs}.${eventId}.`,
   );
   const bodyBytes = bodyToBytes(body);
   const out = new Uint8Array(prefix.length + bodyBytes.length);
@@ -283,8 +297,10 @@ const JWKS_CACHE_TTL_MS = 3_600_000; // 1 hour
 async function fetchPublicKeyFromJWKS(
   jwksUrl: string,
   keyId: string,
-  fetchImpl: typeof globalThis.fetch
-): Promise<{ ok: true; publicKey: string } | ZeroXKeyWebhookVerificationFailure> {
+  fetchImpl: typeof globalThis.fetch,
+): Promise<
+  { ok: true; publicKey: string } | ZeroXKeyWebhookVerificationFailure
+> {
   const cached = jwksCache.get(jwksUrl);
   if (cached && Date.now() - cached.fetchedAt < JWKS_CACHE_TTL_MS) {
     const key = cached.keys.find((k) => k.kid === keyId);
@@ -328,18 +344,20 @@ async function fetchPublicKeyFromJWKS(
 
 function getRequiredHeader(
   headers: ZeroXKeyWebhookHeaders,
-  name: string
+  name: string,
 ): { ok: true; value: string } | ZeroXKeyWebhookVerificationFailure {
   const value = getHeader(headers, name);
   if (value === undefined || value === "") {
-    return failure(ZeroXKeyWebhookVerificationFailureReasons.MissingHeader, { headerName: name });
+    return failure(ZeroXKeyWebhookVerificationFailureReasons.MissingHeader, {
+      headerName: name,
+    });
   }
   return { ok: true, value };
 }
 
 function getHeader(
   headers: ZeroXKeyWebhookHeaders,
-  name: string
+  name: string,
 ): string | undefined {
   if (isHeaders(headers)) {
     return headers.get(name) ?? undefined;
@@ -357,25 +375,30 @@ function isHeaders(h: ZeroXKeyWebhookHeaders): h is Headers {
 }
 
 function decodePublicKey(
-  publicKey: string
+  publicKey: string,
 ): { ok: true; value: Uint8Array } | ZeroXKeyWebhookVerificationFailure {
   try {
     const bytes = base64Decode(publicKey);
     if (bytes.length !== PUBLIC_KEY_BYTE_LENGTH) {
-      return failure(ZeroXKeyWebhookVerificationFailureReasons.InvalidVerificationKey, {
-        message: `Expected ${PUBLIC_KEY_BYTE_LENGTH} bytes, got ${bytes.length}`,
-      });
+      return failure(
+        ZeroXKeyWebhookVerificationFailureReasons.InvalidVerificationKey,
+        {
+          message: `Expected ${PUBLIC_KEY_BYTE_LENGTH} bytes, got ${bytes.length}`,
+        },
+      );
     }
     return { ok: true, value: bytes };
   } catch {
-    return failure(ZeroXKeyWebhookVerificationFailureReasons.InvalidVerificationKey);
+    return failure(
+      ZeroXKeyWebhookVerificationFailureReasons.InvalidVerificationKey,
+    );
   }
 }
 
 function hexToBytes(
   input: string,
   expectedLength: number,
-  reason: ZeroXKeyWebhookVerificationFailureReason
+  reason: ZeroXKeyWebhookVerificationFailureReason,
 ): { ok: true; value: Uint8Array } | ZeroXKeyWebhookVerificationFailure {
   if (input.length !== expectedLength * 2 || !/^[0-9a-fA-F]+$/.test(input)) {
     return failure(reason);
@@ -415,7 +438,7 @@ function normalizeBase64(value: string): string {
 
 function failure(
   reason: ZeroXKeyWebhookVerificationFailureReason,
-  details: Omit<ZeroXKeyWebhookVerificationFailure, "ok" | "reason"> = {}
+  details: Omit<ZeroXKeyWebhookVerificationFailure, "ok" | "reason"> = {},
 ): ZeroXKeyWebhookVerificationFailure {
   return { ok: false, reason, ...details };
 }
