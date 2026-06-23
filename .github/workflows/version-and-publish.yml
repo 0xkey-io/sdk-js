@@ -133,10 +133,11 @@ jobs:
           name: release-artifacts-${{ github.ref_name }}
           path: |
             examples/**
-            !examples/*/node_modules
+            !**/node_modules
+            !**/node_modules/**
             packages/**
-            !packages/*/node_modules
             pnpm-lock.yaml
+            !**/*.tsbuildinfo
             pnpm-workspace.yaml
             .changeset/**
           retention-days: 7
