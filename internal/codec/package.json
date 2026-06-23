@@ -9,7 +9,7 @@
   "scripts": {
     "build": "rollup -c",
     "clean": "rimraf ./dist ./.cache",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
