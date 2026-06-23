@@ -231,8 +231,7 @@ jobs:
       && (needs.test-pre-prod.result == 'success' || needs.test-pre-prod.result == 'skipped')
       && (needs.test-prod.result == 'success' || needs.test-prod.result == 'skipped')
       && github.event_name == 'workflow_dispatch' && inputs.enable_release && inputs.publish_to_npm }}
-    runs-on:
-      group: package-deploy
+    runs-on: ubuntu-latest
     environment: production # require manual approval for production deployments
 
     steps:
