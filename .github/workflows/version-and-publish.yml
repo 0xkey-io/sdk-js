@@ -13,6 +13,11 @@ on:
         required: true
         type: boolean
         default: false
+      skip_integration_tests:
+        description: "Skip preprod/prod integration tests (publish without API secrets)"
+        required: false
+        type: boolean
+        default: false
   push:
     tags:
       - "v*.*.*" # Tag pushes are intentionally guarded; they do not publish automatically.
@@ -139,6 +144,7 @@ jobs:
   test-pre-prod:
     runs-on: ubuntu-latest
     needs: version-and-rebuild
+    if: ${{ !inputs.skip_integration_tests }}
     steps:
       # https://github.com/actions/checkout
       - name: Checkout
@@ -179,6 +185,7 @@ jobs:
   test-prod:
     runs-on: ubuntu-latest
     needs: test-pre-prod
+    if: ${{ !inputs.skip_integration_tests }}
     steps:
       # https://github.com/actions/checkout
       - name: Checkout
@@ -217,8 +224,13 @@ jobs:
           WALLET_ID: ${{ secrets.WALLET_ID }}
 
   publish:
-    needs: test-prod
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_release && inputs.publish_to_npm }}
+    needs: [version-and-rebuild, test-pre-prod, test-prod]
+    if: >-
+      ${{ always()
+      && needs.version-and-rebuild.result == 'success'
+      && (needs.test-pre-prod.result == 'success' || needs.test-pre-prod.result == 'skipped')
+      && (needs.test-prod.result == 'success' || needs.test-prod.result == 'skipped')
+      && github.event_name == 'workflow_dispatch' && inputs.enable_release && inputs.publish_to_npm }}
     runs-on:
       group: package-deploy
     environment: production # require manual approval for production deployments
