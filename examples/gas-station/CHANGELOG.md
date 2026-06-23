@@ -1,5 +1,13 @@
 # @0xkey-io/example-gas-station
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/ethers@0.1.3
+  - @0xkey-io/viem@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes

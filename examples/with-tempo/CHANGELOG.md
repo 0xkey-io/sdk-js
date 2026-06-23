@@ -1,5 +1,12 @@
 # @0xkey-io/example-with-tempo
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/viem@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes
