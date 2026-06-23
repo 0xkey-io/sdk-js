@@ -2,15 +2,17 @@ import { useModal } from "../../providers/modal/Hook";
 import clsx from "clsx";
 import { ActionPage } from "../auth/Action";
 import { SuccessPage } from "../design/Success";
+import type { OnRampFlowResult } from "@0xkey-io/core";
 
 type OnRampPageProps = {
   icon: React.ReactNode;
   onrampProvider: string;
   action: () => Promise<void>;
   completed: boolean;
+  result?: OnRampFlowResult | undefined;
   successPageDuration?: number;
   sandboxMode?: boolean;
-  onSuccess?: () => void;
+  onSuccess?: (result: OnRampFlowResult) => void;
   onError?: (error: any) => void;
 };
 
@@ -19,6 +21,7 @@ export function OnRampPage({
   onrampProvider,
   action,
   completed,
+  result,
   successPageDuration = 2000,
   sandboxMode = false,
   onSuccess,
@@ -27,6 +30,7 @@ export function OnRampPage({
   const { closeModal, isMobile } = useModal();
 
   if (completed) {
+    const status = result?.status ?? "unknown";
     return (
       <div
         className={clsx(
@@ -35,10 +39,12 @@ export function OnRampPage({
         )}
       >
         <SuccessPage
-          text="On Ramp Transaction Complete!"
+          text={`On Ramp Transaction ${status === "completed" ? "Complete" : status}!`}
           duration={successPageDuration}
           onComplete={() => {
-            onSuccess?.();
+            if (result) {
+              onSuccess?.(result);
+            }
             closeModal();
           }}
         />

@@ -15,6 +15,7 @@ import type {
   v1HashFunction,
   v1PayloadEncoding,
   v1WalletAccountParams,
+  OnRampFlowResult,
   WalletAccount,
 } from "@0xkey-io/core";
 import type { KeyFormat } from "./base";
@@ -278,13 +279,27 @@ export type HandleOnRampParams = {
   paymentMethod?: v1FiatOnRampPaymentMethod; // Payment method, e.g., FIAT_ON_RAMP_PAYMENT_METHOD_CREDIT_DEBIT_CARD
   countryCode?: string; // ISO 3166-1 country code
   countrySubdivisionCode?: string; // ISO 3166-2 subdivision code, e.g., NY
-  sandboxMode?: boolean; // Whether to use sandbox (test) mode
+  sandboxMode: boolean; // Whether to use sandbox (test) mode. Must be explicit.
   urlForSignature?: string; // MoonPay Widget URL to sign
   organizationId?: string; // Organization context (ZeroXKey suborg)
   userId?: string; // Optional end user ID
   stampWith?: StamperType; // Stamper type (passkey, api key, wallet, etc.)
   successPageDuration?: number; // Duration for success page in ms (0 disables it)
   openInNewTab?: boolean; // Whether to open the onramp URL in a new browser tab or popup
+  openMode?: "popup" | "newTab" | "returnUrl";
+  polling?: {
+    intervalMs?: number;
+    timeoutMs?: number;
+    maxConsecutiveErrors?: number;
+    refresh?: boolean;
+  };
+  /**
+   * Invoked whenever the on-ramp flow status changes: once on init
+   * (`initiated`), then on every status poll (`pending` / terminal). Use it to
+   * render live progress; the final settled result is also the resolved value
+   * of `handleOnRamp`.
+   */
+  onStatusChange?: (result: OnRampFlowResult) => void;
 };
 
 export type HandleSendTransactionParams = {
