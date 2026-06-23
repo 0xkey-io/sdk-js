@@ -279,7 +279,7 @@ jobs:
 
       - name: Publish to NPM (dry run)
         run: |
-          echo "//registry.npmjs.com/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           pnpm publish -r --dry-run --no-git-checks --report-summary
           echo "npm publish dry run summary:"
           cat publish-summary.json || echo "No NPM dry run summary generated"
@@ -288,7 +288,7 @@ jobs:
 
       - name: Publish packages to NPM
         run: |
-          echo "//registry.npmjs.com/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           echo "Publishing packages to NPM..."
           pnpm publish -r --no-git-checks --report-summary || {
             echo "❌ Publish failed. Check logs above.";
