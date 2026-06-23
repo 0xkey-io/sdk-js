@@ -52,6 +52,15 @@
       "kind": "object"
     },
     {
+      "name": "OnRampError",
+      "kind": "class",
+      "arity": 3
+    },
+    {
+      "name": "OnRampErrorCode",
+      "kind": "object"
+    },
+    {
       "name": "OtpType",
       "kind": "object"
     },
@@ -122,6 +131,21 @@
       "kind": "object"
     },
     {
+      "name": "appendMoonPaySignature",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "assertOnRampProviderSupported",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "buildMoonPayOnRampUrl",
+      "kind": "class",
+      "arity": 1
+    },
+    {
       "name": "decodeVerificationToken",
       "kind": "class",
       "arity": 1
@@ -147,6 +171,21 @@
       "arity": 1
     },
     {
+      "name": "getOnRampProviderCapability",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "inferOnRampAssetFromWalletAccount",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "initOnRampFlow",
+      "kind": "function",
+      "arity": 1
+    },
+    {
       "name": "isEthereumProvider",
       "kind": "class",
       "arity": 1
@@ -154,6 +193,16 @@
     {
       "name": "isSolanaProvider",
       "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "normalizeOnRampStatus",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "pollOnRampTransactionStatus",
+      "kind": "function",
       "arity": 1
     },
     {

@@ -6,6 +6,7 @@ import type {
   Wallet,
   WalletProvider,
   WalletAccount,
+  OnRampFlowResult,
 } from "@0xkey-io/core";
 import type {
   Session,
@@ -760,16 +761,16 @@ export interface ClientContextType
    * @param params.paymentMethod - optional payment method, e.g., FIAT_ON_RAMP_PAYMENT_METHOD_CREDIT_DEBIT_CARD.
    * @param params.countryCode - optional ISO 3166-1 country code.
    * @param params.countrySubdivisionCode - optional ISO 3166-2 subdivision code, e.g., NY.
-   * @param params.sandboxMode - optional flag to use sandbox (test) mode (default: true).
+   * @param params.sandboxMode - explicit flag to use sandbox (test) or production mode.
    * @param params.urlForSignature - optional MoonPay Widget URL to sign.
    * @param params.organizationId - organization ID to specify the sub-organization (defaults to the current session's organizationId).
    * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
    * @param params.successPageDuration - optional duration (in ms) for the success page after connecting (default: 2000ms).
    * @param params.openInNewTab: optional boolean on whether to open the onramp URL in a new browser tab or popup
-   * @returns A promise that resolves when the onramp flow completes successfully.
+   * @returns A promise that resolves with the on-ramp flow result.
    * @throws {ZeroXKeyError} If initialization fails, polling fails, or the user cancels the process.
    */
-  handleOnRamp: (params: HandleOnRampParams) => Promise<void>;
+  handleOnRamp: (params: HandleOnRampParams) => Promise<OnRampFlowResult>;
 
   /**
    * Handles signing and sending an EVM or Solana transaction.

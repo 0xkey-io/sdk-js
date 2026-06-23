@@ -26,6 +26,7 @@ export * from "./__types__/external-wallets";
 export * from "./__types__/http";
 export * from "./__types__/method-types/import-export-params";
 export * from "./__types__/method-types/shared";
+export * from "./__onramp__";
 
 /**@internal */
 export {
