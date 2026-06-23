@@ -268,12 +268,14 @@ jobs:
         run: |
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           echo "Publishing packages to NPM..."
-          pnpm publish -r --no-git-checks --report-summary || {
+          # changeset publish only publishes packages whose version is not yet
+          # on the registry, so partial releases (only the changeset-bumped
+          # packages) work and already-published versions are skipped instead
+          # of failing with "cannot publish over the previously published versions".
+          pnpm exec changeset publish || {
             echo "❌ Publish failed. Check logs above.";
             exit 1;
           }
-          echo "npm publish summary:"
-          cat publish-summary.json || echo "No NPM publish summary generated"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
