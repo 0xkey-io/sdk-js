@@ -41,13 +41,15 @@ describe("on-ramp core helpers", () => {
   });
 
   it("appends MoonPay signatures using the existing query string", () => {
-    expect(appendMoonPaySignature("https://buy.moonpay.com?apiKey=pk", "sig+/=")).toBe(
-      "https://buy.moonpay.com?apiKey=pk&signature=sig%2B%2F%3D",
-    );
+    expect(
+      appendMoonPaySignature("https://buy.moonpay.com?apiKey=pk", "sig+/="),
+    ).toBe("https://buy.moonpay.com?apiKey=pk&signature=sig%2B%2F%3D");
   });
 
   it("marks Coinbase runtime as unsupported for phase one", () => {
-    expect(getOnRampProviderCapability(FiatOnRampProvider.COINBASE)).toMatchObject({
+    expect(
+      getOnRampProviderCapability(FiatOnRampProvider.COINBASE),
+    ).toMatchObject({
       supportsRuntime: false,
       supportsUrlSigning: false,
       supportsStatusRefresh: false,
@@ -155,7 +157,9 @@ describe("on-ramp core helpers", () => {
     jest.useFakeTimers();
     const runtimeClient = {
       initFiatOnRamp: jest.fn<any>(),
-      getOnRampTransactionStatus: jest.fn<any>().mockRejectedValue(new Error("boom")),
+      getOnRampTransactionStatus: jest
+        .fn<any>()
+        .mockRejectedValue(new Error("boom")),
     };
 
     const promise = pollOnRampTransactionStatus({

@@ -12,8 +12,12 @@ import type { StamperType } from "../__types__/enums";
 export type OnRampProvider = TInitFiatOnRampBody["onrampProvider"];
 export type OnRampNetwork = TInitFiatOnRampBody["network"];
 export type OnRampCryptoCurrency = TInitFiatOnRampBody["cryptoCurrencyCode"];
-export type OnRampFiatCurrency = NonNullable<TInitFiatOnRampBody["fiatCurrencyCode"]>;
-export type OnRampPaymentMethod = NonNullable<TInitFiatOnRampBody["paymentMethod"]>;
+export type OnRampFiatCurrency = NonNullable<
+  TInitFiatOnRampBody["fiatCurrencyCode"]
+>;
+export type OnRampPaymentMethod = NonNullable<
+  TInitFiatOnRampBody["paymentMethod"]
+>;
 
 export type InitOnRampRuntimeResult = Pick<
   TInitFiatOnRampResponse,
@@ -175,14 +179,13 @@ export function getOnRampProviderCapability(
   };
 }
 
-export function assertOnRampProviderSupported(
-  provider: OnRampProvider,
-): void {
+export function assertOnRampProviderSupported(provider: OnRampProvider): void {
   const capability = getOnRampProviderCapability(provider);
   if (!capability.supportsRuntime) {
     throw new OnRampError(
       OnRampErrorCode.PROVIDER_UNSUPPORTED,
-      capability.unsupportedReason ?? `${provider} is not supported for on-ramp runtime flows.`,
+      capability.unsupportedReason ??
+        `${provider} is not supported for on-ramp runtime flows.`,
       capability,
     );
   }
@@ -291,7 +294,9 @@ export async function initOnRampFlow(
   try {
     const response = await params.runtimeClient.initFiatOnRamp(
       {
-        ...(params.organizationId ? { organizationId: params.organizationId } : {}),
+        ...(params.organizationId
+          ? { organizationId: params.organizationId }
+          : {}),
         onrampProvider: provider,
         walletAddress: params.walletAddress,
         network: params.network,
@@ -302,7 +307,9 @@ export async function initOnRampFlow(
         ...(params.fiatCurrencyAmount
           ? { fiatCurrencyAmount: params.fiatCurrencyAmount }
           : {}),
-        ...(params.paymentMethod ? { paymentMethod: params.paymentMethod } : {}),
+        ...(params.paymentMethod
+          ? { paymentMethod: params.paymentMethod }
+          : {}),
         ...(params.countryCode ? { countryCode: params.countryCode } : {}),
         ...(params.countrySubdivisionCode
           ? { countrySubdivisionCode: params.countrySubdivisionCode }
@@ -363,7 +370,9 @@ export async function pollOnRampTransactionStatus(
     try {
       const response = await params.runtimeClient.getOnRampTransactionStatus(
         {
-          ...(params.organizationId ? { organizationId: params.organizationId } : {}),
+          ...(params.organizationId
+            ? { organizationId: params.organizationId }
+            : {}),
           transactionId: params.transactionId,
           refresh: params.refresh ?? true,
         },
@@ -396,7 +405,9 @@ export async function pollOnRampTransactionStatus(
   );
 }
 
-export function normalizeOnRampStatus(status: string | undefined): OnRampFlowStatus {
+export function normalizeOnRampStatus(
+  status: string | undefined,
+): OnRampFlowStatus {
   switch ((status ?? "").trim().toLowerCase()) {
     case "initiated":
       return "initiated";
@@ -434,7 +445,10 @@ function moonPayCryptoCode(currency: OnRampCryptoCurrency): string {
     case "FIAT_ON_RAMP_CRYPTO_CURRENCY_USDC":
       return "usdc";
     default:
-      return enumSuffix(currency, "FIAT_ON_RAMP_CRYPTO_CURRENCY_").toLowerCase();
+      return enumSuffix(
+        currency,
+        "FIAT_ON_RAMP_CRYPTO_CURRENCY_",
+      ).toLowerCase();
   }
 }
 
