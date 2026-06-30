@@ -140,7 +140,7 @@ export class IntentBuilder {
     // EIP-712 domain and types for gas station execution
     const domain = {
       name: "TKGasDelegate",
-      version: "1",
+      version: "1.1",
       chainId: this.config.chainId,
       verifyingContract: this.config.eoaAddress,
     };
@@ -207,7 +207,7 @@ export class IntentBuilder {
     // EIP-712 domain and types for approve then execute
     const domain = {
       name: "TKGasDelegate",
-      version: "1",
+      version: "1.1",
       chainId: this.config.chainId,
       verifyingContract: this.config.eoaAddress,
     };
@@ -280,7 +280,7 @@ export class IntentBuilder {
     // EIP-712 domain and types for session execution
     const domain = {
       name: "TKGasDelegate",
-      version: "1",
+      version: "1.1",
       chainId: this.config.chainId,
       verifyingContract: this.config.eoaAddress,
     };

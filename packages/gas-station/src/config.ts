@@ -2,11 +2,16 @@ import type { Chain, WalletClient, Account, Transport, Hex } from "viem";
 
 import { base, mainnet, sepolia } from "viem/chains";
 
-// Default contract addresses (deterministically deployed across all chains)
+// Default contract addresses — 0xkey self-deployed instances (fork of Turnkey's
+// MIT gas-station). Deterministic CREATE2 addresses, identical across all EVM
+// chains. See repos/gas-station-contracts/deployments/ for on-chain records.
 export const DEFAULT_DELEGATE_CONTRACT: Hex =
-  "0x000066a00056CD44008768E2aF00696e19A30084";
+  "0xb575Fe98d8D8aeb6F20c7C5aC9CdE153b4AA39d0";
 export const DEFAULT_EXECUTION_CONTRACT: Hex =
-  "0x00000000008c57a1CE37836a5e9d36759D070d8c";
+  "0x89439f96109025127205fc31b616DDda311E440B";
+// TODO(gas-station-periphery): replace with 0xkey self-deployed
+// ReimbursableGasStationUSDC once the periphery contracts are forked & deployed.
+// This is still Turnkey's upstream address (USDC reimbursement model not yet live).
 export const DEFAULT_REIMBURSABLE_USDC_CONTRACT: Hex =
   "0x4c0a2998B4Dc7BAF418109b80E5dde7395703dcb";
 
