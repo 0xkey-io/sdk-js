@@ -110,6 +110,8 @@ import {
   type BuildWalletLoginRequestParams,
   type VerifyAppProofsParams,
   type PollTransactionStatusParams,
+  type FetchLatestBootProofParams,
+  type VerifyLatestBootProofParams,
 } from "../__types__";
 import {
   buildSignUpBody,
@@ -150,7 +152,13 @@ import {
 import { jwtDecode } from "jwt-decode";
 import { createWalletManager } from "../__wallet__/base";
 import { toUtf8Bytes } from "ethers";
-import { formatHpkeBuf, hpkeEncrypt, verify } from "@0xkey-io/crypto";
+import {
+  formatHpkeBuf,
+  hpkeEncrypt,
+  verify,
+  verifyBootProof,
+  type ParsedManifestEnvelope,
+} from "@0xkey-io/crypto";
 import { SignatureFormat } from "@0xkey-io/api-key-stamper";
 import { encodeFunctionData } from "viem";
 
@@ -5291,6 +5299,113 @@ export class ZeroXKeyClient {
       {
         errorMessage: "Failed to verify app proofs",
         errorCode: ZeroXKeyErrorCodes.VERIFY_APP_PROOFS_ERROR,
+      },
+    );
+  };
+
+  /**
+   * Fetches the latest boot proof for a live enclave app.
+   *
+   * Unlike {@link fetchBootProofForAppProof}, this is not tied to a specific
+   * app proof/ephemeral key — it returns whatever the coordinator most
+   * recently observed for the named enclave app (e.g. `"signer"`), which is
+   * useful for standalone remote-attestation checks independent of any
+   * particular app proof.
+   *
+   * @param params.appName - name of the enclave app (e.g. "signer", "policy-engine").
+   * @param params.organizationId - organization ID to specify the sub-organization (defaults to the current session's organizationId).
+   * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
+   * @returns A promise that resolves to the latest {@link v1BootProof} for the given app.
+   * @throws {ZeroXKeyError} If there is no active session, if the input is invalid, or if boot proof retrieval fails.
+   */
+  fetchLatestBootProof = async (
+    params: FetchLatestBootProofParams,
+  ): Promise<v1BootProof> => {
+    const {
+      appName,
+      stampWith = this.config.defaultStamperType,
+      organizationId: organizationIdFromParams,
+    } = params;
+
+    return withZeroXKeyErrorHandling(
+      async () => {
+        const session = await getActiveSessionOrThrowIfRequired(
+          stampWith,
+          this.storageManager.getActiveSession,
+        );
+
+        const organizationId =
+          organizationIdFromParams || session?.organizationId;
+        if (!organizationId) {
+          throw new ZeroXKeyError(
+            "Organization ID is required to fetch the latest Boot Proof.",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+
+        if (!appName) {
+          throw new ZeroXKeyError(
+            "'appName' is required and cannot be empty.",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+
+        const bootProofResponse = await this.httpClient.getLatestBootProof(
+          {
+            organizationId,
+            appName,
+          },
+          stampWith,
+        );
+        if (!bootProofResponse || !bootProofResponse.bootProof) {
+          throw new ZeroXKeyError(
+            "No boot proof found in the response",
+            ZeroXKeyErrorCodes.BAD_RESPONSE,
+          );
+        }
+        return bootProofResponse.bootProof;
+      },
+      {
+        errorMessage: "Failed to get the latest boot proof",
+        errorCode: ZeroXKeyErrorCodes.FETCH_LATEST_BOOT_PROOF_ERROR,
+      },
+    );
+  };
+
+  /**
+   * Fetches and verifies the latest boot proof for a live enclave app,
+   * proving that the pivot binary it's currently running matches a manifest
+   * approved by 0xkey's quorum multi-sig — independent of any app proof.
+   *
+   * See {@link verifyBootProof} (from `@0xkey-io/crypto`) for the full list
+   * of checks performed (AWS Nitro attestation chain, manifest/user_data
+   * binding, PCR measurements, and quorum approval signatures).
+   *
+   * @param params.appName - name of the enclave app (e.g. "signer", "policy-engine").
+   * @param params.organizationId - organization ID to specify the sub-organization (defaults to the current session's organizationId).
+   * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
+   * @param params.anchor - quorum trust anchor to verify approvals against (defaults to 0xkey's pinned production quorum).
+   * @returns A promise that resolves to the decoded, verified manifest envelope (including the live pivot binary hash).
+   * @throws {ZeroXKeyError} If there is no active session, if the input is invalid, if boot proof retrieval fails, or if verification fails.
+   */
+  verifyLatestBootProof = async (
+    params: VerifyLatestBootProofParams,
+  ): Promise<ParsedManifestEnvelope> => {
+    const { appName, organizationId, stampWith, anchor } = params;
+
+    return withZeroXKeyErrorHandling(
+      async () => {
+        const bootProof = await this.fetchLatestBootProof({
+          appName,
+          ...(organizationId && { organizationId }),
+          ...(stampWith && { stampWith }),
+        });
+
+        return await verifyBootProof(bootProof, anchor); // throws if invalid
+      },
+      {
+        errorMessage: "Failed to verify the latest boot proof",
+        errorCode: ZeroXKeyErrorCodes.VERIFY_LATEST_BOOT_PROOF_ERROR,
       },
     );
   };

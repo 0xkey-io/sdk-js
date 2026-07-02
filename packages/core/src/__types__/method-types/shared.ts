@@ -13,6 +13,7 @@ import type {
   v1WalletAccountParams,
   v1AppProof,
 } from "@0xkey-io/sdk-types";
+import type { QuorumManifestSetAnchor } from "@0xkey-io/crypto";
 import type {
   CreateSubOrgParams,
   OtpType,
@@ -455,4 +456,25 @@ export type VerifyAppProofsParams = {
   appProofs: v1AppProof[];
   organizationId?: string;
   stampWith?: StamperType | undefined;
+};
+
+export type FetchLatestBootProofParams = {
+  /** Name of the enclave app (e.g. "signer", "policy-engine"). */
+  appName: string;
+  organizationId?: string;
+  stampWith?: StamperType | undefined;
+};
+
+export type VerifyLatestBootProofParams = {
+  /** Name of the enclave app (e.g. "signer", "policy-engine"). */
+  appName: string;
+  organizationId?: string;
+  stampWith?: StamperType | undefined;
+  /**
+   * Quorum trust anchor to verify approvals against. Defaults to 0xkey's
+   * pinned production quorum (`PRODUCTION_QUORUM_MANIFEST_SET` from
+   * `@0xkey-io/crypto`). Override for preprod/staging, which are approved
+   * by a different quorum ceremony.
+   */
+  anchor?: QuorumManifestSetAnchor;
 };
