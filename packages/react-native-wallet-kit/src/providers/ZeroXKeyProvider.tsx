@@ -73,6 +73,8 @@ import {
   type CreateHttpClientParams,
   type ZeroXKeySDKClientBase,
   type FetchBootProofForAppProofParams,
+  type FetchLatestBootProofParams,
+  type VerifyLatestBootProofParams,
   type VerifyAppProofsParams,
   type SignAndSendTransactionParams,
   type PollTransactionStatusParams,
@@ -127,7 +129,11 @@ import type {
   ImportPrivateKeyParams,
 } from "../types/method-types";
 import { ClientContext } from "./Types";
-import { decryptExportBundle, generateP256KeyPair } from "@0xkey-io/crypto";
+import {
+  decryptExportBundle,
+  generateP256KeyPair,
+  type ParsedManifestEnvelope,
+} from "@0xkey-io/crypto";
 import {
   encryptWalletToBundle,
   encryptPrivateKeyToBundle,
@@ -1200,6 +1206,42 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         () => logout(),
         callbacks,
         "Failed to fetch or create delegated access user",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const fetchLatestBootProof = useCallback(
+    async (params: FetchLatestBootProofParams): Promise<v1BootProof> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.fetchLatestBootProof(params),
+        () => logout(),
+        callbacks,
+        "Failed to get the latest boot proof",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const verifyLatestBootProof = useCallback(
+    async (
+      params: VerifyLatestBootProofParams,
+    ): Promise<ParsedManifestEnvelope> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.verifyLatestBootProof(params),
+        () => logout(),
+        callbacks,
+        "Failed to verify the latest boot proof",
       );
     },
     [client, callbacks],
@@ -3221,6 +3263,8 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         handleAppleOauth,
         handleFacebookOauth,
         fetchBootProofForAppProof,
+        fetchLatestBootProof,
+        verifyLatestBootProof,
       }}
     >
       {children}
