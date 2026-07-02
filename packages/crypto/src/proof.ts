@@ -7,7 +7,17 @@ import { p256 } from "@noble/curves/p256";
 import { sha256 } from "@noble/hashes/sha2";
 import * as CBOR from "cbor-js";
 import * as x509 from "@peculiar/x509";
-import { AWS_ROOT_CERT_PEM, AWS_ROOT_CERT_SHA256 } from "./constants";
+import {
+  AWS_ROOT_CERT_PEM,
+  AWS_ROOT_CERT_SHA256,
+  PRODUCTION_QUORUM_KEY_HEX,
+  PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS,
+  PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD,
+} from "./constants";
+import {
+  decodeVersionedManifestEnvelope,
+  type ParsedManifestEnvelope,
+} from "./boot-proof-manifest";
 
 export const getCryptoInstance = async () => {
   let cryptoInstance: Crypto;
@@ -45,6 +55,210 @@ async function importEcdsaPublicKey(spki: ArrayBuffer): Promise<CryptoKey> {
     false,
     ["verify"],
   );
+}
+
+/**
+ * Utility: standard-base64 string -> bytes (matches Go's `base64.StdEncoding`
+ * and Rust's `base64::engine::general_purpose::STANDARD`, which is what the
+ * coordinator uses to encode every `*B64` field on `v1BootProof`).
+ */
+function base64ToBytes(b64: string): Uint8Array {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+/**
+ * A quorum trust anchor: the manifest-set members + threshold (and,
+ * optionally, the pinned quorum key) that a `verifyBootProof` caller trusts
+ * to approve manifests. Defaults to {@link PRODUCTION_QUORUM_MANIFEST_SET}.
+ * Override this for preprod/staging boot proofs, which are approved by a
+ * different quorum ceremony than production.
+ */
+export interface QuorumManifestSetAnchor {
+  threshold: number;
+  members: ReadonlyArray<{ alias: string; pubKeyHex: string }>;
+  /**
+   * `manifest.namespace.quorumKey`, pinned to make sure the manifest belongs
+   * to the expected quorum ceremony/namespace. Optional because it's an
+   * extra defense-in-depth binding beyond the (already sufficient) approval
+   * threshold check.
+   */
+  quorumKeyHex?: string;
+}
+
+/**
+ * 0xkey production quorum trust anchor, pinned from the manifest-set that
+ * approved the currently-deployed enclave manifests. See
+ * `repos/enclave-releases/releases/2026.6.15/signer/manifest.json`.
+ */
+export const PRODUCTION_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
+  threshold: PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD,
+  members: PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS,
+  quorumKeyHex: PRODUCTION_QUORUM_KEY_HEX,
+};
+
+/**
+ * Extract the boot proof's observation time. Attestation documents expire
+ * (AWS Nitro caps validity at 3 hours), so `verifyBootProof` validates the
+ * certificate chain as of this time rather than "now" — the enclave is
+ * immutable, so a proof captured while the cert chain was valid remains
+ * trustworthy even if verified long after the cert has since expired.
+ * Mirrors `sdk-go`'s `GetBootProofTime`.
+ */
+export function getBootProofTime(bootProof: v1BootProof): Date {
+  const seconds = Number.parseInt(bootProof.createdAt?.seconds ?? "", 10);
+  const nanos = Number.parseInt(bootProof.createdAt?.nanos ?? "", 10);
+  if (!Number.isFinite(seconds) || !Number.isFinite(nanos)) {
+    throw new Error("Missing or invalid boot proof timestamp");
+  }
+  return new Date(seconds * 1000 + Math.floor(nanos / 1e6));
+}
+
+/**
+ * Verify a boot proof standalone (independent of any app proof), proving
+ * that the pivot binary running in a live enclave matches a manifest
+ * approved by quorum multi-sig:
+ *  1. AWS Nitro attestation document is validly signed and chains to the
+ *     pinned AWS root (hardware root of trust).
+ *  2. `sha256(qosManifestB64) == attestationDoc.user_data` (binds the
+ *     specific manifest to this specific hardware measurement).
+ *  3. The manifest embedded in `qosManifestEnvelopeB64` hashes to the same
+ *     value as (2) (binds the envelope's approvals/PCRs to that manifest).
+ *  4. `attestationDoc.pcrs[0..3] == manifest.enclave.pcr0-3` (the manifest's
+ *     declared measurements match what the hardware actually measured).
+ *  5. At least `anchor.threshold` valid, unique quorum-member signatures
+ *     over the manifest hash, from members in `anchor.members` (NOT merely
+ *     the manifest's self-declared `manifest_set` — an untrusted manifest
+ *     could declare its own attacker-controlled member set).
+ *
+ * On success, returns the decoded envelope so callers can read off e.g.
+ * `manifest.pivotHashHex` (the verified, live pivot binary hash).
+ */
+export async function verifyBootProof(
+  bootProof: v1BootProof,
+  anchor: QuorumManifestSetAnchor = PRODUCTION_QUORUM_MANIFEST_SET,
+): Promise<ParsedManifestEnvelope> {
+  // 1. Parse + verify the attestation document's hardware root of trust.
+  const coseSign1Der = base64ToBytes(bootProof.awsAttestationDocB64);
+  const coseSign1 = CBOR.decode(coseSign1Der.buffer);
+  const [, , payload] = coseSign1;
+  const attestationDoc = CBOR.decode(new Uint8Array(payload).buffer);
+
+  await verifyCoseSign1Sig(coseSign1, attestationDoc.certificate);
+
+  const bootProofTime = getBootProofTime(bootProof);
+  await verifyCertificateChain(
+    attestationDoc.cabundle,
+    AWS_ROOT_CERT_PEM,
+    attestationDoc.certificate,
+    bootProofTime.getTime(),
+  );
+
+  // 2. user_data binding: H = sha256(qosManifestB64) must match the
+  // hardware-measured attestation user_data.
+  const manifestBytes = base64ToBytes(bootProof.qosManifestB64);
+  const manifestHash = sha256(manifestBytes);
+  if (!bytesEq(manifestHash, attestationDoc.user_data)) {
+    throw new Error(
+      "attestationDoc's user_data doesn't match the hash of the manifest",
+    );
+  }
+  const manifestHashHex = uint8ArrayToHexString(manifestHash);
+
+  // 3. Decode the envelope (borsh) and cross-check it embeds the exact same
+  // manifest as (2) — otherwise a tampered envelope could smuggle in
+  // approvals/PCRs for a different manifest than the one bound to user_data.
+  const envelopeBytes = base64ToBytes(bootProof.qosManifestEnvelopeB64);
+  const envelope = decodeVersionedManifestEnvelope(envelopeBytes);
+  if (
+    envelope.manifestHashHex.toLowerCase() !== manifestHashHex.toLowerCase()
+  ) {
+    throw new Error(
+      "qosManifestEnvelopeB64's embedded manifest does not match qosManifestB64",
+    );
+  }
+
+  // 4. PCRs: the manifest's declared enclave measurements must match what
+  // the hardware actually measured.
+  const pcrPairs: Array<[keyof typeof envelope.manifest.enclave, string]> = [
+    ["pcr0Hex", "0"],
+    ["pcr1Hex", "1"],
+    ["pcr2Hex", "2"],
+    ["pcr3Hex", "3"],
+  ];
+  for (const [field, pcrIndex] of pcrPairs) {
+    const attestationPcr = attestationDoc.pcrs?.[pcrIndex];
+    if (!attestationPcr) {
+      throw new Error(`attestation document missing pcr${pcrIndex}`);
+    }
+    const attestationPcrHex = uint8ArrayToHexString(
+      new Uint8Array(attestationPcr),
+    );
+    const manifestPcrHex = envelope.manifest.enclave[field];
+    if (attestationPcrHex.toLowerCase() !== manifestPcrHex.toLowerCase()) {
+      throw new Error(
+        `pcr${pcrIndex} mismatch: attestation=${attestationPcrHex}, manifest=${manifestPcrHex}`,
+      );
+    }
+  }
+
+  // 5. Quorum multi-sig: verify approvals against the pinned trust anchor,
+  // NOT the manifest's self-declared manifest_set (which is untrusted input).
+  if (
+    anchor.quorumKeyHex &&
+    envelope.manifest.namespace.quorumKeyHex.toLowerCase() !==
+      anchor.quorumKeyHex.toLowerCase()
+  ) {
+    throw new Error(
+      "manifest namespace quorum_key does not match the pinned trust anchor",
+    );
+  }
+
+  // QOS's ECDSA signing implementation (RustCrypto p256) hashes its input
+  // with SHA-256 before signing, and approvals are signed over
+  // `manifest.qos_hash()` (itself `sha256(borsh(manifest))`). So the raw
+  // ECDSA digest is `sha256(sha256(borsh(manifest)))` — verified empirically
+  // against real quorum-approved manifests.
+  const doubleHash = sha256(manifestHash);
+
+  const anchorByPubKey = new Map(
+    anchor.members.map((m) => [m.pubKeyHex.toLowerCase(), m]),
+  );
+  const validApprovers = new Set<string>();
+  for (const approval of envelope.manifestSetApprovals) {
+    const pubKeyHex = approval.member.pubKeyHex.toLowerCase();
+    if (!anchorByPubKey.has(pubKeyHex)) continue; // not a trusted quorum member
+
+    let signingKeyBytes: Uint8Array;
+    try {
+      const pubKeyBytes = uint8ArrayFromHexString(pubKeyHex);
+      if (pubKeyBytes.length !== 130) continue;
+      signingKeyBytes = pubKeyBytes.slice(65);
+      if (signingKeyBytes.length !== 65 || signingKeyBytes[0] !== 0x04)
+        continue;
+    } catch {
+      continue;
+    }
+
+    let signatureBytes: Uint8Array;
+    try {
+      signatureBytes = uint8ArrayFromHexString(approval.signatureHex);
+      if (signatureBytes.length !== 64) continue;
+    } catch {
+      continue;
+    }
+
+    if (p256.verify(signatureBytes, doubleHash, signingKeyBytes)) {
+      validApprovers.add(pubKeyHex);
+    }
+  }
+
+  if (validApprovers.size < anchor.threshold) {
+    throw new Error(
+      `Insufficient quorum approvals: got ${validApprovers.size} valid approvals from pinned members, need ${anchor.threshold}`,
+    );
+  }
+
+  return envelope;
 }
 
 /**
