@@ -39,6 +39,75 @@ export const PRODUCTION_TLS_FETCHER_ENCRYPT_PUBLIC_KEY =
 export const PRODUCTION_ON_RAMP_CREDENTIALS_ENCRYPTION_PUBLIC_KEY =
   "02336ebd7e929ef64b87c776b72540255b4c7b41579a24b1e68fb060daa873f9f6";
 
+// Quorum trust anchor for boot proof verification (verifyBootProof):
+// the manifest-set members + threshold + quorum key that approved the
+// currently-deployed 0xkey production manifests. Pinned from the quorum
+// ceremony's signed manifest — see
+// repos/enclave-releases/releases/2026.6.15/signer/manifest.json (all 5
+// enclave apps in a given release share the same manifestSet/quorumKey).
+// Update this pin whenever quorum membership changes (new ceremony that
+// rotates manifest-set members, not routine per-app manifest updates).
+export const PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD = 4;
+
+export const PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS: ReadonlyArray<{
+  alias: string;
+  pubKeyHex: string;
+}> = [
+  {
+    alias: "manifest-bin",
+    pubKeyHex:
+      "04fe1eb9a5b64783555b8403218dc1b0d434967f7eb87cb3f991bc8ef0502137f8c9e22d26aaa213dd2e0fbe639826c9efb9ee6ff4da98c4f7277076cf8162b81e0434675448568d9d0686b9e2b7e7e7b0a769486defa97d3cb76841e350f3345231eb194fd1a2373f4a5d01c2d3d118f599817774f945d9178d8b04c09d6cfb7c8d",
+  },
+  {
+    alias: "manifest-chouowen",
+    pubKeyHex:
+      "044485e6df0687e2b5943a2375519d4c2cc5aa7b58aa741220f89c71ccee83b11f61b0ec6eab1645129a090b585631770f8614c49287ae86ce5599a2e60805acd8046b6ffe8e3561dbec8a65f7dce5f8ef0dd4997a59ef43d1594557d4236b84aef6483b26e4ed37ef25be093fcea677a7ea24d80f3a765a22680963a30aded07ccf",
+  },
+  {
+    alias: "manifest-harry",
+    pubKeyHex:
+      "047f6deb6d265190250ed87bcdcb833e6aaabac0bce524a259923b4e92bbe62b59e225983cae6262e995c54102ffaa3f02d2ccf24f06f4b15926017c24e44821f3041ce7a7f2a90a8274e753961762b11d3359ad2471ff45e6848880fc15454170475d123551c235dc64ca673f4a63b1c5090a349766286a6b94d72b9493c5d81cc3",
+  },
+  {
+    alias: "manifest-hot",
+    pubKeyHex:
+      "04ad5dc00c58a6941b7de7a70f2dd630ff88234a3fa6487c0ce4c044151fe00af5fdf3924fa37cffdcc27c6b51d20dcefedea9b46ab604dc997f118c92501ef64904c655cd4adfefb2d45d5fd34021e8781e29a8d2849cd3312ec614f88168e44e8d1f3faa679ff362481cf5920dbb65cadbc18ebc49c1f2fceecef62dc27cc95590",
+  },
+  {
+    alias: "manifest-j",
+    pubKeyHex:
+      "04fb76921adea0309731829c272f72c31f8d1f1585c31f3666bee0f529b43ffab82cb139f62450b566445158e0c20fefee3e896a66228f2a2f449ef4eee9abc7da049ada1c6e5f1633413e37433fdb3a76b28e39759ca0e73263c6eb01c98ccdbb26505eececc707e643231dbea6e33d242eb910d1ab3c7bcd3a3af8a1bc00c69b2f",
+  },
+  {
+    alias: "manifest-jackson",
+    pubKeyHex:
+      "0484540286d53dc3d713cfd9738698ea08389cc7d0f4762e9ac3e101d21a00c684850d14bdaf18bccc7d20bf589556abc46b1bece2a083527dfa2f96ed3f0f9f5504a61a613bd933aaaf984ba48388c014d11df2a2ccecb15e0898b4a374e1da40533c414997dc7d58dcf516cb95c642c7d75cc95ceb5098956418b26c3db77783a6",
+  },
+  {
+    alias: "manifest-kekos",
+    pubKeyHex:
+      "043503307a76874916d9371aed135ef5fd1500c041fda56c0799c05671003db48632a4a18e79fcaf18a83d63fe4ac89436d43f4c0291f0d19c04d5ebaf180ff7a1047651490c5c6a1a57c90d3d920f5bb29142cccaa73114b6bd5c23f59581fae858c9da021768bf47d3848bca154547e76a08cecc98f8d27034f3ec57a0b7fa51c9",
+  },
+  {
+    alias: "manifest-leon",
+    pubKeyHex:
+      "04322d3f65af5cff22c95cfe2dd702ffdfcb1308f637f74e1273977131c60f1f24b296e558f8b3ccef27fda91466df0ba548ef9c1afbc0d73a7a707cd75e1d8569045cfb0bd4b0a5c33b6be87eb3aa2a0554920e26731701a7dfe59bb8abb579e78b51d4793e2ad2a7ac713cc05d86fe7b7358559033a4cf9d5d9f2efd2126e1d521",
+  },
+  {
+    alias: "manifest-m",
+    pubKeyHex:
+      "04a494626f55b638fc37663f3ed76e167732453aa66043f3a0cc6f6af3ff8b7c2b229f4d8041f1c9bdeb62abd12d76e5d1d643ede33856d3329f414b8e2966db8c0454633c09cf0cd51f51a46c5392b505401cab570ae5381e0fdc85f862614cd9e24df1c9cf0d52b520d4703f5bca52d4ea1ab3658d9d8d1d12e8dc73b45281304e",
+  },
+  {
+    alias: "manifest-torben",
+    pubKeyHex:
+      "04733f848b411c4afdba4e94d0d1cba9acf42ab122cf5e6fd9957380bb6d981f5b052083c8714171c644dae40c3c30eddc504f4717b4364bc3461e797cd09200c904b00e93e7938172b886433c31c618461e9a0b471b7ad37162e2dfdf946ea1f9540d05b0646223ed80f96809b23929d3bc4928d9a01ef551f432418d2a3b0ffaaf",
+  },
+];
+
+export const PRODUCTION_QUORUM_KEY_HEX =
+  "0438c11ab9353df275dd2f3b99a47c64fe37c820775e352cb2746221d9eb458bc513aedae91a662d3a57de88d708c04dd494fc99dfe3ea91b6b4e9fcbca12e78e6046d10ba0b618a5fd338a39e95e0236bb50fa323804952da886aa3768cd6b603747d606778096d5eb24644600f6f7d4a634a93043a8a5db99081068e1e03a9f201";
+
 // Pinned AWS Nitro Enclaves Root
 export const AWS_ROOT_CERT_PEM = `-----BEGIN CERTIFICATE-----
 MIICETCCAZagAwIBAgIRAPkxdWgbkK/hHUbMtOTn+FYwCgYIKoZIzj0EAwMwSTEL

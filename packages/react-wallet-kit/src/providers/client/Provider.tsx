@@ -109,6 +109,8 @@ import {
   type VerifyOtpResult,
   type ConnectedWallet,
   type FetchBootProofForAppProofParams,
+  type FetchLatestBootProofParams,
+  type VerifyLatestBootProofParams,
   type ZeroXKeySDKClientBase,
   type CreateHttpClientParams,
   type BuildWalletLoginRequestParams,
@@ -147,6 +149,7 @@ import {
   type v1AppProof,
   TGetSendTransactionStatusResponse,
 } from "@0xkey-io/sdk-types";
+import type { ParsedManifestEnvelope } from "@0xkey-io/crypto";
 import { useModal } from "../modal/Hook";
 import {
   type ZeroXKeyCallbacks,
@@ -3226,6 +3229,42 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     [client, callbacks, logout],
   );
 
+  const fetchLatestBootProof = useCallback(
+    async (params: FetchLatestBootProofParams): Promise<v1BootProof> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.fetchLatestBootProof(params),
+        () => logout(),
+        callbacks,
+        "Failed to get the latest boot proof",
+      );
+    },
+    [client, callbacks, logout],
+  );
+
+  const verifyLatestBootProof = useCallback(
+    async (
+      params: VerifyLatestBootProofParams,
+    ): Promise<ParsedManifestEnvelope> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.verifyLatestBootProof(params),
+        () => logout(),
+        callbacks,
+        "Failed to verify the latest boot proof",
+      );
+    },
+    [client, callbacks, logout],
+  );
+
   const verifyAppProofs = useCallback(
     async (params: VerifyAppProofsParams): Promise<void> => {
       if (!client)
@@ -5981,6 +6020,8 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         createApiKeyPair,
         getProxyAuthConfig,
         fetchBootProofForAppProof,
+        fetchLatestBootProof,
+        verifyLatestBootProof,
         verifyAppProofs,
         handleLogin,
         handleGoogleOauth,

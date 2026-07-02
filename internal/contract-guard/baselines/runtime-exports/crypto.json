@@ -53,6 +53,23 @@
       "kind": "string"
     },
     {
+      "name": "PRODUCTION_QUORUM_KEY_HEX",
+      "kind": "string"
+    },
+    {
+      "name": "PRODUCTION_QUORUM_MANIFEST_SET",
+      "kind": "object"
+    },
+    {
+      "name": "PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS",
+      "kind": "object",
+      "tag": "[object Array]"
+    },
+    {
+      "name": "PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD",
+      "kind": "number"
+    },
+    {
       "name": "PRODUCTION_SIGNER_SIGN_PUBLIC_KEY",
       "kind": "string"
     },
@@ -99,6 +116,16 @@
     },
     {
       "name": "compressRawPublicKey",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "decodeVersionedManifest",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "decodeVersionedManifestEnvelope",
       "kind": "class",
       "arity": 1
     },
@@ -158,6 +185,11 @@
       "arity": 0
     },
     {
+      "name": "getBootProofTime",
+      "kind": "class",
+      "arity": 1
+    },
+    {
       "name": "getCryptoInstance",
       "kind": "function",
       "arity": 0
@@ -215,6 +247,11 @@
     {
       "name": "verifyAppProofSignature",
       "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "verifyBootProof",
+      "kind": "function",
       "arity": 1
     },
     {
