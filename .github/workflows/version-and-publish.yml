@@ -299,7 +299,14 @@ jobs:
   sync-main:
     runs-on: ubuntu-latest
     needs: publish
-    if: ${{ needs.publish.result == 'success' }}
+    # always() is required here: without it, GitHub's implicit success()
+    # check walks the *transitive* needs graph (publish -> test-pre-prod /
+    # test-prod), and those are legitimately 'skipped' whenever
+    # skip_integration_tests=true - which would otherwise skip this job too,
+    # even though publish itself succeeded. (The pre-existing prepare-release
+    # job below has this same latent bug for the same reason; left as-is
+    # since fixing GitHub Release creation is out of scope here.)
+    if: ${{ always() && needs.publish.result == 'success' }}
     steps:
       - name: Checkout default branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
