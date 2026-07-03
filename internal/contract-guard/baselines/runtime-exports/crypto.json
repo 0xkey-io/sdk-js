@@ -87,6 +87,23 @@
       "kind": "number"
     },
     {
+      "name": "STAGING_QUORUM_KEY_HEX",
+      "kind": "string"
+    },
+    {
+      "name": "STAGING_QUORUM_MANIFEST_SET",
+      "kind": "object"
+    },
+    {
+      "name": "STAGING_QUORUM_MANIFEST_SET_MEMBERS",
+      "kind": "object",
+      "tag": "[object Array]"
+    },
+    {
+      "name": "STAGING_QUORUM_MANIFEST_SET_THRESHOLD",
+      "kind": "number"
+    },
+    {
       "name": "SUITE_ID_1",
       "kind": "object",
       "tag": "[object Uint8Array]"
