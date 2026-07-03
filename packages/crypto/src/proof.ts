@@ -19,6 +19,9 @@ import {
   PRODUCTION_QUORUM_KEY_HEX,
   PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS,
   PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD,
+  STAGING_QUORUM_KEY_HEX,
+  STAGING_QUORUM_MANIFEST_SET_MEMBERS,
+  STAGING_QUORUM_MANIFEST_SET_THRESHOLD,
 } from "./constants";
 import {
   decodeVersionedManifestEnvelope,
@@ -100,6 +103,21 @@ export const PRODUCTION_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
   threshold: PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD,
   members: PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS,
   quorumKeyHex: PRODUCTION_QUORUM_KEY_HEX,
+};
+
+/**
+ * 0xkey `staging-default` quorum trust anchor, pinned from the manifest-set
+ * that approved staging's currently-deployed enclave manifests. Distinct
+ * from {@link PRODUCTION_QUORUM_MANIFEST_SET} — staging is approved by its
+ * own, separate quorum ceremony (smaller membership/threshold), so verifying
+ * a staging boot proof against the production anchor will always fail the
+ * quorum-key check. Use this anchor explicitly when verifying non-production
+ * (staging/preprod) enclaves.
+ */
+export const STAGING_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
+  threshold: STAGING_QUORUM_MANIFEST_SET_THRESHOLD,
+  members: STAGING_QUORUM_MANIFEST_SET_MEMBERS,
+  quorumKeyHex: STAGING_QUORUM_KEY_HEX,
 };
 
 /**

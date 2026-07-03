@@ -1,10 +1,19 @@
 /** @jest-environment node */
 
-import { verifyBootProof, type QuorumManifestSetAnchor } from "../proof";
+import {
+  verifyBootProof,
+  STAGING_QUORUM_MANIFEST_SET,
+  type QuorumManifestSetAnchor,
+} from "../proof";
 import { decodeVersionedManifestEnvelope } from "../boot-proof-manifest";
 import type { v1BootProof } from "@0xkey-io/sdk-types";
 import { test, expect, describe } from "@jest/globals";
-import { preprodAnchor, testBootProof1, testBootProof2 } from "./shared";
+import {
+  preprodAnchor,
+  testBootProof1,
+  testBootProof2,
+  testStagingBootProof1,
+} from "./shared";
 
 function base64ToBytes(b64: string): Uint8Array {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -134,6 +143,40 @@ describe("Boot proof verification (verifyBootProof)", () => {
       verifyBootProof(tamperedBootProof, preprodAnchor),
     ).rejects.toThrow(
       "qosManifestEnvelopeB64's embedded manifest does not match qosManifestB64",
+    );
+  });
+});
+
+describe("STAGING_QUORUM_MANIFEST_SET", () => {
+  test("has the expected anchor shape (3 members, threshold 2)", () => {
+    expect(STAGING_QUORUM_MANIFEST_SET.threshold).toBe(2);
+    expect(STAGING_QUORUM_MANIFEST_SET.members).toHaveLength(3);
+    for (const member of STAGING_QUORUM_MANIFEST_SET.members) {
+      expect(member.alias).toEqual(expect.any(String));
+      expect(member.pubKeyHex).toMatch(/^04[0-9a-f]{258}$/);
+    }
+    expect(STAGING_QUORUM_MANIFEST_SET.quorumKeyHex).toMatch(
+      /^04[0-9a-f]{258}$/,
+    );
+  });
+
+  test("verifyBootProof succeeds against a real staging-default boot proof", async () => {
+    // testStagingBootProof1 (see shared.ts) is a real signer boot proof
+    // fetched live from staging, approved by staging's own quorum ceremony.
+    const envelope = await verifyBootProof(
+      testStagingBootProof1,
+      STAGING_QUORUM_MANIFEST_SET,
+    );
+    expect(envelope.manifest.namespace.name).toBe("0xkey/signer");
+    expect(envelope.manifestSetApprovals.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("verifyBootProof rejects the staging boot proof against the production anchor", async () => {
+    // Staging and production are approved by entirely separate quorum
+    // ceremonies (different quorumKeyHex), so cross-anchor verification
+    // must fail the quorum-key binding check.
+    await expect(verifyBootProof(testStagingBootProof1)).rejects.toThrow(
+      "quorum_key does not match the pinned trust anchor",
     );
   });
 });
