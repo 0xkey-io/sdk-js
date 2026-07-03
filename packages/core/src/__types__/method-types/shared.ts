@@ -456,6 +456,13 @@ export type VerifyAppProofsParams = {
   appProofs: v1AppProof[];
   organizationId?: string;
   stampWith?: StamperType | undefined;
+  /**
+   * Quorum trust anchor used to verify each app proof's underlying boot
+   * proof. Defaults to `PRODUCTION_QUORUM_MANIFEST_SET`; override for
+   * staging/preprod app proofs, which are approved by a different quorum
+   * ceremony than production.
+   */
+  anchor?: QuorumManifestSetAnchor;
 };
 
 export type FetchLatestBootProofParams = {

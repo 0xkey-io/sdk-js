@@ -5243,6 +5243,7 @@ export class ZeroXKeyClient {
       appProofs,
       stampWith = this.config.defaultStamperType,
       organizationId: organizationIdFromParams,
+      anchor,
     } = params;
 
     return withZeroXKeyErrorHandling(
@@ -5293,7 +5294,7 @@ export class ZeroXKeyClient {
             lastBootProof = bootProof;
           }
 
-          await verify(appProof, bootProof); // throws if invalid
+          await verify(appProof, bootProof, anchor); // throws if invalid
         }
       },
       {

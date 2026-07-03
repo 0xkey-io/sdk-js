@@ -2,10 +2,35 @@
  * Shared real attestation test vectors (app proof / boot proof pairs) used
  * across proof verification tests. Captured from a real preprod signer
  * enclave boot (namespace "preprod/signer"), approved by a 2-of-2 preprod
- * quorum (see boot-proof-tests.ts for the corresponding manifest-set
+ * quorum (see `preprodAnchor` below for the corresponding manifest-set
  * members).
  */
 import type { v1AppProof, v1BootProof } from "@0xkey-io/sdk-types";
+import type { QuorumManifestSetAnchor } from "../proof";
+
+/**
+ * Trust anchor for the preprod quorum that approved the manifest embedded in
+ * `testBootProof1`/`testBootProof2` — NOT the production quorum in
+ * `PRODUCTION_QUORUM_MANIFEST_SET`. Extracted by borsh-decoding the
+ * envelope's `manifest_set`/`manifest_set_approvals`.
+ */
+export const preprodAnchor: QuorumManifestSetAnchor = {
+  threshold: 2,
+  members: [
+    {
+      alias: "1",
+      pubKeyHex:
+        "044af8b082b9ef41a238037811a188309d8c8b00b6d49c0574538d7746d7383739e67e1107f134bc102a48301b07e7c53280decbe9c16c9fc1f19b9832018e1485048139aa5de49d9505465bcf1a879954c51ba7b258b669f4e42697088cbbca54aeb888d61e65b2602ce92ae945a0160533acc94942511f8e5b1940ed89cc8f141f",
+    },
+    {
+      alias: "2",
+      pubKeyHex:
+        "04c1c4b4eb784505f167affae00e18b1521e7a0bfa3be46e6a6b43ba1f386afce48d964c885480cb197e3538fd30ebe38a07f76b6a286b37ba6d2abddbbd6c9c8304e492ca7bce95912a7b2565c8553e38cf3a4b1f858171900ed81888282db13d41e214dd6def2de2aacb1fcf92e3ae5a83e1b0ffa660fc59b9dd10e277cfd128dc",
+    },
+  ],
+  quorumKeyHex:
+    "048e92f6cdcc0b375505980a298d9b79201db1f08b1f135360d2864af1a67186ec0dbeb570d396a456226b0844be93dbc0180abbf7e2e4c9cfde8d5da4e3f8a49004f3422b8afbe425d6ece77b8d2469954715a2ff273ab7ac89f1ed70e0a9325eaa1698b4351fd1b23734e65c0b6a86b62dd49d70b37c94606aac402cbd84353212",
+};
 
 export const testAppProof1: v1AppProof = {
   scheme: "SIGNATURE_SCHEME_EPHEMERAL_KEY_P256",
