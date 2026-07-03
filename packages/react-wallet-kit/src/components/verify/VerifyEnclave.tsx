@@ -30,8 +30,15 @@ type VerifyEnclavePageProps = HandleVerifyEnclaveParams & {
  * cancelled/skipped one.
  */
 export function VerifyEnclavePage(props: VerifyEnclavePageProps) {
-  const { appName, organizationId, stampWith, anchor, onSuccess, onError, successPageDuration } =
-    props;
+  const {
+    appName,
+    organizationId,
+    stampWith,
+    anchor,
+    onSuccess,
+    onError,
+    successPageDuration,
+  } = props;
 
   const { isMobile, closeModal } = useModal();
   const { verifyLatestBootProof } = useZeroXKey();
