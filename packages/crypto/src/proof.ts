@@ -5,7 +5,13 @@ import {
 import type { v1AppProof, v1BootProof } from "@0xkey-io/sdk-types";
 import { p256 } from "@noble/curves/p256";
 import { sha256 } from "@noble/hashes/sha2";
-import * as CBOR from "cbor-js";
+// `cbor-js` assigns `module.exports = obj` via an indirect variable
+// reference (not an inline object literal), which `cjs-module-lexer` fails
+// to statically analyze for named exports. `import * as CBOR` therefore only
+// yields `{ default }` under Node's native ESM loader (bundlers like
+// webpack/vite don't hit this since they interop at runtime, not via static
+// lexing) — use the default import, which works under both.
+import CBOR from "cbor-js";
 import * as x509 from "@peculiar/x509";
 import {
   AWS_ROOT_CERT_PEM,
