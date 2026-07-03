@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/example-with-bitcoin",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "scripts": {
     "start": "tsx src/createBtcTx.ts",
