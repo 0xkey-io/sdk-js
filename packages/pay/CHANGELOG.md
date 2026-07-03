@@ -1,5 +1,13 @@
 # @0xkey-io/pay
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/viem@0.1.4
+  - @0xkey-io/http@0.1.4
+
 ## 0.2.0
 
 ### Minor Changes

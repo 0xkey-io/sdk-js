@@ -1,5 +1,17 @@
 # @0xkey-io/react-wallet-kit
 
+## 0.4.0
+
+### Minor Changes
+
+- [#14](https://github.com/0xkey-io/sdk-js/pull/14) [`131ac3c`](https://github.com/0xkey-io/sdk-js/commit/131ac3cf2c8657dd320de872e4ea8a750b98d912) Author [@torbensen](https://github.com/torbensen) - Add `handleVerifyEnclave` + `VerifyEnclavePage`: a standalone, visual "verify enclave identity" flow using `verifyLatestBootProof`, independent of App Proofs. Unlike `handleVerifyAppProofs` (which requires an App Proof to already exist), this can be triggered any time to show end users that the live enclave running a given app (e.g. "signer") matches a manifest approved by 0xkey's quorum multi-sig — including a visible failure state (previous verification UI silently closed on error).
+
+### Patch Changes
+
+- Updated dependencies [[`81a7f91`](https://github.com/0xkey-io/sdk-js/commit/81a7f91c6b9dbcdf3e98667a6b2aadc01a85032e), [`497a0cc`](https://github.com/0xkey-io/sdk-js/commit/497a0cc151b803b166eb443625682a1a4216e779)]:
+  - @0xkey-io/crypto@0.4.0
+  - @0xkey-io/core@0.2.1
+
 ## 0.3.0
 
 ### Minor Changes

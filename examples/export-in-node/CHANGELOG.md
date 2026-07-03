@@ -1,5 +1,13 @@
 # @0xkey-io/example-export-in-node
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`81a7f91`](https://github.com/0xkey-io/sdk-js/commit/81a7f91c6b9dbcdf3e98667a6b2aadc01a85032e), [`497a0cc`](https://github.com/0xkey-io/sdk-js/commit/497a0cc151b803b166eb443625682a1a4216e779)]:
+  - @0xkey-io/crypto@0.4.0
+  - @0xkey-io/sdk-server@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @0xkey-io/import-export-with-rwk
 
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies [[`131ac3c`](https://github.com/0xkey-io/sdk-js/commit/131ac3cf2c8657dd320de872e4ea8a750b98d912)]:
+  - @0xkey-io/react-wallet-kit@0.4.0
+
 ## 0.1.15
 
 ### Patch Changes

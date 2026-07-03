@@ -1,5 +1,16 @@
 # @0xkey-io/ethers
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`497a0cc`](https://github.com/0xkey-io/sdk-js/commit/497a0cc151b803b166eb443625682a1a4216e779)]:
+  - @0xkey-io/core@0.2.1
+  - @0xkey-io/api-key-stamper@0.1.4
+  - @0xkey-io/sdk-browser@0.1.4
+  - @0xkey-io/http@0.1.4
+  - @0xkey-io/sdk-server@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

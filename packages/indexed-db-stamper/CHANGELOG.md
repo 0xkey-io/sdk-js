@@ -1,5 +1,12 @@
 # @0xkey-io/indexed-db-stamper
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/api-key-stamper@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

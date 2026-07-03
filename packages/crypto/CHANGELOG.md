@@ -1,5 +1,15 @@
 # @0xkey-io/crypto
 
+## 0.4.0
+
+### Minor Changes
+
+- [#14](https://github.com/0xkey-io/sdk-js/pull/14) [`497a0cc`](https://github.com/0xkey-io/sdk-js/commit/497a0cc151b803b166eb443625682a1a4216e779) Author [@torbensen](https://github.com/torbensen) - `verify(appProof, bootProof)` now delegates its boot-proof checks to `verifyBootProof`, closing a security gap: it previously only checked the AWS attestation chain and `user_data`/manifest binding, but never checked PCR values or quorum multi-sig approvals — so a manifest that was never approved by 0xkey's quorum (or that declared different PCRs than what's actually running) would still pass. `verify()` now accepts an optional `anchor` parameter (defaults to `PRODUCTION_QUORUM_MANIFEST_SET`, same as `verifyBootProof`), and `@0xkey-io/core`'s `verifyAppProofs` accepts and forwards the same `anchor` option.
+
+### Patch Changes
+
+- [#14](https://github.com/0xkey-io/sdk-js/pull/14) [`81a7f91`](https://github.com/0xkey-io/sdk-js/commit/81a7f91c6b9dbcdf3e98667a6b2aadc01a85032e) Author [@torbensen](https://github.com/torbensen) - Add `STAGING_QUORUM_MANIFEST_SET`, a public trust anchor for verifying boot proofs from 0xkey's `staging-default` enclave environment (analogous to the existing `PRODUCTION_QUORUM_MANIFEST_SET`, but pinned to staging's own, separate quorum ceremony). Pass it explicitly to `verifyBootProof`/`verify` when verifying non-production enclaves.
+
 ## 0.3.0
 
 ### Minor Changes

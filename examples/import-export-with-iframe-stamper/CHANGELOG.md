@@ -1,5 +1,12 @@
 # @0xkey-io/import-export-with-iframe-stamper
 
+## 0.3.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/sdk-server@0.1.4
+
 ## 0.3.15
 
 ### Patch Changes

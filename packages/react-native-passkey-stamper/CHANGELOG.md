@@ -1,5 +1,12 @@
 # @0xkey-io/react-native-passkey-stamper
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/http@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @0xkey-io/paymaster-usdc-transfer
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/sdk-server@0.1.4
+
 ## 0.1.8
 
 ### Patch Changes

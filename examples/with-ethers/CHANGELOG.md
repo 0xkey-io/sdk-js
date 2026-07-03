@@ -1,5 +1,15 @@
 # @0xkey-io/example-with-ethers
 
+## 0.1.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/api-key-stamper@0.1.4
+  - @0xkey-io/ethers@0.1.4
+  - @0xkey-io/http@0.1.4
+  - @0xkey-io/sdk-server@0.1.4
+
 ## 0.1.6
 
 ### Patch Changes

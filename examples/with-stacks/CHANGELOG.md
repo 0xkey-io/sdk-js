@@ -1,5 +1,12 @@
 # @0xkey-io/with-stacks
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/sdk-server@0.1.4
+
 ## 0.0.4
 
 ### Patch Changes
