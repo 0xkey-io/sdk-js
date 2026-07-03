@@ -205,11 +205,13 @@ import type {
   HandleUpdateUserNameParams,
   HandleUpdateUserPhoneNumberParams,
   HandleVerifyAppProofsParams,
+  HandleVerifyEnclaveParams,
   HandleXOauthParams,
   RefreshUserParams,
   RefreshWalletsParams,
 } from "../../types/method-types";
 import { VerifyPage } from "../../components/verify/Verify";
+import { VerifyEnclavePage } from "../../components/verify/VerifyEnclave";
 import { OnRampPage } from "../../components/onramp/OnRamp";
 import { CoinbaseLogo, MoonPayLogo } from "../../components/design/Svg";
 import { SendTransactionPage } from "../../components/send-transaction/SendTransaction";
@@ -5810,6 +5812,67 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     [getSession, pushPage],
   );
 
+  const handleVerifyEnclave = useCallback(
+    async (params: HandleVerifyEnclaveParams): Promise<string> => {
+      const {
+        appName,
+        successPageDuration = 3000,
+        stampWith,
+        anchor,
+      } = params || {};
+      const s = await getSession();
+      const organizationId = params?.organizationId || s?.organizationId;
+      if (!organizationId) {
+        throw new ZeroXKeyError(
+          "A session or passed in organization ID is required.",
+          ZeroXKeyErrorCodes.INVALID_REQUEST,
+        );
+      }
+
+      try {
+        return await new Promise<string>((resolve, reject) => {
+          pushPage({
+            key: "Verify enclave",
+            content: (
+              <VerifyEnclavePage
+                appName={appName}
+                onSuccess={(pivotHashHex: string) => {
+                  resolve(pivotHashHex);
+                }}
+                onError={(error: unknown) => {
+                  reject(error);
+                }}
+                successPageDuration={successPageDuration}
+                {...(stampWith && { stampWith })}
+                {...(anchor && { anchor })}
+                {...(organizationId !== undefined && { organizationId })}
+              />
+            ),
+            showTitle: false,
+            preventBack: true,
+            onClose: () =>
+              reject(
+                new ZeroXKeyError(
+                  "User canceled the verify enclave process.",
+                  ZeroXKeyErrorCodes.USER_CANCELED,
+                ),
+              ),
+          });
+        });
+      } catch (error) {
+        if (error instanceof ZeroXKeyError) {
+          throw error;
+        }
+        throw new ZeroXKeyError(
+          "Failed to verify enclave.",
+          ZeroXKeyErrorCodes.VERIFY_LATEST_BOOT_PROOF_ERROR,
+          error,
+        );
+      }
+    },
+    [getSession, pushPage],
+  );
+
   useEffect(() => {
     if (proxyAuthConfigRef.current) return;
 
@@ -6048,6 +6111,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         handleRemoveUserEmail,
         handleRemoveUserPhoneNumber,
         handleVerifyAppProofs,
+        handleVerifyEnclave,
         handleOnRamp,
         handleSendTransaction,
         handleSendErc20Transfer,

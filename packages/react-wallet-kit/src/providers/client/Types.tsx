@@ -47,6 +47,7 @@ import type {
   HandleUpdateUserNameParams,
   HandleUpdateUserPhoneNumberParams,
   HandleVerifyAppProofsParams,
+  HandleVerifyEnclaveParams,
   HandleXOauthParams,
   RefreshUserParams,
   RefreshWalletsParams,
@@ -743,6 +744,23 @@ export interface ClientContextType
    * @throws {ZeroXKeyError} If there is no active session, if the input is invalid, if verification fails, or if the user cancels the action.
    */
   handleVerifyAppProofs: (params: HandleVerifyAppProofsParams) => Promise<void>;
+
+  /**
+   * Verifies that the live enclave running a given app name (e.g. "signer")
+   * matches a manifest approved by 0xkey's quorum multi-sig, showing a modal
+   * with the verification status. Unlike {@link handleVerifyAppProofs}, this
+   * doesn't require an App Proof to exist — it verifies the enclave's
+   * identity directly via `verifyLatestBootProof`.
+   *
+   * @param params.appName - name of the enclave app to verify (e.g. "signer", "policy-engine").
+   * @param params.organizationId - organization ID to specify the sub-organization (defaults to the current session's organizationId).
+   * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
+   * @param params.anchor - quorum trust anchor override (e.g. for staging/preprod enclaves).
+   * @param params.successPageDuration - duration (in ms) for the success page after verification.
+   * @returns A promise that resolves with the verified pivot hash (hex) when verification succeeds.
+   * @throws {ZeroXKeyError} If there is no active session, if the input is invalid, if verification fails, or if the user cancels the action.
+   */
+  handleVerifyEnclave: (params: HandleVerifyEnclaveParams) => Promise<string>;
 
   /**
    * Handles the fiat onramp process for converting fiat currency into crypto and funding a wallet.

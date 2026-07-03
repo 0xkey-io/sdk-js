@@ -19,6 +19,9 @@ import {
   PRODUCTION_QUORUM_KEY_HEX,
   PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS,
   PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD,
+  STAGING_QUORUM_KEY_HEX,
+  STAGING_QUORUM_MANIFEST_SET_MEMBERS,
+  STAGING_QUORUM_MANIFEST_SET_THRESHOLD,
 } from "./constants";
 import {
   decodeVersionedManifestEnvelope,
@@ -100,6 +103,21 @@ export const PRODUCTION_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
   threshold: PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD,
   members: PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS,
   quorumKeyHex: PRODUCTION_QUORUM_KEY_HEX,
+};
+
+/**
+ * 0xkey `staging-default` quorum trust anchor, pinned from the manifest-set
+ * that approved staging's currently-deployed enclave manifests. Distinct
+ * from {@link PRODUCTION_QUORUM_MANIFEST_SET} — staging is approved by its
+ * own, separate quorum ceremony (smaller membership/threshold), so verifying
+ * a staging boot proof against the production anchor will always fail the
+ * quorum-key check. Use this anchor explicitly when verifying non-production
+ * (staging/preprod) enclaves.
+ */
+export const STAGING_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
+  threshold: STAGING_QUORUM_MANIFEST_SET_THRESHOLD,
+  members: STAGING_QUORUM_MANIFEST_SET_MEMBERS,
+  quorumKeyHex: STAGING_QUORUM_KEY_HEX,
 };
 
 /**
@@ -270,61 +288,47 @@ export async function verifyBootProof(
 /**
  * verify goes through the following verification steps for an app proof & boot proof pair:
  *  - Verify app proof signature
- *  - Verify the boot proof
- *    - Attestation doc was signed by AWS
- *    - Attestation doc's `user_data` is the hash of the qos manifest
- *  - Verify the connection between the app proof & boot proof i.e. that the ephemeral keys match
+ *  - Verify the boot proof via {@link verifyBootProof} — this is the same
+ *    full chain used to verify a boot proof standalone: AWS attestation
+ *    chain, `user_data` == manifest hash, envelope binding, PCR match
+ *    against the manifest, and **quorum multi-sig approval against
+ *    `anchor`** (defaults to {@link PRODUCTION_QUORUM_MANIFEST_SET}).
+ *  - Verify the connection between the app proof & boot proof i.e. that the
+ *    ephemeral keys match (app proof, boot proof structure, and the
+ *    attestation doc's own `public_key` all agree)
+ *
+ * Earlier versions of this function only checked the AWS attestation chain
+ * and `user_data`/manifest binding — it did **not** check PCR values or
+ * quorum approvals, so a manifest that was never approved by 0xkey's quorum
+ * (or that declared different PCRs than what's actually running) would
+ * still pass. Delegating to `verifyBootProof` closes that gap.
  *
  *  For more information, check out https://whitepaper.0xkey.com/foundations
  */
 export async function verify(
   appProof: v1AppProof,
   bootProof: v1BootProof,
+  anchor: QuorumManifestSetAnchor = PRODUCTION_QUORUM_MANIFEST_SET,
 ): Promise<void> {
-  // 1. Verify App Proof
+  // 1. Verify App Proof signature.
   verifyAppProofSignature(appProof);
 
-  // 2. Verify Boot Proof
-  // Parse attestation
-  const coseSign1Der = Uint8Array.from(
-    atob(bootProof.awsAttestationDocB64)
-      .split("")
-      .map((c) => c.charCodeAt(0)),
-  );
+  // 2. Verify Boot Proof: AWS attestation chain + user_data/manifest binding
+  // + PCR match + quorum multi-sig approval against `anchor`.
+  await verifyBootProof(bootProof, anchor);
+
+  // 3. Verify that all the ephemeral public keys match: app proof, boot
+  // proof structure, and the actual attestation doc. `verifyBootProof`
+  // doesn't expose the raw attestation doc's `public_key` field, so it's
+  // decoded again here (cheap: no signature/chain re-verification, just
+  // reading a CBOR field already known-valid from step 2).
+  const coseSign1Der = base64ToBytes(bootProof.awsAttestationDocB64);
   const coseSign1 = CBOR.decode(coseSign1Der.buffer);
   const [, , payload] = coseSign1;
   const attestationDoc = CBOR.decode(new Uint8Array(payload).buffer);
-
-  // Verify cose sign1 signature
-  await verifyCoseSign1Sig(coseSign1, attestationDoc.certificate);
-
-  // Verify certificate chain
-  const appProofTimestampMs = parseInt(
-    JSON.parse(appProof.proofPayload).timestampMs,
+  const attestationPubKey = uint8ArrayToHexString(
+    new Uint8Array(attestationDoc.public_key),
   );
-  await verifyCertificateChain(
-    attestationDoc.cabundle,
-    AWS_ROOT_CERT_PEM,
-    attestationDoc.certificate,
-    appProofTimestampMs,
-  );
-
-  // Verify manifest digest
-  const decodedBootProofManifest = Uint8Array.from(
-    atob(bootProof.qosManifestB64)
-      .split("")
-      .map((c) => c.charCodeAt(0)),
-  );
-  const manifestDigest = sha256(decodedBootProofManifest);
-  if (!bytesEq(manifestDigest, attestationDoc.user_data)) {
-    throw new Error(
-      `attestationDoc's user_data doesn't match the hash of the manifest. attestationDoc.user_data: ${attestationDoc.user_data} , manifest digest: ${manifestDigest}`,
-    );
-  }
-
-  // 3. Verify that all the ephemeral public keys match: app proof, boot proof structure, actual attestation doc
-  const publicKeyBytes = new Uint8Array(attestationDoc.public_key);
-  const attestationPubKey = uint8ArrayToHexString(publicKeyBytes);
   if (
     appProof.publicKey !== attestationPubKey ||
     attestationPubKey !== bootProof.ephemeralPublicKeyHex

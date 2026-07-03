@@ -18,6 +18,7 @@ import type {
   OnRampFlowResult,
   WalletAccount,
 } from "@0xkey-io/core";
+import type { QuorumManifestSetAnchor } from "@0xkey-io/crypto";
 import type { KeyFormat } from "./base";
 
 export type RefreshUserParams = {
@@ -266,6 +267,16 @@ export type HandleVerifyAppProofsParams = {
   appProofs: v1AppProof[];
   organizationId?: string;
   stampWith?: StamperType | undefined;
+  successPageDuration?: number | undefined; // Duration in milliseconds for the success page to show. If 0, it will not show the success page.
+};
+
+export type HandleVerifyEnclaveParams = {
+  /** Name of the enclave app to verify (e.g. "signer", "policy-engine"). */
+  appName: string;
+  organizationId?: string;
+  stampWith?: StamperType | undefined;
+  /** Quorum trust anchor override (e.g. for staging/preprod enclaves). */
+  anchor?: QuorumManifestSetAnchor;
   successPageDuration?: number | undefined; // Duration in milliseconds for the success page to show. If 0, it will not show the success page.
 };
 

@@ -108,6 +108,41 @@ export const PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS: ReadonlyArray<{
 export const PRODUCTION_QUORUM_KEY_HEX =
   "0438c11ab9353df275dd2f3b99a47c64fe37c820775e352cb2746221d9eb458bc513aedae91a662d3a57de88d708c04dd494fc99dfe3ea91b6b4e9fcbca12e78e6046d10ba0b618a5fd338a39e95e0236bb50fa323804952da886aa3768cd6b603747d606778096d5eb24644600f6f7d4a634a93043a8a5db99081068e1e03a9f201";
 
+// Quorum trust anchor for the `staging-default` environment's boot proof
+// verification. Pinned from the staging quorum ceremony's manifest-set —
+// see `~/0xkey/keyops/staging-default/manifester1/shared/{manifest-set,
+// quorum_key}.pub` on an operator machine (not committed to this repo,
+// since it's operator key material, not code — these are just the public
+// keys copied out of it). Cross-checked against the live staging signer's
+// boot proof manifest (namespace "0xkey/signer") during the initial
+// boot-proof-verification rollout. Update if staging's quorum membership
+// ever changes (new ceremony rotating manifest-set members).
+export const STAGING_QUORUM_MANIFEST_SET_THRESHOLD = 2;
+
+export const STAGING_QUORUM_MANIFEST_SET_MEMBERS: ReadonlyArray<{
+  alias: string;
+  pubKeyHex: string;
+}> = [
+  {
+    alias: "manifester1",
+    pubKeyHex:
+      "0485e2a53baa735645e72ba0ab5bc27cfbb1b900f07c416998c02ffdd35be185909e858e25d8cc3548464d2bae8d92d1b4b6a3358a904b8cd5a87d9590c4f9f3f8042beaf3fb2899250d17085782c7e82dc46da07b79cec41475ab20ea4e9f2ba94eac3f18ddb234cc7cda6ee54a71fb58ff3cc02e35f5d236444878d0d8ae7d5721",
+  },
+  {
+    alias: "manifester2",
+    pubKeyHex:
+      "04ce62b47a52e265c2a4465ce8e34f451d465587586fd632b279ff00c7dd832f0bbd537edf9340723795847e21e706770d4d133c7cb1287b6a49778a07518af350042a26a0faec055587fe2e97386e13c537ba1a3434d2bd4ac7daf0097c571db274d1234a319875ddfbd99f157ff10ef1d15ffd0f5f619e3bc386ef6a555bd84434",
+  },
+  {
+    alias: "manifester3",
+    pubKeyHex:
+      "043a3dffd396421c4835ce3ba629dd2c576f2a2beeebb6791536238537d6cb9ea2ce7df15c1a022ad7517fbab13f08748a1fda2b2c9c71741ce7a05ddeed94a1490460bcd41fadc768c9f60918d9184636d8507c0d1e174bbb54deebbcd510627e86d70e0d0f4856a82285fe8941e0b40578878f25c9903d8ef33d39ffa9fb98ee79",
+  },
+];
+
+export const STAGING_QUORUM_KEY_HEX =
+  "048a3d4a375c46f90285603033ef2cbc8093dd38173770ac9db1538ba573a5fbcf567a326624ce8a43d5a6598288b120c90bd9d78145c050db9cbb232a6690ef1b046f2e6d75c39167e1e23dce9f12920edbcf3e82dbf6f09e7acfaa8e00f9945e5bfe598439367c295bf05920edab68213b739a9eebd5f159397db29d3c50dd91a9";
+
 // Pinned AWS Nitro Enclaves Root
 export const AWS_ROOT_CERT_PEM = `-----BEGIN CERTIFICATE-----
 MIICETCCAZagAwIBAgIRAPkxdWgbkK/hHUbMtOTn+FYwCgYIKoZIzj0EAwMwSTEL
