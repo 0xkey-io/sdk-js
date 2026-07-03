@@ -26,6 +26,7 @@ permissions:
   contents: write
   packages: write
   id-token: write
+  pull-requests: write
 
 jobs:
   build:
@@ -87,10 +88,17 @@ jobs:
           git config user.name "0xkey-deploy"
           git config user.email "github@0xkey.io"
 
-      - name: Create and switch to release branch
+      # release/* is a use-once-and-discard scratch branch, never a long-lived
+      # branch. It must always be cut fresh from the commit we just checked
+      # out above (the default branch tip), never reused from a stale remote
+      # copy left over by a previous run - otherwise a leftover
+      # origin/release/<ref> branch would silently resurrect old, already
+      # superseded version bumps/changesets instead of the current main.
+      - name: Create fresh release branch from the latest default branch
         run: |
           git fetch origin
-          git checkout -B release/${{ github.ref_name }} origin/release/${{ github.ref_name }} || \
+          git push origin --delete release/${{ github.ref_name }} || \
+            echo "No stale origin/release/${{ github.ref_name }} to delete"
           git checkout -B release/${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -123,7 +131,10 @@ jobs:
 
       - name: Push changes to release branch
         run: |
-          git push -u origin release/${{ github.ref_name }}
+          # -f is safe/expected here: release/${{ github.ref_name }} is the
+          # disposable scratch branch we just deleted and recreated above, so
+          # this is never rewriting history anyone else has based work on.
+          git push -f -u origin release/${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -278,6 +289,59 @@ jobs:
           }
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Bring the "chore: release packages" version-bump commit (produced on the
+  # scratch release/* branch by version-and-rebuild) back onto the default
+  # branch once publish has actually succeeded. Without this, package.json
+  # versions on the default branch permanently drift behind what's live on
+  # npm, and .changeset/*.md files are never cleared - both bugs this job
+  # exists to close. See root-cause discussion in the PR that introduced it.
+  sync-main:
+    runs-on: ubuntu-latest
+    needs: publish
+    if: ${{ needs.publish.result == 'success' }}
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # required to evaluate fast-forward ancestry
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Configure Git User
+        run: |
+          git config user.name "0xkey-deploy"
+          git config user.email "github@0xkey.io"
+
+      - name: Fetch release branch
+        run: git fetch origin release/${{ github.ref_name }}
+
+      - name: Fast-forward default branch to the published version bump
+        id: ff
+        run: |
+          if git merge --ff-only origin/release/${{ github.ref_name }}; then
+            git push origin HEAD:${{ github.event.repository.default_branch }}
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::${{ github.event.repository.default_branch }} advanced since release/${{ github.ref_name }} was cut; cannot fast-forward, opening a PR instead."
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Rare path: only hit if someone pushed to the default branch while
+      # build/version/test/publish were running. Never force-pushes over
+      # those new commits - opens a normal PR for a human to merge instead.
+      - name: Open PR to sync version bump if fast-forward was not possible
+        if: ${{ steps.ff.outputs.merged == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SYNC_BRANCH="chore/sync-release-${{ github.run_id }}"
+          git checkout -B "$SYNC_BRANCH" origin/release/${{ github.ref_name }}
+          git push -u origin "$SYNC_BRANCH"
+          gh pr create \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$SYNC_BRANCH" \
+            --title "chore: sync published package versions back to ${{ github.event.repository.default_branch }} (run #${{ github.run_id }})" \
+            --body "Automated version-bump commit from \`release/${{ github.ref_name }}\` (already published to npm by this run) could not be fast-forwarded onto \`${{ github.event.repository.default_branch }}\` because the base branch advanced during this release. Please review and merge to keep package.json versions and \`.changeset/\` in sync with what's live on npm."
 
   prepare-release:
     runs-on: ubuntu-latest
