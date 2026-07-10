@@ -1,6 +1,6 @@
 import type { Chain, WalletClient, Account, Transport, Hex } from "viem";
 
-import { base, mainnet, sepolia } from "viem/chains";
+import { base, baseSepolia, mainnet, sepolia } from "viem/chains";
 
 // Default contract addresses — 0xkey self-deployed instances (fork of Turnkey's
 // MIT gas-station). Deterministic CREATE2 addresses, identical across all EVM
@@ -72,6 +72,13 @@ export const CHAIN_PRESETS: Record<string, ChainPreset> = {
     rpcUrl: process.env.BASE_RPC_URL || "",
     tokens: {
       USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    },
+  },
+  BASE_SEPOLIA: {
+    chain: baseSepolia,
+    rpcUrl: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
+    tokens: {
+      USDC: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     },
   },
   ETHEREUM_MAINNET: {
