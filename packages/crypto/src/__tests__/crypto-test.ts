@@ -690,7 +690,10 @@ describe("Session JWT signature", () => {
     const rustSignerJwt =
       "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDAsIm9yZ2FuaXphdGlvbl9pZCI6ImM3NWVjYjA3LWM4NGEtNGRkNS05MzJjLTUzOWRmYWZjNjg2NCIsInB1YmxpY19rZXkiOiIwNGFiY2QiLCJzZXNzaW9uX3R5cGUiOiJTRVNTSU9OX1RZUEVfUkVBRF9XUklURSIsInVzZXJfaWQiOiI2OTEyYjgxOS1mNGRmLTQwZjQtYTE5Mi0yMGVlNDMwOTA5NzQifQ.B3eNfwx4OGHzhLFvZQ1LnHj6YCvCi_G4H7pcwmVkDok8J5TnhWMqxYAaDrwb3k0ckAmKKlDAyzyIOZ8gb-f5hQ";
 
-    const ok = await verifySessionJwtSignature(rustSignerJwt, rustSignerPubkeyHex);
+    const ok = await verifySessionJwtSignature(
+      rustSignerJwt,
+      rustSignerPubkeyHex,
+    );
     expect(ok).toBe(true);
 
     // Claims decode as expected for downstream consumers.
@@ -699,9 +702,7 @@ describe("Session JWT signature", () => {
       atob(payloadB64!.replace(/-/g, "+").replace(/_/g, "/")),
     );
     expect(claims.user_id).toBe("6912b819-f4df-40f4-a192-20ee43090974");
-    expect(claims.organization_id).toBe(
-      "c75ecb07-c84a-4dd5-932c-539dfafc6864",
-    );
+    expect(claims.organization_id).toBe("c75ecb07-c84a-4dd5-932c-539dfafc6864");
     expect(claims.session_type).toBe("SESSION_TYPE_READ_WRITE");
     expect(claims.exp).toBe(4102444800);
   });
