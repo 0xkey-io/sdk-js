@@ -677,6 +677,35 @@ describe("Session JWT signature", () => {
     const ok = await verifySessionJwtSignature(jwt, wrongKeyHex);
     expect(ok).toBe(false);
   });
+
+  // Cross-implementation interop vector minted by the Rust signer enclave
+  // (`test_session_jwt_interop_vector` in apps/signer/src/service.rs, fixed
+  // quorum master seed + fixed payload, RFC6979 deterministic ECDSA). Pins the
+  // signer-side signing scheme — ES256 over sha256(sha256(header.payload)),
+  // compact r||s — to this SDK's verification. If the signer scheme drifts,
+  // this test fails even though the self-minted round-trip tests above pass.
+  test("verifies a JWT minted by the Rust signer enclave", async () => {
+    const rustSignerPubkeyHex =
+      "04670dabe4fc9cf1c5589ac77ae11f782370881c62ffac84d6a48893763d9976ce310c9477a4c4c793289e54b1e5ce7e06a99a2eb97da04e9d4bd82f792f9754d1";
+    const rustSignerJwt =
+      "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDAsIm9yZ2FuaXphdGlvbl9pZCI6ImM3NWVjYjA3LWM4NGEtNGRkNS05MzJjLTUzOWRmYWZjNjg2NCIsInB1YmxpY19rZXkiOiIwNGFiY2QiLCJzZXNzaW9uX3R5cGUiOiJTRVNTSU9OX1RZUEVfUkVBRF9XUklURSIsInVzZXJfaWQiOiI2OTEyYjgxOS1mNGRmLTQwZjQtYTE5Mi0yMGVlNDMwOTA5NzQifQ.B3eNfwx4OGHzhLFvZQ1LnHj6YCvCi_G4H7pcwmVkDok8J5TnhWMqxYAaDrwb3k0ckAmKKlDAyzyIOZ8gb-f5hQ";
+
+    const ok = await verifySessionJwtSignature(
+      rustSignerJwt,
+      rustSignerPubkeyHex,
+    );
+    expect(ok).toBe(true);
+
+    // Claims decode as expected for downstream consumers.
+    const [, payloadB64] = rustSignerJwt.split(".");
+    const claims = JSON.parse(
+      atob(payloadB64!.replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    expect(claims.user_id).toBe("6912b819-f4df-40f4-a192-20ee43090974");
+    expect(claims.organization_id).toBe("c75ecb07-c84a-4dd5-932c-539dfafc6864");
+    expect(claims.session_type).toBe("SESSION_TYPE_READ_WRITE");
+    expect(claims.exp).toBe(4102444800);
+  });
 });
 
 // Helper function to create hex strings from byte arrays
