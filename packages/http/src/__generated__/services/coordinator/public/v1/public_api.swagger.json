@@ -100,6 +100,40 @@
         "tags": ["Activities"]
       }
     },
+    "/public/v1/query/get_attestation": {
+      "post": {
+        "summary": "Attestation",
+        "description": "Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot\u2194quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.",
+        "operationId": "PublicApiService_GetAttestationDocument",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetAttestationDocumentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetAttestationDocumentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Attestation"
+        ]
+      }
+    },
     "/public/v1/query/get_api_key": {
       "post": {
         "summary": "Get API key",
@@ -3642,6 +3676,36 @@
     }
   },
   "definitions": {
+    "v1GetAttestationDocumentRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given organization."
+        },
+        "enclaveType": {
+          "type": "string",
+          "description": "Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`."
+        }
+      },
+      "required": [
+        "organizationId",
+        "enclaveType"
+      ]
+    },
+    "v1GetAttestationDocumentResponse": {
+      "type": "object",
+      "properties": {
+        "attestationDocument": {
+          "type": "string",
+          "format": "byte",
+          "description": "Raw (CBOR-encoded) attestation document."
+        }
+      },
+      "required": [
+        "attestationDocument"
+      ]
+    },
     "apiApiKeyParams": {
       "type": "object",
       "properties": {

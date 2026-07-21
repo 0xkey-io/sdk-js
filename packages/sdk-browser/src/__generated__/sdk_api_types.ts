@@ -62,6 +62,19 @@ export type TGetAuthenticatorsBody = Omit<
 > &
   queryOverrideParams;
 
+export type TGetAttestationDocumentResponse =
+  operations["PublicApiService_GetAttestationDocument"]["responses"]["200"]["schema"];
+
+export type TGetAttestationDocumentInput = {
+  body: TGetAttestationDocumentBody;
+};
+
+export type TGetAttestationDocumentBody = Omit<
+  operations["PublicApiService_GetAttestationDocument"]["parameters"]["body"]["body"],
+  "organizationId"
+> &
+  queryOverrideParams;
+
 export type TGetBootProofResponse =
   operations["PublicApiService_GetBootProof"]["responses"]["200"]["schema"];
 
