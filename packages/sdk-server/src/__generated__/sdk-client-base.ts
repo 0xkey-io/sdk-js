@@ -303,6 +303,38 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  getAttestationDocument = async (
+    input: SdkApiTypes.TGetAttestationDocumentBody,
+  ): Promise<SdkApiTypes.TGetAttestationDocumentResponse> => {
+    return this.request("/public/v1/query/get_attestation", {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    });
+  };
+
+  stampGetAttestationDocument = async (
+    input: SdkApiTypes.TGetAttestationDocumentBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const fullUrl = this.config.apiBaseUrl + "/public/v1/query/get_attestation";
+    const body = {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+
   getBootProof = async (
     input: SdkApiTypes.TGetBootProofBody,
   ): Promise<SdkApiTypes.TGetBootProofResponse> => {

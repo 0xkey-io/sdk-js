@@ -2230,6 +2230,22 @@ export type v1GetAuthenticatorsResponse = {
   authenticators: v1Authenticator[];
 };
 
+export type v1GetAttestationDocumentRequest = {
+  /** Unique identifier for a given organization. */
+  organizationId: string;
+  /**
+   * Enclave app to attest. Accepted values (case-insensitive): signer; notarizer;
+   * tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy.
+   * Turnkey alias `ump` maps to 0xkey `policy-engine`.
+   */
+  enclaveType: string;
+};
+
+export type v1GetAttestationDocumentResponse = {
+  /** Raw (CBOR-encoded) attestation document. */
+  attestationDocument: string;
+};
+
 export type v1GetBootProofRequest = {
   /** Unique identifier for a given Organization. */
   organizationId: string;
@@ -4692,6 +4708,23 @@ export type TGetAuthenticatorsBody = {
 };
 
 export type TGetAuthenticatorsInput = { body: TGetAuthenticatorsBody };
+
+export type TGetAttestationDocumentResponse = {
+  /** Raw (CBOR-encoded) attestation document. */
+  attestationDocument: string;
+};
+
+export type TGetAttestationDocumentBody = {
+  organizationId?: string;
+  /**
+   * Enclave app to attest. Accepted values (case-insensitive): signer; notarizer;
+   * tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy.
+   * Turnkey alias `ump` maps to 0xkey `policy-engine`.
+   */
+  enclaveType: string;
+};
+
+export type TGetAttestationDocumentInput = { body: TGetAttestationDocumentBody };
 
 export type TGetBootProofResponse = {
   bootProof: v1BootProof;

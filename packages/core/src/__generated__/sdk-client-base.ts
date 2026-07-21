@@ -574,6 +574,53 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  getAttestationDocument = async (
+    input: SdkTypes.TGetAttestationDocumentBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TGetAttestationDocumentResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/get_attestation",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampGetAttestationDocument = async (
+    input: SdkTypes.TGetAttestationDocumentBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl = this.config.apiBaseUrl + "/public/v1/query/get_attestation";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+
   getBootProof = async (
     input: SdkTypes.TGetBootProofBody,
     stampWith?: StamperType,

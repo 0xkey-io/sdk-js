@@ -24,6 +24,10 @@ export type paths = {
     /** Get details about an authenticator. */
     post: operations["PublicApiService_GetAuthenticator"];
   };
+  "/public/v1/query/get_attestation": {
+    /** Attestation */
+    post: operations["PublicApiService_GetAttestationDocument"];
+  };
   "/public/v1/query/get_authenticators": {
     /** Get details about authenticators for a user. */
     post: operations["PublicApiService_GetAuthenticators"];
@@ -2621,6 +2625,21 @@ export type definitions = {
     /** @description A list of authenticators. */
     authenticators: definitions["v1Authenticator"][];
   };
+  v1GetAttestationDocumentRequest: {
+    /** @description Unique identifier for a given organization. */
+    organizationId: string;
+    /**
+     * @description Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy.
+     */
+    enclaveType: string;
+  };
+  v1GetAttestationDocumentResponse: {
+    /**
+     * Format: byte
+     * @description Raw (CBOR-encoded) attestation document.
+     */
+    attestationDocument: string;
+  };
   v1GetBootProofRequest: {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
@@ -4996,6 +5015,24 @@ export type operations = {
     };
   };
   /** Get the boot proof for a given ephemeral key. */
+  /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. */
+  PublicApiService_GetAttestationDocument: {
+    parameters: {
+      body: {
+        body: definitions["v1GetAttestationDocumentRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetAttestationDocumentResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   PublicApiService_GetBootProof: {
     parameters: {
       body: {

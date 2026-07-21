@@ -478,6 +478,73 @@ export async function verifyCertificateChain(
   }
 }
 
+/**
+ * Parsed fields from a verified AWS Nitro attestation document.
+ * This is the lightweight Turnkey-style "attestation-validator" surface —
+ * COSE Sign1 + certificate chain only. For full pivot↔quorum-manifest
+ * verification use {@link verifyBootProof} / `verifyLatestBootProof`.
+ */
+export type VerifiedAttestationDocument = {
+  /** Decoded attestation document payload (PCRs, user_data, public_key, …). */
+  attestationDoc: Record<string, unknown>;
+  /** Validation timestamp used for the certificate chain check. */
+  asOf: Date;
+};
+
+/**
+ * Verify a raw AWS Nitro attestation document (COSE Sign1 DER bytes), as
+ * returned by `GET /public/v1/query/get_attestation` (`attestationDocument`).
+ *
+ * @param documentBytes - Raw COSE Sign1 bytes (not base64).
+ * @param asOf - Time at which to validate the cert chain. Defaults to now
+ *   (appropriate for freshly fetched live attestations). For historical
+ *   documents from a boot proof, pass {@link getBootProofTime} instead —
+ *   Nitro leaf certs expire after ~3 hours.
+ */
+export async function verifyAttestationDocument(
+  documentBytes: Uint8Array,
+  asOf: Date = new Date(),
+): Promise<VerifiedAttestationDocument> {
+  if (!documentBytes || documentBytes.length === 0) {
+    throw new Error("attestation document is empty");
+  }
+
+  const coseSign1 = CBOR.decode(
+    documentBytes.buffer.slice(
+      documentBytes.byteOffset,
+      documentBytes.byteOffset + documentBytes.byteLength,
+    ),
+  );
+  const [, , payload] = coseSign1;
+  const attestationDoc = CBOR.decode(new Uint8Array(payload).buffer) as Record<
+    string,
+    unknown
+  >;
+
+  const certificate = attestationDoc.certificate;
+  if (!(certificate instanceof Uint8Array) && !Array.isArray(certificate)) {
+    throw new Error("attestation document missing certificate");
+  }
+  const leafCert = new Uint8Array(certificate as ArrayLike<number>);
+
+  await verifyCoseSign1Sig(coseSign1, leafCert);
+
+  const cabundleRaw = attestationDoc.cabundle;
+  if (!Array.isArray(cabundleRaw)) {
+    throw new Error("attestation document missing cabundle");
+  }
+  const cabundle = cabundleRaw.map((c) => new Uint8Array(c as ArrayLike<number>));
+
+  await verifyCertificateChain(
+    cabundle,
+    AWS_ROOT_CERT_PEM,
+    leafCert,
+    asOf.getTime(),
+  );
+
+  return { attestationDoc, asOf };
+}
+
 export async function verifyCoseSign1Sig(
   coseSign1: any,
   leaf: Uint8Array,
