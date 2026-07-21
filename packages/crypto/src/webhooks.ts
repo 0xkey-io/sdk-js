@@ -10,7 +10,8 @@
  *
  * Verification keys are base64-encoded Ed25519 public keys (the `x` field
  * of a JWK, RFC 7517 OKP). Use `verifyWebhookFromJWKS` for automatic
- * key fetching and caching from the `GET /v1/webhook-jwks` endpoint.
+ * key fetching and caching from
+ * `GET /public/v1/discovery/webhooks/jwks` (Public API).
  */
 
 import { ed25519 } from "@noble/curves/ed25519";
