@@ -147,7 +147,7 @@ describe("webhook verification", () => {
     const result = await verifyWebhookFromJWKS({
       headers: goldenHeaders(),
       body: GOLDEN.body,
-      jwksUrl: "https://gateway.test/v1/webhook-jwks",
+      jwksUrl: "https://api.test/public/v1/discovery/webhooks/jwks",
       maxTimestampAgeMs: 0,
       nowMs: Number(GOLDEN.timestampMs),
       fetch,
