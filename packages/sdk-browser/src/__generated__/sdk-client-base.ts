@@ -4838,6 +4838,59 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  tronSendTransaction = async (
+    input: SdkApiTypes.TTronSendTransactionBody,
+  ): Promise<SdkApiTypes.TTronSendTransactionResponse> => {
+    const sessionData = await getStorageValue(StorageKeys.Session);
+    const session = sessionData ? parseSession(sessionData) : null;
+
+    const { organizationId, timestampMs, ...rest } = input;
+    return this.command(
+      "/public/v1/submit/tron_send_transaction",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_TRON_SEND_TRANSACTION",
+      },
+      "tronSendTransactionResult",
+    );
+  };
+
+  stampTronSendTransaction = async (
+    input: SdkApiTypes.TTronSendTransactionBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const sessionData = await getStorageValue(StorageKeys.Session);
+    const session = sessionData ? parseSession(sessionData) : null;
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/tron_send_transaction";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_TRON_SEND_TRANSACTION",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+
   stampLogin = async (
     input: SdkApiTypes.TStampLoginBody,
   ): Promise<SdkApiTypes.TStampLoginResponse> => {

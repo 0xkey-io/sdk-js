@@ -1046,6 +1046,15 @@ export type TSignTransactionBody =
   operations["PublicApiService_SignTransaction"]["parameters"]["body"]["body"]["parameters"] &
     commandOverrideParams;
 
+export type TTronSendTransactionResponse =
+  operations["PublicApiService_TronSendTransaction"]["responses"]["200"]["schema"]["activity"]["result"]["solSendTransactionResult"] &
+    definitions["v1ActivityResponse"];
+
+export type TTronSendTransactionInput = { body: TTronSendTransactionBody };
+
+export type TTronSendTransactionBody =
+  operations["PublicApiService_TronSendTransaction"]["parameters"]["body"]["body"]["parameters"] &
+    commandOverrideParams;
 export type TSolSendTransactionResponse =
   operations["PublicApiService_SolSendTransaction"]["responses"]["200"]["schema"]["activity"]["result"]["solSendTransactionResult"] &
     definitions["v1ActivityResponse"];

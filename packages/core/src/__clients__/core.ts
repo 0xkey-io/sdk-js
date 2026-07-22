@@ -16,6 +16,7 @@ import {
   type v1BootProof,
   type TEthSendTransactionBody,
   type TSolSendTransactionBody,
+  type TTronSendTransactionBody,
   type TGetSendTransactionStatusResponse,
   type ProxyTSignupResponse,
   type TGetWalletsResponse,
@@ -77,6 +78,7 @@ import {
   type EthSendErc20TransferParams,
   type EthSendTransactionParams,
   type SolSendTransactionParams,
+  type TronSendTransactionParams,
   type FetchUserParams,
   type FetchOrCreateP256ApiKeyUserParams,
   type FetchOrCreatePoliciesParams,
@@ -3049,6 +3051,80 @@ export class ZeroXKeyClient {
       {
         errorMessage: "Failed to sign and send Solana transaction",
         errorCode: ZeroXKeyErrorCodes.SOL_SEND_TRANSACTION_ERROR,
+      },
+    );
+  };
+
+  /**
+   * Signs and sends a native TRX transfer or TRC-20 token transfer.
+   *
+   * Tron has no client-buildable nonce/replay-window primitive (unlike
+   * Solana's recent blockhash): the Coordinator always builds the unsigned
+   * transaction server-side from `transaction`, so there is no
+   * `unsignedTransaction` field to provide here.
+   *
+   * Set `transaction.contractAddress` for a TRC-20 `transfer(address,uint256)`
+   * (with the atomic-unit amount in `transaction.tokenAmount`); omit it for a
+   * native TRX transfer (amount in sun via `transaction.value`).
+   */
+  tronSendTransaction = async (
+    params: TronSendTransactionParams,
+  ): Promise<string> => {
+    const {
+      organizationId: organizationIdFromParams,
+      stampWith = this.config.defaultStamperType,
+      transaction,
+    } = params;
+
+    const session = await getActiveSessionOrThrowIfRequired(
+      stampWith,
+      this.storageManager.getActiveSession,
+    );
+
+    const organizationId = organizationIdFromParams || session?.organizationId;
+    if (!organizationId) {
+      throw new ZeroXKeyError(
+        "Organization ID must be provided to send a transaction",
+        ZeroXKeyErrorCodes.INVALID_REQUEST,
+      );
+    }
+
+    return withZeroXKeyErrorHandling(
+      async () => {
+        const intent: TTronSendTransactionBody = {
+          from: transaction.from,
+          to: transaction.to,
+          caip2: transaction.caip2,
+          ...(transaction.value ? { value: transaction.value } : {}),
+          ...(transaction.contractAddress
+            ? { contractAddress: transaction.contractAddress }
+            : {}),
+          ...(transaction.tokenAmount
+            ? { tokenAmount: transaction.tokenAmount }
+            : {}),
+        };
+
+        const resp = await this.httpClient.tronSendTransaction(
+          {
+            ...intent,
+            organizationId,
+          },
+          stampWith,
+        );
+
+        const id = resp.sendTransactionStatusId;
+        if (!id) {
+          throw new ZeroXKeyError(
+            "Missing sendTransactionStatusId",
+            ZeroXKeyErrorCodes.TRON_SEND_TRANSACTION_ERROR,
+          );
+        }
+
+        return id;
+      },
+      {
+        errorMessage: "Failed to sign and send Tron transaction",
+        errorCode: ZeroXKeyErrorCodes.TRON_SEND_TRANSACTION_ERROR,
       },
     );
   };

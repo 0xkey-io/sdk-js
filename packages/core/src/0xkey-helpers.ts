@@ -37,6 +37,18 @@ export const DEFAULT_COSMOS_ACCOUNTS: v1WalletAccountParams[] = [
 ];
 
 // Tron
+/**
+ * Derives a Tron account at the given index using the shortened path
+ * `m/44'/195'/{pathIndex}'` (no `/0/0` suffix).
+ *
+ * This matches Turnkey's SDK helper convention, but differs from the
+ * *full* BIP44 path `m/44'/195'/0'/0/0` that the 0xkey Dashboard uses by
+ * default when creating a Tron account manually. The two paths derive
+ * **different addresses** for the same index — if you created a Tron
+ * wallet via the Dashboard and are now creating one with this helper (or
+ * vice versa), make sure the path matches or you will get a different
+ * address than expected.
+ */
 export const defaultTronAccountAtIndex = (
   pathIndex: number,
 ): v1WalletAccountParams => {

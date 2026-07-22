@@ -27,7 +27,7 @@ async function main() {
   const effect = "EFFECT_ALLOW";
   const consensus = `approvers.count() == 1`;
   // allow for transfer function calls on the tether smart contract on Nile. The mainnet Tether contract address is different!
-  const condition = `tron.tx.contract[0].contract_address == '${usdtContractAddressNile}' && tron.tx.contract[0].data[0..8] == 'a9059cbb'`;
+  const condition = `tron.tx.contract[0].contract_address == '${usdtContractAddressNile}' && tron.tx.contract[0].data.startsWith('a9059cbb')`;
   const notes = "This policy restricts transfer over 100 sun";
 
   await createPolicy(

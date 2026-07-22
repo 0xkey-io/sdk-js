@@ -79,6 +79,7 @@ import {
   type SignAndSendTransactionParams,
   type PollTransactionStatusParams,
   type SolSendTransactionParams,
+  type TronSendTransactionParams,
 } from "@0xkey-io/core";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
@@ -1293,6 +1294,23 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         () => logout(),
         callbacks,
         "Failed to send sol transaction",
+      );
+    },
+    [client, callbacks],
+  );
+
+  const tronSendTransaction = useCallback(
+    async (params: TronSendTransactionParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.tronSendTransaction(params),
+        () => logout(),
+        callbacks,
+        "Failed to send tron transaction",
       );
     },
     [client, callbacks],
@@ -3224,6 +3242,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         ethSendTransaction,
         ethSendErc20Transfer,
         solSendTransaction,
+        tronSendTransaction,
         pollTransactionStatus,
         fetchUser,
         fetchOrCreateP256ApiKeyUser,

@@ -341,6 +341,7 @@ export type v1ActivityType =
   | "ACTIVITY_TYPE_CREATE_TVC_DEPLOYMENT"
   | "ACTIVITY_TYPE_CREATE_TVC_MANIFEST_APPROVALS"
   | "ACTIVITY_TYPE_SOL_SEND_TRANSACTION"
+  | "ACTIVITY_TYPE_TRON_SEND_TRANSACTION"
   | "ACTIVITY_TYPE_INIT_OTP_V3"
   | "ACTIVITY_TYPE_VERIFY_OTP_V2"
   | "ACTIVITY_TYPE_OTP_LOGIN_V2"
@@ -2410,6 +2411,8 @@ export type v1GetSendTransactionStatusResponse = {
   eth?: v1EthSendTransactionStatus;
   /** Solana-specific transaction status. */
   solana?: v1SolanaSendTransactionStatus;
+  /** Tron-specific transaction status. */
+  tron?: v1TronSendTransactionStatus;
   /** The error encountered when broadcasting or confirming the transaction, if any. */
   txError?: string;
   /** Structured error information including revert details, if available. */
@@ -3066,6 +3069,7 @@ export type v1Intent = {
   createTvcDeploymentIntent?: v1CreateTvcDeploymentIntent;
   createTvcManifestApprovalsIntent?: v1CreateTvcManifestApprovalsIntent;
   solSendTransactionIntent?: v1SolSendTransactionIntent;
+  tronSendTransactionIntent?: v1TronSendTransactionIntent;
   initOtpIntentV3?: v1InitOtpIntentV3;
   verifyOtpIntentV2?: v1VerifyOtpIntentV2;
   otpLoginIntentV2?: v1OtpLoginIntentV2;
@@ -3632,6 +3636,7 @@ export type v1Result = {
   createTvcDeploymentResult?: v1CreateTvcDeploymentResult;
   createTvcManifestApprovalsResult?: v1CreateTvcManifestApprovalsResult;
   solSendTransactionResult?: v1SolSendTransactionResult;
+  tronSendTransactionResult?: v1TronSendTransactionResult;
   initOtpResultV2?: v1InitOtpResultV2;
   updateOrganizationNameResult?: v1UpdateOrganizationNameResult;
   createSubOrganizationResultV8?: v1CreateSubOrganizationResultV8;
@@ -3879,6 +3884,42 @@ export type v1SmartContractInterfaceType =
 export type v1SmsCustomizationParams = {
   /** Template containing references to .OtpCode i.e Your OTP is {{.OtpCode}} */
   template?: string;
+};
+
+
+export type v1TronSendTransactionIntent = {
+  /** A wallet or private key address to sign with (base58 T... form). This does not support private key IDs. */
+  from: string;
+  /** CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet). */
+  caip2: string;
+  /** Recipient address (base58 T... form). */
+  to: string;
+  /** Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contractAddress is set. */
+  value?: string;
+  /** TRC-20 contract address (base58 T... form). When set, this is a token transfer instead of native TRX. */
+  contractAddress?: string;
+  /** TRC-20 transfer amount in the token's atomic unit. Required when contractAddress is set. */
+  tokenAmount?: string;
+};
+
+export type v1TronSendTransactionRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1TronSendTransactionIntent;
+  generateAppProofs?: boolean;
+};
+
+export type v1TronSendTransactionResult = {
+  /** The send_transaction_status ID associated with the transaction submission */
+  sendTransactionStatusId: string;
+};
+
+export type v1TronSendTransactionStatus = {
+  /** The Tron transaction id (sha256(raw_data), hex), if available. */
+  txHash?: string;
 };
 
 export type v1SolSendTransactionIntent = {
@@ -4886,6 +4927,7 @@ export type TGetSendTransactionStatusResponse = {
   eth?: v1EthSendTransactionStatus;
   /** Solana-specific transaction status. */
   solana?: v1SolanaSendTransactionStatus;
+  tron?: v1TronSendTransactionStatus;
   /** The error encountered when broadcasting or confirming the transaction, if any. */
   txError?: string;
   /** Structured error information including revert details, if available. */
@@ -6406,6 +6448,32 @@ export type TSignTransactionBody = {
 };
 
 export type TSignTransactionInput = { body: TSignTransactionBody };
+
+
+export type TTronSendTransactionResponse = {
+  activity: v1Activity;
+  /** The send_transaction_status ID associated with the transaction submission */
+  sendTransactionStatusId: string;
+};
+
+export type TTronSendTransactionBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  /** A wallet or private key address to sign with (base58 T... form). This does not support private key IDs. */
+  from: string;
+  /** CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet). */
+  caip2: string;
+  /** Recipient address (base58 T... form). */
+  to: string;
+  /** Native TRX amount to transfer, in sun. Ignored when contractAddress is set. */
+  value?: string;
+  /** TRC-20 contract address (base58 T... form). */
+  contractAddress?: string;
+  /** TRC-20 transfer amount in atomic units. Required when contractAddress is set. */
+  tokenAmount?: string;
+};
+
+export type TTronSendTransactionInput = { body: TTronSendTransactionBody };
 
 export type TSolSendTransactionResponse = {
   activity: v1Activity;
