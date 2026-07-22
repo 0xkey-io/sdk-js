@@ -77,3 +77,8 @@ The following example demonstrates creating policies for guarding `TransferContr
 #### transferTRC20Policy
 
 The final example demonstrates how to create Tron policies for `TriggerSmartContract` transactions. `TriggerSmartContract` transactions are how TRC-20 contracts are called, but more generally any smart contract invocation on Tron is called using this transaction type. This policy specifically guards usage around the Tether smart contract. Run `pnpm run transferTRC20Policy`.
+
+## Notes on the policy conditions
+
+- Both policies use the singular `tron.tx.contract[0].*` accessor (aligned with Turnkey's policy examples). This alias requires an enclave/policy-engine release that includes the Tron `contract` singular alias — if you're running against an older 0xkey deployment that only exposes the plural `tron.tx.contracts[0].*` form, rewrite the condition accordingly.
+- The policy language has **no** substring slicing (`data[0..8]`). To match a function selector, use `tron.tx.contract[0].data.startsWith('a9059cbb')` instead. See [the policy language docs](https://docs.0xkey.com/concepts/policies/language#grammar) for the full list of supported string methods.

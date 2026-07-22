@@ -92,6 +92,7 @@ import {
   type EthSendErc20TransferParams,
   type EthSendTransactionParams,
   type SolSendTransactionParams,
+  type TronSendTransactionParams,
   type SignMessageParams,
   type SignTransactionParams,
   type SignUpWithOauthParams,
@@ -2567,6 +2568,23 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         () => logout(),
         callbacks,
         "Failed to send sol transaction",
+      );
+    },
+    [client, callbacks, logout],
+  );
+
+  const tronSendTransaction = useCallback(
+    async (params: TronSendTransactionParams): Promise<string> => {
+      if (!client)
+        throw new ZeroXKeyError(
+          "Client is not initialized.",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        );
+      return withZeroXKeyErrorHandling(
+        () => client.tronSendTransaction(params),
+        () => logout(),
+        callbacks,
+        "Failed to send tron transaction",
       );
     },
     [client, callbacks, logout],
@@ -6048,6 +6066,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         ethSendTransaction,
         ethSendErc20Transfer,
         solSendTransaction,
+        tronSendTransaction,
         signAndSendTransaction,
         pollTransactionStatus,
         fetchUser,

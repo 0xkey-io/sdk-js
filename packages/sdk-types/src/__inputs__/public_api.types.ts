@@ -456,6 +456,10 @@ export type paths = {
     /** Sign a transaction. */
     post: operations["PublicApiService_SignTransaction"];
   };
+  "/public/v1/submit/tron_send_transaction": {
+    /** Submit a transaction intent for broadcasting. */
+    post: operations["PublicApiService_TronSendTransaction"];
+  };
   "/public/v1/submit/sol_send_transaction": {
     /** Submit a transaction intent describing an SVM transaction you would like to broadcast. */
     post: operations["PublicApiService_SolSendTransaction"];
@@ -2936,6 +2940,8 @@ export type definitions = {
     eth?: definitions["v1EthSendTransactionStatus"];
     /** @description Solana-specific transaction status. */
     solana?: definitions["v1SolanaSendTransactionStatus"];
+    /** @description Tron-specific transaction status. */
+    tron?: definitions["v1TronSendTransactionStatus"];
     /** @description The error encountered when broadcasting or confirming the transaction, if any. */
     txError?: string;
     /** @description Structured error information including revert details, if available. */
@@ -3623,6 +3629,7 @@ export type definitions = {
     createTvcDeploymentIntent?: definitions["v1CreateTvcDeploymentIntent"];
     createTvcManifestApprovalsIntent?: definitions["v1CreateTvcManifestApprovalsIntent"];
     solSendTransactionIntent?: definitions["v1SolSendTransactionIntent"];
+    tronSendTransactionIntent?: definitions["v1TronSendTransactionIntent"];
     initOtpIntentV3?: definitions["v1InitOtpIntentV3"];
     verifyOtpIntentV2?: definitions["v1VerifyOtpIntentV2"];
     otpLoginIntentV2?: definitions["v1OtpLoginIntentV2"];
@@ -4224,6 +4231,7 @@ export type definitions = {
     createTvcDeploymentResult?: definitions["v1CreateTvcDeploymentResult"];
     createTvcManifestApprovalsResult?: definitions["v1CreateTvcManifestApprovalsResult"];
     solSendTransactionResult?: definitions["v1SolSendTransactionResult"];
+    tronSendTransactionResult?: definitions["v1TronSendTransactionResult"];
     initOtpResultV2?: definitions["v1InitOtpResultV2"];
     updateOrganizationNameResult?: definitions["v1UpdateOrganizationNameResult"];
     createSubOrganizationResultV8?: definitions["v1CreateSubOrganizationResultV8"];
@@ -4457,6 +4465,41 @@ export type definitions = {
   v1SmsCustomizationParams: {
     /** @description Template containing references to .OtpCode i.e Your OTP is {{.OtpCode}} */
     template?: string;
+  };
+  v1TronSendTransactionIntent: {
+    /** @description A wallet or private key address to sign with (base58 T... form). This does not support private key IDs. */
+    from: string;
+    /**
+     * @description CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet).
+     * @enum {string}
+     */
+    caip2: "tron:0x2b6653dc" | "tron:0xcd8690dc" | "tron:0x94a9059e";
+    /** @description Recipient address (base58 T... form). */
+    to: string;
+    /** @description Native TRX amount to transfer, in sun. Ignored when contractAddress is set. */
+    value?: string;
+    /** @description TRC-20 contract address (base58 T... form). */
+    contractAddress?: string;
+    /** @description TRC-20 transfer amount in atomic units. */
+    tokenAmount?: string;
+  };
+  v1TronSendTransactionRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_TRON_SEND_TRANSACTION";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1TronSendTransactionIntent"];
+    generateAppProofs?: boolean;
+  };
+  v1TronSendTransactionResult: {
+    /** @description The send_transaction_status ID associated with the transaction submission */
+    sendTransactionStatusId: string;
+  };
+  v1TronSendTransactionStatus: {
+    /** @description The Tron transaction id (sha256(raw_data), hex), if available. */
+    txHash?: string;
   };
   v1SolSendTransactionIntent: {
     /** @description Base64-encoded serialized unsigned Solana transaction */
@@ -7416,6 +7459,24 @@ export type operations = {
     };
   };
   /** Submit a transaction intent describing an SVM transaction you would like to broadcast. */
+  /** Submit a native TRX transfer intent describing a transaction you would like to broadcast. */
+  PublicApiService_TronSendTransaction: {
+    parameters: {
+      body: {
+        body: definitions["v1TronSendTransactionRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   PublicApiService_SolSendTransaction: {
     parameters: {
       body: {

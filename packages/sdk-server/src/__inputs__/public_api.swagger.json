@@ -3174,7 +3174,41 @@
         "tags": ["Signing"]
       }
     },
-    "/public/v1/submit/sol_send_transaction": {
+        "/public/v1/submit/tron_send_transaction": {
+      "post": {
+        "summary": "Submit a transaction intent for broadcasting.",
+        "description": "Submit a native TRX transfer intent describing a transaction you would like to broadcast.",
+        "operationId": "PublicApiService_TronSendTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TronSendTransactionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Broadcasting"
+        ]
+      }
+    },
+"/public/v1/submit/sol_send_transaction": {
       "post": {
         "summary": "Broadcast SVM transaction",
         "description": "Submit a transaction intent describing an SVM transaction you would like to broadcast.",
@@ -3676,6 +3710,103 @@
     }
   },
   "definitions": {
+    "v1TronSendTransactionIntent": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "A wallet or private key address to sign with (base58 T... form). This does not support private key IDs.",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "caip2": {
+          "type": "string",
+          "enum": [
+            "tron:0x2b6653dc",
+            "tron:0xcd8690dc",
+            "tron:0x94a9059e"
+          ],
+          "description": "CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet).",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "to": {
+          "type": "string",
+          "description": "Recipient address (base58 T... form).",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "value": {
+          "type": "string",
+          "description": "Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contract_address is set.",
+          "title": "@inject_tag: validate:\"omitempty\""
+        },
+        "contractAddress": {
+          "type": "string",
+          "description": "TRC-20 contract address (base58 T... form). When set, this is a token transfer(address,uint256) to `to` instead of a native TRX transfer, ABI-encoded server-side.",
+          "title": "@inject_tag: validate:\"omitempty\""
+        },
+        "tokenAmount": {
+          "type": "string",
+          "description": "TRC-20 transfer amount in the token's atomic (smallest) unit. Required when contract_address is set.",
+          "title": "@inject_tag: validate:\"omitempty\""
+        }
+      },
+      "required": [
+        "from",
+        "caip2",
+        "to"
+      ]
+    },
+    "v1TronSendTransactionRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_TRON_SEND_TRANSACTION"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1TronSendTransactionIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1TronSendTransactionResult": {
+      "type": "object",
+      "properties": {
+        "sendTransactionStatusId": {
+          "type": "string",
+          "description": "The send_transaction_status ID associated with the transaction submission"
+        }
+      },
+      "required": [
+        "sendTransactionStatusId"
+      ]
+    },
+    "v1TronSendTransactionStatus": {
+      "type": "object",
+      "properties": {
+        "txHash": {
+          "type": "string",
+          "description": "The Tron transaction id (sha256(raw_data), hex), if available."
+        }
+      }
+    },
     "v1GetAttestationDocumentRequest": {
       "type": "object",
       "properties": {
@@ -4332,6 +4463,7 @@
         "ACTIVITY_TYPE_CREATE_TVC_DEPLOYMENT",
         "ACTIVITY_TYPE_CREATE_TVC_MANIFEST_APPROVALS",
         "ACTIVITY_TYPE_SOL_SEND_TRANSACTION",
+      "ACTIVITY_TYPE_TRON_SEND_TRANSACTION",
         "ACTIVITY_TYPE_UPDATE_ORGANIZATION_NAME",
         "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT",
         "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT",
@@ -8856,6 +8988,9 @@
           "$ref": "#/definitions/v1SolanaSendTransactionStatus",
           "description": "Solana-specific transaction status."
         },
+      "tron": {
+        "$ref": "#/definitions/v1TronSendTransactionStatus"
+      },
         "txError": {
           "type": "string",
           "description": "The error encountered when broadcasting or confirming the transaction, if any."
@@ -10296,6 +10431,9 @@
         "solSendTransactionIntent": {
           "$ref": "#/definitions/v1SolSendTransactionIntent"
         },
+      "tronSendTransactionIntent": {
+        "$ref": "#/definitions/v1TronSendTransactionIntent"
+      },
         "updateOrganizationNameIntent": {
           "$ref": "#/definitions/v1UpdateOrganizationNameIntent"
         }
@@ -11573,6 +11711,9 @@
         "solSendTransactionResult": {
           "$ref": "#/definitions/v1SolSendTransactionResult"
         },
+      "tronSendTransactionResult": {
+        "$ref": "#/definitions/v1TronSendTransactionResult"
+      },
         "updateOrganizationNameResult": {
           "$ref": "#/definitions/v1UpdateOrganizationNameResult"
         }

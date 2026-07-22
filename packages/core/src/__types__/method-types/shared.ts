@@ -292,6 +292,20 @@ export type SolanaTransaction = {
   recentBlockhash?: string;
 };
 
+export type TronTransaction = {
+  /** Address to sign with (base58 `T...` form). */
+  from: string;
+  /** Recipient address (base58 `T...` form). */
+  to: string;
+  caip2: string;
+  /** Native TRX amount in sun (1 TRX = 1_000_000 sun). Ignored when `contractAddress` is set. */
+  value?: string;
+  /** TRC-20 contract address (base58 `T...` form). When set, this is a `transfer(address,uint256)` to `to` (ABI-encoded server-side) instead of a native TRX transfer — pass the amount via `tokenAmount`, not `value`. */
+  contractAddress?: string;
+  /** TRC-20 transfer amount in the token's atomic (smallest) unit. Required when `contractAddress` is set. */
+  tokenAmount?: string;
+};
+
 export type EthSendTransactionParams = {
   organizationId?: string;
   stampWith?: StamperType | undefined;
@@ -308,6 +322,12 @@ export type SolSendTransactionParams = {
   organizationId?: string;
   stampWith?: StamperType | undefined;
   transaction: SolanaTransaction;
+};
+
+export type TronSendTransactionParams = {
+  organizationId?: string;
+  stampWith?: StamperType | undefined;
+  transaction: TronTransaction;
 };
 
 export type FetchUserParams = {
