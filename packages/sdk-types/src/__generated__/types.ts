@@ -3886,7 +3886,6 @@ export type v1SmsCustomizationParams = {
   template?: string;
 };
 
-
 export type v1TronSendTransactionIntent = {
   /** A wallet or private key address to sign with (base58 T... form). This does not support private key IDs. */
   from: string;
@@ -4765,7 +4764,9 @@ export type TGetAttestationDocumentBody = {
   enclaveType: string;
 };
 
-export type TGetAttestationDocumentInput = { body: TGetAttestationDocumentBody };
+export type TGetAttestationDocumentInput = {
+  body: TGetAttestationDocumentBody;
+};
 
 export type TGetBootProofResponse = {
   bootProof: v1BootProof;
@@ -5494,7 +5495,7 @@ export type TCreateSubOrganizationBody = {
   /** Name for this sub-organization */
   subOrganizationName: string;
   /** Root users to create within this sub-organization */
-  rootUsers: v1RootUserParamsV4[];
+  rootUsers: v1RootUserParamsV5[];
   /** The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users */
   rootQuorumThreshold: number;
   /** The wallet to create for the sub-organization */
@@ -6448,7 +6449,6 @@ export type TSignTransactionBody = {
 };
 
 export type TSignTransactionInput = { body: TSignTransactionBody };
-
 
 export type TTronSendTransactionResponse = {
   activity: v1Activity;

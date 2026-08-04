@@ -7,6 +7,7 @@
     "clean": "rimraf ./dist ./.cache",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-vm-modules ./scripts/run-guards.mjs",
+    "audit:activities": "node ./scripts/audit-activity-contracts.mjs",
     "audit:surfaces": "node ./scripts/audit-package-surfaces.mjs",
     "audit:leaks": "node ./scripts/check-internal-leaks.mjs",
     "audit:exports": "node ./scripts/audit-runtime-exports.mjs",

@@ -1,5 +1,14 @@
 # @0xkey-io/sdk-server
 
+## 0.1.4
+
+### Patch Changes
+
+- Upgrade `createSubOrganization` to V8 and defensively flatten newer
+  versioned result keys from completed activities.
+- Updated dependencies:
+  - @0xkey-io/sdk-types@0.1.2
+
 ## 0.1.3
 
 ### Patch Changes

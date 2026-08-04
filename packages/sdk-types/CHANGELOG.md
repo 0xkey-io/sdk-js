@@ -1,5 +1,12 @@
 # @0xkey-io/sdk-types
 
+## 0.1.2
+
+### Patch Changes
+
+- Upgrade `createSubOrganization` request types to the V8 contract, including
+  V5 root-user parameters.
+
 ## 0.1.1
 
 ### Patch Changes

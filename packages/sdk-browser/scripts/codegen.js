@@ -23,7 +23,7 @@ const VERSIONED_ACTIVITY_TYPES = {
   ACTIVITY_TYPE_CREATE_POLICY: "ACTIVITY_TYPE_CREATE_POLICY_V3",
   ACTIVITY_TYPE_CREATE_PRIVATE_KEYS: "ACTIVITY_TYPE_CREATE_PRIVATE_KEYS_V2",
   ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION:
-    "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7",
+    "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8",
   ACTIVITY_TYPE_CREATE_USERS: "ACTIVITY_TYPE_CREATE_USERS_V3",
   ACTIVITY_TYPE_SIGN_RAW_PAYLOAD: "ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2",
   ACTIVITY_TYPE_SIGN_TRANSACTION: "ACTIVITY_TYPE_SIGN_TRANSACTION_V2",
@@ -139,6 +139,10 @@ const generateApiTypesFromSwagger = async (swaggerSpec, targetPath) => {
     'import type { queryOverrideParams, commandOverrideParams } from "../__types__/base";',
   );
 
+  imports.push(
+    'import type { TCreateSubOrganizationBody as TCreateSubOrganizationBodyV8, TCreateSubOrganizationResponse as TCreateSubOrganizationResponseV8 } from "@0xkey-io/sdk-types";',
+  );
+
   const latestVersions = extractLatestVersions(swaggerSpec.definitions);
 
   for (const endpointPath in swaggerSpec.paths) {
@@ -171,6 +175,9 @@ const generateApiTypesFromSwagger = async (swaggerSpec, targetPath) => {
     } else if (methodType === "activityDecision") {
       responseValue = `operations["${operationId}"]["responses"]["200"]["schema"]["activity"]["result"] & definitions["v1ActivityResponse"]`;
     }
+    if (operationNameWithoutNamespace === "CreateSubOrganization") {
+      responseValue = "TCreateSubOrganizationResponseV8";
+    }
 
     /** @type {TBinding} */
     const responseTypeBinding = {
@@ -184,6 +191,9 @@ const generateApiTypesFromSwagger = async (swaggerSpec, targetPath) => {
       bodyValue = `operations["${operationId}"]["parameters"]["body"]["body"]["parameters"] & commandOverrideParams`;
     } else if (methodType === "query") {
       bodyValue = `Omit<operations["${operationId}"]["parameters"]["body"]["body"], "organizationId"> & queryOverrideParams`;
+    }
+    if (operationNameWithoutNamespace === "CreateSubOrganization") {
+      bodyValue = "TCreateSubOrganizationBodyV8";
     }
 
     /** @type {TBinding} */
@@ -341,8 +351,14 @@ export class ZeroXKeySDKClientBase {
       const { result, status } = activityData.activity;
 
       if (status === "ACTIVITY_STATUS_COMPLETED") {
+        const matchingResult =
+          result[\`\${resultKey}\` as keyof definitions["v1Result"]] ??
+          Object.entries(result).find(
+            ([key, value]) => /Result(?:V\\d+)?$/.test(key) && value
+          )?.[1];
+
         return {
-          ...result[\`\${resultKey}\` as keyof definitions["v1Result"]],
+          ...matchingResult,
           ...activityData
         } as TResponseType;
       }
@@ -439,7 +455,10 @@ export class ZeroXKeySDKClientBase {
       );
     } else if (methodType === "command") {
       const resultKey = operationNameWithoutNamespace + "Result";
-      const versionedMethodName = latestVersions[resultKey].formattedKeyName;
+      const versionedMethodName =
+        operationNameWithoutNamespace === "CreateSubOrganization"
+          ? "createSubOrganizationResultV8"
+          : latestVersions[resultKey].formattedKeyName;
 
       codeBuffer.push(
         `\n\t${methodName} = async (input: SdkApiTypes.${inputType}): Promise<SdkApiTypes.${responseType}> => {

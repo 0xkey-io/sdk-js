@@ -92,8 +92,14 @@ export class ZeroXKeySDKClientBase {
       const { result, status } = activityData.activity;
 
       if (status === "ACTIVITY_STATUS_COMPLETED") {
+        const matchingResult =
+          result[`${resultKey}` as keyof definitions["v1Result"]] ??
+          Object.entries(result).find(
+            ([key, value]) => /Result(?:V\d+)?$/.test(key) && value,
+          )?.[1];
+
         return {
-          ...result[`${resultKey}` as keyof definitions["v1Result"]],
+          ...matchingResult,
           ...activityData,
         } as TResponseType;
       }
@@ -400,7 +406,6 @@ export class ZeroXKeySDKClientBase {
       url: fullUrl,
     };
   };
-
 
   getBootProof = async (
     input: SdkApiTypes.TGetBootProofBody,
@@ -2429,9 +2434,9 @@ export class ZeroXKeySDKClientBase {
           session?.organizationId ??
           this.config.organizationId,
         timestampMs: timestampMs ?? String(Date.now()),
-        type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7",
+        type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8",
       },
-      "createSubOrganizationResultV7",
+      "createSubOrganizationResultV8",
     );
   };
 
@@ -2453,7 +2458,7 @@ export class ZeroXKeySDKClientBase {
       organizationId:
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
-      type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7",
+      type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -4889,7 +4894,6 @@ export class ZeroXKeySDKClientBase {
       url: fullUrl,
     };
   };
-
 
   stampLogin = async (
     input: SdkApiTypes.TStampLoginBody,

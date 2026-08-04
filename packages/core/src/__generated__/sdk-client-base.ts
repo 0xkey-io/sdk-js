@@ -136,9 +136,13 @@ export class ZeroXKeySDKClientBase {
         } as TResponseType;
       }
 
-      // Otherwise, try to find any result field and flatten it
+      // Otherwise, tolerate a newer versioned result key (for example,
+      // createSubOrganizationResultV9) and flatten it.
       for (const key of Object.keys(result)) {
-        if (key.endsWith("Result") && result[key as keyof SdkTypes.v1Result]) {
+        if (
+          /Result(?:V\d+)?$/.test(key) &&
+          result[key as keyof SdkTypes.v1Result]
+        ) {
           return {
             ...result[key as keyof SdkTypes.v1Result],
             ...activityData,
@@ -619,7 +623,6 @@ export class ZeroXKeySDKClientBase {
       url: fullUrl,
     };
   };
-
 
   getBootProof = async (
     input: SdkTypes.TGetBootProofBody,
@@ -2835,9 +2838,9 @@ export class ZeroXKeySDKClientBase {
           session?.organizationId ??
           this.config.organizationId,
         timestampMs: timestampMs ?? String(Date.now()),
-        type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7",
+        type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8",
       },
-      "createSubOrganizationResultV7",
+      "createSubOrganizationResultV8",
       stampWith,
     );
   };
@@ -2861,7 +2864,7 @@ export class ZeroXKeySDKClientBase {
       organizationId:
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
-      type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7",
+      type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -5395,7 +5398,6 @@ export class ZeroXKeySDKClientBase {
       url: fullUrl,
     };
   };
-
 
   stampLogin = async (
     input: SdkTypes.TStampLoginBody,

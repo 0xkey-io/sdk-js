@@ -39,9 +39,9 @@ const VERSIONED_ACTIVITY_TYPES = {
     "v1CreatePrivateKeysResultV2",
   ],
   ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION: [
-    "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7",
-    "v1CreateSubOrganizationIntentV7",
-    "v1CreateSubOrganizationResultV7",
+    "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8",
+    "v1CreateSubOrganizationIntentV8",
+    "v1CreateSubOrganizationResultV8",
   ],
   ACTIVITY_TYPE_CREATE_USERS: [
     "ACTIVITY_TYPE_CREATE_USERS_V3",
@@ -347,9 +347,10 @@ const generateSDKClientFromSwagger = async (
             } as TResponseType;
         }
 
-        // Otherwise, try to find any result field and flatten it
+        // Otherwise, tolerate a newer versioned result key (for example,
+        // createSubOrganizationResultV9) and flatten it.
         for (const key of Object.keys(result)) {
-            if (key.endsWith('Result') && result[key as keyof SdkTypes.v1Result]) {
+            if (/Result(?:V\\d+)?$/.test(key) && result[key as keyof SdkTypes.v1Result]) {
             return {
                 ...result[key as keyof SdkTypes.v1Result],
                 ...activityData

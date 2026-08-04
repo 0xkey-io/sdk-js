@@ -7,6 +7,11 @@ import type {
   commandOverrideParams,
 } from "../__types__/base";
 
+import type {
+  TCreateSubOrganizationBody as TCreateSubOrganizationBodyV8,
+  TCreateSubOrganizationResponse as TCreateSubOrganizationResponseV8,
+} from "@0xkey-io/sdk-types";
+
 export type TGetActivityResponse =
   operations["PublicApiService_GetActivity"]["responses"]["200"]["schema"];
 
@@ -576,15 +581,11 @@ export type TCreateSmartContractInterfaceBody =
   operations["PublicApiService_CreateSmartContractInterface"]["parameters"]["body"]["body"]["parameters"] &
     commandOverrideParams;
 
-export type TCreateSubOrganizationResponse =
-  operations["PublicApiService_CreateSubOrganization"]["responses"]["200"]["schema"]["activity"]["result"]["createSubOrganizationResultV7"] &
-    definitions["v1ActivityResponse"];
+export type TCreateSubOrganizationResponse = TCreateSubOrganizationResponseV8;
 
 export type TCreateSubOrganizationInput = { body: TCreateSubOrganizationBody };
 
-export type TCreateSubOrganizationBody =
-  operations["PublicApiService_CreateSubOrganization"]["parameters"]["body"]["body"]["parameters"] &
-    commandOverrideParams;
+export type TCreateSubOrganizationBody = TCreateSubOrganizationBodyV8;
 
 export type TCreateUserTagResponse =
   operations["PublicApiService_CreateUserTag"]["responses"]["200"]["schema"]["activity"]["result"]["createUserTagResult"] &
