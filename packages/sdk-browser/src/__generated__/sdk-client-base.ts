@@ -407,7 +407,6 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
-
   getBootProof = async (
     input: SdkApiTypes.TGetBootProofBody,
   ): Promise<SdkApiTypes.TGetBootProofResponse> => {
@@ -4895,7 +4894,6 @@ export class ZeroXKeySDKClientBase {
       url: fullUrl,
     };
   };
-
 
   stampLogin = async (
     input: SdkApiTypes.TStampLoginBody,

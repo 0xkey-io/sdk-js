@@ -624,7 +624,6 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
-
   getBootProof = async (
     input: SdkTypes.TGetBootProofBody,
     stampWith?: StamperType,
@@ -5399,7 +5398,6 @@ export class ZeroXKeySDKClientBase {
       url: fullUrl,
     };
   };
-
 
   stampLogin = async (
     input: SdkTypes.TStampLoginBody,

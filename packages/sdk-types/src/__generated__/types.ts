@@ -3886,7 +3886,6 @@ export type v1SmsCustomizationParams = {
   template?: string;
 };
 
-
 export type v1TronSendTransactionIntent = {
   /** A wallet or private key address to sign with (base58 T... form). This does not support private key IDs. */
   from: string;
@@ -4765,7 +4764,9 @@ export type TGetAttestationDocumentBody = {
   enclaveType: string;
 };
 
-export type TGetAttestationDocumentInput = { body: TGetAttestationDocumentBody };
+export type TGetAttestationDocumentInput = {
+  body: TGetAttestationDocumentBody;
+};
 
 export type TGetBootProofResponse = {
   bootProof: v1BootProof;
@@ -6448,7 +6449,6 @@ export type TSignTransactionBody = {
 };
 
 export type TSignTransactionInput = { body: TSignTransactionBody };
-
 
 export type TTronSendTransactionResponse = {
   activity: v1Activity;
