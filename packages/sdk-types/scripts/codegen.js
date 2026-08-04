@@ -40,9 +40,9 @@ const VERSIONED_ACTIVITY_TYPES = {
     "v1CreatePrivateKeysResultV2",
   ],
   ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION: [
-    "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7",
-    "v1CreateSubOrganizationIntentV7",
-    "v1CreateSubOrganizationResultV7",
+    "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8",
+    "v1CreateSubOrganizationIntentV8",
+    "v1CreateSubOrganizationResultV8",
   ],
   ACTIVITY_TYPE_CREATE_USERS: [
     "ACTIVITY_TYPE_CREATE_USERS_V3",

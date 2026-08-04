@@ -5494,7 +5494,7 @@ export type TCreateSubOrganizationBody = {
   /** Name for this sub-organization */
   subOrganizationName: string;
   /** Root users to create within this sub-organization */
-  rootUsers: v1RootUserParamsV4[];
+  rootUsers: v1RootUserParamsV5[];
   /** The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users */
   rootQuorumThreshold: number;
   /** The wallet to create for the sub-organization */

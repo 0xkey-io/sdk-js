@@ -8,6 +8,7 @@ const GUARD_DIR = path.resolve(__dirname, "..");
 const FIXTURES_DIR = path.join(GUARD_DIR, "fixtures/consumer-typechecks");
 
 const scripts = [
+  "audit-activity-contracts.mjs",
   "audit-package-surfaces.mjs",
   "audit-runtime-exports.mjs",
   "audit-declarations.mjs",
