@@ -1580,7 +1580,7 @@ export class ZeroXKeyClient {
           signature: signature,
         };
 
-        const signupRes = await this.httpClient.proxySignup({
+        const signupRes = await this.httpClient.proxySignupV2({
           ...signUpBody,
           clientSignature,
         });

@@ -11,7 +11,7 @@ export type { definitions as ZeroXKeyApiTypes } from "./__generated__/services/c
 export { ZeroXKeyClient } from "./__generated__/services/coordinator/public/v1/public_api.client";
 
 export { init, browserInit } from "./config";
-export { ZeroXKeyRequestError } from "./base";
+export { RateLimitError, ZeroXKeyRequestError } from "./base";
 export {
   assertNonNull,
   assertActivityCompleted,
