@@ -66,16 +66,14 @@ async function main() {
 
   console.log("\n=== TRC-20 (USDT) transfer via tronSendTransaction ===");
   try {
-    const trc20StatusId = await zeroXKeyClient
-      .apiClient()
-      .tronSendTransaction({
-        organizationId: process.env.ORGANIZATION_ID!,
-        from,
-        to,
-        caip2: "tron:0xcd8690dc", // Nile testnet
-        contractAddress: usdtContract,
-        tokenAmount: "1000000", // 1 USDT (6 decimals)
-      });
+    const trc20StatusId = await zeroXKeyClient.apiClient().tronSendTransaction({
+      organizationId: process.env.ORGANIZATION_ID!,
+      from,
+      to,
+      caip2: "tron:0xcd8690dc", // Nile testnet
+      contractAddress: usdtContract,
+      tokenAmount: "1000000", // 1 USDT (6 decimals)
+    });
     console.log("sendTransactionStatusId:", trc20StatusId);
     await pollStatus(zeroXKeyClient, trc20StatusId);
   } catch (e: any) {

@@ -533,7 +533,9 @@ export async function verifyAttestationDocument(
   if (!Array.isArray(cabundleRaw)) {
     throw new Error("attestation document missing cabundle");
   }
-  const cabundle = cabundleRaw.map((c) => new Uint8Array(c as ArrayLike<number>));
+  const cabundle = cabundleRaw.map(
+    (c) => new Uint8Array(c as ArrayLike<number>),
+  );
 
   await verifyCertificateChain(
     cabundle,

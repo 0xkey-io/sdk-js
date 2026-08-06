@@ -47,6 +47,10 @@
     },
     {
       "kind": "re-export",
+      "name": "RateLimitError"
+    },
+    {
+      "kind": "re-export",
       "name": "sealAndStampRequestBody"
     },
     {

@@ -267,6 +267,11 @@
       "arity": 1
     },
     {
+      "name": "verifyAttestationDocument",
+      "kind": "function",
+      "arity": 1
+    },
+    {
       "name": "verifyBootProof",
       "kind": "function",
       "arity": 1
