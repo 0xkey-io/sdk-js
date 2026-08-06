@@ -1,0 +1,17 @@
+{
+  "name": "@0xkey-io/pay",
+  "exports": [
+    {
+      "kind": "re-export",
+      "name": "Pay"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PayClient"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PayClientOptions"
+    }
+  ]
+}

@@ -8,6 +8,11 @@
       "arity": 1
     },
     {
+      "name": "RateLimitError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
       "name": "TERMINAL_ACTIVITY_STATUSES",
       "kind": "object",
       "tag": "[object Array]"

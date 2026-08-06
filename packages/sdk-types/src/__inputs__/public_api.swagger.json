@@ -129,9 +129,7 @@
             }
           }
         ],
-        "tags": [
-          "Attestation"
-        ]
+        "tags": ["Attestation"]
       }
     },
     "/public/v1/query/get_api_key": {
@@ -3174,7 +3172,7 @@
         "tags": ["Signing"]
       }
     },
-        "/public/v1/submit/tron_send_transaction": {
+    "/public/v1/submit/tron_send_transaction": {
       "post": {
         "summary": "Submit a transaction intent for broadcasting.",
         "description": "Submit a native TRX transfer intent describing a transaction you would like to broadcast.",
@@ -3203,12 +3201,10 @@
             }
           }
         ],
-        "tags": [
-          "Broadcasting"
-        ]
+        "tags": ["Broadcasting"]
       }
     },
-"/public/v1/submit/sol_send_transaction": {
+    "/public/v1/submit/sol_send_transaction": {
       "post": {
         "summary": "Broadcast SVM transaction",
         "description": "Submit a transaction intent describing an SVM transaction you would like to broadcast.",
@@ -3720,11 +3716,7 @@
         },
         "caip2": {
           "type": "string",
-          "enum": [
-            "tron:0x2b6653dc",
-            "tron:0xcd8690dc",
-            "tron:0x94a9059e"
-          ],
+          "enum": ["tron:0x2b6653dc", "tron:0xcd8690dc", "tron:0x94a9059e"],
           "description": "CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet).",
           "title": "@inject_tag: validate:\"required\""
         },
@@ -3749,20 +3741,14 @@
           "title": "@inject_tag: validate:\"omitempty\""
         }
       },
-      "required": [
-        "from",
-        "caip2",
-        "to"
-      ]
+      "required": ["from", "caip2", "to"]
     },
     "v1TronSendTransactionRequest": {
       "type": "object",
       "properties": {
         "type": {
           "type": "string",
-          "enum": [
-            "ACTIVITY_TYPE_TRON_SEND_TRANSACTION"
-          ]
+          "enum": ["ACTIVITY_TYPE_TRON_SEND_TRANSACTION"]
         },
         "timestampMs": {
           "type": "string",
@@ -3779,12 +3765,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "type",
-        "timestampMs",
-        "organizationId",
-        "parameters"
-      ]
+      "required": ["type", "timestampMs", "organizationId", "parameters"]
     },
     "v1TronSendTransactionResult": {
       "type": "object",
@@ -3794,9 +3775,7 @@
           "description": "The send_transaction_status ID associated with the transaction submission"
         }
       },
-      "required": [
-        "sendTransactionStatusId"
-      ]
+      "required": ["sendTransactionStatusId"]
     },
     "v1TronSendTransactionStatus": {
       "type": "object",
@@ -3819,10 +3798,7 @@
           "description": "Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`."
         }
       },
-      "required": [
-        "organizationId",
-        "enclaveType"
-      ]
+      "required": ["organizationId", "enclaveType"]
     },
     "v1GetAttestationDocumentResponse": {
       "type": "object",
@@ -3833,9 +3809,7 @@
           "description": "Raw (CBOR-encoded) attestation document."
         }
       },
-      "required": [
-        "attestationDocument"
-      ]
+      "required": ["attestationDocument"]
     },
     "apiApiKeyParams": {
       "type": "object",
@@ -4463,7 +4437,7 @@
         "ACTIVITY_TYPE_CREATE_TVC_DEPLOYMENT",
         "ACTIVITY_TYPE_CREATE_TVC_MANIFEST_APPROVALS",
         "ACTIVITY_TYPE_SOL_SEND_TRANSACTION",
-      "ACTIVITY_TYPE_TRON_SEND_TRANSACTION",
+        "ACTIVITY_TYPE_TRON_SEND_TRANSACTION",
         "ACTIVITY_TYPE_INIT_OTP_V3",
         "ACTIVITY_TYPE_VERIFY_OTP_V2",
         "ACTIVITY_TYPE_OTP_LOGIN_V2",
@@ -9108,9 +9082,9 @@
           "$ref": "#/definitions/v1SolanaSendTransactionStatus",
           "description": "Solana-specific transaction status."
         },
-      "tron": {
-        "$ref": "#/definitions/v1TronSendTransactionStatus"
-      },
+        "tron": {
+          "$ref": "#/definitions/v1TronSendTransactionStatus"
+        },
         "txError": {
           "type": "string",
           "description": "The error encountered when broadcasting or confirming the transaction, if any."
@@ -10620,9 +10594,9 @@
         "solSendTransactionIntent": {
           "$ref": "#/definitions/v1SolSendTransactionIntent"
         },
-      "tronSendTransactionIntent": {
-        "$ref": "#/definitions/v1TronSendTransactionIntent"
-      },
+        "tronSendTransactionIntent": {
+          "$ref": "#/definitions/v1TronSendTransactionIntent"
+        },
         "initOtpIntentV3": {
           "$ref": "#/definitions/v1InitOtpIntentV3"
         },
@@ -11980,9 +11954,9 @@
         "solSendTransactionResult": {
           "$ref": "#/definitions/v1SolSendTransactionResult"
         },
-      "tronSendTransactionResult": {
-        "$ref": "#/definitions/v1TronSendTransactionResult"
-      },
+        "tronSendTransactionResult": {
+          "$ref": "#/definitions/v1TronSendTransactionResult"
+        },
         "initOtpResultV2": {
           "$ref": "#/definitions/v1InitOtpResultV2"
         },

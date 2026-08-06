@@ -19,6 +19,7 @@ type TSubstitutionShape = Record<string, any>;
 
 const sharedHeaders: THeadersShape = {
   "Content-Type": "application/json",
+  Accept: "application/problem+json, application/json",
 };
 
 const sharedRequestOptions: Partial<RequestInit> = {
@@ -85,6 +86,7 @@ export async function request<
   query?: Q;
   body?: B;
   substitution?: S;
+  signal?: AbortSignal;
 }): Promise<ResponseData> {
   const {
     uri: inputUri,
@@ -93,6 +95,7 @@ export async function request<
     query: inputQuery = {},
     substitution: inputSubstitution = {},
     body: inputBody = {},
+    signal,
   } = input;
 
   const url = constructUrl({
@@ -105,7 +108,9 @@ export async function request<
     body: inputBody,
   });
 
-  const response = await fetch(url.toString(), {
+  // Retries reuse the exact sealed body and stamp. Activity mutations remain
+  // safe because their activityId is the server-side idempotency key.
+  const response = await fetchWithRateLimitRetry(url.toString(), {
     ...sharedRequestOptions,
     method,
     headers: {
@@ -114,6 +119,7 @@ export async function request<
       "X-Stamp": xStamp,
     },
     body: sealedBody,
+    ...(signal ? { signal } : {}),
   });
 
   if (!response.ok) {
@@ -133,6 +139,160 @@ export async function request<
   const data = await response.json();
 
   return data as ResponseData;
+}
+
+export class RateLimitError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly retryAfterMs: number | undefined;
+  readonly lane: string | undefined;
+  readonly scope: string | undefined;
+  readonly requestId: string | undefined;
+
+  constructor(input: {
+    status: number;
+    code: string;
+    message: string;
+    retryAfterMs: number | undefined;
+    lane: string | undefined;
+    scope: string | undefined;
+    requestId: string | undefined;
+  }) {
+    super(input.message);
+    this.name = "RateLimitError";
+    this.status = input.status;
+    this.code = input.code;
+    this.retryAfterMs = input.retryAfterMs;
+    this.lane = input.lane;
+    this.scope = input.scope;
+    this.requestId = input.requestId;
+  }
+}
+
+const MAX_RATE_LIMIT_RETRIES = 2;
+const MAX_RATE_LIMIT_DELAY_MS = 5000;
+
+async function fetchWithRateLimitRetry(
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  let totalDelayMs = 0;
+
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(url, init);
+    if (response.status !== 429 && response.status !== 503) {
+      return response;
+    }
+    const rateLimitError = await rateLimitErrorFromResponse(response.clone());
+    if (!rateLimitError) {
+      return response;
+    }
+
+    const minimumDelayMs = rateLimitError.retryAfterMs ?? 1000;
+    if (
+      attempt >= MAX_RATE_LIMIT_RETRIES ||
+      totalDelayMs + minimumDelayMs > MAX_RATE_LIMIT_DELAY_MS
+    ) {
+      throw rateLimitError;
+    }
+
+    // Jitter is added after the server-provided minimum, never before it.
+    const delayMs = Math.min(
+      Math.ceil(minimumDelayMs * (1 + Math.random() * 0.2)),
+      MAX_RATE_LIMIT_DELAY_MS - totalDelayMs,
+    );
+    totalDelayMs += delayMs;
+    await sleep(delayMs, init.signal);
+  }
+}
+
+async function rateLimitErrorFromResponse(
+  response: Response,
+): Promise<RateLimitError | null> {
+  if (response.status !== 429 && response.status !== 503) {
+    return null;
+  }
+
+  const retryAfterMs = retryDelayMs(response);
+  let problem: Record<string, unknown> = {};
+  try {
+    problem = (await response.json()) as Record<string, unknown>;
+  } catch (_) {
+    if (response.status !== 429) {
+      return null;
+    }
+  }
+
+  const code = typeof problem.code === "string" ? problem.code : "";
+  if (response.status === 503 && code !== "RATE_LIMIT_BACKEND_UNAVAILABLE") {
+    return null;
+  }
+
+  return new RateLimitError({
+    status: response.status,
+    code:
+      code ||
+      (response.status === 429
+        ? "RATE_LIMIT_EXCEEDED"
+        : "RATE_LIMIT_BACKEND_UNAVAILABLE"),
+    message:
+      stringField(problem, "detail") ??
+      stringField(problem, "title") ??
+      (response.statusText || "Request rate limited"),
+    retryAfterMs,
+    lane: stringField(problem, "lane"),
+    scope: stringField(problem, "scope"),
+    requestId: stringField(problem, "requestId"),
+  });
+}
+
+function stringField(
+  value: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  return typeof value[key] === "string" ? (value[key] as string) : undefined;
+}
+
+function retryDelayMs(response: Response): number | undefined {
+  const retryAfter = response.headers.get("retry-after")?.trim();
+  if (!retryAfter) {
+    return undefined;
+  }
+
+  const seconds = Number.parseFloat(retryAfter);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.max(0, Math.ceil(seconds * 1000));
+  }
+
+  const retryAt = Date.parse(retryAfter);
+  if (Number.isNaN(retryAt)) {
+    return undefined;
+  }
+  return Math.max(0, retryAt - Date.now());
+}
+
+function sleep(ms: number, signal?: AbortSignal | null): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(abortError());
+  }
+
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(abortError());
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+function abortError(): Error {
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  return error;
 }
 
 function constructUrl(input: {
