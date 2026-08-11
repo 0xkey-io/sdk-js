@@ -29,7 +29,9 @@ describe("Commerce signature primitive", () => {
   });
 
   it("privately verifies a deterministic Commerce session before projection", () => {
-    const privateKey = Uint8Array.from({ length: 32 }, (_, index) => index === 31 ? 7 : 0);
+    const privateKey = Uint8Array.from({ length: 32 }, (_, index) =>
+      index === 31 ? 7 : 0,
+    );
     const sessionKey = p256.getPublicKey(privateKey, false);
     const publicKey = Uint8Array.of(...sessionKey, ...sessionKey);
     const publicKeyHex = Buffer.from(publicKey).toString("hex");
@@ -38,8 +40,11 @@ describe("Commerce signature primitive", () => {
       claimsHash,
       profile: "commerce-authorization/v1",
     });
-    const signature = p256.sign(sha256(text.encode(proofPayload)), privateKey).toCompactHex();
-    const ephemeralKeyHash = `sha256:${Buffer.from(sha256(publicKey)).toString("hex")}` as const;
+    const signature = p256
+      .sign(sha256(text.encode(proofPayload)), privateKey)
+      .toCompactHex();
+    const ephemeralKeyHash =
+      `sha256:${Buffer.from(sha256(publicKey)).toString("hex")}` as const;
     const projection = projectAuthenticatedCommerceAppProof(
       {
         scheme: "SIGNATURE_SCHEME_EPHEMERAL_KEY_P256",
@@ -56,15 +61,23 @@ describe("Commerce signature primitive", () => {
     );
     expect(projection.appProofClaimsHash).toBe(claimsHash);
     expect(isVerifiedCommerceBootProjection(projection)).toBe(false);
-    expect(() => projectAuthenticatedCommerceAppProof(
-      { ...{
-        scheme: "SIGNATURE_SCHEME_EPHEMERAL_KEY_P256" as const,
-        publicKey: publicKeyHex,
-        proofPayload,
-        signature,
-      }, proofPayload: proofPayload.replace("commerce-authorization/v1", "other/v1") },
-      claimsHash,
-      projection,
-    )).toThrow();
+    expect(() =>
+      projectAuthenticatedCommerceAppProof(
+        {
+          ...{
+            scheme: "SIGNATURE_SCHEME_EPHEMERAL_KEY_P256" as const,
+            publicKey: publicKeyHex,
+            proofPayload,
+            signature,
+          },
+          proofPayload: proofPayload.replace(
+            "commerce-authorization/v1",
+            "other/v1",
+          ),
+        },
+        claimsHash,
+        projection,
+      ),
+    ).toThrow();
   });
 });

@@ -26,12 +26,19 @@ const bootVector = require("./artifacts/boot-v1.json") as any;
 const wrongSigner = require("./artifacts/eip3009-wrong-signer.json") as any;
 
 const keys = jwsVector.keys as HistoricalCommerceKey[];
-const mutateBase64 = (value: string, offset = Math.floor(value.length / 2)): string =>
+const mutateBase64 = (
+  value: string,
+  offset = Math.floor(value.length / 2),
+): string =>
   `${value.slice(0, offset)}${value[offset] === "A" ? "B" : "A"}${value.slice(offset + 1)}`;
 const base64url = (bytes: Uint8Array): string =>
   Buffer.from(bytes).toString("base64url");
-const P256_ORDER = BigInt("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
-const SECP256K1_ORDER = BigInt("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+const P256_ORDER = BigInt(
+  "0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551",
+);
+const SECP256K1_ORDER = BigInt(
+  "0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+);
 
 function highSJws(signature: string): string {
   const segments = signature.split(".");
@@ -70,20 +77,30 @@ describe("immutable PR-002 verifier artifact seam", () => {
 
   it("verifies exact bundle bytes and rejects missing, extra, or replaced artifacts", () => {
     const root = path.join(__dirname, "artifacts", "pr002");
-    const manifest = new Uint8Array(readFileSync(path.join(root, "bundle-manifest.json")));
+    const manifest = new Uint8Array(
+      readFileSync(path.join(root, "bundle-manifest.json")),
+    );
     const files = Object.fromEntries(
       readdirSync(root)
         .filter((file) => file !== "bundle-manifest.json")
         .sort()
-        .map((file) => [file, new Uint8Array(readFileSync(path.join(root, file)))]),
+        .map((file) => [
+          file,
+          new Uint8Array(readFileSync(path.join(root, file))),
+        ]),
     );
-    expect(verifyCommerceVerifierBundle(manifest, files).reason).toBe("VERIFIED");
+    expect(verifyCommerceVerifierBundle(manifest, files).reason).toBe(
+      "VERIFIED",
+    );
     const { [Object.keys(files)[0]!]: _missing, ...missing } = files;
     expect(verifyCommerceVerifierBundle(manifest, missing).reason).toBe(
       "ARTIFACT_INTEGRITY_FAILED",
     );
     expect(
-      verifyCommerceVerifierBundle(manifest, { ...files, "../escape": new Uint8Array() }).reason,
+      verifyCommerceVerifierBundle(manifest, {
+        ...files,
+        "../escape": new Uint8Array(),
+      }).reason,
     ).toBe("ARTIFACT_INTEGRITY_FAILED");
     const replaced = { ...files };
     replaced["jws-v1.json"] = Uint8Array.of(...replaced["jws-v1.json"]!);
@@ -134,9 +151,17 @@ describe("offline detached JWS verification", () => {
   });
 
   it.each([
-    ["wrong audience", { audience: "openant-commerce-verifier:wrong" }, "AUDIENCE_MISMATCH"],
+    [
+      "wrong audience",
+      { audience: "openant-commerce-verifier:wrong" },
+      "AUDIENCE_MISMATCH",
+    ],
     ["wrong role", { requiredRole: "CUSTODY" }, "KEY_ROLE_MISMATCH"],
-    ["unknown key", { envelope: { ...jwsVector.es256, keyId: "key-unknown" } }, "KEY_ID_MISMATCH"],
+    [
+      "unknown key",
+      { envelope: { ...jwsVector.es256, keyId: "key-unknown" } },
+      "KEY_ID_MISMATCH",
+    ],
     [
       "revoked key",
       {
@@ -205,9 +230,21 @@ describe("offline detached JWS verification", () => {
   });
 
   it.each([
-    ["embedded payload", `${jwsVector.es256.signature.split(".")[0]}.eA.${jwsVector.es256.signature.split(".")[2]}`, "MALFORMED_PROOF"],
-    ["high-S ES256", highSJws(jwsVector.es256.signature), "SIGNATURE_NON_CANONICAL"],
-    ["truncated ES256", `${jwsVector.es256.signature.slice(0, -8)}`, "SIGNATURE_ENCODING_INVALID"],
+    [
+      "embedded payload",
+      `${jwsVector.es256.signature.split(".")[0]}.eA.${jwsVector.es256.signature.split(".")[2]}`,
+      "MALFORMED_PROOF",
+    ],
+    [
+      "high-S ES256",
+      highSJws(jwsVector.es256.signature),
+      "SIGNATURE_NON_CANONICAL",
+    ],
+    [
+      "truncated ES256",
+      `${jwsVector.es256.signature.slice(0, -8)}`,
+      "SIGNATURE_ENCODING_INVALID",
+    ],
   ])("rejects %s JWS encoding", async (_case, signature, reason) => {
     const outcome = await verifyDetachedJwsLive({
       audience: jwsVector.audience,
@@ -231,7 +268,10 @@ describe("offline detached JWS verification", () => {
     const duplicate = await verifyDetachedJwsLive({
       audience: jwsVector.audience,
       claims: jwsVector.statement,
-      envelope: { ...jwsVector.es256, signature: `${duplicateHeader}.${empty}.${signature}` },
+      envelope: {
+        ...jwsVector.es256,
+        signature: `${duplicateHeader}.${empty}.${signature}`,
+      },
       keyRegistry: keys,
       profile: jwsVector.statementProfile,
       requiredRole: "ISSUER",
@@ -302,7 +342,10 @@ describe("offline EIP-3009 and boot binding", () => {
     const high = (SECP256K1_ORDER - s).toString(16).padStart(64, "0");
     const highS = await verifyEip3009Live({
       claimedClaimsHash: eip712Vector.claimsDigest,
-      envelope: { ...eip712Vector.envelope, signature: `${signature.slice(0, 66)}${high}${signature.slice(130)}` },
+      envelope: {
+        ...eip712Vector.envelope,
+        signature: `${signature.slice(0, 66)}${high}${signature.slice(130)}`,
+      },
       typedData: eip712Vector.typedData,
       walletProofClaims: eip712Vector.walletProofClaims,
       wireVersion: "0.1",
@@ -311,7 +354,13 @@ describe("offline EIP-3009 and boot binding", () => {
     const injected = await verifyEip3009Live({
       claimedClaimsHash: eip712Vector.claimsDigest,
       envelope: eip712Vector.envelope,
-      typedData: { ...eip712Vector.typedData, message: { ...eip712Vector.typedData.message, callerDigest: `0x${"0".repeat(64)}` } },
+      typedData: {
+        ...eip712Vector.typedData,
+        message: {
+          ...eip712Vector.typedData.message,
+          callerDigest: `0x${"0".repeat(64)}`,
+        },
+      },
       walletProofClaims: eip712Vector.walletProofClaims,
       wireVersion: "0.1",
     });
@@ -362,23 +411,84 @@ describe("offline EIP-3009 and boot binding", () => {
   });
 
   it.each([
-    ["capture time", { createdAt: { ...bootVector.bootProof.createdAt, seconds: String(Number(bootVector.bootProof.createdAt.seconds) + 2) } }, bootVector.anchor],
-    ["attestation/certificate chain", { awsAttestationDocB64: mutateBase64(bootVector.bootProof.awsAttestationDocB64) }, bootVector.anchor],
-    ["manifest/pivot", { qosManifestB64: mutateBase64(bootVector.bootProof.qosManifestB64) }, bootVector.anchor],
-    ["manifest envelope", { qosManifestEnvelopeB64: mutateBase64(bootVector.bootProof.qosManifestEnvelopeB64) }, bootVector.anchor],
-    ["ephemeral key", { ephemeralPublicKeyHex: `${bootVector.bootProof.ephemeralPublicKeyHex.slice(0, -1)}0` }, bootVector.anchor],
-    ["pinned member", {}, { ...bootVector.anchor, members: [{ ...bootVector.anchor.members[0]!, pubKeyHex: `${bootVector.anchor.members[0]!.pubKeyHex.slice(0, -1)}0` }, bootVector.anchor.members[1]!] }],
-    ["pinned quorum", {}, { ...bootVector.anchor, quorumKeyHex: `${bootVector.anchor.quorumKeyHex.slice(0, -1)}0` }],
-  ])("fails closed when %s is tampered", async (_case, bootOverride, anchorOverride) => {
-    const failure = await verifyCommerceBootProjection(
+    [
+      "capture time",
+      {
+        createdAt: {
+          ...bootVector.bootProof.createdAt,
+          seconds: String(Number(bootVector.bootProof.createdAt.seconds) + 2),
+        },
+      },
+      bootVector.anchor,
+    ],
+    [
+      "attestation/certificate chain",
+      {
+        awsAttestationDocB64: mutateBase64(
+          bootVector.bootProof.awsAttestationDocB64,
+        ),
+      },
+      bootVector.anchor,
+    ],
+    [
+      "manifest/pivot",
+      { qosManifestB64: mutateBase64(bootVector.bootProof.qosManifestB64) },
+      bootVector.anchor,
+    ],
+    [
+      "manifest envelope",
+      {
+        qosManifestEnvelopeB64: mutateBase64(
+          bootVector.bootProof.qosManifestEnvelopeB64,
+        ),
+      },
+      bootVector.anchor,
+    ],
+    [
+      "ephemeral key",
+      {
+        ephemeralPublicKeyHex: `${bootVector.bootProof.ephemeralPublicKeyHex.slice(0, -1)}0`,
+      },
+      bootVector.anchor,
+    ],
+    [
+      "pinned member",
+      {},
+      {
+        ...bootVector.anchor,
+        members: [
+          {
+            ...bootVector.anchor.members[0]!,
+            pubKeyHex: `${bootVector.anchor.members[0]!.pubKeyHex.slice(0, -1)}0`,
+          },
+          bootVector.anchor.members[1]!,
+        ],
+      },
+    ],
+    [
+      "pinned quorum",
+      {},
+      {
+        ...bootVector.anchor,
+        quorumKeyHex: `${bootVector.anchor.quorumKeyHex.slice(0, -1)}0`,
+      },
+    ],
+  ])(
+    "fails closed when %s is tampered",
+    async (_case, bootOverride, anchorOverride) => {
+      const failure = await verifyCommerceBootProjection(
         bootVector.appProof as never,
         { ...bootVector.bootProof, ...bootOverride } as never,
         `sha256:${"1".repeat(64)}`,
         anchorOverride as QuorumManifestSetAnchor,
-      ).then(() => null, (error: unknown) => error);
-    expect(failure).toBeInstanceOf(CommerceBootVerificationError);
-    expect(failure).toMatchObject({ reason: "BOOT_BINDING_MISMATCH" });
-  });
+      ).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      expect(failure).toBeInstanceOf(CommerceBootVerificationError);
+      expect(failure).toMatchObject({ reason: "BOOT_BINDING_MISMATCH" });
+    },
+  );
 
   it("returns the same stable reason for a non-canonical claims hash", async () => {
     await expect(

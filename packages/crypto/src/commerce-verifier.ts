@@ -91,9 +91,10 @@ function validJwkMetadata(
   algorithm: CommerceSignatureAlgorithm,
   jwk: CommercePublicJwk,
 ): boolean {
-  const required = algorithm === "ES256"
-    ? ["crv", "kty", "use", "x", "y"]
-    : ["crv", "kty", "use", "x"];
+  const required =
+    algorithm === "ES256"
+      ? ["crv", "kty", "use", "x", "y"]
+      : ["crv", "kty", "use", "x"];
   const allowed = new Set([...required, "alg", "key_ops", "kid"]);
   const keys = Object.keys(jwk);
   if (
@@ -139,7 +140,9 @@ export function verifyCommerceSignature(
       const parsed = p256.Signature.fromCompact(signature);
       if (parsed.hasHighS()) return "SIGNATURE_NON_CANONICAL";
       const publicKey = Uint8Array.of(4, ...x, ...y);
-      return p256.verify(parsed, sha256(signingInput), publicKey, { lowS: true })
+      return p256.verify(parsed, sha256(signingInput), publicKey, {
+        lowS: true,
+      })
         ? "VERIFIED"
         : "SIGNATURE_INVALID";
     }
@@ -177,11 +180,15 @@ export async function verifyCommerceBootProjection(
       (character) => character.charCodeAt(0),
     );
 
-    const projection = projectAuthenticatedCommerceAppProof(appProof, expectedClaimsHash, {
-      bootProofHash: digest(attestationBytes),
-      ephemeralKeyHash: digest(ephemeralKey),
-      pivotHash: `sha256:${envelope.manifest.pivotHashHex.toLowerCase()}`,
-    });
+    const projection = projectAuthenticatedCommerceAppProof(
+      appProof,
+      expectedClaimsHash,
+      {
+        bootProofHash: digest(attestationBytes),
+        ephemeralKeyHash: digest(ephemeralKey),
+        pivotHash: `sha256:${envelope.manifest.pivotHashHex.toLowerCase()}`,
+      },
+    );
     verifiedBootProjections.add(projection);
     return projection;
   } catch {

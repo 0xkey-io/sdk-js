@@ -6,10 +6,7 @@ import {
 } from "@0xkey-io/crypto";
 import { recoverTypedDataAddress } from "viem";
 
-import {
-  canonicalizeJcs,
-  sha256Bytes,
-} from "../commerce/generated/jcs";
+import { canonicalizeJcs, sha256Bytes } from "../commerce/generated/jcs";
 import { parseCommerceJson } from "../commerce/generated/strict-json";
 
 export const COMMERCE_VERIFIER_METADATA = Object.freeze({
@@ -129,12 +126,36 @@ const BASE_USDC_CONTRACT =
   "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" as const;
 const UINT256_MAX = (1n << 256n) - 1n;
 const ARTIFACT_FILES = Object.freeze([
-  ["eip712-v1.json", 3355, "sha256:fbd11abda83fcbc214808e3506a33001fab2d4193faee96245d0e27182cb9e6d"],
-  ["jcs-v1.json", 2960, "sha256:c331b38d94a56a0c383f23c52f1d92803b8deff78331426a7aa2de80f28d186c"],
-  ["jws-v1.json", 3363, "sha256:dc02568cb014cb46cdc984a38e987ffa1c9cfc05ddcb018c604d624a479ef6f9"],
-  ["lexical-v1.json", 1508, "sha256:d788d31815411b0f323ae869ae4b91483c7278bbac9d2b78d30ec42f0c0da99a"],
-  ["protocol-index.ts.source", 21305, "sha256:8d61f4759245f6d26108225c97b60ad5e418ada00024ab8843f3cdbea50a3233"],
-  ["verifier-lib.rs", 47421, "sha256:038fcce977da0bd4a1f8b3c96d868c4d954eda2bd1c2f5f93531e3e45520ac6e"],
+  [
+    "eip712-v1.json",
+    3355,
+    "sha256:fbd11abda83fcbc214808e3506a33001fab2d4193faee96245d0e27182cb9e6d",
+  ],
+  [
+    "jcs-v1.json",
+    2960,
+    "sha256:c331b38d94a56a0c383f23c52f1d92803b8deff78331426a7aa2de80f28d186c",
+  ],
+  [
+    "jws-v1.json",
+    3363,
+    "sha256:dc02568cb014cb46cdc984a38e987ffa1c9cfc05ddcb018c604d624a479ef6f9",
+  ],
+  [
+    "lexical-v1.json",
+    1508,
+    "sha256:d788d31815411b0f323ae869ae4b91483c7278bbac9d2b78d30ec42f0c0da99a",
+  ],
+  [
+    "protocol-index.ts.source",
+    21305,
+    "sha256:8d61f4759245f6d26108225c97b60ad5e418ada00024ab8843f3cdbea50a3233",
+  ],
+  [
+    "verifier-lib.rs",
+    47421,
+    "sha256:038fcce977da0bd4a1f8b3c96d868c4d954eda2bd1c2f5f93531e3e45520ac6e",
+  ],
 ] as const);
 
 function result(
@@ -152,7 +173,8 @@ export function verifyCommerceVerifierBundle(
   try {
     if (
       !(manifestBytes instanceof Uint8Array) ||
-      sha256Bytes(manifestBytes) !== COMMERCE_VERIFIER_METADATA.artifactManifestDigest ||
+      sha256Bytes(manifestBytes) !==
+        COMMERCE_VERIFIER_METADATA.artifactManifestDigest ||
       files === null ||
       typeof files !== "object" ||
       Array.isArray(files) ||
@@ -176,7 +198,8 @@ export function verifyCommerceVerifierBundle(
     }
     for (const [path, byteLength, expectedDigest] of ARTIFACT_FILES) {
       const descriptor = descriptors[path];
-      const bytes = descriptor && "value" in descriptor ? descriptor.value : null;
+      const bytes =
+        descriptor && "value" in descriptor ? descriptor.value : null;
       if (
         !(bytes instanceof Uint8Array) ||
         bytes.byteLength !== byteLength ||
@@ -188,22 +211,44 @@ export function verifyCommerceVerifierBundle(
     const manifest = parseCommerceJson(manifestBytes);
     if (
       !exactKeys(manifest, [
-        "formatVersion", "protocolVersion", "releaseCandidate", "sourceDigest",
-        "wireVersion", "files", "bundleDigest",
+        "formatVersion",
+        "protocolVersion",
+        "releaseCandidate",
+        "sourceDigest",
+        "wireVersion",
+        "files",
+        "bundleDigest",
       ]) ||
       (manifest as { formatVersion?: unknown }).formatVersion !== 1 ||
-      (manifest as { protocolVersion?: unknown }).protocolVersion !== COMMERCE_VERIFIER_METADATA.protocolVersion ||
-      (manifest as { releaseCandidate?: unknown }).releaseCandidate !== "AC-M0-PR-002/accepted" ||
-      (manifest as { sourceDigest?: unknown }).sourceDigest !== COMMERCE_VERIFIER_METADATA.sourceDigest ||
-      (manifest as { wireVersion?: unknown }).wireVersion !== COMMERCE_VERIFIER_METADATA.wireVersion ||
-      (manifest as { bundleDigest?: unknown }).bundleDigest !== COMMERCE_VERIFIER_METADATA.artifactBundleDigest ||
+      (manifest as { protocolVersion?: unknown }).protocolVersion !==
+        COMMERCE_VERIFIER_METADATA.protocolVersion ||
+      (manifest as { releaseCandidate?: unknown }).releaseCandidate !==
+        "AC-M0-PR-002/accepted" ||
+      (manifest as { sourceDigest?: unknown }).sourceDigest !==
+        COMMERCE_VERIFIER_METADATA.sourceDigest ||
+      (manifest as { wireVersion?: unknown }).wireVersion !==
+        COMMERCE_VERIFIER_METADATA.wireVersion ||
+      (manifest as { bundleDigest?: unknown }).bundleDigest !==
+        COMMERCE_VERIFIER_METADATA.artifactBundleDigest ||
       JSON.stringify((manifest as { files?: unknown }).files) !==
-        JSON.stringify(ARTIFACT_FILES.map(([path, bytes, sha256]) => ({ path, bytes, sha256 })))
+        JSON.stringify(
+          ARTIFACT_FILES.map(([path, bytes, sha256]) => ({
+            path,
+            bytes,
+            sha256,
+          })),
+        )
     ) {
       return result("ARTIFACT_INTEGRITY_FAILED");
     }
-    const { bundleDigest: _bundleDigest, ...frame } = manifest as Record<string, unknown>;
-    if (sha256Bytes(canonicalizeJcs(frame)) !== COMMERCE_VERIFIER_METADATA.artifactBundleDigest) {
+    const { bundleDigest: _bundleDigest, ...frame } = manifest as Record<
+      string,
+      unknown
+    >;
+    if (
+      sha256Bytes(canonicalizeJcs(frame)) !==
+      COMMERCE_VERIFIER_METADATA.artifactBundleDigest
+    ) {
       return result("ARTIFACT_INTEGRITY_FAILED");
     }
     return result("VERIFIED");
@@ -222,15 +267,19 @@ function isIdentifier(value: unknown): value is string {
 }
 
 function exactKeys(value: unknown, keys: readonly string[]): boolean {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
-  if (![Object.prototype, null].includes(Object.getPrototypeOf(value))) return false;
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  if (![Object.prototype, null].includes(Object.getPrototypeOf(value)))
+    return false;
   if (Object.getOwnPropertySymbols(value).length !== 0) return false;
   const descriptors = Object.getOwnPropertyDescriptors(value);
-  return JSON.stringify(Object.keys(value).sort()) ===
+  return (
+    JSON.stringify(Object.keys(value).sort()) ===
       JSON.stringify([...keys].sort()) &&
     Object.values(descriptors).every(
       (descriptor) => descriptor.enumerable && "value" in descriptor,
-    );
+    )
+  );
 }
 
 function parseRfc3339UtcWholeSeconds(value: unknown): number | null {
@@ -363,9 +412,17 @@ async function verifyDetachedJwsWithTrustedPolicy(
 ): Promise<CommerceVerificationResult> {
   const now = liveTime();
   if (now === null) return result("CLOCK_UNAVAILABLE");
-  if (!exactKeys(request, [
-    "audience", "claims", "envelope", "keyRegistry", "profile", "requiredRole", "wireVersion",
-  ])) {
+  if (
+    !exactKeys(request, [
+      "audience",
+      "claims",
+      "envelope",
+      "keyRegistry",
+      "profile",
+      "requiredRole",
+      "wireVersion",
+    ])
+  ) {
     return result("MALFORMED_PROOF");
   }
   if (request.wireVersion !== COMMERCE_VERIFIER_METADATA.wireVersion) {
@@ -394,7 +451,10 @@ async function verifyDetachedJwsWithTrustedPolicy(
     request.claims,
     request.wireVersion,
   );
-  if (claimsHash === null || claimsHash !== request.envelope.signedObjectDigest) {
+  if (
+    claimsHash === null ||
+    claimsHash !== request.envelope.signedObjectDigest
+  ) {
     return result("CLAIMS_DIGEST_MISMATCH", claimsHash);
   }
   if (request.requiredRole === "BOOT") {
@@ -547,9 +607,15 @@ export async function verifyEip3009Live(
 ): Promise<CommerceVerificationResult> {
   const now = liveTime();
   if (now === null) return result("CLOCK_UNAVAILABLE");
-  if (!exactKeys(request, [
-    "claimedClaimsHash", "envelope", "typedData", "walletProofClaims", "wireVersion",
-  ])) {
+  if (
+    !exactKeys(request, [
+      "claimedClaimsHash",
+      "envelope",
+      "typedData",
+      "walletProofClaims",
+      "wireVersion",
+    ])
+  ) {
     return result("MALFORMED_PROOF");
   }
   if (request.wireVersion !== COMMERCE_VERIFIER_METADATA.wireVersion) {
@@ -691,7 +757,7 @@ export async function verifyEip3009Live(
   ) {
     return result("SIGNATURE_NON_CANONICAL", claimsHash);
   }
-  if (!['1b', '1c'].includes(signature.slice(130, 132))) {
+  if (!["1b", "1c"].includes(signature.slice(130, 132))) {
     return result("SIGNATURE_ENCODING_INVALID", claimsHash);
   }
   try {
@@ -730,11 +796,13 @@ export function verifyBootBinding(
     !isVerifiedCommerceBootProjection(request.verified) ||
     request.expected.profile !== "commerce-authorization/v1" ||
     request.verified.profile !== "commerce-authorization/v1" ||
-    keys.slice(1).some(
-      (key) =>
-        !SHA256_DIGEST.test(request.expected[key]) ||
-        !SHA256_DIGEST.test(request.verified[key]),
-    ) ||
+    keys
+      .slice(1)
+      .some(
+        (key) =>
+          !SHA256_DIGEST.test(request.expected[key]) ||
+          !SHA256_DIGEST.test(request.verified[key]),
+      ) ||
     keys.some((key) => request.expected[key] !== request.verified[key])
   ) {
     return result("BOOT_BINDING_MISMATCH");
@@ -782,7 +850,9 @@ function validateWalletClaims(claims: any): boolean {
       claims.serviceSkuVersionDigest,
       claims.challengeDigest,
       claims.paymentAuthorizationDigest,
-    ].every((value) => typeof value === "string" && SHA256_DIGEST.test(value)) &&
+    ].every(
+      (value) => typeof value === "string" && SHA256_DIGEST.test(value),
+    ) &&
     positiveUint256(claims.amountAtomic) &&
     typeof claims.payerAddress === "string" &&
     /^0x[0-9a-fA-F]{40}$/.test(claims.payerAddress) &&

@@ -44,9 +44,13 @@ export const getCryptoInstance = async () => {
 };
 
 function hasExactOwnKeys(value: unknown, expected: readonly string[]): boolean {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
   const actual = Object.keys(value).sort();
-  return actual.length === expected.length && actual.every((key, index) => key === [...expected].sort()[index]);
+  return (
+    actual.length === expected.length &&
+    actual.every((key, index) => key === [...expected].sort()[index])
+  );
 }
 
 /**
@@ -78,7 +82,11 @@ async function importEcdsaPublicKey(spki: ArrayBuffer): Promise<CryptoKey> {
  * coordinator uses to encode every `*B64` field on `v1BootProof`).
  */
 function base64ToBytes(b64: string): Uint8Array {
-  if (b64.length === 0 || b64.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) {
+  if (
+    b64.length === 0 ||
+    b64.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)
+  ) {
     throw new Error("Invalid canonical base64");
   }
   const decoded = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -144,7 +152,10 @@ export const STAGING_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
 export function getBootProofTime(bootProof: v1BootProof): Date {
   const secondsText = bootProof.createdAt?.seconds ?? "";
   const nanosText = bootProof.createdAt?.nanos ?? "";
-  if (!/^(?:0|[1-9][0-9]*)$/.test(secondsText) || !/^(?:0|[1-9][0-9]*)$/.test(nanosText)) {
+  if (
+    !/^(?:0|[1-9][0-9]*)$/.test(secondsText) ||
+    !/^(?:0|[1-9][0-9]*)$/.test(nanosText)
+  ) {
     throw new Error("Missing or invalid boot proof timestamp");
   }
   const seconds = Number(secondsText);
@@ -185,16 +196,18 @@ export async function verifyBootProof(
   bootProof: v1BootProof,
   anchor: QuorumManifestSetAnchor = PRODUCTION_QUORUM_MANIFEST_SET,
 ): Promise<ParsedManifestEnvelope> {
-  if (!hasExactOwnKeys(bootProof, [
-    "awsAttestationDocB64",
-    "createdAt",
-    "deploymentLabel",
-    "enclaveApp",
-    "ephemeralPublicKeyHex",
-    "owner",
-    "qosManifestB64",
-    "qosManifestEnvelopeB64",
-  ])) {
+  if (
+    !hasExactOwnKeys(bootProof, [
+      "awsAttestationDocB64",
+      "createdAt",
+      "deploymentLabel",
+      "enclaveApp",
+      "ephemeralPublicKeyHex",
+      "owner",
+      "qosManifestB64",
+      "qosManifestEnvelopeB64",
+    ])
+  ) {
     throw new Error("Boot proof has unknown or missing fields");
   }
   // 1. Parse + verify the attestation document's hardware root of trust.
@@ -213,7 +226,9 @@ export async function verifyBootProof(
     capturedTimestampMs < signedTimestampMs ||
     capturedTimestampMs - signedTimestampMs > 1_000
   ) {
-    throw new Error("boot proof capture timestamp is not bound to attestation timestamp");
+    throw new Error(
+      "boot proof capture timestamp is not bound to attestation timestamp",
+    );
   }
 
   await verifyCoseSign1Sig(coseSign1, attestationDoc.certificate);
@@ -371,7 +386,14 @@ export async function verifyWithBootEnvelope(
   bootProof: v1BootProof,
   anchor: QuorumManifestSetAnchor = PRODUCTION_QUORUM_MANIFEST_SET,
 ): Promise<ParsedManifestEnvelope> {
-  if (!hasExactOwnKeys(appProof, ["proofPayload", "publicKey", "scheme", "signature"])) {
+  if (
+    !hasExactOwnKeys(appProof, [
+      "proofPayload",
+      "publicKey",
+      "scheme",
+      "signature",
+    ])
+  ) {
     throw new Error("App proof has unknown or missing fields");
   }
   // 1. Verify App Proof signature.

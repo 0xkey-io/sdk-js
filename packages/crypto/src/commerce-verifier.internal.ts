@@ -55,7 +55,9 @@ export function projectAuthenticatedCommerceAppProof(
 
   const ephemeralKey = canonicalHex(appProof.publicKey);
   if (!ephemeralKey || digest(ephemeralKey) !== evidence.ephemeralKeyHash) {
-    throw new Error("AppProof ephemeral key is not bound to verified Boot evidence");
+    throw new Error(
+      "AppProof ephemeral key is not bound to verified Boot evidence",
+    );
   }
   for (const value of [
     evidence.bootProofHash,
