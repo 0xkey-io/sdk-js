@@ -187,6 +187,8 @@
         "require": "./dist/index.js",
         "types": "./dist/index.d.ts"
       },
+      "./commerce-contract/rc-bundle/*": "./dist/commerce-contract/rc-bundle/*",
+      "./commerce-verifier/artifacts/*": "./dist/commerce-verifier/artifacts/*",
       "./server": {
         "default": "./dist/server/index.mjs",
         "import": "./dist/server/index.mjs",

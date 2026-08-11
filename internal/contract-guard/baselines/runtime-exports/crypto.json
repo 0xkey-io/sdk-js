@@ -16,6 +16,11 @@
       "kind": "string"
     },
     {
+      "name": "CommerceBootVerificationError",
+      "kind": "class",
+      "arity": 0
+    },
+    {
       "name": "Enclave",
       "kind": "object"
     },
@@ -232,6 +237,11 @@
       "arity": 1
     },
     {
+      "name": "isVerifiedCommerceBootProjection",
+      "kind": "class",
+      "arity": 1
+    },
+    {
       "name": "modSqrt",
       "kind": "class",
       "arity": 2
@@ -282,6 +292,16 @@
       "arity": 4
     },
     {
+      "name": "verifyCommerceBootProjection",
+      "kind": "function",
+      "arity": 3
+    },
+    {
+      "name": "verifyCommerceSignature",
+      "kind": "class",
+      "arity": 4
+    },
+    {
       "name": "verifyCoseSign1Sig",
       "kind": "function",
       "arity": 2
@@ -305,6 +325,11 @@
       "name": "verifyWebhookFromJWKS",
       "kind": "function",
       "arity": 1
+    },
+    {
+      "name": "verifyWithBootEnvelope",
+      "kind": "function",
+      "arity": 2
     }
   ]
 }

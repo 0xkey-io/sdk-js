@@ -3,7 +3,32 @@
   "skipped": false,
   "exports": [
     {
+      "name": "COMMERCE_CONTRACT",
+      "kind": "object"
+    },
+    {
+      "name": "COMMERCE_CONTRACT_METADATA",
+      "kind": "object"
+    },
+    {
+      "name": "COMMERCE_SCHEMAS",
+      "kind": "object"
+    },
+    {
+      "name": "COMMERCE_VERIFIER_METADATA",
+      "kind": "object"
+    },
+    {
+      "name": "CommerceCodecError",
+      "kind": "class",
+      "arity": 1
+    },
+    {
       "name": "DEFAULT_X402_POLICIES",
+      "kind": "object"
+    },
+    {
+      "name": "GENERATED_METADATA",
       "kind": "object"
     },
     {
@@ -58,6 +83,15 @@
     },
     {
       "name": "chainIdFromNetwork",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "commerceContract",
+      "kind": "object"
+    },
+    {
+      "name": "createCommerceVerifier",
       "kind": "class",
       "arity": 1
     },
@@ -139,6 +173,26 @@
     {
       "name": "splitTypedDataSignature",
       "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "verifyBootBinding",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "verifyCommerceVerifierBundle",
+      "kind": "class",
+      "arity": 2
+    },
+    {
+      "name": "verifyDetachedJwsLive",
+      "kind": "function",
+      "arity": 1
+    },
+    {
+      "name": "verifyEip3009Live",
+      "kind": "function",
       "arity": 1
     },
     {
