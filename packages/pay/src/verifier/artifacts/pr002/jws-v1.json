@@ -1,0 +1,88 @@
+{
+  "audience": "openant-commerce-verifier",
+  "statementProfile": "TEST_JWS_STATEMENT",
+  "statement": {
+    "issuedAt": "1970-01-01T00:00:02Z",
+    "kind": "test",
+    "nonce": "shared"
+  },
+  "rotatedStatement": {
+    "issuedAt": "1970-01-01T00:00:03Z",
+    "kind": "test",
+    "nonce": "rotated"
+  },
+  "keys": [
+    {
+      "issuer": "issuer:openant:example",
+      "kid": "key-2026-08",
+      "role": "ISSUER",
+      "algorithm": "ES256",
+      "notBeforeUnixMs": 1000,
+      "notAfterUnixMs": null,
+      "revokedAtUnixMs": null,
+      "jwk": {
+        "kty": "EC",
+        "crv": "P-256",
+        "use": "sig",
+        "key_ops": ["verify"],
+        "x": "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+        "y": "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"
+      }
+    },
+    {
+      "issuer": "issuer:openant:example",
+      "kid": "ed-key-2026-08",
+      "role": "ISSUER",
+      "algorithm": "EdDSA",
+      "notBeforeUnixMs": 1000,
+      "notAfterUnixMs": null,
+      "revokedAtUnixMs": null,
+      "jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "use": "sig",
+        "key_ops": ["verify"],
+        "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+      }
+    },
+    {
+      "issuer": "issuer:openant:example",
+      "kid": "ed-key-2026-09",
+      "role": "ISSUER",
+      "algorithm": "EdDSA",
+      "notBeforeUnixMs": 3000,
+      "notAfterUnixMs": null,
+      "revokedAtUnixMs": null,
+      "jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "use": "sig",
+        "key_ops": ["verify"],
+        "x": "KgqvVKQHd5gox2bT1imb9oG4RR5U6Om_n1RPmBYRIks"
+      }
+    }
+  ],
+  "es256": {
+    "scheme": "DETACHED_JWS_ES256",
+    "issuer": "issuer:openant:example",
+    "keyId": "key-2026-08",
+    "signedObjectDigest": "sha256:7366785a6c71c553c6d226623922b706eadd6119b845a14ff1a70d07467ee1e5",
+    "signature": "eyJhbGciOiJFUzI1NiIsImF1ZCI6Im9wZW5hbnQtY29tbWVyY2UtdmVyaWZpZXIiLCJpc3MiOiJpc3N1ZXI6b3BlbmFudDpleGFtcGxlIiwia2lkIjoia2V5LTIwMjYtMDgiLCJ0eXAiOiJvcGVuYW50LWNvbW1lcmNlK2p3cyJ9..Y0FTtuvKO6kew5hJKiI87dUyencjPxvWSEbnUbAalcJYhIZiZZ8m-NxbRUAlKF8WLkCXAn8i4aVIEeo2pjFYKQ"
+  },
+  "es256HighS": "Y0FTtuvKO6kew5hJKiI87dUyencjPxvWSEbnUbAalcKne3mcmmDZCCOkur_a16DpjqZjqyf0vN-rp-CMVjHNKA",
+  "es256Der": "MEQCIGNBU7bryjupHsOYSSoiPO3VMnp3Iz8b1khG51GwGpXCAiBYhIZiZZ8m-NxbRUAlKF8WLkCXAn8i4aVIEeo2pjFYKQ",
+  "eddsa": {
+    "scheme": "DETACHED_JWS_EDDSA",
+    "issuer": "issuer:openant:example",
+    "keyId": "ed-key-2026-08",
+    "signedObjectDigest": "sha256:7366785a6c71c553c6d226623922b706eadd6119b845a14ff1a70d07467ee1e5",
+    "signature": "eyJhbGciOiJFZERTQSIsImF1ZCI6Im9wZW5hbnQtY29tbWVyY2UtdmVyaWZpZXIiLCJpc3MiOiJpc3N1ZXI6b3BlbmFudDpleGFtcGxlIiwia2lkIjoiZWQta2V5LTIwMjYtMDgiLCJ0eXAiOiJvcGVuYW50LWNvbW1lcmNlK2p3cyJ9..ZzrzKTTm45s3xvcrNUNOIkI-KtQAfPZKEriZeJyA2vLXFWHO64vgtcO-XjeuRn7mDnMr6rJzX-iIjaB4MhcmAg"
+  },
+  "rotatedEddsa": {
+    "scheme": "DETACHED_JWS_EDDSA",
+    "issuer": "issuer:openant:example",
+    "keyId": "ed-key-2026-09",
+    "signedObjectDigest": "sha256:d4058c311172d9c70fb7fa5a43b037ca276876d34ccb4c22f3fcd6a431e19d42",
+    "signature": "eyJhbGciOiJFZERTQSIsImF1ZCI6Im9wZW5hbnQtY29tbWVyY2UtdmVyaWZpZXIiLCJpc3MiOiJpc3N1ZXI6b3BlbmFudDpleGFtcGxlIiwia2lkIjoiZWQta2V5LTIwMjYtMDkiLCJ0eXAiOiJvcGVuYW50LWNvbW1lcmNlK2p3cyJ9..SFyfbZEkzA6_C-2eUZGOSoRUf_8X6M-NKAaRNiTD6F9kQtjZcWhpYS4kdsIjUG9eXyuOKN-t7WXqj3MsxVXAAA"
+  }
+}

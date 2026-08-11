@@ -1,0 +1,14 @@
+{
+  "drift": false,
+  "generatorHash": "sha256:8f6d309f509e095b1bbca3c011c0ca046dbbdacb075e84e0b13091581a2a07fa",
+  "generatorVersion": "0.1.0",
+  "outputHashes": {
+    "cli-skeleton.mjs": "sha256:9acd12fe941a19e262014b05c6af98942eb28125ec5ab1fdcec9951d5cf32d7d",
+    "commerce-types.ts": "sha256:f5ba8579d860ff3bc722f5669252353de9e2a6d031ea480dac052296846f419a",
+    "mcp-tools.json": "sha256:a595fa528a38452515f332cff65f7f36c5a65a67b98113a90db55a373bc217cc",
+    "openapi-3.1.json": "sha256:9ad6949e4e70bacb4dbeb0622e92fe9348ca1ca08075337866e0e4d34ebc7e3f",
+    "skill-metadata.json": "sha256:b48c0bb5225e325ac4008b92263f7dbb1b8d8efdb62ff357debea3b8f346a993"
+  },
+  "protocolVersion": "0.1.0-draft.4",
+  "sourceDigest": "sha256:0069b449f4b0f2f2ae88103219a182703498231b3e7cbe6d76cdd7e3f195ff27"
+}

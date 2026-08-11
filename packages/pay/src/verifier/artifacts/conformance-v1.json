@@ -1,0 +1,28 @@
+{
+  "formatVersion": 1,
+  "protocolVersion": "0.1.0-draft.4",
+  "cases": [
+    { "id": "jws-es256-valid", "operation": "JWS_ES256_VALID" },
+    { "id": "jws-eddsa-valid", "operation": "JWS_EDDSA_VALID" },
+    { "id": "jws-custody-valid", "operation": "JWS_CUSTODY_VALID" },
+    { "id": "jws-role-mismatch", "operation": "JWS_ROLE_MISMATCH" },
+    { "id": "jws-boot-request-rejected", "operation": "JWS_BOOT_REQUEST" },
+    { "id": "jws-boot-registry-rejected", "operation": "JWS_BOOT_REGISTRY" },
+    { "id": "jws-audience-mismatch", "operation": "JWS_AUDIENCE_MISMATCH" },
+    { "id": "jws-issuer-mismatch", "operation": "JWS_ISSUER_MISMATCH" },
+    { "id": "jws-kid-mismatch", "operation": "JWS_KID_MISMATCH" },
+    { "id": "jws-jwk-kid-mismatch", "operation": "JWS_JWK_KID_MISMATCH" },
+    { "id": "jws-revoked", "operation": "JWS_REVOKED" },
+    { "id": "jws-expired", "operation": "JWS_EXPIRED" },
+    { "id": "jws-not-active", "operation": "JWS_NOT_ACTIVE" },
+    { "id": "jws-high-s", "operation": "JWS_HIGH_S" },
+    { "id": "eip3009-valid", "operation": "EIP3009_VALID" },
+    { "id": "eip3009-corrupt-signature", "operation": "EIP3009_CORRUPT_SIGNATURE" },
+    { "id": "eip3009-wrong-signer", "operation": "EIP3009_WRONG_SIGNER" },
+    { "id": "eip3009-high-s", "operation": "EIP3009_HIGH_S" },
+    { "id": "boot-real-valid", "operation": "BOOT_REAL_VALID" },
+    { "id": "boot-not-commerce-profile", "operation": "BOOT_NOT_COMMERCE_PROFILE" },
+    { "id": "boot-ephemeral-mismatch", "operation": "BOOT_EPHEMERAL_MISMATCH" },
+    { "id": "boot-pivot-mismatch", "operation": "BOOT_PIVOT_MISMATCH" }
+  ]
+}

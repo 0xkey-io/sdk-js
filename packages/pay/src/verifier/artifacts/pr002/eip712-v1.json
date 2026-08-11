@@ -1,0 +1,78 @@
+{
+  "payerAddress": "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c",
+  "walletProofClaims": {
+    "objectType": "WalletAuthorizationProof",
+    "protocolVersion": "0.1",
+    "receiptId": "receipt:wallet:1",
+    "invocationId": "invocation:1",
+    "issuedAt": "2020-01-01T00:00:00Z",
+    "issuer": {
+      "issuer": "buyer:alice",
+      "keyId": "wallet:0xfcad0b19bb29d4674531d6f115237e16afce377c"
+    },
+    "paymentIntentId": "payment:intent:1",
+    "paymentIntentFingerprintDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "buyerActorRef": "buyer:alice",
+    "serviceSkuVersionDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "challengeDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "paymentAuthorizationDigest": "sha256:d00cfbe60d85c24feec39f3ebb132f91a89fbe2c63f9fcdcb24b51d6149eea31",
+    "expiresAt": "2099-01-01T00:00:00Z",
+    "amountAtomic": "1250000",
+    "asset": {
+      "network": "eip155:8453",
+      "namespace": "erc20",
+      "reference": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "symbol": "USDC",
+      "decimals": 6
+    },
+    "payerAddress": "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c",
+    "payeeAddress": "0x2222222222222222222222222222222222222222",
+    "mode": "HOSTED",
+    "requestedAssurance": {
+      "authorization": "WALLET_SIGNED",
+      "settlement": "FINALITY_VERIFIED",
+      "delivery": "HOSTED_RECOVERABLE",
+      "contentCustody": "HOSTED_ENCRYPTED_BUFFER",
+      "identity": "PLATFORM_BOUND"
+    },
+    "facilitatorId": "facilitator:0xkey:base"
+  },
+  "typedData": {
+    "domain": {
+      "name": "USD Coin",
+      "version": "2",
+      "chainId": 8453,
+      "verifyingContract": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+    },
+    "types": {
+      "TransferWithAuthorization": [
+        {"name": "from", "type": "address"},
+        {"name": "to", "type": "address"},
+        {"name": "value", "type": "uint256"},
+        {"name": "validAfter", "type": "uint256"},
+        {"name": "validBefore", "type": "uint256"},
+        {"name": "nonce", "type": "bytes32"}
+      ]
+    },
+    "primaryType": "TransferWithAuthorization",
+    "message": {
+      "from": "0xfcad0b19bb29d4674531d6f115237e16afce377c",
+      "to": "0x2222222222222222222222222222222222222222",
+      "value": "1250000",
+      "validAfter": "0",
+      "validBefore": "4070908800",
+      "nonce": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "envelope": {
+    "scheme": "EIP712",
+    "issuer": "buyer:alice",
+    "keyId": "wallet:0xfcad0b19bb29d4674531d6f115237e16afce377c",
+    "signedObjectDigest": "sha256:d00cfbe60d85c24feec39f3ebb132f91a89fbe2c63f9fcdcb24b51d6149eea31",
+    "signature": "0x88840ddea5a194865cc23261a001250d73a0092ca8d55f2d403668cd6b71780e79b21f94d5525a5f598cc35008c4721cc1d687563ec891b668d3a4b58a5c14b41c"
+  },
+  "highSSignature": "0x88840ddea5a194865cc23261a001250d73a0092ca8d55f2d403668cd6b71780e864de06b2aada5a0a6733caff73b8de1f8d8559070800e8556feb9d745da2c8d1b",
+  "paymentAuthorizationDigest": "sha256:d00cfbe60d85c24feec39f3ebb132f91a89fbe2c63f9fcdcb24b51d6149eea31",
+  "claimsDigest": "sha256:32de24be075b8fd27c360f214e8dc29ee4964d554df75c1161e89e22af93f267",
+  "eip712SigningHash": "0xe534c6faf8482fc76d9ce4d3443343d7fec25f6d78d5566f481b1c16a0f2c2d7"
+}

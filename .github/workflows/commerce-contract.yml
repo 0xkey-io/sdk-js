@@ -1,0 +1,44 @@
+name: Commerce contract
+
+on:
+  pull_request:
+    paths:
+      - "packages/pay/src/commerce/generated/**"
+      - "packages/pay/src/index.ts"
+      - "packages/pay/package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/commerce-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/pay/src/commerce/generated/**"
+      - "packages/pay/src/index.ts"
+      - "packages/pay/package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/commerce-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  immutable-commerce-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @0xkey-io/pay...
+      - run: pnpm --filter @0xkey-io/pay test:commerce-contract
+      - run: pnpm --filter @0xkey-io/pay typecheck
+      - run: pnpm --filter @0xkey-io/pay build
+      - name: Confirm published RC bundle is byte-identical
+        run: >-
+          diff -qr
+          packages/pay/src/commerce/generated/rc-bundle
+          packages/pay/dist/commerce-contract/rc-bundle

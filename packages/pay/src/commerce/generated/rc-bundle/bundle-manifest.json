@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "releaseCandidate": "AC-M0-PR-004/accepted",
+  "protocolVersion": "0.1.0-draft.4",
+  "wireVersion": "0.1",
+  "sourceDigest": "sha256:0069b449f4b0f2f2ae88103219a182703498231b3e7cbe6d76cdd7e3f195ff27",
+  "generatorVersion": "0.1.0",
+  "generatorHash": "sha256:8f6d309f509e095b1bbca3c011c0ca046dbbdacb075e84e0b13091581a2a07fa",
+  "files": [
+    {
+      "path": "cli-skeleton.mjs",
+      "bytes": 97823,
+      "sha256": "sha256:9acd12fe941a19e262014b05c6af98942eb28125ec5ab1fdcec9951d5cf32d7d"
+    },
+    {
+      "path": "codec-corpus.json",
+      "bytes": 58436,
+      "sha256": "sha256:b04adc5079601c6659a85ce323fbb7d31f282ea2dfe9ce92ba8a2acace481a70"
+    },
+    {
+      "path": "codegen-report.json",
+      "bytes": 798,
+      "sha256": "sha256:3f0165d933c762252d1c69184e45959713aed43e1fe83d85edfa22ebb20f7b3a"
+    },
+    {
+      "path": "commerce-envelope.schema.json",
+      "bytes": 93748,
+      "sha256": "sha256:c5d4946e8ee7c1edc5c47260b753ccd2e1314217ee6f13641674b61dd9a6b8ad"
+    },
+    {
+      "path": "commerce-types.ts",
+      "bytes": 206021,
+      "sha256": "sha256:f5ba8579d860ff3bc722f5669252353de9e2a6d031ea480dac052296846f419a"
+    },
+    {
+      "path": "mcp-tools.json",
+      "bytes": 344025,
+      "sha256": "sha256:a595fa528a38452515f332cff65f7f36c5a65a67b98113a90db55a373bc217cc"
+    },
+    {
+      "path": "openapi-3.1.json",
+      "bytes": 208387,
+      "sha256": "sha256:9ad6949e4e70bacb4dbeb0622e92fe9348ca1ca08075337866e0e4d34ebc7e3f"
+    },
+    {
+      "path": "skill-metadata.json",
+      "bytes": 111808,
+      "sha256": "sha256:b48c0bb5225e325ac4008b92263f7dbb1b8d8efdb62ff357debea3b8f346a993"
+    }
+  ],
+  "bundleDigest": "sha256:61daab4e29396dad5c393a6d0838963106b526849f7e880fa30538ea81cf83f6"
+}

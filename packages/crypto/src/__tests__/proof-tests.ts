@@ -75,12 +75,15 @@ describe("Proof verification tests", () => {
     malformedBootProof2.ephemeralPublicKeyHex =
       testBootProof2.ephemeralPublicKeyHex;
 
-    // Wrong awsAttestationDocB64 - causes ephemeral key mistmatch error because the boot proofs have the same qos manifest, so the user data check doesn't fail
+    // Wrong awsAttestationDocB64 is rejected first by the signed-attestation
+    // timestamp/capture binding; this prevents mixing fields from two captures.
     malformedBootProof2.awsAttestationDocB64 =
       testBootProof1.awsAttestationDocB64;
     await expect(
       verify(testAppProof2, malformedBootProof2, preprodAnchor),
-    ).rejects.toThrow("Ephemeral pub keys from app proof:");
+    ).rejects.toThrow(
+      "boot proof capture timestamp is not bound to attestation timestamp",
+    );
     malformedBootProof2.awsAttestationDocB64 =
       testBootProof2.awsAttestationDocB64;
 

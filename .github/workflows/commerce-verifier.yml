@@ -1,0 +1,69 @@
+name: Commerce verifier
+
+on:
+  pull_request:
+    paths:
+      - "packages/crypto/**"
+      - "packages/pay/src/verifier/**"
+      - "packages/pay/src/index.ts"
+      - "packages/pay/package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/commerce-verifier.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/crypto/**"
+      - "packages/pay/src/verifier/**"
+      - "packages/pay/src/index.ts"
+      - "packages/pay/package.json"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Build crypto verifier dependency
+        working-directory: packages/crypto
+        run: |
+          pnpm typecheck
+          node ../../node_modules/jest/bin/jest.js --runInBand --forceExit src/__tests__/commerce-verifier.test.ts
+          pnpm build
+      - name: Typecheck and test public verifier
+        working-directory: packages/pay
+        run: |
+          pnpm typecheck
+          pnpm exec jest --runInBand src/verifier/verifier.test.ts src/verifier/conformance.test.ts
+      - name: Build and verify vendored artifacts
+        working-directory: packages/pay
+        run: |
+          pnpm build
+      - name: Smoke packed CJS, ESM, types, and public exports
+        run: |
+          mkdir -p /tmp/ox003-pack/pay /tmp/ox003-pack/crypto
+          (cd packages/pay && npm pack --ignore-scripts --pack-destination /tmp/ox003-pack)
+          (cd packages/crypto && npm pack --ignore-scripts --pack-destination /tmp/ox003-pack)
+          tar -xzf /tmp/ox003-pack/0xkey-io-pay-0.2.0.tgz -C /tmp/ox003-pack/pay
+          tar -xzf /tmp/ox003-pack/0xkey-io-crypto-0.3.0.tgz -C /tmp/ox003-pack/crypto
+          ln -s "${{ github.workspace }}/packages/pay/node_modules" /tmp/ox003-pack/pay/package/node_modules
+          ln -s "${{ github.workspace }}/packages/crypto/node_modules" /tmp/ox003-pack/crypto/package/node_modules
+          node -e 'const p=require("/tmp/ox003-pack/pay/package");const n=["verifyDetachedJwsLive","verifyEip3009Live","verifyBootBinding","verifyCommerceVerifierBundle"];if(!n.every(x=>typeof p[x]==="function"))process.exit(1)'
+          node --input-type=module -e 'const p=await import("file:///tmp/ox003-pack/pay/package/dist/index.mjs");const n=["verifyDetachedJwsLive","verifyEip3009Live","verifyBootBinding","verifyCommerceVerifierBundle"];if(!n.every(x=>typeof p[x]==="function"))process.exit(1)'
+          node -e 'const p=require("/tmp/ox003-pack/crypto/package");if(typeof p.verifyCommerceSignature!=="function"||typeof p.CommerceBootVerificationError!=="function"||Object.hasOwn(p,"projectAuthenticatedCommerceAppProof"))process.exit(1)'
+          node --input-type=module -e 'const p=await import("file:///tmp/ox003-pack/crypto/package/dist/index.mjs");if(typeof p.verifyCommerceSignature!=="function"||typeof p.CommerceBootVerificationError!=="function"||Object.hasOwn(p,"projectAuthenticatedCommerceAppProof"))process.exit(1)'
+          printf '%s\n' 'import { verifyDetachedJwsLive, verifyEip3009Live, verifyBootBinding, verifyCommerceVerifierBundle } from "/tmp/ox003-pack/pay/package";' 'import { CommerceBootVerificationError, verifyCommerceSignature } from "/tmp/ox003-pack/crypto/package";' 'void [verifyDetachedJwsLive, verifyEip3009Live, verifyBootBinding, verifyCommerceVerifierBundle, CommerceBootVerificationError, verifyCommerceSignature];' > /tmp/ox003-pack/public-api-smoke.ts
+          node node_modules/typescript/bin/tsc --noEmit --strict --skipLibCheck --moduleResolution node --module commonjs /tmp/ox003-pack/public-api-smoke.ts
+          ! rg -n "projectAuthenticatedCommerceAppProof" /tmp/ox003-pack/crypto/package/dist/index.d.ts
+      - name: Public runtime has no network adapter
+        run: |
+          ! rg -n "fetch\(|XMLHttpRequest|WebSocket|node:(http|https|net|tls|dns)" packages/pay/src/verifier/index.ts packages/crypto/src/commerce-verifier.ts
