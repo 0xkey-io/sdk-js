@@ -119,6 +119,7 @@ dist
 
 # Generated files
 pnpm-lock.yaml
+packages/pay/src/commerce/generated/rc-bundle/
 
 # Hardhat files
 cache/
@@ -130,4 +131,3 @@ typechain-types/
 test-results/
 playwright-report/
 playwright/.cache/
-
