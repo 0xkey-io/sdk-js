@@ -27,7 +27,7 @@ export const COMMERCE_VERIFIER_METADATA = Object.freeze({
     "sha256:717fcc6c3fe26a5e8c1ba45746c67fdee5199c2a93fb860de8aab41e22c1e95e",
   bootCaptureDelayMaxMs: 1_000,
   bootVectorDigest:
-    "sha256:ea385d885e978787a94bd999767c0fe0b0d3c3e45bf6f2e14638b6a600cfd348",
+    "sha256:210ec8cec947783a3258d4e04b97e93a411856711a2c2b0504923096a8038fc7",
   wrongSignerVectorDigest:
     "sha256:c74f0ec0c8ae1b398334fccb114aadc209a9b0758d2ef8d1d7b1074761d12070",
   conformanceCorpusDigest:
