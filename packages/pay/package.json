@@ -15,7 +15,9 @@
       "import": "./dist/server/index.mjs",
       "require": "./dist/server/index.js",
       "default": "./dist/server/index.mjs"
-    }
+    },
+    "./commerce-contract/rc-bundle/*": "./dist/commerce-contract/rc-bundle/*",
+    "./commerce-verifier/artifacts/*": "./dist/commerce-verifier/artifacts/*"
   },
   "types": "./dist/index.d.ts",
   "license": "Apache-2.0",
@@ -37,22 +39,26 @@
   },
   "scripts": {
     "prepublishOnly": "pnpm run clean && pnpm run build",
-    "build": "rollup -c",
+    "build": "rollup -c && node src/commerce/generated/copy-rc-bundle.mjs && node src/verifier/copy-artifacts.mjs",
     "clean": "rimraf ./dist ./.cache",
-    "typecheck": "tsc -p tsconfig.typecheck.json",
-    "test": "jest --detectOpenHandles"
+    "typecheck": "tsc -p tsconfig.typecheck.json --allowJs false --checkJs false",
+    "test": "jest --detectOpenHandles",
+    "test:commerce-contract": "jest --runInBand src/commerce/generated/codec.test.ts"
   },
   "peerDependencies": {
     "viem": "^2.24.2"
   },
   "dependencies": {
+    "@0xkey-io/crypto": "workspace:*",
     "@0xkey-io/viem": "workspace:*",
-    "@0xkey-io/http": "workspace:*"
+    "@0xkey-io/http": "workspace:*",
+    "ajv": "8.12.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.3",
     "@types/express": "^4.17.21",
     "jest": "^29.3.1",
+    "ts-jest": "29.4.1",
     "typescript": "5.4.3",
     "viem": "^2.24.2"
   },

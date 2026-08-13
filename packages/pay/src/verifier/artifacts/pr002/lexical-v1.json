@@ -1,0 +1,59 @@
+{
+  "validIdentifiers": [
+    "buyer:alice",
+    "openant-commerce-verifier",
+    "key-2026-08",
+    "wallet:0xfcad0b19bb29d4674531d6f115237e16afce377c",
+    "zero_x_key"
+  ],
+  "invalidIdentifiers": [
+    "",
+    "ab",
+    "plain",
+    "Buyer:alice",
+    "did:web:buyer.example",
+    "buyer:",
+    "buyer::alice",
+    "buyer:alice/bob",
+    "buyer:艾丽丝"
+  ],
+  "validRfc3339UtcWholeSeconds": [
+    "0001-01-01T00:00:00Z",
+    "1970-01-01T00:00:00Z",
+    "2000-02-29T23:59:59Z",
+    "2026-08-11T04:00:00Z",
+    "9999-12-31T23:59:59Z"
+  ],
+  "invalidRfc3339UtcWholeSeconds": [
+    "0000-01-01T00:00:00Z",
+    "2026-02-29T00:00:00Z",
+    "2026-02-30T00:00:00Z",
+    "2026-08-11T04:00:00.000Z",
+    "2026-08-11T12:00:00+08:00",
+    "2026-08-11 04:00:00Z",
+    "2026-08-11T04:00:60Z",
+    "2026-08-11T04:00:00z"
+  ],
+  "validNonZeroEvmAddresses": [
+    "0x2222222222222222222222222222222222222222",
+    "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c"
+  ],
+  "invalidNonZeroEvmAddresses": [
+    "2222222222222222222222222222222222222222",
+    "0X2222222222222222222222222222222222222222",
+    "0x2222",
+    "0x0000000000000000000000000000000000000000",
+    "0xgggggggggggggggggggggggggggggggggggggggg"
+  ],
+  "validPositiveUint256Decimals": [
+    "1",
+    "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+  ],
+  "invalidPositiveUint256Decimals": [
+    "0",
+    "01",
+    "-1",
+    "1.0",
+    "115792089237316195423570985008687907853269984665640564039457584007913129639936"
+  ]
+}

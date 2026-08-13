@@ -1,5 +1,11 @@
 # @0xkey-io/crypto
 
+The Commerce Boot adapter verifies the real qOS/Nitro Boot/AppProof chain and
+never promotes a non-Commerce profile. Its deterministic package-private test
+covers session signature, canonical `commerce-authorization/v1`, claims-hash,
+and WeakSet projection semantics. The first real combined Commerce staging
+artifact remains the AC-M1-OX-008 hard integration gate.
+
 This package consolidates some common cryptographic utilities used across our applications, particularly primitives related to keys, encryption, and decryption in a pure JS implementation. For react-native you will need to polyfill our random byte generation by importing [react-native-get-random-values](https://www.npmjs.com/package/react-native-get-random-values)
 
 Example usage (Hpke E2E):

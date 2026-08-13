@@ -1,0 +1,44 @@
+name: Commerce contract
+
+on:
+  pull_request:
+    paths:
+      - "packages/pay/src/commerce/generated/**"
+      - "packages/pay/src/index.ts"
+      - "packages/pay/package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/commerce-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/pay/src/commerce/generated/**"
+      - "packages/pay/src/index.ts"
+      - "packages/pay/package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/commerce-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  immutable-commerce-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Activate the pinned pnpm toolchain
+        run: npm install --global corepack@0.34.1 && corepack enable
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @0xkey-io/pay...
+      - run: pnpm --filter @0xkey-io/crypto... build
+      - run: pnpm --filter @0xkey-io/pay test:commerce-contract
+      - run: pnpm --filter @0xkey-io/pay typecheck
+      - run: pnpm --filter @0xkey-io/pay build
+      - name: Confirm published RC bundle is byte-identical
+        run: >-
+          diff -qr
+          packages/pay/src/commerce/generated/rc-bundle
+          packages/pay/dist/commerce-contract/rc-bundle

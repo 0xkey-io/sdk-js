@@ -1,0 +1,40 @@
+{
+  "formatVersion": 1,
+  "protocolVersion": "0.1.0-draft.4",
+  "releaseCandidate": "AC-M0-PR-002/accepted",
+  "sourceDigest": "sha256:0069b449f4b0f2f2ae88103219a182703498231b3e7cbe6d76cdd7e3f195ff27",
+  "wireVersion": "0.1",
+  "files": [
+    {
+      "path": "eip712-v1.json",
+      "bytes": 3355,
+      "sha256": "sha256:fbd11abda83fcbc214808e3506a33001fab2d4193faee96245d0e27182cb9e6d"
+    },
+    {
+      "path": "jcs-v1.json",
+      "bytes": 2960,
+      "sha256": "sha256:c331b38d94a56a0c383f23c52f1d92803b8deff78331426a7aa2de80f28d186c"
+    },
+    {
+      "path": "jws-v1.json",
+      "bytes": 3363,
+      "sha256": "sha256:dc02568cb014cb46cdc984a38e987ffa1c9cfc05ddcb018c604d624a479ef6f9"
+    },
+    {
+      "path": "lexical-v1.json",
+      "bytes": 1508,
+      "sha256": "sha256:d788d31815411b0f323ae869ae4b91483c7278bbac9d2b78d30ec42f0c0da99a"
+    },
+    {
+      "path": "protocol-index.ts.source",
+      "bytes": 21305,
+      "sha256": "sha256:8d61f4759245f6d26108225c97b60ad5e418ada00024ab8843f3cdbea50a3233"
+    },
+    {
+      "path": "verifier-lib.rs",
+      "bytes": 47421,
+      "sha256": "sha256:038fcce977da0bd4a1f8b3c96d868c4d954eda2bd1c2f5f93531e3e45520ac6e"
+    }
+  ],
+  "bundleDigest": "sha256:f5d1ea24047de1ac5bc325137b68fa6cc166a03728a0ae6214d1f2424c2cc0e7"
+}
