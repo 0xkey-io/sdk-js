@@ -30,7 +30,7 @@ jobs:
         uses: ./.github/actions/js-setup
 
       - name: Build Pay signing dependency
-        run: pnpm --filter @0xkey-io/api-key-stamper build
+        run: pnpm turbo run build --filter='@0xkey-io/api-key-stamper...'
 
       - name: Typecheck
         run: pnpm --filter @0xkey-io/pay typecheck:pay-v1
