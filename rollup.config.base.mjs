@@ -33,6 +33,7 @@ const getFormatConfig = (format, options = {}) => {
       entryFileNames: singleFile
         ? `index.${format === "esm" ? "mjs" : "js"}`
         : `[name].${format === "esm" ? "mjs" : "js"}`,
+      chunkFileNames: `[name]-[hash].${format === "esm" ? "mjs" : "js"}`,
       preserveModules: !singleFile,
       preserveModulesRoot: "src",
       sourcemap: true,

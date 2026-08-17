@@ -224,7 +224,11 @@ async function pay(preference) {
     },
   });
   const response = await payFetch("https://merchant.example/weather");
-  assert.equal(response.status, 200);
+  if (response.status !== 200) {
+    throw new Error(
+      `pay failed for ${preference.join(",")}: ${response.status} ${await response.text()}`,
+    );
+  }
   assert.deepEqual(await response.json(), { weather: "sunny" });
   assert.equal(receipts.length, 1);
   assert.equal(receipts[0].protocol, preference[0]);
