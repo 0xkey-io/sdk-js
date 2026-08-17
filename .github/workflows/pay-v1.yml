@@ -29,6 +29,9 @@ jobs:
       - name: Setup JS
         uses: ./.github/actions/js-setup
 
+      - name: Build Pay signing dependency
+        run: pnpm --filter @0xkey-io/api-key-stamper build
+
       - name: Typecheck
         run: pnpm --filter @0xkey-io/pay typecheck:pay-v1
 
