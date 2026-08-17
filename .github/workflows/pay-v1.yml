@@ -61,26 +61,26 @@ jobs:
           tarballs=(/tmp/oxkey-pay-pack/*.tgz)
           [ "${#tarballs[@]}" -eq 1 ]
           contents="$(tar -tf "${tarballs[0]}")"
-          if printf '%s\n' "$contents" | rg '/(commerce|verifier)/'; then
+          if printf '%s\n' "$contents" | grep -E '/(commerce|verifier)/'; then
             echo 'Standalone Pay tarball must not contain Commerce artifacts.' >&2
             exit 1
           fi
           for entry in admin client express hono next server; do
-            printf '%s\n' "$contents" | rg -q "^package/dist/${entry}/index\\.(js|mjs|d\\.ts)$"
+            printf '%s\n' "$contents" | grep -Eq "^package/dist/${entry}/index\\.(js|mjs|d\\.ts)$"
           done
           for doc in generated-support protocol-selection-and-recovery; do
-            printf '%s\n' "$contents" | rg -q "^package/docs/${doc}\\.md$"
+            printf '%s\n' "$contents" | grep -Eq "^package/docs/${doc}\\.md$"
           done
 
       - name: Keep protocol types upstream-owned
         run: |
           set -euo pipefail
-          if rg -n '^(export )?(interface|type|class) (PaymentRequired|PaymentPayload|Credential)\b' \
+          if grep -REn '^(export )?(interface|type|class) (PaymentRequired|PaymentPayload|Credential)\b' \
             packages/pay/src/client.ts packages/pay/src/server.ts packages/pay/src/{client,server,express,hono,next,admin}; then
             echo 'Pay must use mppx or official x402 protocol types.' >&2
             exit 1
           fi
-          if rg -n 'CommerceAuthorization|BudgetReservation|MANDATE_PROTECTED' \
+          if grep -REn 'CommerceAuthorization|BudgetReservation|MANDATE_PROTECTED' \
             packages/pay/src/client.ts packages/pay/src/server.ts packages/pay/src/{client,server,express,hono,next,admin}; then
             echo 'Standalone Pay must not depend on CommerceAuthorization.' >&2
             exit 1
@@ -99,23 +99,23 @@ jobs:
       - name: Reject removed pre-release interfaces
         run: |
           set -euo pipefail
-          if rg -n '\b(Pay\.client|createPayClient|handlePaywallRequest|paywallExpress|paywallHono|withPaywall)\b' \
+          if grep -REn '\b(Pay\.client|createPayClient|handlePaywallRequest|paywallExpress|paywallHono|withPaywall)\b' \
             packages/pay/src/client.ts packages/pay/src/server.ts \
             packages/pay/src/index.ts \
             packages/pay/src/{client,server,admin,express,hono,next}; then
             echo 'Standalone Pay must not restore unused pre-release interfaces.' >&2
             exit 1
           fi
-          if rg -n '"(verified|settling|settled|failed)"' packages/pay/src/types.ts; then
+          if grep -En '"(verified|settling|settled|failed)"' packages/pay/src/types.ts; then
             echo 'Standalone Pay must not restore unused pre-release interfaces.' >&2
             exit 1
           fi
-          if rg -n '\b(GasPayerBalance|gasPayerBalance|direction)\b' \
+          if grep -REn '\b(GasPayerBalance|gasPayerBalance|direction)\b' \
             packages/pay/src/{types.ts,admin/index.ts}; then
             echo 'Standalone Pay must not expose relayer balances or the removed direction field/filter.' >&2
             exit 1
           fi
-          if rg -n '\binternalBearerToken\b' \
+          if grep -REn '\binternalBearerToken\b' \
             packages/pay/src/server.ts packages/pay/src/admin/index.ts; then
             echo 'Public Pay SDK paths must use X-Stamp, not an internal bearer.' >&2
             exit 1
