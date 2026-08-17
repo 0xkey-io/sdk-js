@@ -187,8 +187,36 @@
         "require": "./dist/index.js",
         "types": "./dist/index.d.ts"
       },
-      "./commerce-contract/rc-bundle/*": "./dist/commerce-contract/rc-bundle/*",
-      "./commerce-verifier/artifacts/*": "./dist/commerce-verifier/artifacts/*",
+      "./admin": {
+        "default": "./dist/admin/index.mjs",
+        "import": "./dist/admin/index.mjs",
+        "require": "./dist/admin/index.js",
+        "types": "./dist/admin/index.d.ts"
+      },
+      "./client": {
+        "default": "./dist/client/index.mjs",
+        "import": "./dist/client/index.mjs",
+        "require": "./dist/client/index.js",
+        "types": "./dist/client/index.d.ts"
+      },
+      "./express": {
+        "default": "./dist/express/index.mjs",
+        "import": "./dist/express/index.mjs",
+        "require": "./dist/express/index.js",
+        "types": "./dist/express/index.d.ts"
+      },
+      "./hono": {
+        "default": "./dist/hono/index.mjs",
+        "import": "./dist/hono/index.mjs",
+        "require": "./dist/hono/index.js",
+        "types": "./dist/hono/index.d.ts"
+      },
+      "./next": {
+        "default": "./dist/next/index.mjs",
+        "import": "./dist/next/index.mjs",
+        "require": "./dist/next/index.js",
+        "types": "./dist/next/index.d.ts"
+      },
       "./server": {
         "default": "./dist/server/index.mjs",
         "import": "./dist/server/index.mjs",
@@ -196,7 +224,7 @@
         "types": "./dist/server/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": ["dist/", "docs/", "CHANGELOG.md", "README.md"],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/pay",
