@@ -32,7 +32,12 @@ const exports = Object.keys(packageJson.exports)
   .sort();
 
 const rows = [
-  ["Base mainnet", constant("NETWORK_BASE"), constant("USDC_BASE"), "production"],
+  [
+    "Base mainnet",
+    constant("NETWORK_BASE"),
+    constant("USDC_BASE"),
+    "production",
+  ],
   [
     "Base Sepolia",
     constant("NETWORK_BASE_SEPOLIA"),

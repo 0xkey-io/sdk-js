@@ -15,7 +15,8 @@ export function paymentMiddleware(server: PayServer, routes: PayRoutes) {
       const payment = await server.handle(request, route);
       if (payment.status !== 200) {
         res.status(payment.response.status);
-        for (const [name, value] of payment.response.headers) res.setHeader(name, value);
+        for (const [name, value] of payment.response.headers)
+          res.setHeader(name, value);
         res.send(await payment.response.text());
         return;
       }

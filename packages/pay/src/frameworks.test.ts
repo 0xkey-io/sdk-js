@@ -14,7 +14,10 @@ function paidServer(events: string[]): PayServer {
         withReceipt(response) {
           const headers = new Headers(response.headers);
           headers.set("PAYMENT-RESPONSE", "receipt");
-          return new Response(response.body, { status: response.status, headers });
+          return new Response(response.body, {
+            status: response.status,
+            headers,
+          });
         },
       };
     },
@@ -85,7 +88,9 @@ test("Next settles before the route handler and keeps the receipt on 5xx", async
       return new Response("failed", { status: 500 });
     },
   );
-  const response = await handler(new Request("https://api.example.com/weather"));
+  const response = await handler(
+    new Request("https://api.example.com/weather"),
+  );
   expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
   expect(response.status).toBe(500);
   expect(response.headers.get("PAYMENT-RESPONSE")).toBe("receipt");
@@ -123,8 +128,8 @@ test("Next records a thrown merchant handler after payment", async () => {
       throw new Error("merchant failed");
     },
   );
-  await expect(handler(new Request("https://api.example.com/weather"))).rejects.toThrow(
-    "merchant failed",
-  );
+  await expect(
+    handler(new Request("https://api.example.com/weather")),
+  ).rejects.toThrow("merchant failed");
   expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
 });

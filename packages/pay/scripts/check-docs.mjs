@@ -25,21 +25,31 @@ const recovery = bodies.find(
 if (!recovery) throw new Error("Missing protocol selection and recovery doc");
 
 const openings = recovery.match(/^```mermaid\s*$/gm)?.length ?? 0;
-const blocks = [...recovery.matchAll(/^```mermaid\s*\n([\s\S]*?)^```\s*$/gm)].map(
-  (match) => match[1],
-);
+const blocks = [
+  ...recovery.matchAll(/^```mermaid\s*\n([\s\S]*?)^```\s*$/gm),
+].map((match) => match[1]);
 if (openings !== blocks.length) {
-  throw new Error("protocol-selection-and-recovery.md has an unclosed Mermaid block");
+  throw new Error(
+    "protocol-selection-and-recovery.md has an unclosed Mermaid block",
+  );
 }
 
 const sequence = blocks.find((block) =>
   block.trimStart().startsWith("sequenceDiagram"),
 );
 if (!sequence) {
-  throw new Error("protocol-selection-and-recovery.md needs a sequence diagram");
+  throw new Error(
+    "protocol-selection-and-recovery.md needs a sequence diagram",
+  );
 }
 
-for (const marker of ["saveIfAbsent", "fallback", "resume()", "receipt", "clear("]) {
+for (const marker of [
+  "saveIfAbsent",
+  "fallback",
+  "resume()",
+  "receipt",
+  "clear(",
+]) {
   if (!sequence.toLowerCase().includes(marker.toLowerCase())) {
     throw new Error(`SDK recovery sequence is missing ${marker}`);
   }

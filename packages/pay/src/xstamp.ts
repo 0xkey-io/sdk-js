@@ -1,7 +1,4 @@
-import {
-  ApiKeyStamper,
-  SignatureFormat,
-} from "@0xkey-io/api-key-stamper";
+import { ApiKeyStamper, SignatureFormat } from "@0xkey-io/api-key-stamper";
 
 export type WireProtocol = "x402" | "mpp" | "admin";
 
@@ -60,11 +57,13 @@ export function createXStampV2Stamper(apiKey: PayApiKey): RequestStamper {
   };
 }
 
-export async function xStampV2Canonical(input: RequestStampInput & {
-  body: string;
-  nonce: string;
-  timestampMs: number;
-}): Promise<string> {
+export async function xStampV2Canonical(
+  input: RequestStampInput & {
+    body: string;
+    nonce: string;
+    timestampMs: number;
+  },
+): Promise<string> {
   const url = new URL(input.url);
   return [
     "2",
@@ -92,8 +91,9 @@ function canonicalQuery(url: URL): string {
 }
 
 function rfc3986(value: string): string {
-  return encodeURIComponent(value).replace(/[!'()*]/g, (character) =>
-    `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 }
 
@@ -130,9 +130,13 @@ function base64Url(value: string): string {
   if (typeof btoa === "function") {
     encoded = btoa(String.fromCharCode(...bytes));
   } else {
-    const buffer = (globalThis as unknown as {
-      Buffer?: { from(value: Uint8Array): { toString(encoding: string): string } };
-    }).Buffer;
+    const buffer = (
+      globalThis as unknown as {
+        Buffer?: {
+          from(value: Uint8Array): { toString(encoding: string): string };
+        };
+      }
+    ).Buffer;
     if (!buffer) throw new Error("X-Stamp V2 requires a base64 encoder");
     encoded = buffer.from(bytes).toString("base64");
   }

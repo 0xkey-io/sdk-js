@@ -3,7 +3,10 @@ import type { PayRoute, PayServer } from "../server";
 export function withPayment(
   server: PayServer,
   route: PayRoute,
-  handler: (request: Request, context?: unknown) => Response | Promise<Response>,
+  handler: (
+    request: Request,
+    context?: unknown,
+  ) => Response | Promise<Response>,
 ) {
   return async (request: Request, context?: unknown): Promise<Response> => {
     const payment = await server.handle(request, route);
