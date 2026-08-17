@@ -33,12 +33,12 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile --filter @0xkey-io/pay...
-      - run: pnpm --filter @0xkey-io/crypto... build
+      - name: Build Pay dependency graph
+        run: pnpm turbo run build --filter='@0xkey-io/pay^...'
       - run: pnpm --filter @0xkey-io/pay test:commerce-contract
       - run: pnpm --filter @0xkey-io/pay typecheck
       - run: pnpm --filter @0xkey-io/pay build
-      - name: Confirm published RC bundle is byte-identical
-        run: >-
-          diff -qr
-          packages/pay/src/commerce/generated/rc-bundle
-          packages/pay/dist/commerce-contract/rc-bundle
+      - name: Confirm Commerce contract is not shipped from Pay
+        run: |
+          test ! -e packages/pay/dist/commerce-contract
+          node -e 'const p=require("./packages/pay/package.json");if(Object.keys(p.exports).some(x=>x.startsWith("./commerce")))process.exit(1)'

@@ -34,8 +34,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build crypto workspace dependencies in topological order
-        run: pnpm --filter @0xkey-io/crypto... build
+      - name: Build Pay dependency graph
+        run: pnpm turbo run build --filter='@0xkey-io/pay^...'
       - name: Build crypto verifier dependency
         working-directory: packages/crypto
         run: |
@@ -51,22 +51,24 @@ jobs:
         working-directory: packages/pay
         run: |
           pnpm build
-      - name: Smoke packed CJS, ESM, types, and public exports
+      - name: Smoke packed crypto exports and Pay isolation
         run: |
           mkdir -p /tmp/ox003-pack/pay /tmp/ox003-pack/crypto
           (cd packages/pay && npm pack --ignore-scripts --pack-destination /tmp/ox003-pack)
           (cd packages/crypto && npm pack --ignore-scripts --pack-destination /tmp/ox003-pack)
-          tar -xzf /tmp/ox003-pack/0xkey-io-pay-0.2.0.tgz -C /tmp/ox003-pack/pay
-          tar -xzf /tmp/ox003-pack/0xkey-io-crypto-0.3.0.tgz -C /tmp/ox003-pack/crypto
+          tar -xzf /tmp/ox003-pack/0xkey-io-pay-*.tgz -C /tmp/ox003-pack/pay
+          tar -xzf /tmp/ox003-pack/0xkey-io-crypto-*.tgz -C /tmp/ox003-pack/crypto
           ln -s "${{ github.workspace }}/packages/pay/node_modules" /tmp/ox003-pack/pay/package/node_modules
           ln -s "${{ github.workspace }}/packages/crypto/node_modules" /tmp/ox003-pack/crypto/package/node_modules
-          node -e 'const p=require("/tmp/ox003-pack/pay/package");const n=["verifyDetachedJwsLive","verifyEip3009Live","verifyBootBinding","verifyCommerceVerifierBundle"];if(!n.every(x=>typeof p[x]==="function"))process.exit(1)'
-          node --input-type=module -e 'const p=await import("file:///tmp/ox003-pack/pay/package/dist/index.mjs");const n=["verifyDetachedJwsLive","verifyEip3009Live","verifyBootBinding","verifyCommerceVerifierBundle"];if(!n.every(x=>typeof p[x]==="function"))process.exit(1)'
+          node -e 'const p=require("/tmp/ox003-pack/pay/package");const n=["verifyDetachedJwsLive","verifyEip3009Live","verifyBootBinding","verifyCommerceVerifierBundle"];if(n.some(x=>Object.hasOwn(p,x)))process.exit(1)'
+          node --input-type=module -e 'const p=await import("file:///tmp/ox003-pack/pay/package/dist/index.mjs");const n=["verifyDetachedJwsLive","verifyEip3009Live","verifyBootBinding","verifyCommerceVerifierBundle"];if(n.some(x=>Object.hasOwn(p,x)))process.exit(1)'
+          test ! -e /tmp/ox003-pack/pay/package/dist/verifier
+          test ! -e /tmp/ox003-pack/pay/package/dist/commerce-verifier
           node -e 'const p=require("/tmp/ox003-pack/crypto/package");if(typeof p.verifyCommerceSignature!=="function"||typeof p.CommerceBootVerificationError!=="function"||Object.hasOwn(p,"projectAuthenticatedCommerceAppProof"))process.exit(1)'
           node --input-type=module -e 'const p=await import("file:///tmp/ox003-pack/crypto/package/dist/index.mjs");if(typeof p.verifyCommerceSignature!=="function"||typeof p.CommerceBootVerificationError!=="function"||Object.hasOwn(p,"projectAuthenticatedCommerceAppProof"))process.exit(1)'
-          printf '%s\n' 'import { verifyDetachedJwsLive, verifyEip3009Live, verifyBootBinding, verifyCommerceVerifierBundle } from "/tmp/ox003-pack/pay/package";' 'import { CommerceBootVerificationError, verifyCommerceSignature } from "/tmp/ox003-pack/crypto/package";' 'void [verifyDetachedJwsLive, verifyEip3009Live, verifyBootBinding, verifyCommerceVerifierBundle, CommerceBootVerificationError, verifyCommerceSignature];' > /tmp/ox003-pack/public-api-smoke.ts
+          printf '%s\n' 'import { CommerceBootVerificationError, verifyCommerceSignature } from "/tmp/ox003-pack/crypto/package";' 'void [CommerceBootVerificationError, verifyCommerceSignature];' > /tmp/ox003-pack/public-api-smoke.ts
           node node_modules/typescript/bin/tsc --noEmit --strict --skipLibCheck --moduleResolution node --module commonjs /tmp/ox003-pack/public-api-smoke.ts
-          ! rg -n "projectAuthenticatedCommerceAppProof" /tmp/ox003-pack/crypto/package/dist/index.d.ts
+          ! grep -q "projectAuthenticatedCommerceAppProof" /tmp/ox003-pack/crypto/package/dist/index.d.ts
       - name: Public runtime has no network adapter
         run: |
-          ! rg -n "fetch\(|XMLHttpRequest|WebSocket|node:(http|https|net|tls|dns)" packages/pay/src/verifier/index.ts packages/crypto/src/commerce-verifier.ts
+          ! grep -Eq "fetch\(|XMLHttpRequest|WebSocket|node:(http|https|net|tls|dns)" packages/pay/src/verifier/index.ts packages/crypto/src/commerce-verifier.ts
