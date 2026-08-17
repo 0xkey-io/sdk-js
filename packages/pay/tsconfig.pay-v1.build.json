@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "files": [
+    "src/index.ts",
+    "src/client.ts",
+    "src/receipt-verifier.ts",
+    "src/server.ts",
+    "src/constants.ts",
+    "src/errors.ts",
+    "src/types.ts",
+    "src/xstamp.ts",
+    "src/client/index.ts",
+    "src/server/index.ts",
+    "src/admin/index.ts",
+    "src/express/index.ts",
+    "src/hono/index.ts",
+    "src/next/index.ts"
+  ],
+  "include": []
+}

@@ -1,182 +1,175 @@
-import {
-  createFacilitatorClient,
-  createPayClient,
-  type Stamper,
-} from "./server";
+import { createFacilitatorClient, createPayServer } from "./server";
 import type { PaymentPayload, PaymentRequirements } from "./types";
+import type { RequestStampInput, RequestStamper } from "./xstamp";
+
+jest.mock("mppx", () => ({
+  Credential: { deserialize: jest.fn() },
+  Receipt: { fromResponse: jest.fn() },
+  x402: { Header: { decodePaymentSignature: jest.fn() } },
+}));
+jest.mock("mppx/server", () => ({
+  Mppx: {
+    create: jest.fn(() => ({
+      evm: { charge: jest.fn(() => jest.fn()) },
+    })),
+  },
+}));
+jest.mock("mppx/evm/server", () => {
+  const USDC = {
+    address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    network: "eip155:84532",
+    transfer: { name: "USDC", version: "2" },
+  };
+  return {
+    assets: { base: { USDC }, baseSepolia: { USDC } },
+    charge: jest.fn((config) => config),
+  };
+});
+jest.mock("mppx/evm", () => ({
+  Types: { challengeHash: jest.fn(() => "native-nonce") },
+}));
 
 const ORG = "11111111-1111-1111-1111-111111111111";
-
-const payload = {
-  x402Version: 2,
-  scheme: "exact",
-  network: "eip155:84532",
-  payload: {
-    signature: "0xsig",
-    authorization: {
-      from: "0xfrom",
-      to: "0xto",
-      value: "1000",
-      validAfter: "0",
-      validBefore: "99",
-      nonce: "0xnonce",
-    },
-  },
-} as unknown as PaymentPayload;
 
 const requirements = {
   scheme: "exact",
   network: "eip155:84532",
   amount: "1000",
-  asset: "0xusdc",
-  payTo: "0xto",
+  asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  payTo: "0x1111111111111111111111111111111111111111",
   maxTimeoutSeconds: 300,
-} as PaymentRequirements;
+  extra: {
+    assetTransferMethod: "eip3009",
+    name: "USDC",
+    version: "2",
+  },
+} satisfies PaymentRequirements;
 
-/** Records the exact payload it was asked to stamp, so tests can assert the
- *  signature is computed over the bytes that are actually sent. */
-function fakeStamper(): Stamper & { stamped: string[] } {
-  const stamped: string[] = [];
-  return {
-    stamped,
-    async stamp(p: string) {
-      stamped.push(p);
-      return { stampHeaderName: "X-Stamp", stampHeaderValue: "stamp-of:" + p };
+const payload = {
+  x402Version: 2,
+  accepted: requirements,
+  payload: {
+    signature: `0x${"11".repeat(65)}`,
+    authorization: {
+      from: "0x2222222222222222222222222222222222222222",
+      to: requirements.payTo,
+      value: requirements.amount,
+      validAfter: "0",
+      validBefore: "99",
+      nonce: `0x${"22".repeat(32)}`,
+    },
+  },
+} satisfies PaymentPayload;
+
+function fakeStamper() {
+  const inputs: RequestStampInput[] = [];
+  const stamper: RequestStamper = {
+    async stampRequest(input) {
+      inputs.push(input);
+      return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed-v2" };
     },
   };
+  return { inputs, stamper };
 }
 
-function mockFetch() {
-  const calls: { url: string; init: RequestInit }[] = [];
-  const fn = (async (url: string, init: RequestInit) => {
-    calls.push({ url, init });
-    return {
-      ok: true,
-      status: 200,
-      async json() {
-        return { isValid: true, success: true, payments: [], balances: [] };
+describe("createFacilitatorClient", () => {
+  it("signs the exact request with its wire protocol", async () => {
+    const { inputs, stamper } = fakeStamper();
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetch = jest.fn(
+      async (url: RequestInfo | URL, init?: RequestInit) => {
+        calls.push({ url: String(url), ...(init ? { init } : {}) });
+        return Response.json({ success: true, transaction: "0xtx" });
       },
-      async text() {
-        return JSON.stringify({ payments: [], balances: [] });
-      },
-    } as unknown as Response;
-  }) as unknown as typeof fetch;
-  return { fn, calls };
-}
-
-describe("createFacilitatorClient stamper mode", () => {
-  it("embeds organizationId in the signed body and sends X-Stamp over those bytes", async () => {
-    const stamper = fakeStamper();
-    const { fn, calls } = mockFetch();
+    ) as typeof globalThis.fetch;
     const client = createFacilitatorClient({
       baseUrl: "https://pay.example",
       organizationId: ORG,
       stamper,
-      fetch: fn,
+      fetch,
     });
 
-    await client.settle(payload, requirements);
+    await client.settle(payload, requirements, "mpp");
 
-    expect(calls).toHaveLength(1);
-    const { url, init } = calls[0]!;
-    expect(url).toBe("https://pay.example/settle");
-    const sentBody = init.body as string;
-    // The stamp must be computed over the exact bytes that are sent.
-    expect(stamper.stamped).toEqual([sentBody]);
-    expect((init.headers as Record<string, string>)["X-Stamp"]).toBe(
-      "stamp-of:" + sentBody,
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]).toMatchObject({
+      method: "POST",
+      url: "https://pay.example/settle",
+      organizationId: ORG,
+      wireProtocol: "mpp",
+    });
+    expect(inputs[0]!.body).toBe(calls[0]!.init!.body);
+    expect(JSON.parse(inputs[0]!.body!)).toMatchObject({
+      organizationId: ORG,
+      paymentPayload: { x402Version: 2 },
+    });
+    expect((calls[0]!.init!.headers as Record<string, string>)["X-Stamp"]).toBe(
+      "signed-v2",
     );
-    // organizationId is embedded so the gateway can read+authorize it.
-    expect(JSON.parse(sentBody).organizationId).toBe(ORG);
-    // No bearer / org header in stamper mode.
-    const headers = init.headers as Record<string, string>;
-    expect(headers["Authorization"]).toBeUndefined();
-    expect(headers["x-0xkey-organization-id"]).toBeUndefined();
   });
 
-  it("throws if organizationId is missing in stamper mode", async () => {
-    const stamper = fakeStamper();
-    const { fn } = mockFetch();
+  it("keeps the HTTP status when a facilitator error is not JSON", async () => {
+    const { stamper } = fakeStamper();
     const client = createFacilitatorClient({
       baseUrl: "https://pay.example",
+      organizationId: ORG,
       stamper,
-      fetch: fn,
+      fetch: async () => new Response("bad gateway", { status: 502 }),
     });
-    await expect(client.verify(payload, requirements)).rejects.toThrow(
-      /organizationId is required/,
+
+    await expect(client.settle(payload, requirements)).rejects.toThrow(
+      "Pay facilitator request failed with 502",
     );
+  });
+
+  it("preserves a structured unknown 503 for durable recovery", async () => {
+    const { stamper } = fakeStamper();
+    const client = createFacilitatorClient({
+      baseUrl: "https://pay.example",
+      organizationId: ORG,
+      stamper,
+      fetch: async () =>
+        Response.json(
+          {
+            success: false,
+            errorReason: "PAYMENT_STATUS_UNKNOWN",
+            paymentId: "22222222-2222-2222-2222-222222222222",
+          },
+          { status: 503 },
+        ),
+    });
+
+    await expect(client.settle(payload, requirements)).resolves.toMatchObject({
+      success: false,
+      errorReason: "PAYMENT_STATUS_UNKNOWN",
+      paymentId: "22222222-2222-2222-2222-222222222222",
+    });
   });
 });
 
-describe("createFacilitatorClient bearer mode", () => {
-  it("sends Authorization + org header and no organizationId in the body", async () => {
-    const { fn, calls } = mockFetch();
-    const client = createFacilitatorClient({
-      baseUrl: "https://facilitator.internal",
-      apiKey: "internal-key",
+describe("createPayServer", () => {
+  it("rejects two credentials before settlement", async () => {
+    const server = createPayServer({
+      environment: "sandbox",
       organizationId: ORG,
-      fetch: fn,
+      payTo: requirements.payTo as `0x${string}`,
+      apiKey: { publicKey: "unused", privateKey: "unused" },
+      mppSecretKey: "01234567890123456789012345678901",
+    });
+    const request = new Request("https://merchant.example/weather", {
+      headers: {
+        Authorization: "Payment native-credential",
+        "PAYMENT-SIGNATURE": "x402-credential",
+      },
     });
 
-    await client.verify(payload, requirements);
+    const result = await server.handle(request, { price: "$0.01" });
 
-    const { init } = calls[0]!;
-    const headers = init.headers as Record<string, string>;
-    expect(headers["Authorization"]).toBe("Bearer internal-key");
-    expect(headers["x-0xkey-organization-id"]).toBe(ORG);
-    expect(JSON.parse(init.body as string).organizationId).toBeUndefined();
-  });
-});
-
-describe("createPayClient reads", () => {
-  it("signs an empty body and forwards filters + cursor on list", async () => {
-    const stamper = fakeStamper();
-    const { fn, calls } = mockFetch();
-    const pay = createPayClient({
-      baseUrl: "https://pay.example",
-      organizationId: ORG,
-      stamper,
-      fetch: fn,
-    });
-
-    await pay.payments.list({
-      organizationId: ORG,
-      status: "settled",
-      network: "eip155:84532",
-      direction: "inbound",
-      address: "0xabc",
-      limit: 20,
-      after: "cursor-1",
-    });
-
-    const { url, init } = calls[0]!;
-    expect(url).toContain(`/v1/organizations/${ORG}/payments?`);
-    expect(url).toContain("status=settled");
-    expect(url).toContain("network=eip155");
-    expect(url).toContain("direction=inbound");
-    expect(url).toContain("address=0xabc");
-    expect(url).toContain("after=cursor-1");
-    // GET signs the empty body; org travels in the path.
-    expect(stamper.stamped).toEqual([""]);
-    expect((init.headers as Record<string, string>)["X-Stamp"]).toBe(
-      "stamp-of:",
-    );
-  });
-
-  it("hits the gas-payer-balance endpoint", async () => {
-    const stamper = fakeStamper();
-    const { fn, calls } = mockFetch();
-    const pay = createPayClient({
-      baseUrl: "https://pay.example",
-      organizationId: ORG,
-      stamper,
-      fetch: fn,
-    });
-
-    await pay.payments.gasPayerBalance({ organizationId: ORG });
-
-    expect(calls[0]!.url).toBe(
-      `https://pay.example/v1/organizations/${ORG}/payments/gas-payer-balance`,
-    );
+    expect(result.status).toBe(400);
+    if (result.status === 400) {
+      await expect(result.response.json()).resolves.toMatchObject({
+        errorCode: "AMBIGUOUS_PAYMENT_CREDENTIAL",
+      });
+    }
   });
 });

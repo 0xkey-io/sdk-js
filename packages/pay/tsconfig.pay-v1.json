@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.pay-v1.build.json",
+  "compilerOptions": {
+    "noEmit": true
+  }
+}

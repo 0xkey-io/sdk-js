@@ -1,413 +1,465 @@
-import {
-  HEADER_PAYMENT_REQUIRED,
-  HEADER_PAYMENT_RESPONSE,
-  HEADER_PAYMENT_SIGNATURE,
-  X402_VERSION,
-  dollarsToAtomic,
-} from "./constants";
-import {
-  encodeBase64Json,
-  decodePaymentPayloadHeader,
-  decodePaymentRequiredHeader,
-  encodePaymentRequired,
-} from "./errors";
+import { Credential, Errors, Receipt, x402 } from "mppx";
+import { Types as EvmTypes } from "mppx/evm";
+import { Mppx } from "mppx/server";
+import { assets, charge as evmCharge } from "mppx/evm/server";
 import type {
-  GasPayerBalanceParams,
-  GasPayerBalanceResponse,
   PaymentPayload,
-  PaymentGetParams,
-  PaymentListParams,
-  PaymentListResponse,
-  PaymentRecord,
-  PaymentReceipt,
   PaymentRequirements,
   SettleResponse,
   VerifyResponse,
-} from "./types";
-
-/**
- * Minimal stamper contract (satisfied by `@0xkey-io/api-key-stamper`'s
- * `ApiKeyStamper`). Signs a payload string and returns the X-Stamp header to
- * send. Kept as an interface so `@0xkey-io/pay` need not hard-depend on the
- * stamper package.
- */
-export interface Stamper {
-  stamp(
-    payload: string,
-  ): Promise<{ stampHeaderName: string; stampHeaderValue: string }>;
-}
+} from "mppx/x402";
+import type { Address } from "viem";
+import { createXStampV2Stamper } from "./xstamp";
+import type { PayApiKey, RequestStamper, WireProtocol } from "./xstamp";
 
 export interface FacilitatorClientOptions {
   baseUrl: string;
-  /**
-   * X-Stamp signer (P-256 API key). Preferred when talking to the PUBLIC
-   * pay-gateway (pay.staging.0xkey.io): the org is bound cryptographically.
-   * `organizationId` is then required and is embedded in the signed body.
-   */
-  stamper?: Stamper;
-  /**
-   * Bearer token for the INTERNAL facilitator (in-cluster, behind a trusted
-   * BFF). Ignored when `stamper` is set.
-   */
-  apiKey?: string;
-  organizationId?: string;
-  fetch?: typeof fetch;
+  organizationId: string;
+  apiKey?: PayApiKey;
+  stamper?: RequestStamper;
+  fetch?: typeof globalThis.fetch;
 }
 
-/**
- * Build auth headers + the exact request body for a POST write. In stamper mode
- * the organizationId is embedded in the signed body (so the gateway can read
- * and authorize it) and the X-Stamp is computed over those exact bytes.
- */
-async function buildSignedPost(
-  opts: FacilitatorClientOptions,
-  payload: object,
-): Promise<{ headers: Record<string, string>; body: string }> {
-  if (opts.stamper) {
-    if (!opts.organizationId) {
-      throw new Error(
-        "organizationId is required when using a stamper (it is embedded in the signed body)",
-      );
-    }
+export function createFacilitatorClient(options: FacilitatorClientOptions) {
+  const baseUrl = options.baseUrl.replace(/\/$/, "");
+  const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+  const stamper = requireFacilitatorStamper(
+    options.stamper ??
+      (options.apiKey ? createXStampV2Stamper(options.apiKey) : undefined),
+  );
+
+  async function request<T>(
+    path: string,
+    payload: object,
+    wireProtocol: WireProtocol,
+  ): Promise<T> {
+    const url = `${baseUrl}${path}`;
     const body = JSON.stringify({
       ...payload,
-      organizationId: opts.organizationId,
+      organizationId: options.organizationId,
     });
-    const { stampHeaderName, stampHeaderValue } =
-      await opts.stamper.stamp(body);
-    return {
-      headers: {
-        "Content-Type": "application/json",
-        [stampHeaderName]: stampHeaderValue,
-      },
-      body,
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
     };
-  }
-  return {
-    headers: {
-      "Content-Type": "application/json",
-      ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
-      ...(opts.organizationId
-        ? { "x-0xkey-organization-id": opts.organizationId }
-        : {}),
-    },
-    body: JSON.stringify(payload),
-  };
-}
-
-/** Build auth headers for an org-scoped GET (org travels in the path). */
-async function buildReadHeaders(
-  opts: FacilitatorClientOptions,
-): Promise<Record<string, string>> {
-  if (opts.stamper) {
-    // The pay-gateway verifies the stamp over the (empty) body for GETs; the
-    // org is taken from the URL path. Replay protection comes from the stamp
-    // timestamp, not the body.
-    const { stampHeaderName, stampHeaderValue } = await opts.stamper.stamp("");
-    return { [stampHeaderName]: stampHeaderValue };
-  }
-  return {
-    ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
-    ...(opts.organizationId
-      ? { "x-0xkey-organization-id": opts.organizationId }
-      : {}),
-  };
-}
-
-export function createFacilitatorClient(opts: FacilitatorClientOptions) {
-  const baseFetch = opts.fetch ?? globalThis.fetch.bind(globalThis);
-
-  async function verify(
-    paymentPayload: PaymentPayload,
-    paymentRequirements: PaymentRequirements,
-  ): Promise<VerifyResponse> {
-    const { headers, body } = await buildSignedPost(opts, {
-      x402Version: X402_VERSION,
-      paymentPayload,
-      paymentRequirements,
-    });
-    const res = await baseFetch(`${opts.baseUrl.replace(/\/$/, "")}/verify`, {
+    const stamped = await stamper.stampRequest({
       method: "POST",
-      headers,
+      url,
       body,
+      organizationId: options.organizationId,
+      wireProtocol,
     });
-    return (await res.json()) as VerifyResponse;
-  }
-
-  async function settle(
-    paymentPayload: PaymentPayload,
-    paymentRequirements: PaymentRequirements,
-  ): Promise<SettleResponse> {
-    const { headers, body } = await buildSignedPost(opts, {
-      x402Version: X402_VERSION,
-      paymentPayload,
-      paymentRequirements,
-    });
-    const res = await baseFetch(`${opts.baseUrl.replace(/\/$/, "")}/settle`, {
-      method: "POST",
-      headers,
-      body,
-    });
-    return (await res.json()) as SettleResponse;
-  }
-
-  return { verify, settle };
-}
-
-async function readJson<T>(res: Response): Promise<T> {
-  const text = await res.text();
-  const body = text ? JSON.parse(text) : undefined;
-  if (!res.ok) {
-    throw new Error(
-      typeof body?.error === "string"
-        ? body.error
-        : `Pay API request failed with ${res.status}`,
-    );
-  }
-  return body as T;
-}
-
-export function createPayClient(opts: FacilitatorClientOptions) {
-  const baseFetch = opts.fetch ?? globalThis.fetch.bind(globalThis);
-  const baseUrl = opts.baseUrl.replace(/\/$/, "");
-
-  async function listPayments(
-    params: PaymentListParams,
-  ): Promise<PaymentListResponse> {
-    const search = new URLSearchParams();
-    if (params.status) search.set("status", params.status);
-    if (params.txHash) search.set("txHash", params.txHash);
-    if (params.network) search.set("network", params.network);
-    if (params.direction) search.set("direction", params.direction);
-    if (params.address) search.set("address", params.address);
-    if (params.createdAfter) search.set("createdAfter", params.createdAfter);
-    if (params.createdBefore) search.set("createdBefore", params.createdBefore);
-    if (params.limit) search.set("limit", String(params.limit));
-    if (params.after) search.set("after", params.after);
-    const query = search.toString();
-    const res = await baseFetch(
-      `${baseUrl}/v1/organizations/${params.organizationId}/payments${
-        query ? `?${query}` : ""
-      }`,
-      { headers: await buildReadHeaders(opts) },
-    );
-    return readJson<PaymentListResponse>(res);
-  }
-
-  async function getPayment(params: PaymentGetParams): Promise<PaymentRecord> {
-    const res = await baseFetch(
-      `${baseUrl}/v1/organizations/${params.organizationId}/payments/${params.paymentId}`,
-      { headers: await buildReadHeaders(opts) },
-    );
-    return readJson<PaymentRecord>(res);
-  }
-
-  async function gasPayerBalance(
-    params: GasPayerBalanceParams,
-  ): Promise<GasPayerBalanceResponse> {
-    const res = await baseFetch(
-      `${baseUrl}/v1/organizations/${params.organizationId}/payments/gas-payer-balance`,
-      { headers: await buildReadHeaders(opts) },
-    );
-    return readJson<GasPayerBalanceResponse>(res);
-  }
-
-  return {
-    payments: {
-      list: listPayments,
-      get: getPayment,
-      gasPayerBalance,
-    },
-  };
-}
-
-export interface PaywallOptions {
-  price: string;
-  asset: string;
-  network: string;
-  payTo: string;
-  facilitator: FacilitatorClientOptions;
-  description?: string;
-  resource?: string;
-  maxTimeoutSeconds?: number;
-  settleFirst?: boolean;
-  organizationId?: string;
-}
-
-function buildRequirements(opts: PaywallOptions): PaymentRequirements {
-  const req: PaymentRequirements = {
-    scheme: "exact",
-    network: opts.network,
-    amount: dollarsToAtomic(opts.price),
-    asset: opts.asset,
-    payTo: opts.payTo,
-    maxTimeoutSeconds: opts.maxTimeoutSeconds ?? 300,
-    mimeType: "application/json",
-    extra: { name: "USDC", version: "2" },
-  };
-  if (opts.description) req.description = opts.description;
-  if (opts.resource) req.resource = opts.resource;
-  return req;
-}
-
-function payment402(required: PaymentRequirements, reason?: string): Response {
-  const body: {
-    x402Version: 2;
-    error?: string;
-    accepts: PaymentRequirements[];
-  } = {
-    x402Version: X402_VERSION,
-    accepts: [required],
-  };
-  if (reason) body.error = reason;
-  const encoded = encodePaymentRequired(body);
-  return new Response(JSON.stringify(body), {
-    status: 402,
-    headers: {
-      "Content-Type": "application/json",
-      [HEADER_PAYMENT_REQUIRED]: encoded,
-    },
-  });
-}
-
-export async function handlePaywallRequest(
-  req: Request,
-  opts: PaywallOptions,
-  handler: () => Promise<Response> | Response,
-): Promise<Response> {
-  const requirements = buildRequirements(opts);
-  const sigHeader = req.headers.get(HEADER_PAYMENT_SIGNATURE);
-
-  if (!sigHeader) {
-    return payment402(requirements);
-  }
-
-  let payload: PaymentPayload;
-  try {
-    payload = decodePaymentPayloadHeader<PaymentPayload>(sigHeader);
-  } catch {
-    return payment402(requirements, "Invalid PAYMENT-SIGNATURE");
-  }
-
-  const facilitator = createFacilitatorClient(opts.facilitator);
-  const verifyResult = await facilitator.verify(payload, requirements);
-  if (!verifyResult.isValid) {
-    return payment402(
-      requirements,
-      verifyResult.invalidReason ?? "verify failed",
-    );
-  }
-
-  const runHandler = async () => {
-    const business = await handler();
-    const settleResult = await facilitator.settle(payload, requirements);
-    if (!settleResult.success) {
-      return new Response(
-        JSON.stringify({ error: settleResult.errorReason ?? "settle failed" }),
-        { status: 500 },
+    headers[stamped.stampHeaderName] = stamped.stampHeaderValue;
+    const response = await fetch(url, { method: "POST", headers, body });
+    const text = await response.text();
+    let result: unknown = text;
+    if (text) {
+      try {
+        result = JSON.parse(text) as unknown;
+      } catch {
+        // Preserve the HTTP status for text and proxy-generated error bodies.
+      }
+    }
+    const structuredUnknown = response.status === 503 && isRecord(result);
+    if (!response.ok && !structuredUnknown) {
+      const errorCode =
+        isRecord(result) && typeof result.errorCode === "string"
+          ? `: ${result.errorCode}`
+          : "";
+      throw new Error(
+        `Pay facilitator request failed with ${response.status}${errorCode}`,
       );
     }
-    const receipt: PaymentReceipt = {
-      success: true,
-      ...(settleResult.transaction
-        ? { transaction: settleResult.transaction }
-        : {}),
-      ...(settleResult.network ? { network: settleResult.network } : {}),
-      ...(settleResult.payer ? { payer: settleResult.payer } : {}),
-    };
-    const headers = new Headers(business.headers);
-    headers.set(HEADER_PAYMENT_RESPONSE, encodeBase64Json(receipt));
-    return new Response(business.body, {
-      status: business.status,
-      statusText: business.statusText,
-      headers,
-    });
-  };
-
-  if (opts.settleFirst) {
-    const settleResult = await facilitator.settle(payload, requirements);
-    if (!settleResult.success) {
-      return payment402(requirements, settleResult.errorReason);
+    if (!isRecord(result)) {
+      throw new Error(
+        `Pay facilitator response was not JSON (HTTP ${response.status})`,
+      );
     }
-    const business = await handler();
-    const receipt: PaymentReceipt = {
-      success: true,
-      ...(settleResult.transaction
-        ? { transaction: settleResult.transaction }
-        : {}),
-      ...(settleResult.network ? { network: settleResult.network } : {}),
-      ...(settleResult.payer ? { payer: settleResult.payer } : {}),
-    };
-    const headers = new Headers(business.headers);
-    headers.set(HEADER_PAYMENT_RESPONSE, encodeBase64Json(receipt));
-    return new Response(business.body, { status: business.status, headers });
+    return result as T;
   }
 
-  return runHandler();
+  return {
+    verify(
+      paymentPayload: PaymentPayload,
+      paymentRequirements: PaymentRequirements,
+      wireProtocol: WireProtocol = "x402",
+    ) {
+      return request<VerifyResponse>(
+        "/verify",
+        { x402Version: 2, paymentPayload, paymentRequirements },
+        wireProtocol,
+      );
+    },
+    settle(
+      paymentPayload: PaymentPayload,
+      paymentRequirements: PaymentRequirements,
+      wireProtocol: WireProtocol = "x402",
+    ) {
+      return request<SettleResponse & { paymentId: string }>(
+        "/settle",
+        { x402Version: 2, paymentPayload, paymentRequirements },
+        wireProtocol,
+      );
+    },
+  };
 }
 
-/** Express middleware factory */
-export function paywallExpress(opts: PaywallOptions) {
-  return async (
-    req: {
-      headers: Record<string, string | string[] | undefined>;
-      url?: string;
-    },
-    res: {
-      status: (code: number) => {
-        setHeader: (k: string, v: string) => void;
-        send: (b: string) => void;
-      };
-      setHeader: (k: string, v: string) => void;
-      send: (b: string) => void;
-    },
-  ) => {
-    const url = req.url ?? "/";
-    const request = new Request(`http://local${url}`, {
-      headers: req.headers as HeadersInit,
-    });
-    const response = await handlePaywallRequest(
-      request,
-      opts,
-      async () =>
-        new Response(JSON.stringify({ ok: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-    );
-    if (response.status === 402) {
-      const required = response.headers.get(HEADER_PAYMENT_REQUIRED);
-      if (required) res.setHeader(HEADER_PAYMENT_REQUIRED, required);
-      res.status(402).send(await response.text());
-      return;
+export interface CreatePayServerOptions {
+  environment: "production" | "sandbox";
+  organizationId: string;
+  payTo: Address;
+  apiKey: PayApiKey;
+  mppSecretKey: string;
+  facilitatorUrl?: string;
+  fetch?: typeof globalThis.fetch;
+  onFulfillmentFailed?: (event: {
+    paymentId: string;
+    reference: string;
+    route: string;
+    status: number;
+  }) => void | Promise<void>;
+}
+
+export type PayServerProtocol = "x402" | "mpp";
+
+export interface PayRoute {
+  price: string;
+  protocols?: readonly PayServerProtocol[];
+  description?: string;
+}
+
+export interface PaidRequest {
+  status: 200;
+  paymentId: string;
+  reference: string;
+  withReceipt(response: Response): Response;
+}
+
+export interface PaymentChallenge {
+  status: 402 | 400 | 503;
+  response: Response;
+}
+
+export interface PayServer {
+  handle(
+    request: Request,
+    route: PayRoute,
+  ): Promise<PaidRequest | PaymentChallenge>;
+  fulfillmentFailed(event: {
+    paymentId: string;
+    reference: string;
+    route: string;
+    status: number;
+  }): Promise<void>;
+}
+
+export function createPayServer(options: CreatePayServerOptions): PayServer {
+  if (new TextEncoder().encode(options.mppSecretKey).length < 32) {
+    throw new Error("mppSecretKey must contain at least 32 bytes");
+  }
+  const currency =
+    options.environment === "production"
+      ? assets.base.USDC
+      : assets.baseSepolia.USDC;
+  const facilitator = createFacilitatorClient({
+    baseUrl:
+      options.facilitatorUrl ??
+      (options.environment === "production"
+        ? "https://pay.0xkey.io"
+        : "https://api-pay.staging.0xkey.io"),
+    organizationId: options.organizationId,
+    apiKey: options.apiKey,
+    ...(options.fetch ? { fetch: options.fetch } : {}),
+  });
+  const paymentIds = new BoundedTtlMap<string, string>();
+  const pendingFailures = new BoundedTtlMap<
+    string,
+    {
+      errorCode: "PAYMENT_SERVICE_UNAVAILABLE" | "PAYMENT_STATUS_UNKNOWN";
+      paymentId?: string;
+      transaction?: string;
     }
-    response.headers.forEach((v, k) => res.setHeader(k, v));
-    res.status(response.status).send(await response.text());
+  >();
+  const method = evmCharge({
+    currency,
+    recipient: options.payTo,
+    async settle({ credential, payload, request }) {
+      const wireProtocol: WireProtocol =
+        payload.nonce === EvmTypes.challengeHash(credential.challenge)
+          ? "mpp"
+          : "x402";
+      const requirements: PaymentRequirements = {
+        amount: request.amount,
+        asset: request.currency,
+        extra: {
+          assetTransferMethod: "eip3009",
+          name: currency.transfer.name,
+          version: currency.transfer.version,
+        },
+        maxTimeoutSeconds: 300,
+        network: currency.network,
+        payTo: request.recipient,
+        scheme: "exact",
+      };
+      const paymentPayload: PaymentPayload = {
+        accepted: requirements,
+        payload: {
+          authorization: {
+            from: payload.from,
+            nonce: payload.nonce,
+            to: payload.to,
+            validAfter: payload.validAfter,
+            validBefore: payload.validBefore,
+            value: payload.value,
+          },
+          signature: payload.signature,
+        },
+        x402Version: 2,
+      };
+      let verified: VerifyResponse;
+      try {
+        verified = await facilitator.verify(
+          paymentPayload,
+          requirements,
+          wireProtocol,
+        );
+      } catch (error) {
+        pendingFailures.set(payload.signature, {
+          errorCode: "PAYMENT_SERVICE_UNAVAILABLE",
+        });
+        throw new Errors.VerificationFailedError({
+          reason: "payment service unavailable",
+        });
+      }
+      if (!verified.isValid) {
+        throw new Errors.VerificationFailedError({
+          reason:
+            verified.invalidMessage ??
+            verified.invalidReason ??
+            "PAYMENT_VERIFICATION_REJECTED",
+        });
+      }
+      let settled: SettleResponse & { paymentId: string };
+      try {
+        settled = await facilitator.settle(
+          paymentPayload,
+          requirements,
+          wireProtocol,
+        );
+      } catch (error) {
+        pendingFailures.set(payload.signature, {
+          errorCode: "PAYMENT_STATUS_UNKNOWN",
+        });
+        throw new Errors.VerificationFailedError({
+          reason: "payment status unknown",
+        });
+      }
+      if (!settled.success) {
+        if (settled.errorReason === "PAYMENT_STATUS_UNKNOWN") {
+          pendingFailures.set(payload.signature, {
+            errorCode: "PAYMENT_STATUS_UNKNOWN",
+            paymentId: settled.paymentId,
+            ...(settled.transaction
+              ? { transaction: settled.transaction }
+              : {}),
+          });
+        }
+        throw new Errors.VerificationFailedError({
+          reason: settled.errorReason ?? "PAYMENT_STATUS_UNKNOWN",
+        });
+      }
+      if (!settled.paymentId) {
+        pendingFailures.set(payload.signature, {
+          errorCode: "PAYMENT_STATUS_UNKNOWN",
+          transaction: settled.transaction,
+        });
+        throw new Errors.VerificationFailedError({
+          reason: "PAYMENT_ID_MISSING",
+        });
+      }
+      pendingFailures.delete(payload.signature);
+      paymentIds.set(settled.transaction, settled.paymentId);
+      return {
+        reference: settled.transaction,
+        timestamp: new Date().toISOString(),
+      };
+    },
+  });
+  const mppx = Mppx.create({
+    methods: [method],
+    secretKey: options.mppSecretKey,
+  });
+
+  return {
+    async handle(request, route) {
+      const protocols = route.protocols ?? ["x402", "mpp"];
+      if (!protocols.length) {
+        throw new Error("Pay route must enable x402, mpp, or both");
+      }
+      const hasX402 = request.headers.has("PAYMENT-SIGNATURE");
+      const hasMpp =
+        request.headers.get("Authorization")?.startsWith("Payment ") ?? false;
+      if (hasX402 && hasMpp) {
+        return {
+          status: 400,
+          response: Response.json(
+            { errorCode: "AMBIGUOUS_PAYMENT_CREDENTIAL", retryable: false },
+            { status: 400 },
+          ),
+        };
+      }
+      if (
+        (hasX402 && !protocols.includes("x402")) ||
+        (hasMpp && !protocols.includes("mpp"))
+      ) {
+        return {
+          status: 400,
+          response: Response.json(
+            { errorCode: "PAYMENT_PROTOCOL_NOT_ALLOWED", retryable: false },
+            { status: 400 },
+          ),
+        };
+      }
+      const amount = route.price.replace(/^\$/, "");
+      const result = await mppx.evm.charge({
+        amount,
+        ...(route.description ? { description: route.description } : {}),
+      })(request);
+      const signature = credentialSignature(request);
+      const pendingFailure = signature
+        ? pendingFailures.get(signature)
+        : undefined;
+      if (pendingFailure) {
+        return {
+          status: 503,
+          response: Response.json(
+            {
+              errorCode: pendingFailure.errorCode,
+              retryable: true,
+              ...(pendingFailure.paymentId
+                ? { paymentId: pendingFailure.paymentId }
+                : {}),
+              ...(pendingFailure.transaction
+                ? { transaction: pendingFailure.transaction }
+                : {}),
+            },
+            { status: 503, headers: { "Retry-After": "2" } },
+          ),
+        };
+      }
+      if (result.status === 402) {
+        const headers = new Headers(result.challenge.headers);
+        if (!protocols.includes("mpp")) headers.delete("WWW-Authenticate");
+        if (!protocols.includes("x402")) headers.delete("PAYMENT-REQUIRED");
+        return {
+          status: 402,
+          response: new Response(result.challenge.body, {
+            headers,
+            status: 402,
+            statusText: result.challenge.statusText,
+          }),
+        };
+      }
+      const carrier = result.withReceipt(new Response());
+      const receipt = Receipt.fromResponse(carrier);
+      const paymentId = paymentIds.get(receipt.reference);
+      if (!paymentId) {
+        return {
+          status: 503,
+          response: Response.json(
+            {
+              errorCode: "PAYMENT_STATUS_UNKNOWN",
+              retryable: true,
+              transaction: receipt.reference,
+            },
+            { status: 503, headers: { "Retry-After": "2" } },
+          ),
+        };
+      }
+      return {
+        status: 200,
+        paymentId,
+        reference: receipt.reference,
+        withReceipt: result.withReceipt,
+      };
+    },
+    async fulfillmentFailed(event) {
+      try {
+        if (options.onFulfillmentFailed) {
+          await options.onFulfillmentFailed(event);
+          return;
+        }
+        console.error("pay_fulfillment_failed", event);
+      } catch (error) {
+        console.error("pay_fulfillment_failed_callback_error", {
+          ...event,
+          error: error instanceof Error ? error.message : "unknown error",
+        });
+      }
+    },
   };
 }
 
-/** Hono middleware */
-export function paywallHono(opts: PaywallOptions) {
-  return async (c: {
-    req: { raw: Request };
-    json: (
-      data: unknown,
-      status?: number,
-      init?: { headers?: Record<string, string> },
-    ) => Response;
-  }) => {
-    return handlePaywallRequest(c.req.raw, opts, async () =>
-      c.json({ ok: true }),
+function requireFacilitatorStamper(
+  stamper: RequestStamper | undefined,
+): RequestStamper {
+  if (!stamper)
+    throw new Error("Pay facilitator X-Stamp credentials are required");
+  return stamper;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+class BoundedTtlMap<Key, Value> {
+  private readonly values = new Map<Key, { expiresAt: number; value: Value }>();
+
+  constructor(
+    private readonly maxEntries = 10_000,
+    private readonly ttlMs = 60 * 60 * 1_000,
+  ) {}
+
+  get(key: Key): Value | undefined {
+    const entry = this.values.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt <= Date.now()) {
+      this.values.delete(key);
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  set(key: Key, value: Value): void {
+    const now = Date.now();
+    for (const [candidate, entry] of this.values) {
+      if (entry.expiresAt <= now) this.values.delete(candidate);
+    }
+    if (!this.values.has(key) && this.values.size >= this.maxEntries) {
+      const oldest = this.values.keys().next().value as Key | undefined;
+      if (oldest !== undefined) this.values.delete(oldest);
+    }
+    this.values.set(key, { expiresAt: now + this.ttlMs, value });
+  }
+
+  delete(key: Key): void {
+    this.values.delete(key);
+  }
+}
+
+function credentialSignature(request: Request): string | undefined {
+  try {
+    const encoded = request.headers.get("PAYMENT-SIGNATURE");
+    if (encoded)
+      return x402.Header.decodePaymentSignature(encoded).payload.signature;
+    const authorization = request.headers.get("Authorization");
+    if (!authorization) return undefined;
+    const credential = Credential.deserialize<{ signature?: unknown }>(
+      authorization,
     );
-  };
+    return typeof credential.payload.signature === "string"
+      ? credential.payload.signature
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
-
-/** Next.js App Router route wrapper */
-export function withPaywall(
-  opts: PaywallOptions,
-  handler: (req: Request) => Promise<Response> | Response,
-) {
-  return (req: Request) => handlePaywallRequest(req, opts, () => handler(req));
-}
-
-export { decodePaymentRequiredHeader, encodePaymentRequired };

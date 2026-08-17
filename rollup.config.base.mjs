@@ -26,7 +26,7 @@ const getFormatConfig = (format, options = {}) => {
 
   /** @type {import('rollup').RollupOptions} */
   return {
-    input: "src/index.ts",
+    input: options.input ?? "src/index.ts",
     output: {
       format,
       dir: "dist",
@@ -50,7 +50,7 @@ const getFormatConfig = (format, options = {}) => {
           ]
         : []),
       typescript({
-        tsconfig: "./tsconfig.json",
+        tsconfig: options.tsconfig ?? "./tsconfig.json",
         outputToFilesystem: false,
         compilerOptions: {
           outDir: "dist",

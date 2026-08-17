@@ -4,7 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { createAccount } from "@0xkey-io/viem";
 import { ApiKeyStamper, ZeroXKeyServerClient } from "@0xkey-io/sdk-server";
 import { baseSepolia } from "viem/chains";
-import { createPayClient } from "@0xkey-io/pay";
+import { createPayAdminClient } from "@0xkey-io/pay/admin";
 import type {
   PaymentPayload,
   PaymentRequirements,
@@ -17,7 +17,7 @@ const zeroXKeyEnv =
 const usesStagingWalletApi = zeroXKeyEnv === "staging";
 
 export const PLAYGROUND = {
-  network: "eip155:84532",
+  network: "eip155:84532" as const,
   chainId: 84532,
   usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Hex,
   seller:
@@ -38,6 +38,11 @@ export const PLAYGROUND = {
     process.env.COMPANY_ORGANIZATION_ID ??
     process.env.NEXT_PUBLIC_ORGANIZATION_ID,
   apiKey: process.env.FACILITATOR_API_KEY ?? process.env.ZEROXKEY_PAY_API_KEY,
+  adminPublicKey:
+    process.env.ZEROXKEY_PAY_PUBLIC_KEY ?? process.env.ZEROXKEY_API_PUBLIC_KEY,
+  adminPrivateKey:
+    process.env.ZEROXKEY_PAY_PRIVATE_KEY ??
+    process.env.ZEROXKEY_API_PRIVATE_KEY,
 };
 
 export type PlaygroundScenario =
@@ -68,6 +73,9 @@ export function envStatus() {
     hasRpcUrl: Boolean(process.env.BASE_SEPOLIA_RPC_URL),
     hasPayOrganizationId: Boolean(PLAYGROUND.organizationId),
     hasPayApiKey: Boolean(PLAYGROUND.apiKey),
+    hasPayAdminApiKey: Boolean(
+      PLAYGROUND.adminPublicKey && PLAYGROUND.adminPrivateKey,
+    ),
     usesStagingWalletApi,
   };
 }
@@ -214,8 +222,11 @@ export function requirementsFor(amountAtomic: string): PaymentRequirements {
     asset: PLAYGROUND.usdc,
     payTo: PLAYGROUND.seller,
     maxTimeoutSeconds: 300,
-    resource: PLAYGROUND.resource,
-    extra: { name: "USDC", version: "2" },
+    extra: {
+      assetTransferMethod: "eip3009",
+      name: "USDC",
+      version: "2",
+    },
   };
 }
 
@@ -283,10 +294,12 @@ export async function buildPaymentRequest(opts?: {
     x402Version: 2,
     paymentPayload: {
       x402Version: 2,
-      scheme: "exact",
-      network: PLAYGROUND.network,
       accepted: requirements,
       payload: { signature, authorization },
+      resource: {
+        url: PLAYGROUND.resource,
+        description: "0xkey Pay playground settlement",
+      },
     },
     paymentRequirements: requirements,
   };
@@ -325,12 +338,18 @@ export async function queryRecords(txHash: string) {
   if (!PLAYGROUND.organizationId) {
     throw new Error("Missing PAY_ORGANIZATION_ID or ZEROXKEY_ORGANIZATION_ID");
   }
-  const client = createPayClient({
+  if (!PLAYGROUND.adminPublicKey || !PLAYGROUND.adminPrivateKey) {
+    throw new Error("Missing ZEROXKEY_PAY_PUBLIC_KEY/ZEROXKEY_PAY_PRIVATE_KEY");
+  }
+  const client = createPayAdminClient({
     baseUrl: PLAYGROUND.facilitatorUrl,
-    apiKey: PLAYGROUND.apiKey,
+    organizationId: PLAYGROUND.organizationId,
+    apiKey: {
+      publicKey: PLAYGROUND.adminPublicKey,
+      privateKey: PLAYGROUND.adminPrivateKey,
+    },
   });
   return client.payments.list({
-    organizationId: PLAYGROUND.organizationId,
     txHash,
     limit: 10,
   });
