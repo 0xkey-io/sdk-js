@@ -60,6 +60,12 @@ const payFetch = createPayFetch({
 const response = await payFetch("https://api.example.com/weather");
 ```
 
+`account` is a standard Viem `Account`. For a 0xkey Company Wallet or TEE-held
+key, create it with `createAccount` from `@0xkey-io/viem`, then pass it here.
+That adapter already implements the `signTypedData` call used by x402 and MPP;
+Pay does not copy a second wallet adapter. See the tested
+[`with-x402` example](../../examples/with-x402/README.md#2-company-wallet-signing).
+
 The buyer does not replace global `fetch`. It never falls back after signing.
 HTTPS is required. For local development only, `allowInsecureLocalhost: true`
 allows HTTP to `localhost`, `127.0.0.1`, and `[::1]`.
