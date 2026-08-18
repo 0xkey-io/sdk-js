@@ -227,6 +227,9 @@ operations data and are not exposed by this SDK.
 Changes to a protocol, public option, entry point, network, asset, receipt, or
 recovery rule must update the matching document in the same pull request.
 
+Release evidence is kept in [`docs/releases`](./docs/releases/), including
+[`0.3.0-rc.4`](./docs/releases/PAY-SDK-0.3.0-RC4-2026-08-19.md).
+
 ```bash
 pnpm --filter @0xkey-io/pay docs:check
 ```
