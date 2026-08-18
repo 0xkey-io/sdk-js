@@ -27,9 +27,9 @@ All runs in this table covered final release SHA
 
 | Run | Result | Evidence |
 | --- | --- | --- |
-| js-build | passed | [run 32190412624](https://github.com/0xkey-io/sdk-js/actions/runs/32190412624) |
-| meta | passed | [run 32190412691](https://github.com/0xkey-io/sdk-js/actions/runs/32190412691) |
-| Pay-only publish | failed verification-after-publish | [run 32190440464](https://github.com/0xkey-io/sdk-js/actions/runs/32190440464) |
+| js-build | passed | [run 32190412624](https://github.com/0xkey-io/sdk-js/actions/runs/32190412624/attempts/1) |
+| meta | passed | [run 32190412691](https://github.com/0xkey-io/sdk-js/actions/runs/32190412691/attempts/1) |
+| Pay-only publish | failed verification-after-publish | [run 32190440464](https://github.com/0xkey-io/sdk-js/actions/runs/32190440464/attempts/1) |
 
 The Pay-only publish run completed pins, docs, typecheck, 57 tests, build,
 interop, pack, and publication successfully on the final release SHA. Only its
@@ -42,11 +42,11 @@ These runs covered PR #32 head SHA
 
 | Run | Result | Evidence |
 | --- | --- | --- |
-| js-build | passed | [run 32188445955](https://github.com/0xkey-io/sdk-js/actions/runs/32188445955) |
-| pay-v1 | passed | [run 32188445994](https://github.com/0xkey-io/sdk-js/actions/runs/32188445994) |
-| Commerce contract | passed | [run 32188445967](https://github.com/0xkey-io/sdk-js/actions/runs/32188445967) |
-| Commerce verifier | passed | [run 32188445996](https://github.com/0xkey-io/sdk-js/actions/runs/32188445996) |
-| meta | passed | [run 32188446200](https://github.com/0xkey-io/sdk-js/actions/runs/32188446200) |
+| js-build | passed | [run 32188445955](https://github.com/0xkey-io/sdk-js/actions/runs/32188445955/attempts/1) |
+| pay-v1 | passed | [run 32188445994](https://github.com/0xkey-io/sdk-js/actions/runs/32188445994/attempts/1) |
+| Commerce contract | passed | [run 32188445967](https://github.com/0xkey-io/sdk-js/actions/runs/32188445967/attempts/1) |
+| Commerce verifier | passed | [run 32188445996](https://github.com/0xkey-io/sdk-js/actions/runs/32188445996/attempts/1) |
+| meta | passed | [run 32188446200](https://github.com/0xkey-io/sdk-js/actions/runs/32188446200/attempts/1) |
 
 - Independent registry checks seconds later verified the published version,
   shasum, integrity, `next`, and `latest` values above.
