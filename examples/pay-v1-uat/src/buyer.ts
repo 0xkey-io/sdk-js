@@ -2,6 +2,7 @@ import { ApiKeyStamper, ZeroXKeyServerClient } from "@0xkey-io/sdk-server";
 import { createAccount } from "@0xkey-io/viem";
 import { createPayFetch, type PayProtocol } from "@0xkey-io/pay/client";
 import { Challenge, x402 } from "mppx";
+import { createInterface } from "node:readline/promises";
 import { getAddress } from "viem";
 import { createFilePendingPaymentStore } from "./file-store.js";
 
@@ -30,13 +31,8 @@ const signWith = requireEnv("ZEROXKEY_SIGN_WITH");
 const ethereumAddress = getAddress(requireEnv("ZEROXKEY_ETHEREUM_ADDRESS"));
 
 if (command === "pay" && protocol) {
-  const confirmation = `I_CONFIRM_${protocol.toUpperCase()}_0.001_USDC_FROM_${ethereumAddress}_TO_${payTo}_ON_84532`;
-  if (process.env.PAY_UAT_OPERATOR_CONFIRMATION !== confirmation) {
-    await printQuote(endpoint, payTo, ethereumAddress, protocol);
-    throw new Error(
-      `Fresh confirmation required. Set PAY_UAT_OPERATOR_CONFIRMATION exactly to ${confirmation}`,
-    );
-  }
+  await printQuote(endpoint, payTo, ethereumAddress, protocol);
+  await requireFreshConfirmation(protocol, ethereumAddress, payTo);
 }
 
 const organizationId = requireEnv("ZEROXKEY_ORGANIZATION_ID");
@@ -68,6 +64,11 @@ const store = createFilePendingPaymentStore({
   file: requireEnv("PAY_UAT_PENDING_FILE"),
   keyHex: requireEnv("PAY_UAT_STORE_KEY"),
 });
+const termsCheckingFetch: typeof fetch = async (input, init) => {
+  const response = await fetch(input, init);
+  if (response.status === 402) inspectQuote(response.clone(), payTo);
+  return response;
+};
 const payFetch = createPayFetch({
   account,
   allowHosts: [endpoint.host],
@@ -75,6 +76,7 @@ const payFetch = createPayFetch({
   maxAmount: "$0.001",
   protocolPreference: protocol ? [protocol] : ["x402", "mpp"],
   pendingPaymentStore: store,
+  fetch: termsCheckingFetch,
   allowInsecureLocalhost: isLoopbackHttp(endpoint),
   rpcUrls: {
     "eip155:84532":
@@ -104,6 +106,20 @@ async function printQuote(
       `Expected merchant 402 challenge, received ${response.status}`,
     );
   }
+  inspectQuote(response, expectedPayTo);
+
+  console.info("PAYMENT_CONFIRMATION_REQUIRED", {
+    amount: amountDisplay,
+    asset,
+    endpoint: url.toString(),
+    network,
+    payTo: expectedPayTo,
+    payer: payer ?? "not loaded for quote-only mode",
+    protocol: selectedProtocol ?? "choose x402 or mpp; confirm separately",
+  });
+}
+
+function inspectQuote(response: Response, expectedPayTo: `0x${string}`) {
   const encodedX402 = response.headers.get("payment-required");
   if (!encodedX402) throw new Error("Merchant did not advertise x402");
   const paymentRequired = x402.Header.decodePaymentRequired(encodedX402);
@@ -138,16 +154,28 @@ async function printQuote(
     },
     expectedPayTo,
   );
+}
 
-  console.info("PAYMENT_CONFIRMATION_REQUIRED", {
-    amount: amountDisplay,
-    asset,
-    endpoint: url.toString(),
-    network,
-    payTo: expectedPayTo,
-    payer: payer ?? "not loaded for quote-only mode",
-    protocol: selectedProtocol ?? "choose x402 or mpp; confirm separately",
+async function requireFreshConfirmation(
+  protocol: PayProtocol,
+  payer: `0x${string}`,
+  recipient: `0x${string}`,
+) {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw new Error("A fresh payment confirmation requires an interactive TTY");
+  }
+  const expected = `PAY ${protocol.toUpperCase()} 0.001 USDC FROM ${payer} TO ${recipient} ON BASE SEPOLIA`;
+  const prompt = createInterface({
+    input: process.stdin,
+    output: process.stdout,
   });
+  try {
+    const answer = await prompt.question(`Type exactly: ${expected}\n> `);
+    if (answer !== expected)
+      throw new Error("Payment confirmation did not match");
+  } finally {
+    prompt.close();
+  }
 }
 
 function assertTerms(

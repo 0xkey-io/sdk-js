@@ -71,9 +71,10 @@ With the merchant running, inspect both challenges without signing:
 pnpm --filter pay-v1-uat buyer quote
 ```
 
-For a real payment, first obtain a fresh human confirmation of the exact card
-printed by `quote`. Then set the exact `PAY_UAT_OPERATOR_CONFIRMATION` string
-reported by the CLI and run one protocol only:
+For a real payment, run one protocol only. The command revalidates both wire
+challenges, prints the exact card, and requires the operator to type a fresh
+confirmation sentence on an interactive TTY before it loads signing
+credentials. Non-interactive execution is rejected:
 
 ```bash
 pnpm --filter pay-v1-uat buyer pay x402
