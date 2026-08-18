@@ -32,9 +32,13 @@ const required = [
   "test:pay-v1",
   "test:interop",
   "pnpm --filter @0xkey-io/pay build",
-  "pack --pack-destination",
+  "Pack and smoke the exact Pay release candidate",
+  "id: pack",
+  "pnpm --filter @0xkey-io/pay artifact:check",
+  '--pack-destination "$RUNNER_TEMP/oxkey-pay-publish"',
   "Reconfirm source, package metadata, and npm state before mutation",
-  "npm publish --tag next",
+  'npm publish "${{ steps.pack.outputs.tarball }}"',
+  "--tag next",
   "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
 ];
 
@@ -93,7 +97,10 @@ const registryPreflight = workflow.indexOf(
 const finalMutationPreflight = workflow.indexOf(
   "Reconfirm source, package metadata, and npm state before mutation",
 );
-const publish = workflow.indexOf("npm publish --tag next");
+const artifactCheck = workflow.indexOf(
+  "Pack and smoke the exact Pay release candidate",
+);
+const publish = workflow.indexOf("Publish only @0xkey-io/pay to npm next");
 const postPublishVerification = workflow.indexOf(
   "Verify published version and npm tags",
 );
@@ -110,9 +117,13 @@ assert.ok(
   "Pay dependency graph must build after install and before Pay typecheck",
 );
 assert.ok(registryPreflight >= 0 && registryPreflight < publish);
-assert.ok(finalMutationPreflight >= 0 && finalMutationPreflight < publish);
+assert.ok(
+  artifactCheck >= 0 &&
+    artifactCheck < finalMutationPreflight &&
+    finalMutationPreflight < publish,
+  "the shared artifact check must run before the final mutation preflight and publish",
+);
 assert.ok(postPublishVerification > publish);
-assert.equal((workflow.match(/npm publish --tag next/g) ?? []).length, 1);
 assert.ok(
   workflow.lastIndexOf('packageJson.name !== "@0xkey-io/pay"') >
     finalMutationPreflight,
@@ -141,7 +152,56 @@ assert.match(
   "final mutation preflight must require a clean source tree",
 );
 
-for (const command of workflow.match(/^\s*npm (?:view|publish)\b.*$/gm) ?? []) {
+function step(name) {
+  const marker = `      - name: ${name}\n`;
+  const start = workflow.indexOf(marker);
+  assert.ok(start >= 0, `pay publish workflow is missing step ${name}`);
+  const next = workflow.indexOf("\n      - name:", start + marker.length);
+  return workflow.slice(start, next < 0 ? workflow.length : next);
+}
+
+const artifactStep = step("Pack and smoke the exact Pay release candidate");
+assert.match(artifactStep, /^\s+id: pack$/m, "artifact step must have id pack");
+assert.match(
+  artifactStep,
+  /pnpm --filter @0xkey-io\/pay artifact:check \\\n\s+--pack-destination "\$RUNNER_TEMP\/oxkey-pay-publish"/,
+  "artifact step must use the shared checker with a retained pack destination",
+);
+
+const publishStep = step("Publish only @0xkey-io/pay to npm next");
+assert.doesNotMatch(
+  publishStep,
+  /^\s+working-directory:/m,
+  "Pay publish must target the verified tarball, not the package directory",
+);
+assert.match(
+  publishStep,
+  /npm publish "\$\{\{ steps\.pack\.outputs\.tarball \}\}"/,
+  "Pay publish must target the exact tarball emitted by the artifact step",
+);
+assert.match(publishStep, /^\s+--tag next$/m, "Pay publish must use tag next");
+assert.match(
+  publishStep,
+  /^\s+--registry="\$PUBLIC_NPM_REGISTRY"$/m,
+  "Pay publish must pin npmjs",
+);
+assert.equal(
+  (workflow.match(/\bnpm publish\b/g) ?? []).length,
+  1,
+  "workflow must contain one npm publish command",
+);
+assert.equal(
+  (workflow.match(/^\s+--tag next$/gm) ?? []).length,
+  1,
+  "workflow must contain one --tag next publish",
+);
+assert.equal(
+  (workflow.match(/\$\{\{ steps\.pack\.outputs\.tarball \}\}/g) ?? []).length,
+  1,
+  "the artifact output must be consumed only by the Pay publish command",
+);
+
+for (const command of workflow.match(/^\s*npm view\b.*$/gm) ?? []) {
   assert.match(
     command,
     /--registry="\$PUBLIC_NPM_REGISTRY"/,
@@ -158,6 +218,43 @@ assert.match(
   workflow,
   /pnpm install -r --frozen-lockfile --registry "\$PUBLIC_NPM_REGISTRY"/,
   "dependency install must pin npmjs",
+);
+
+const visibilityStep = step("Verify published version and npm tags");
+const attempts = visibilityStep.match(/^\s+attempts=(\d+)$/m);
+const waitSeconds = visibilityStep.match(/^\s+wait_seconds=(\d+)$/m);
+assert.ok(
+  attempts,
+  "post-publish verification must set a numeric attempt bound",
+);
+assert.ok(waitSeconds, "post-publish verification must set a numeric wait");
+assert.ok(
+  Number(attempts[1]) > 1 && Number(attempts[1]) <= 30,
+  "post-publish verification attempts must be bounded between 2 and 30",
+);
+assert.ok(
+  Number(waitSeconds[1]) > 0 && Number(waitSeconds[1]) <= 60,
+  "post-publish verification wait must be bounded between 1 and 60 seconds",
+);
+assert.match(
+  visibilityStep,
+  /for attempt in \$\(seq 1 "\$attempts"\); do/,
+  "post-publish verification must use the attempt bound",
+);
+assert.match(
+  visibilityStep,
+  /if \[ "\$attempt" -lt "\$attempts" \]; then[\s\S]*sleep "\$wait_seconds"/,
+  "post-publish verification must wait only between bounded attempts",
+);
+assert.match(
+  visibilityStep,
+  /echo "npm did not expose the expected state after \$attempts attempts\." >&2[\s\S]*exit 1/,
+  "post-publish verification must fail after the bounded retry",
+);
+assert.doesNotMatch(
+  visibilityStep,
+  /\bwhile\b/,
+  "post-publish verification must not use an unbounded while loop",
 );
 
 process.stdout.write("Pay publish workflow static checks passed.\n");

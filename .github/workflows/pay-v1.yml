@@ -58,24 +58,11 @@ jobs:
           MPPX_COMPAT_VERSION: 0.8.15
         run: pnpm --filter @0xkey-io/pay exec node scripts/mppx-validate-smoke.mjs
 
-      - name: Pack the RC
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/oxkey-pay-pack
-          pnpm --dir packages/pay pack --pack-destination /tmp/oxkey-pay-pack
-          tarballs=(/tmp/oxkey-pay-pack/*.tgz)
-          [ "${#tarballs[@]}" -eq 1 ]
-          contents="$(tar -tf "${tarballs[0]}")"
-          if printf '%s\n' "$contents" | grep -E '/(commerce|verifier)/'; then
-            echo 'Standalone Pay tarball must not contain Commerce artifacts.' >&2
-            exit 1
-          fi
-          for entry in admin client express hono next server; do
-            printf '%s\n' "$contents" | grep -Eq "^package/dist/${entry}/index\\.(js|mjs|d\\.ts)$"
-          done
-          for doc in generated-support protocol-selection-and-recovery; do
-            printf '%s\n' "$contents" | grep -Eq "^package/docs/${doc}\\.md$"
-          done
+      - name: Test the packed-artifact guard
+        run: pnpm --filter @0xkey-io/pay artifact:test
+
+      - name: Pack and smoke the RC outside the workspace
+        run: pnpm --filter @0xkey-io/pay artifact:check
 
       - name: Keep protocol types upstream-owned
         run: |

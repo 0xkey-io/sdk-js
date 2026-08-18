@@ -151,15 +151,12 @@ jobs:
       - name: Run Pay interoperability checks
         run: pnpm --filter @0xkey-io/pay test:interop
 
-      - name: Pack Pay release candidate
+      - name: Pack and smoke the exact Pay release candidate
+        id: pack
         run: |
           set -euo pipefail
-          pack_directory=/tmp/oxkey-pay-publish
-          mkdir -p "$pack_directory"
-          pnpm --dir packages/pay pack --pack-destination "$pack_directory"
-          shopt -s nullglob
-          tarballs=("$pack_directory"/*.tgz)
-          [ "${#tarballs[@]}" -eq 1 ]
+          pnpm --filter @0xkey-io/pay artifact:check \
+            --pack-destination "$RUNNER_TEMP/oxkey-pay-publish"
 
       - name: Reconfirm source, package metadata, and npm state before mutation
         env:
@@ -226,10 +223,14 @@ jobs:
           rm -f "$stderr_file"
 
       - name: Publish only @0xkey-io/pay to npm next
-        working-directory: packages/pay
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --tag next --access public --ignore-scripts --registry="$PUBLIC_NPM_REGISTRY"
+        run: >-
+          npm publish "${{ steps.pack.outputs.tarball }}"
+          --tag next
+          --access public
+          --ignore-scripts
+          --registry="$PUBLIC_NPM_REGISTRY"
 
       - name: Verify published version and npm tags
         env:
@@ -237,9 +238,22 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          published_version="$(npm view "@0xkey-io/pay@$EXPECTED_VERSION" version --registry="$PUBLIC_NPM_REGISTRY")"
-          next="$(npm view @0xkey-io/pay dist-tags.next --registry="$PUBLIC_NPM_REGISTRY")"
-          latest="$(npm view @0xkey-io/pay dist-tags.latest --registry="$PUBLIC_NPM_REGISTRY")"
-          [ "$published_version" = "$EXPECTED_VERSION" ]
-          [ "$next" = "$EXPECTED_VERSION" ]
-          [ "$latest" = "0.2.0" ]
+          attempts=12
+          wait_seconds=10
+          for attempt in $(seq 1 "$attempts"); do
+            published_version="$(npm view "@0xkey-io/pay@$EXPECTED_VERSION" version --registry="$PUBLIC_NPM_REGISTRY" 2>/dev/null || true)"
+            next="$(npm view @0xkey-io/pay dist-tags.next --registry="$PUBLIC_NPM_REGISTRY" 2>/dev/null || true)"
+            latest="$(npm view @0xkey-io/pay dist-tags.latest --registry="$PUBLIC_NPM_REGISTRY" 2>/dev/null || true)"
+            if [ "$published_version" = "$EXPECTED_VERSION" ] \
+              && [ "$next" = "$EXPECTED_VERSION" ] \
+              && [ "$latest" = "0.2.0" ]; then
+              exit 0
+            fi
+            if [ "$attempt" -lt "$attempts" ]; then
+              echo "npm has not exposed the expected version and tags yet (attempt $attempt/$attempts); waiting ${wait_seconds}s."
+              sleep "$wait_seconds"
+            fi
+          done
+          echo "npm did not expose the expected state after $attempts attempts." >&2
+          echo "version=$published_version next=$next latest=$latest" >&2
+          exit 1
