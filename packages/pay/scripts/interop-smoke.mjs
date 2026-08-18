@@ -200,9 +200,9 @@ assert.throws(
       payTo: "0x1111111111111111111111111111111111111111",
       apiKey: { publicKey, privateKey },
       mppSecretKey: "01234567890123456789012345678901",
-      facilitatorUrl: "https://pay.0xkey.io/base-sepolia",
+      facilitatorUrl: "https://api-pay.0xkey.io/base-sepolia",
     }),
-  /PAY_NETWORK_CHANNEL_MISMATCH/,
+  /PAY_FACILITATOR_ORIGIN_MISMATCH/,
 );
 
 async function assertChannelInterop(selected, protocol) {

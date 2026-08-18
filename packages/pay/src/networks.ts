@@ -1,6 +1,12 @@
 import type { BasePaymentNetwork } from "./receipt-verifier";
 
-export const PAY_ORIGIN = "https://pay.0xkey.io";
+export const PAY_API_ORIGIN = "https://api-pay.0xkey.io";
+const RETIRED_PAY_WEB_ORIGIN = "https://pay.0xkey.io";
+
+const CHANNEL_BY_NETWORK = {
+  "eip155:8453": "base-mainnet",
+  "eip155:84532": "base-sepolia",
+} as const;
 
 export function assertBasePaymentNetwork(
   network: unknown,
@@ -16,39 +22,37 @@ export function assertBasePaymentNetwork(
 }
 
 export function payChannel(network: BasePaymentNetwork): string {
-  return network === "eip155:8453" ? "base-mainnet" : "base-sepolia";
+  return CHANNEL_BY_NETWORK[network];
 }
 
 export function resolvePayBaseUrl(
   network: BasePaymentNetwork,
-  configuredBaseUrl = PAY_ORIGIN,
+  configuredBaseUrl = PAY_API_ORIGIN,
 ): string {
   assertBasePaymentNetwork(network);
   const url = new URL(configuredBaseUrl);
-  const pathname = url.pathname.replace(/\/+$/, "");
   const expected = payChannel(network);
-  const opposite =
-    expected === "base-mainnet" ? "base-sepolia" : "base-mainnet";
-  const segments = pathname.split("/").filter(Boolean);
-  if (url.origin === PAY_ORIGIN) {
-    if (url.username || url.password || url.search || url.hash) {
-      throw new Error(
-        `PAY_NETWORK_CHANNEL_MISMATCH: ${network} must use a canonical public Pay URL`,
-      );
-    }
-    if (segments.length === 0) {
-      url.pathname = `/${expected}`;
-    } else if (segments.length !== 1 || segments[0] !== expected) {
-      throw new Error(
-        `PAY_NETWORK_CHANNEL_MISMATCH: ${network} must use /${expected}`,
-      );
-    }
-    return url.toString().replace(/\/$/, "");
-  }
-  if (segments.at(-1) === opposite) {
+
+  if (url.origin === RETIRED_PAY_WEB_ORIGIN) {
     throw new Error(
-      `PAY_NETWORK_CHANNEL_MISMATCH: ${network} cannot use /${opposite}`,
+      "PAY_FACILITATOR_ORIGIN_MISMATCH: pay.0xkey.io is not a facilitator base URL",
     );
   }
+
+  if (url.origin !== PAY_API_ORIGIN) return url.toString().replace(/\/$/, "");
+
+  if (
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    (url.pathname !== "/" && url.pathname !== `/${expected}`)
+  ) {
+    throw new Error(
+      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${network} must use ${PAY_API_ORIGIN}/${expected}`,
+    );
+  }
+  if (url.pathname === "/") url.pathname = `/${expected}`;
+
   return url.toString().replace(/\/$/, "");
 }

@@ -103,9 +103,11 @@ sign or send a payment.
 Sandbox workspace. The same organization and API-key model can use either
 Base mainnet or Base Sepolia, but each SDK instance and every signed credential
 belongs to exactly one network. Seller and Admin traffic uses the matching
-`https://pay.0xkey.io/base-mainnet` or
-`https://pay.0xkey.io/base-sepolia` channel. The public Pay origin rejects any
+`https://api-pay.0xkey.io/base-mainnet` or
+`https://api-pay.0xkey.io/base-sepolia` channel. The public Pay origin rejects any
 other path instead of guessing a network.
+
+`pay.0xkey.io` serves the product website and is never a facilitator base URL.
 
 For tests and local work only, storage can be disabled explicitly:
 
@@ -185,7 +187,7 @@ sent.
 import { createPayAdminClient } from "@0xkey-io/pay/admin";
 
 const admin = createPayAdminClient({
-  baseUrl: "https://pay.0xkey.io",
+  baseUrl: "https://api-pay.0xkey.io",
   network: "eip155:8453",
   organizationId: process.env.ZEROXKEY_ORGANIZATION_ID!,
   apiKey: {

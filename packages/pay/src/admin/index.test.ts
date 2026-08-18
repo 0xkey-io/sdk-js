@@ -150,10 +150,9 @@ describe("createPayAdminClient", () => {
     );
   });
 
-  it("routes the public Pay origin through the configured network channel", async () => {
+  it("uses the canonical production Pay API channel by default", async () => {
     const urls: string[] = [];
     const client = createPayAdminClient({
-      baseUrl: "https://pay.0xkey.io",
       network: "eip155:8453",
       organizationId: "11111111-1111-1111-1111-111111111111",
       stamper: {
@@ -170,7 +169,7 @@ describe("createPayAdminClient", () => {
     await client.payments.list({});
 
     expect(urls).toEqual([
-      "https://pay.0xkey.io/base-mainnet/v1/organizations/11111111-1111-1111-1111-111111111111/payments?network=eip155%3A8453",
+      "https://api-pay.0xkey.io/base-mainnet/v1/organizations/11111111-1111-1111-1111-111111111111/payments?network=eip155%3A8453",
     ]);
   });
 });

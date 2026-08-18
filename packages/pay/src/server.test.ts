@@ -1,4 +1,5 @@
 import { createFacilitatorClient, createPayServer } from "./server";
+import { resolvePayBaseUrl } from "./networks";
 import type { PaymentPayload, PaymentRequirements } from "./types";
 import type { RequestStampInput, RequestStamper } from "./xstamp";
 
@@ -156,6 +157,36 @@ describe("createFacilitatorClient", () => {
 });
 
 describe("createPayServer", () => {
+  it("uses the canonical production Pay API channel", () => {
+    expect(resolvePayBaseUrl("eip155:8453")).toBe(
+      "https://api-pay.0xkey.io/base-mainnet",
+    );
+    expect(resolvePayBaseUrl("eip155:84532")).toBe(
+      "https://api-pay.0xkey.io/base-sepolia",
+    );
+  });
+
+  it("rejects the retired Pay Web origin as a facilitator", () => {
+    expect(() =>
+      resolvePayBaseUrl("eip155:8453", "https://pay.0xkey.io/base-mainnet"),
+    ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
+  });
+
+  it("rejects an opposite canonical channel hidden in a longer path", () => {
+    expect(() =>
+      resolvePayBaseUrl("eip155:8453", "https://api-pay.0xkey.io/base-sepolia"),
+    ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
+  });
+
+  it("preserves an explicit third-party facilitator URL", () => {
+    expect(
+      resolvePayBaseUrl(
+        "eip155:8453",
+        "https://facilitator.example/base-sepolia",
+      ),
+    ).toBe("https://facilitator.example/base-sepolia");
+  });
+
   it("rejects two credentials before settlement", async () => {
     const server = createPayServer({
       network: "eip155:84532",
@@ -191,16 +222,17 @@ describe("createPayServer", () => {
         mppSecretKey: "01234567890123456789012345678901",
         facilitatorUrl: "https://pay.0xkey.io/base-mainnet",
       }),
-    ).toThrow("PAY_NETWORK_CHANNEL_MISMATCH");
+    ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
   });
 
   it("rejects every non-canonical path on the public Pay origin", () => {
     for (const facilitatorUrl of [
-      "https://pay.0xkey.io/base-mainnet/v1",
-      "https://pay.0xkey.io/pay",
-      "https://pay.0xkey.io/base-mainnet?tenant=wrong",
-      "https://pay.0xkey.io/base-mainnet#fragment",
-      "https://user@pay.0xkey.io/base-mainnet",
+      "https://api-pay.0xkey.io/base-mainnet/v1",
+      "https://api-pay.0xkey.io/base-mainnet/",
+      "https://api-pay.0xkey.io/pay",
+      "https://api-pay.0xkey.io/base-mainnet?tenant=wrong",
+      "https://api-pay.0xkey.io/base-mainnet#fragment",
+      "https://user@api-pay.0xkey.io/base-mainnet",
     ]) {
       expect(() =>
         createPayServer({
@@ -211,7 +243,7 @@ describe("createPayServer", () => {
           mppSecretKey: "01234567890123456789012345678901",
           facilitatorUrl,
         }),
-      ).toThrow("PAY_NETWORK_CHANNEL_MISMATCH");
+      ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
     }
   });
 
