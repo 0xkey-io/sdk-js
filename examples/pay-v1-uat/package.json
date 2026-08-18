@@ -7,6 +7,7 @@
     "buyer": "tsx src/buyer.ts",
     "start": "tsx src/server.ts",
     "smoke": "tsx src/smoke.ts",
+    "test:tamper": "tsx src/tamper.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

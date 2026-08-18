@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createUatApp } from "./app.js";
 import { createFilePendingPaymentStore } from "./file-store.js";
+import { corruptBase64urlBytes } from "./tamper.js";
 
 const payTo = "0x00000000000000000000000000000000000000aa";
 const handle = createUatApp({
@@ -70,9 +71,7 @@ assert.doesNotMatch(await readFile(storeFile, "utf8"), /payment-signature/);
 const envelope = JSON.parse(await readFile(storeFile, "utf8")) as {
   ciphertext: string;
 };
-envelope.ciphertext = `${envelope.ciphertext.slice(0, -1)}${
-  envelope.ciphertext.endsWith("A") ? "B" : "A"
-}`;
+envelope.ciphertext = corruptBase64urlBytes(envelope.ciphertext);
 await writeFile(storeFile, JSON.stringify(envelope));
 await assert.rejects(store.load());
 await rm(storeDirectory, { recursive: true });
