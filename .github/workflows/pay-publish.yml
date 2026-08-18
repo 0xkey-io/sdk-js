@@ -79,6 +79,9 @@ jobs:
           corepack enable
           pnpm install -r --frozen-lockfile --registry "$PUBLIC_NPM_REGISTRY"
 
+      - name: Build Pay dependency graph
+        run: pnpm turbo run build --filter='@0xkey-io/pay^...'
+
       - name: Verify Pay package metadata
         env:
           EXPECTED_VERSION: ${{ inputs.expected_version }}
