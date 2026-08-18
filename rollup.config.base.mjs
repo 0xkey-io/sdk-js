@@ -26,13 +26,14 @@ const getFormatConfig = (format, options = {}) => {
 
   /** @type {import('rollup').RollupOptions} */
   return {
-    input: "src/index.ts",
+    input: options.input ?? "src/index.ts",
     output: {
       format,
       dir: "dist",
       entryFileNames: singleFile
         ? `index.${format === "esm" ? "mjs" : "js"}`
         : `[name].${format === "esm" ? "mjs" : "js"}`,
+      chunkFileNames: `[name]-[hash].${format === "esm" ? "mjs" : "js"}`,
       preserveModules: !singleFile,
       preserveModulesRoot: "src",
       sourcemap: true,
@@ -50,7 +51,7 @@ const getFormatConfig = (format, options = {}) => {
           ]
         : []),
       typescript({
-        tsconfig: "./tsconfig.json",
+        tsconfig: options.tsconfig ?? "./tsconfig.json",
         outputToFilesystem: false,
         compilerOptions: {
           outDir: "dist",

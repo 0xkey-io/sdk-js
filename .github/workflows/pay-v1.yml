@@ -1,0 +1,142 @@
+name: pay-v1
+
+on:
+  pull_request:
+    paths:
+      - "packages/pay/**"
+      - "examples/with-x402/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/pay-v1.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/pay/**"
+      - "examples/with-x402/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/pay-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup JS
+        uses: ./.github/actions/js-setup
+
+      - name: Build Pay dependency graph
+        run: >-
+          pnpm turbo run build
+          --filter='@0xkey-io/pay...'
+          --filter='@0xkey-io/sdk-server...'
+          --filter='@0xkey-io/viem...'
+
+      - name: Typecheck
+        run: pnpm --filter @0xkey-io/pay typecheck:pay-v1
+
+      - name: Typecheck the x402 example
+        run: pnpm --filter with-x402 exec next typegen && pnpm --filter with-x402 typecheck
+
+      - name: Unit and framework tests
+        run: pnpm --filter @0xkey-io/pay test:pay-v1
+
+      - name: Official x402 and mppx interoperability
+        run: pnpm --filter @0xkey-io/pay test:interop
+
+      - name: Previous mppx wire compatibility
+        env:
+          MPPX_COMPAT_VERSION: 0.8.15
+        run: pnpm --filter @0xkey-io/pay exec node scripts/mppx-validate-smoke.mjs
+
+      - name: Pack the RC
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/oxkey-pay-pack
+          pnpm --dir packages/pay pack --pack-destination /tmp/oxkey-pay-pack
+          tarballs=(/tmp/oxkey-pay-pack/*.tgz)
+          [ "${#tarballs[@]}" -eq 1 ]
+          contents="$(tar -tf "${tarballs[0]}")"
+          if printf '%s\n' "$contents" | grep -E '/(commerce|verifier)/'; then
+            echo 'Standalone Pay tarball must not contain Commerce artifacts.' >&2
+            exit 1
+          fi
+          for entry in admin client express hono next server; do
+            printf '%s\n' "$contents" | grep -Eq "^package/dist/${entry}/index\\.(js|mjs|d\\.ts)$"
+          done
+          for doc in generated-support protocol-selection-and-recovery; do
+            printf '%s\n' "$contents" | grep -Eq "^package/docs/${doc}\\.md$"
+          done
+
+      - name: Keep protocol types upstream-owned
+        run: |
+          set -euo pipefail
+          if grep -REn '^(export )?(interface|type|class) (PaymentRequired|PaymentPayload|Credential)\b' \
+            packages/pay/src/client.ts packages/pay/src/server.ts packages/pay/src/{client,server,express,hono,next,admin}; then
+            echo 'Pay must use mppx or official x402 protocol types.' >&2
+            exit 1
+          fi
+          if grep -REn 'CommerceAuthorization|BudgetReservation|MANDATE_PROTECTED' \
+            packages/pay/src/client.ts packages/pay/src/server.ts packages/pay/src/{client,server,express,hono,next,admin}; then
+            echo 'Standalone Pay must not depend on CommerceAuthorization.' >&2
+            exit 1
+          fi
+          node - <<'NODE'
+          const pkg = require('./packages/pay/package.json')
+          const build = String(pkg.scripts.build).toLowerCase()
+          const exportsCommerce = Object.keys(pkg.exports).some((key) =>
+            key.toLowerCase().includes('commerce'),
+          )
+          if (build.includes('commerce') || exportsCommerce) {
+            throw new Error('Standalone Pay build and exports must not include Commerce artifacts')
+          }
+          NODE
+
+      - name: Reject removed pre-release interfaces
+        run: |
+          set -euo pipefail
+          if grep -REn '\b(Pay\.client|createPayClient|handlePaywallRequest|paywallExpress|paywallHono|withPaywall)\b' \
+            packages/pay/src/client.ts packages/pay/src/server.ts \
+            packages/pay/src/index.ts \
+            packages/pay/src/{client,server,admin,express,hono,next}; then
+            echo 'Standalone Pay must not restore unused pre-release interfaces.' >&2
+            exit 1
+          fi
+          if grep -En '"(verified|settling|settled|failed)"' packages/pay/src/types.ts; then
+            echo 'Standalone Pay must not restore unused pre-release interfaces.' >&2
+            exit 1
+          fi
+          if grep -REn '\b(GasPayerBalance|gasPayerBalance|direction)\b' \
+            packages/pay/src/{types.ts,admin/index.ts}; then
+            echo 'Standalone Pay must not expose relayer balances or the removed direction field/filter.' >&2
+            exit 1
+          fi
+          if grep -REn '\binternalBearerToken\b' \
+            packages/pay/src/server.ts packages/pay/src/admin/index.ts; then
+            echo 'Public Pay SDK paths must use X-Stamp, not an internal bearer.' >&2
+            exit 1
+          fi
+
+      - name: Verify exact protocol dependency pins
+        run: |
+          node - <<'NODE'
+          const pkg = require('./packages/pay/package.json')
+          const expected = {
+            mppx: '0.8.17',
+            '@x402/core': '2.22.0',
+            '@x402/evm': '2.22.0',
+            '@x402/fetch': '2.22.0',
+          }
+          for (const [name, version] of Object.entries(expected)) {
+            if (pkg.dependencies[name] !== version) {
+              throw new Error(`${name} must be pinned to ${version}`)
+            }
+          }
+          NODE
+
+      - name: Keep Pay docs in sync
+        run: pnpm --filter @0xkey-io/pay docs:check

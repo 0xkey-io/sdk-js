@@ -3,15 +3,35 @@
   "exports": [
     {
       "kind": "re-export",
-      "name": "Pay"
+      "name": "createPayFetch"
     },
     {
       "kind": "re-export",
-      "name": "type PayClient"
+      "name": "type CreatePayFetchOptions"
     },
     {
       "kind": "re-export",
-      "name": "type PayClientOptions"
+      "name": "type NormalizedPaymentReceipt"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PayFetch"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PayProtocol"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PendingPaymentRecord"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PendingPaymentStore"
+    },
+    {
+      "kind": "re-export",
+      "name": "type SerializedPendingPayment"
     }
   ]
 }

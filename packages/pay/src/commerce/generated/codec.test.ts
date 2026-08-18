@@ -7,7 +7,7 @@ import {
   type CommerceBundleManifest,
   type CommerceCodecCorpus,
   commerceContract,
-} from "../../index";
+} from "./codec";
 
 const corpus = JSON.parse(
   readFileSync(path.join(__dirname, "rc-bundle", "codec-corpus.json"), "utf8"),
