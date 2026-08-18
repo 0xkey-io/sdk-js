@@ -774,6 +774,15 @@ importers:
       '@0xkey-io/pay':
         specifier: workspace:*
         version: link:../../packages/pay
+      '@0xkey-io/sdk-server':
+        specifier: workspace:*
+        version: link:../../packages/sdk-server
+      '@0xkey-io/viem':
+        specifier: workspace:*
+        version: link:../../packages/viem
+      mppx:
+        specifier: 0.8.17
+        version: 0.8.17(hono@4.12.5)(typescript@5.4.3)(viem@2.54.0(bufferutil@4.0.9)(typescript@5.4.3)(utf-8-validate@5.0.10)(zod@4.4.3))
       viem:
         specifier: 2.54.0
         version: 2.54.0(bufferutil@4.0.9)(typescript@5.4.3)(utf-8-validate@5.0.10)(zod@3.25.76)

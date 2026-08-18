@@ -23,6 +23,16 @@ export type {
 
 export type PayProtocol = "x402" | "mpp";
 
+/**
+ * Minimal signer seam used by Pay. Keeping the full Viem Account out of the
+ * public Interface lets 0xkey TEE adapters and local accounts from compatible
+ * Viem minors provide the only two capabilities the payment flow needs.
+ */
+export interface PayEvmAccount {
+  address: `0x${string}`;
+  signTypedData: (...parameters: never[]) => Promise<`0x${string}`>;
+}
+
 export interface NormalizedPaymentReceipt {
   protocol: PayProtocol;
   reference: string;
@@ -33,7 +43,7 @@ export interface NormalizedPaymentReceipt {
 }
 
 export interface CreatePayFetchOptions {
-  account: Account;
+  account: PayEvmAccount;
   allowHosts: string[];
   maxAmount: string;
   /** Defaults to production. Sandbox is fixed to Base Sepolia. */
@@ -245,7 +255,10 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
   const payment = Mppx.create({
     methods: [
       charge({
-        account: options.account,
+        // mppx pins its own Viem Account type, but only consumes address and
+        // signTypedData. The public seam above prevents that dependency's
+        // minor-version internals from leaking to callers.
+        account: options.account as Account,
         currencies:
           environment === "production"
             ? [assets.base.USDC]

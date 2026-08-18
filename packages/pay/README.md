@@ -60,10 +60,13 @@ const payFetch = createPayFetch({
 const response = await payFetch("https://api.example.com/weather");
 ```
 
-`account` is a standard Viem `Account`. For a 0xkey Company Wallet or TEE-held
-key, create it with `createAccount` from `@0xkey-io/viem`, then pass it here.
-That adapter already implements the `signTypedData` call used by x402 and MPP;
-Pay does not copy a second wallet adapter. See the tested
+`account` uses Pay's narrow signer Interface: an EVM `address` plus
+`signTypedData`. Standard Viem accounts satisfy it. For a 0xkey Company Wallet
+or TEE-held key, create the account with `createAccount` from
+`@0xkey-io/viem`, then pass it here. Pay deliberately does not expose the full
+Viem `Account` type, so compatible Viem minor versions do not leak through the
+payment seam. The 0xkey adapter already implements the typed-data signing used
+by x402 and MPP; Pay does not copy a second wallet adapter. See the tested
 [`with-x402` example](../../examples/with-x402/README.md#2-company-wallet-signing).
 
 The buyer does not replace global `fetch`. It never falls back after signing.

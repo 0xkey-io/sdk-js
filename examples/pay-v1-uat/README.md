@@ -32,7 +32,8 @@ pnpm --filter pay-v1-uat smoke
 
 It checks that the route returns both standard challenges and that the x402
 challenge is Base Sepolia, canonical USDC, exact `1000` atomic units, and the
-configured `payTo`.
+configured `payTo`. It also checks encrypted save-before-send storage,
+exclusive slot creation, ciphertext confidentiality, and tamper rejection.
 
 ## Run the merchant
 
@@ -52,3 +53,37 @@ Endpoints:
 An unauthenticated request to `/paid/ping` must return 402 with both
 `PAYMENT-REQUIRED` and `WWW-Authenticate: Payment ...`. A paid response is
 returned only after the staging facilitator reports a confirmed settlement.
+
+## Quote and pay with a 0xkey Company Wallet
+
+The buyer uses `@0xkey-io/viem` as the TEE wallet adapter and the released
+`createPayFetch`. It never reads or exports the wallet private key. Configure
+`ZEROXKEY_SIGN_WITH` and `ZEROXKEY_ETHEREUM_ADDRESS` to the dedicated funded
+payer account, not the facilitator relayer.
+
+Generate a 32-byte pending-store key in a secret manager and expose it as 64
+hex characters in `PAY_UAT_STORE_KEY`. The key must not be stored beside the
+pending file. Only one buyer process may own the configured pending file.
+
+With the merchant running, inspect both challenges without signing:
+
+```bash
+pnpm --filter pay-v1-uat buyer quote
+```
+
+For a real payment, first obtain a fresh human confirmation of the exact card
+printed by `quote`. Then set the exact `PAY_UAT_OPERATOR_CONFIRMATION` string
+reported by the CLI and run one protocol only:
+
+```bash
+pnpm --filter pay-v1-uat buyer pay x402
+pnpm --filter pay-v1-uat buyer pay mpp
+```
+
+Never run those two commands as fallback for one request. Confirm and reconcile
+x402 first; confirm MPP separately afterward. If a signed request returns an
+unknown result, do not run `pay` again. Reuse the saved credential:
+
+```bash
+pnpm --filter pay-v1-uat buyer resume
+```
