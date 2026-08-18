@@ -1,0 +1,242 @@
+name: Publish Pay SDK release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Full merged default-branch commit SHA to publish"
+        required: true
+        type: string
+      expected_version:
+        description: "Exact @0xkey-io/pay version to publish"
+        required: true
+        type: string
+      confirm_publish:
+        description: "Publish @0xkey-io/pay with npm dist-tag next"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: ${{ inputs.confirm_publish }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      PUBLIC_NPM_REGISTRY: https://registry.npmjs.org/
+    steps:
+      - name: Checkout the requested source commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.source_sha }}
+
+      - name: Verify immutable default-branch source
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "source_sha must be a full lowercase Git commit SHA." >&2
+            exit 1
+          fi
+          requested_sha="$(git rev-parse "${SOURCE_SHA}^{commit}")"
+          checked_out_sha="$(git rev-parse HEAD)"
+          if [ "$checked_out_sha" != "$requested_sha" ]; then
+            echo "Checkout did not resolve to source_sha." >&2
+            exit 1
+          fi
+          git fetch --no-tags origin "$DEFAULT_BRANCH"
+          default_head="$(git rev-parse "origin/$DEFAULT_BRANCH")"
+          if [ "$requested_sha" != "$default_head" ]; then
+            echo "source_sha is not the current default-branch HEAD." >&2
+            exit 1
+          fi
+
+      - name: Set up Node and pnpm
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version-file: ".nvmrc"
+          registry-url: https://registry.npmjs.org/
+
+      - name: Verify public npm registry configuration
+        run: |
+          set -euo pipefail
+          effective_registry="$(npm config get registry)"
+          if [ "$effective_registry" != "$PUBLIC_NPM_REGISTRY" ]; then
+            echo "npm registry must be $PUBLIC_NPM_REGISTRY; found $effective_registry." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: |
+          npm install --global corepack@0.34.1 --registry="$PUBLIC_NPM_REGISTRY"
+          corepack enable
+          pnpm install -r --frozen-lockfile --registry "$PUBLIC_NPM_REGISTRY"
+
+      - name: Verify Pay package metadata
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+
+          const expectedVersion = process.env.EXPECTED_VERSION;
+          const packageJson = JSON.parse(
+            await readFile("packages/pay/package.json", "utf8"),
+          );
+          if (packageJson.name !== "@0xkey-io/pay") {
+            throw new Error("packages/pay must be exactly @0xkey-io/pay");
+          }
+          if (packageJson.version !== expectedVersion) {
+            throw new Error(
+              `Expected ${expectedVersion}; found ${packageJson.version}`,
+            );
+          }
+          NODE
+
+      - name: Refuse existing version and protect latest
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          latest="$(npm view @0xkey-io/pay dist-tags.latest --registry="$PUBLIC_NPM_REGISTRY")"
+          if [ "$latest" != "0.2.0" ]; then
+            echo "npm latest must remain 0.2.0; found $latest." >&2
+            exit 1
+          fi
+          stderr_file="$(mktemp)"
+          set +e
+          npm view "@0xkey-io/pay@$EXPECTED_VERSION" version --json --registry="$PUBLIC_NPM_REGISTRY" \
+            >/dev/null 2>"$stderr_file"
+          view_status=$?
+          set -e
+          if [ "$view_status" -eq 0 ]; then
+            echo "@0xkey-io/pay@$EXPECTED_VERSION already exists; refusing to publish." >&2
+            rm -f "$stderr_file"
+            exit 1
+          fi
+          if ! grep -Eq 'E404|404' "$stderr_file"; then
+            echo "Could not safely confirm that the requested npm version is absent." >&2
+            rm -f "$stderr_file"
+            exit 1
+          fi
+          rm -f "$stderr_file"
+
+      - name: Verify exact protocol pins
+        run: pnpm --filter @0xkey-io/pay pins:check
+
+      - name: Verify Pay documentation
+        run: pnpm --filter @0xkey-io/pay docs:check
+
+      - name: Typecheck Pay
+        run: pnpm --filter @0xkey-io/pay typecheck:pay-v1
+
+      - name: Test Pay
+        run: pnpm --filter @0xkey-io/pay test:pay-v1
+
+      - name: Build Pay
+        run: pnpm --filter @0xkey-io/pay build
+
+      - name: Run Pay interoperability checks
+        run: pnpm --filter @0xkey-io/pay test:interop
+
+      - name: Pack Pay release candidate
+        run: |
+          set -euo pipefail
+          pack_directory=/tmp/oxkey-pay-publish
+          mkdir -p "$pack_directory"
+          pnpm --dir packages/pay pack --pack-destination "$pack_directory"
+          shopt -s nullglob
+          tarballs=("$pack_directory"/*.tgz)
+          [ "${#tarballs[@]}" -eq 1 ]
+
+      - name: Reconfirm source, package metadata, and npm state before mutation
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$DEFAULT_BRANCH"
+          current_default_head="$(git rev-parse "origin/$DEFAULT_BRANCH")"
+          if [ "$SOURCE_SHA" != "$current_default_head" ]; then
+            echo "source_sha is no longer the current default-branch HEAD." >&2
+            exit 1
+          fi
+          git diff --quiet
+          git diff --cached --quiet
+          if [ -n "$(git status --porcelain=v1 --untracked-files=all)" ]; then
+            echo "The source tree has unexpected untracked files after Pay gates." >&2
+            exit 1
+          fi
+          effective_registry="$(npm config get registry)"
+          if [ "$effective_registry" != "$PUBLIC_NPM_REGISTRY" ]; then
+            echo "npm registry must be $PUBLIC_NPM_REGISTRY; found $effective_registry." >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+
+          const expectedVersion = process.env.EXPECTED_VERSION;
+          const packageJson = JSON.parse(
+            await readFile("packages/pay/package.json", "utf8"),
+          );
+          if (packageJson.name !== "@0xkey-io/pay") {
+            throw new Error("packages/pay must be exactly @0xkey-io/pay");
+          }
+          if (packageJson.version !== expectedVersion) {
+            throw new Error(
+              `Expected ${expectedVersion}; found ${packageJson.version}`,
+            );
+          }
+          NODE
+          latest="$(npm view @0xkey-io/pay dist-tags.latest --registry="$PUBLIC_NPM_REGISTRY")"
+          if [ "$latest" != "0.2.0" ]; then
+            echo "npm latest must remain 0.2.0; found $latest." >&2
+            exit 1
+          fi
+          stderr_file="$(mktemp)"
+          set +e
+          npm view "@0xkey-io/pay@$EXPECTED_VERSION" version --json --registry="$PUBLIC_NPM_REGISTRY" \
+            >/dev/null 2>"$stderr_file"
+          view_status=$?
+          set -e
+          if [ "$view_status" -eq 0 ]; then
+            echo "@0xkey-io/pay@$EXPECTED_VERSION already exists; refusing to publish." >&2
+            rm -f "$stderr_file"
+            exit 1
+          fi
+          if ! grep -Eq 'E404|404' "$stderr_file"; then
+            echo "Could not safely confirm that the requested npm version is absent." >&2
+            rm -f "$stderr_file"
+            exit 1
+          fi
+          rm -f "$stderr_file"
+
+      - name: Publish only @0xkey-io/pay to npm next
+        working-directory: packages/pay
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --tag next --access public --ignore-scripts --registry="$PUBLIC_NPM_REGISTRY"
+
+      - name: Verify published version and npm tags
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          published_version="$(npm view "@0xkey-io/pay@$EXPECTED_VERSION" version --registry="$PUBLIC_NPM_REGISTRY")"
+          next="$(npm view @0xkey-io/pay dist-tags.next --registry="$PUBLIC_NPM_REGISTRY")"
+          latest="$(npm view @0xkey-io/pay dist-tags.latest --registry="$PUBLIC_NPM_REGISTRY")"
+          [ "$published_version" = "$EXPECTED_VERSION" ]
+          [ "$next" = "$EXPECTED_VERSION" ]
+          [ "$latest" = "0.2.0" ]

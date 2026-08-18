@@ -1,5 +1,10 @@
 # @0xkey-io/pay
 
+## 0.3.0-rc.4
+
+- Use `https://api-pay.0xkey.io` as the public Pay API origin. The product
+  website `pay.0xkey.io` is rejected as a facilitator base URL.
+
 ## 0.3.0-rc.3
 
 - Replace the implicit `production | sandbox` switch with required CAIP-2

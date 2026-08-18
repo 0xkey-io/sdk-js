@@ -86,6 +86,17 @@ The workflow will:
 4. Publish to npm with `pnpm publish -r`
 5. Create a GitHub Release
 
+### Pay release candidates
+
+Use **Publish Pay SDK release candidate** (`.github/workflows/pay-publish.yml`)
+for a reviewed `@0xkey-io/pay` release candidate. It is manual only and takes
+the full merged default-branch `source_sha`, the exact `expected_version`, and
+`confirm_publish: true`. The workflow checks that the SHA is still the current
+default-branch head, verifies Pay's package gates and tarball, then publishes
+only `@0xkey-io/pay` with npm tag `next` after `production` approval. It refuses
+an existing version and keeps npm `latest` at `0.2.0`; do not use the general
+changeset workflow for this release.
+
 ## Version policy
 
 | Change type            | Semver bump               | Changeset type |
