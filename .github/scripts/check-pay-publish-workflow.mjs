@@ -16,6 +16,10 @@ const required = [
   "environment: production",
   "if: ${{ inputs.confirm_publish }}",
   "ref: ${{ inputs.source_sha }}",
+  "registry-url: https://registry.npmjs.org/",
+  "PUBLIC_NPM_REGISTRY: https://registry.npmjs.org/",
+  "Verify public npm registry configuration",
+  "npm config get registry",
   'git fetch --no-tags origin "$DEFAULT_BRANCH"',
   "origin/$DEFAULT_BRANCH",
   'packageJson.name !== "@0xkey-io/pay"',
@@ -29,7 +33,7 @@ const required = [
   "test:interop",
   "pnpm --filter @0xkey-io/pay build",
   "pack --pack-destination",
-  "Reconfirm source and npm state before mutation",
+  "Reconfirm source, package metadata, and npm state before mutation",
   "npm publish --tag next",
   "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
 ];
@@ -77,7 +81,7 @@ assert.doesNotMatch(
 const immutableSourceCheck = workflow.indexOf("Verify immutable default-branch source");
 const registryPreflight = workflow.indexOf("Refuse existing version and protect latest");
 const finalMutationPreflight = workflow.indexOf(
-  "Reconfirm source and npm state before mutation",
+  "Reconfirm source, package metadata, and npm state before mutation",
 );
 const publish = workflow.indexOf("npm publish --tag next");
 const postPublishVerification = workflow.indexOf("Verify published version and npm tags");
@@ -86,5 +90,49 @@ assert.ok(registryPreflight >= 0 && registryPreflight < publish);
 assert.ok(finalMutationPreflight >= 0 && finalMutationPreflight < publish);
 assert.ok(postPublishVerification > publish);
 assert.equal((workflow.match(/npm publish --tag next/g) ?? []).length, 1);
+assert.ok(
+  workflow.lastIndexOf('packageJson.name !== "@0xkey-io/pay"') >
+    finalMutationPreflight,
+  "final mutation preflight must recheck the Pay package name",
+);
+assert.ok(
+  workflow.lastIndexOf("packageJson.version !== expectedVersion") >
+    finalMutationPreflight,
+  "final mutation preflight must recheck the expected Pay version",
+);
+
+const registryConfiguration = workflow.indexOf(
+  "Verify public npm registry configuration",
+);
+const firstTokenUse = workflow.indexOf("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}");
+assert.ok(registryConfiguration >= 0 && registryConfiguration < firstTokenUse);
+assert.ok(
+  workflow.lastIndexOf("npm config get registry") > finalMutationPreflight,
+  "final mutation preflight must recheck the effective npm registry",
+);
+assert.match(
+  workflow,
+  /git diff --quiet\n\s+git diff --cached --quiet\n\s+if \[ -n "\$\(git status --porcelain=v1 --untracked-files=all\)" \]; then/,
+  "final mutation preflight must require a clean source tree",
+);
+
+for (const command of workflow.match(/^\s*npm (?:view|publish)\b.*$/gm) ?? []) {
+  assert.match(
+    command,
+    /--registry="\$PUBLIC_NPM_REGISTRY"/,
+    `npm registry command must pin npmjs: ${command.trim()}`,
+  );
+}
+
+assert.match(
+  workflow,
+  /npm install --global corepack@0\.34\.1 --registry="\$PUBLIC_NPM_REGISTRY"/,
+  "corepack install must pin npmjs",
+);
+assert.match(
+  workflow,
+  /pnpm install -r --frozen-lockfile --registry "\$PUBLIC_NPM_REGISTRY"/,
+  "dependency install must pin npmjs",
+);
 
 process.stdout.write("Pay publish workflow static checks passed.\n");
