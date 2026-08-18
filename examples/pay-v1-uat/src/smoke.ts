@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createUatApp } from "./app.js";
+import { createFilePendingPaymentStore } from "./file-store.js";
 
 const payTo = "0x00000000000000000000000000000000000000aa";
 const handle = createUatApp({
@@ -40,8 +44,41 @@ assert.equal(accepted?.network, "eip155:84532");
 assert.equal(accepted?.payTo.toLowerCase(), payTo.toLowerCase());
 assert.equal(accepted?.scheme, "exact");
 
+const storeDirectory = await mkdtemp(join(tmpdir(), "pay-v1-uat-store-"));
+const storeFile = join(storeDirectory, "pending.aead");
+const store = createFilePendingPaymentStore({
+  file: storeFile,
+  keyHex: "22".repeat(32),
+});
+const record = {
+  digest: `0x${"33".repeat(32)}` as const,
+  payment: {
+    version: 2 as const,
+    requestDigest: `0x${"44".repeat(32)}` as const,
+    url: "https://pay-uat.example/paid/ping",
+    method: "GET",
+    headers: [["payment-signature", "encrypted-by-store"]] as Array<
+      [string, string]
+    >,
+  },
+};
+assert.equal(await store.saveIfAbsent(record), true);
+assert.equal(await store.saveIfAbsent(record), false);
+assert.deepEqual(await store.load(), record);
+assert.doesNotMatch(await readFile(storeFile, "utf8"), /payment-signature/);
+const envelope = JSON.parse(await readFile(storeFile, "utf8")) as {
+  ciphertext: string;
+};
+envelope.ciphertext = `${envelope.ciphertext.slice(0, -1)}${
+  envelope.ciphertext.endsWith("A") ? "B" : "A"
+}`;
+await writeFile(storeFile, JSON.stringify(envelope));
+await assert.rejects(store.load());
+await rm(storeDirectory, { recursive: true });
+
 console.info("pay_v1_uat_smoke_passed", {
   amountAtomic: challenge.accepts[0]?.amount,
   network: challenge.accepts[0]?.network,
   protocols: ["x402", "mpp"],
+  storeProtection: store.protection,
 });

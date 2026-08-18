@@ -25,6 +25,9 @@
   not need a 0xkey extension.
 - Require a production-grade Base RPC, or an injected receipt verifier, before
   a production buyer can sign. Base public RPC is sandbox-only.
+- Keep the buyer signer seam to `address + signTypedData` instead of exposing
+  the full Viem `Account` type. This lets the 0xkey TEE wallet adapter and local
+  accounts from compatible Viem minors compile against the same Pay Interface.
 
 ## 0.2.0
 
