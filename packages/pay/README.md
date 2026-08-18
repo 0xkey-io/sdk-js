@@ -104,7 +104,8 @@ Sandbox workspace. The same organization and API-key model can use either
 Base mainnet or Base Sepolia, but each SDK instance and every signed credential
 belongs to exactly one network. Seller and Admin traffic uses the matching
 `https://pay.0xkey.io/base-mainnet` or
-`https://pay.0xkey.io/base-sepolia` channel.
+`https://pay.0xkey.io/base-sepolia` channel. The public Pay origin rejects any
+other path instead of guessing a network.
 
 For tests and local work only, storage can be disabled explicitly:
 

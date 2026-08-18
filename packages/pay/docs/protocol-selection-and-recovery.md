@@ -6,7 +6,7 @@ Status: RC contract
 
 Evidence state: Implemented without end-to-end evidence; local gates pass
 
-Last verified: 2026-08-18
+Last verified: 2026-08-19
 
 This is the implementation contract for `@0xkey-io/pay/client` and
 `@0xkey-io/pay/server`. The package README is the public quickstart. Generated
@@ -63,9 +63,10 @@ is created. The rate-limited Base mainnet public RPC is rejected. Base Sepolia
 may use the public Sepolia endpoint.
 
 Server and Admin instances route through the corresponding
-`/base-mainnet` or `/base-sepolia` Pay channel. Passing the opposite canonical
-channel is a configuration error. Custom local URLs remain available for tests,
-but they still represent exactly the configured network.
+`/base-mainnet` or `/base-sepolia` Pay channel. On `https://pay.0xkey.io`, the
+SDK accepts only the selected canonical channel and rejects every other path.
+Custom local URLs remain available for tests, but they still represent exactly
+the configured network.
 
 `mppx 0.8.17` needs its route-binding extension when it signs ordinary x402.
 Many normal x402 sellers do not send that extension. If this exact error occurs

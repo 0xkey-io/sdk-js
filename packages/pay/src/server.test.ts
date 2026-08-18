@@ -194,6 +194,27 @@ describe("createPayServer", () => {
     ).toThrow("PAY_NETWORK_CHANNEL_MISMATCH");
   });
 
+  it("rejects every non-canonical path on the public Pay origin", () => {
+    for (const facilitatorUrl of [
+      "https://pay.0xkey.io/base-mainnet/v1",
+      "https://pay.0xkey.io/pay",
+      "https://pay.0xkey.io/base-mainnet?tenant=wrong",
+      "https://pay.0xkey.io/base-mainnet#fragment",
+      "https://user@pay.0xkey.io/base-mainnet",
+    ]) {
+      expect(() =>
+        createPayServer({
+          network: "eip155:8453",
+          organizationId: ORG,
+          payTo: requirements.payTo as `0x${string}`,
+          apiKey: { publicKey: "unused", privateKey: "unused" },
+          mppSecretKey: "01234567890123456789012345678901",
+          facilitatorUrl,
+        }),
+      ).toThrow("PAY_NETWORK_CHANNEL_MISMATCH");
+    }
+  });
+
   it("configures mppx with canonical Base mainnet USDC", () => {
     const evmServer = jest.requireMock("mppx/evm/server") as {
       charge: jest.Mock;

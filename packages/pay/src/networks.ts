@@ -27,15 +27,28 @@ export function resolvePayBaseUrl(
   const url = new URL(configuredBaseUrl);
   const pathname = url.pathname.replace(/\/+$/, "");
   const expected = payChannel(network);
-  const opposite = expected === "base-mainnet" ? "base-sepolia" : "base-mainnet";
+  const opposite =
+    expected === "base-mainnet" ? "base-sepolia" : "base-mainnet";
   const segments = pathname.split("/").filter(Boolean);
+  if (url.origin === PAY_ORIGIN) {
+    if (url.username || url.password || url.search || url.hash) {
+      throw new Error(
+        `PAY_NETWORK_CHANNEL_MISMATCH: ${network} must use a canonical public Pay URL`,
+      );
+    }
+    if (segments.length === 0) {
+      url.pathname = `/${expected}`;
+    } else if (segments.length !== 1 || segments[0] !== expected) {
+      throw new Error(
+        `PAY_NETWORK_CHANNEL_MISMATCH: ${network} must use /${expected}`,
+      );
+    }
+    return url.toString().replace(/\/$/, "");
+  }
   if (segments.at(-1) === opposite) {
     throw new Error(
       `PAY_NETWORK_CHANNEL_MISMATCH: ${network} cannot use /${opposite}`,
     );
-  }
-  if (url.origin === PAY_ORIGIN && segments.length === 0) {
-    url.pathname = `/${expected}`;
   }
   return url.toString().replace(/\/$/, "");
 }
