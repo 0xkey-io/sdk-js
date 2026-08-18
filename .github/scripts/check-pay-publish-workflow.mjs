@@ -39,14 +39,17 @@ const required = [
 ];
 
 for (const value of required) {
-  assert.ok(workflow.includes(value), `pay publish workflow is missing ${value}`);
+  assert.ok(
+    workflow.includes(value),
+    `pay publish workflow is missing ${value}`,
+  );
 }
 
 for (const forbidden of [
   "changeset",
   "publish -r",
   "echo $NPM_TOKEN",
-  "echo \"$NPM_TOKEN\"",
+  'echo "$NPM_TOKEN"',
 ]) {
   assert.ok(
     !workflow.includes(forbidden),
@@ -78,13 +81,19 @@ assert.doesNotMatch(
   "pay publish workflow must be manual only",
 );
 
-const immutableSourceCheck = workflow.indexOf("Verify immutable default-branch source");
-const registryPreflight = workflow.indexOf("Refuse existing version and protect latest");
+const immutableSourceCheck = workflow.indexOf(
+  "Verify immutable default-branch source",
+);
+const registryPreflight = workflow.indexOf(
+  "Refuse existing version and protect latest",
+);
 const finalMutationPreflight = workflow.indexOf(
   "Reconfirm source, package metadata, and npm state before mutation",
 );
 const publish = workflow.indexOf("npm publish --tag next");
-const postPublishVerification = workflow.indexOf("Verify published version and npm tags");
+const postPublishVerification = workflow.indexOf(
+  "Verify published version and npm tags",
+);
 assert.ok(immutableSourceCheck >= 0 && immutableSourceCheck < publish);
 assert.ok(registryPreflight >= 0 && registryPreflight < publish);
 assert.ok(finalMutationPreflight >= 0 && finalMutationPreflight < publish);
@@ -104,7 +113,9 @@ assert.ok(
 const registryConfiguration = workflow.indexOf(
   "Verify public npm registry configuration",
 );
-const firstTokenUse = workflow.indexOf("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}");
+const firstTokenUse = workflow.indexOf(
+  "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
+);
 assert.ok(registryConfiguration >= 0 && registryConfiguration < firstTokenUse);
 assert.ok(
   workflow.lastIndexOf("npm config get registry") > finalMutationPreflight,
