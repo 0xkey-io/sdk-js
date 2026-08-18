@@ -4,11 +4,14 @@ import type {
   PaymentListResponse,
   PaymentRecord,
 } from "../types";
+import { assertBasePaymentNetwork, resolvePayBaseUrl } from "../networks";
+import type { BasePaymentNetwork } from "../receipt-verifier";
 import { createXStampV2Stamper } from "../xstamp";
 import type { PayApiKey, RequestStamper } from "../xstamp";
 
 export interface PayAdminClientOptions {
-  baseUrl: string;
+  network: BasePaymentNetwork;
+  baseUrl?: string;
   organizationId: string;
   apiKey?: PayApiKey;
   stamper?: RequestStamper;
@@ -16,7 +19,8 @@ export interface PayAdminClientOptions {
 }
 
 export function createPayAdminClient(options: PayAdminClientOptions) {
-  const baseUrl = options.baseUrl.replace(/\/$/, "");
+  assertBasePaymentNetwork(options.network);
+  const baseUrl = resolvePayBaseUrl(options.network, options.baseUrl);
   const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   const stamper = requireStamper(
     options.stamper ??
@@ -67,7 +71,7 @@ export function createPayAdminClient(options: PayAdminClientOptions) {
         const query = new URLSearchParams();
         if (params.status) query.set("status", params.status);
         if (params.txHash) query.set("txHash", params.txHash);
-        if (params.network) query.set("network", params.network);
+        query.set("network", options.network);
         if (params.protocol) query.set("protocol", params.protocol);
         if (params.address) query.set("address", params.address);
         if (params.createdAfter) query.set("createdAfter", params.createdAfter);

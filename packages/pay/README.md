@@ -18,7 +18,7 @@ import { createPayServer } from "@0xkey-io/pay/server";
 import { paymentMiddleware } from "@0xkey-io/pay/express";
 
 const payments = createPayServer({
-  environment: "production",
+  network: "eip155:8453",
   organizationId: process.env.ZEROXKEY_ORGANIZATION_ID!,
   payTo: process.env.ZEROXKEY_PAY_TO! as `0x${string}`,
   apiKey: {
@@ -50,7 +50,7 @@ import { createPayFetch } from "@0xkey-io/pay/client";
 const payFetch = createPayFetch({
   account,
   allowHosts: ["api.example.com"],
-  environment: "production",
+  network: "eip155:8453",
   maxAmount: "$0.10",
   rpcUrls: { "eip155:8453": process.env.BASE_RPC_URL! },
   protocolPreference: ["x402", "mpp"],
@@ -93,11 +93,19 @@ canonical block, full `transferWithAuthorization` input, `Transfer` event, and
 time window, nonce, and transaction. A normal official x402 seller works; it
 does not need a 0xkey receipt extension.
 
-Production must set `rpcUrls["eip155:8453"]` to a production-grade Base RPC, or
+For Base mainnet, set `rpcUrls["eip155:8453"]` to a production-grade Base RPC, or
 provide an audited `receiptVerifier` with the same checks. The public
-`https://mainnet.base.org` endpoint is rejected in production. Sandbox uses
-Base Sepolia and may use its public endpoint. This check happens when the buyer
-is created, before it can sign or send a payment.
+`https://mainnet.base.org` endpoint is rejected. Base Sepolia may use its
+public endpoint. This check happens when the buyer is created, before it can
+sign or send a payment.
+
+`network` is required everywhere; there is no inferred environment and no
+Sandbox workspace. The same organization and API-key model can use either
+Base mainnet or Base Sepolia, but each SDK instance and every signed credential
+belongs to exactly one network. Seller and Admin traffic uses the matching
+`https://pay.0xkey.io/base-mainnet` or
+`https://pay.0xkey.io/base-sepolia` channel. The public Pay origin rejects any
+other path instead of guessing a network.
 
 For tests and local work only, storage can be disabled explicitly:
 
@@ -105,7 +113,7 @@ For tests and local work only, storage can be disabled explicitly:
 const payFetch = createPayFetch({
   account,
   allowHosts: ["localhost:3000"],
-  environment: "sandbox",
+  network: "eip155:84532",
   maxAmount: "$0.10",
   allowInMemoryPendingPayment: true,
   allowInsecureLocalhost: true,
@@ -135,7 +143,7 @@ normal calls share one in-process lock.
 const payFetch = createPayFetch({
   account,
   allowHosts: ["api.example.com"],
-  environment: "production",
+  network: "eip155:8453",
   maxAmount: "$0.10",
   pendingPaymentStore,
   rpcUrls: { "eip155:8453": process.env.BASE_RPC_URL! },
@@ -151,7 +159,7 @@ const pendingPayment = await payFetch.exportPendingPayment();
 const restored = createPayFetch({
   account,
   allowHosts: ["api.example.com"],
-  environment: "production",
+  network: "eip155:8453",
   maxAmount: "$0.10",
   pendingPayment,
   pendingPaymentStore,
@@ -167,6 +175,9 @@ AEAD or encryption plus HMAC, with the key kept outside the record.
 On restore, the SDK uses mppx schemas to check the payer, Base network,
 canonical USDC, amount limit, recipient, and challenge. The authenticated
 stored snapshot binds the original URL, method, headers, and body.
+Pending-payment format v3 also binds the selected network. Restoring it through
+an SDK instance configured for the other network fails before any request is
+sent.
 
 ## Admin
 
@@ -175,6 +186,7 @@ import { createPayAdminClient } from "@0xkey-io/pay/admin";
 
 const admin = createPayAdminClient({
   baseUrl: "https://pay.0xkey.io",
+  network: "eip155:8453",
   organizationId: process.env.ZEROXKEY_ORGANIZATION_ID!,
   apiKey: {
     publicKey: process.env.ZEROXKEY_PUBLIC_KEY!,

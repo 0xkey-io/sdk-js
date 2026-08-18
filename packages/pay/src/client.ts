@@ -14,6 +14,7 @@ import {
   type PaymentReceiptVerifier,
   type PaymentReceiptVerificationInput,
 } from "./receipt-verifier";
+import { assertBasePaymentNetwork } from "./networks";
 
 export type {
   BasePaymentNetwork,
@@ -46,8 +47,8 @@ export interface CreatePayFetchOptions {
   account: PayEvmAccount;
   allowHosts: string[];
   maxAmount: string;
-  /** Defaults to production. Sandbox is fixed to Base Sepolia. */
-  environment?: "production" | "sandbox";
+  /** Required rail selection. A signed payment can never switch networks. */
+  network: BasePaymentNetwork;
   protocolPreference?: PayProtocol[];
   /** Local development only. Allows HTTP to exact loopback hostnames. */
   allowInsecureLocalhost?: boolean;
@@ -86,7 +87,8 @@ export interface PendingPaymentRecord {
 }
 
 export interface SerializedPendingPayment {
-  version: 2;
+  version: 3;
+  network: BasePaymentNetwork;
   /** Unkeyed checksum for accidental corruption. This is not tamper protection. */
   requestDigest: `0x${string}`;
   url: string;
@@ -116,6 +118,7 @@ interface DecodedPaymentReceipt {
 }
 
 export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
+  assertBasePaymentNetwork(options.network);
   if (!options.allowHosts.length) {
     throw new Error("allowHosts must contain at least one trusted host");
   }
@@ -153,14 +156,12 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
       "PENDING_PAYMENT_STORE_PROTECTION_REQUIRED: use AEAD or encryption plus HMAC",
     );
   }
-  const environment = options.environment ?? "production";
-  const paymentNetwork: BasePaymentNetwork =
-    environment === "production" ? "eip155:8453" : "eip155:84532";
+  const paymentNetwork = options.network;
   const receiptVerifier =
     options.receiptVerifier ??
     createBaseReceiptVerifier({
       network: paymentNetwork,
-      rpcUrl: receiptRpcUrl(options, environment, paymentNetwork),
+      rpcUrl: receiptRpcUrl(options, paymentNetwork),
     });
   const rawFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   let pendingRequest: Request | undefined;
@@ -186,7 +187,10 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
         maxAmountAtomic,
         paymentNetwork,
       );
-      const candidateRecord = await pendingPaymentRecord(candidateRequest);
+      const candidateRecord = await pendingPaymentRecord(
+        candidateRequest,
+        paymentNetwork,
+      );
       const isPersistedResume =
         resumingPending &&
         pendingPersisted &&
@@ -204,6 +208,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
             pendingRequest = restorePendingPayment(
               stored.payment,
               options.allowHosts,
+              paymentNetwork,
               options.allowInsecureLocalhost,
             );
             pendingRecord = stored;
@@ -243,6 +248,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
     pendingRequest = restorePendingPayment(
       options.pendingPayment,
       options.allowHosts,
+      paymentNetwork,
       options.allowInsecureLocalhost,
     );
   }
@@ -260,11 +266,11 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
         // minor-version internals from leaking to callers.
         account: options.account as Account,
         currencies:
-          environment === "production"
+          paymentNetwork === "eip155:8453"
             ? [assets.base.USDC]
             : [assets.baseSepolia.USDC],
         maxAmount,
-        networks: environment === "production" ? [8453] : [84532],
+        networks: paymentNetwork === "eip155:8453" ? [8453] : [84532],
       }),
     ],
     fetch: guardedFetch,
@@ -378,7 +384,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
   payFetch.exportPendingPayment = async () => {
     await ensurePendingPaymentLoaded();
     if (!pendingRequest) return undefined;
-    return serializePendingPayment(pendingRequest);
+    return serializePendingPayment(pendingRequest, paymentNetwork);
   };
   return payFetch;
 
@@ -441,7 +447,10 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
         if (stored) {
           await assertPendingPaymentRecord(stored);
           if (pendingRequest) {
-            const manual = await pendingPaymentRecord(pendingRequest);
+            const manual = await pendingPaymentRecord(
+              pendingRequest,
+              paymentNetwork,
+            );
             if (manual.digest !== stored.digest) {
               throw new Error(
                 "PENDING_PAYMENT_CONFLICT: store and pendingPayment differ",
@@ -452,13 +461,17 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
             pendingRequest = restorePendingPayment(
               stored.payment,
               options.allowHosts,
+              paymentNetwork,
               options.allowInsecureLocalhost,
             );
             pendingRecord = stored;
           }
           pendingPersisted = true;
         } else if (pendingRequest) {
-          pendingRecord = await pendingPaymentRecord(pendingRequest);
+          pendingRecord = await pendingPaymentRecord(
+            pendingRequest,
+            paymentNetwork,
+          );
           pendingPersisted = false;
         }
         storeLoaded = true;
@@ -466,7 +479,10 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
       await storeLoad;
     }
     if (pendingRequest && !pendingRecord) {
-      pendingRecord = await pendingPaymentRecord(pendingRequest);
+      pendingRecord = await pendingPaymentRecord(
+        pendingRequest,
+        paymentNetwork,
+      );
     }
     if (pendingRequest && !pendingFacts) {
       pendingFacts = inspectPendingPayment(
@@ -481,11 +497,13 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
 
 async function serializePendingPayment(
   requestInput: Request,
+  network: BasePaymentNetwork,
 ): Promise<SerializedPendingPayment> {
   const request = requestInput.clone();
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   const unsigned = {
-    version: 2 as const,
+    version: 3 as const,
+    network,
     url: request.url,
     method: request.method,
     headers: Array.from(request.headers.entries()),
@@ -505,8 +523,9 @@ async function serializePendingPayment(
 
 async function pendingPaymentRecord(
   request: Request,
+  network: BasePaymentNetwork,
 ): Promise<PendingPaymentRecord> {
-  const payment = await serializePendingPayment(request);
+  const payment = await serializePendingPayment(request, network);
   return {
     digest: pendingPaymentDigest(payment),
     payment,
@@ -548,11 +567,17 @@ function assertPendingPaymentChecksum(payment: SerializedPendingPayment): void {
 function restorePendingPayment(
   pending: SerializedPendingPayment,
   allowHosts: string[],
+  expectedNetwork: BasePaymentNetwork,
   allowInsecureLocalhost?: boolean,
 ): Request {
-  if (pending.version !== 2) {
+  if (pending.version !== 3) {
     throw new Error(
       "PENDING_PAYMENT_INVALID: unsupported pending payment version",
+    );
+  }
+  if (pending.network !== expectedNetwork) {
+    throw new Error(
+      "PENDING_PAYMENT_NETWORK_MISMATCH: pending payment belongs to another network",
     );
   }
   assertPendingPaymentChecksum(pending);
@@ -647,7 +672,7 @@ function inspectPendingPayment(
       const proof = x402.Types.ExactEip3009PayloadSchema.parse(payment.payload);
       const accepted = payment.accepted;
       if (accepted.network !== paymentNetwork) {
-        throw new Error("x402 network does not match environment");
+        throw new Error("x402 network does not match configured network");
       }
       const asset = baseUsdc(accepted.network);
       if (
@@ -705,7 +730,7 @@ function inspectPendingPayment(
     const proof = EvmTypes.AuthorizationPayloadSchema.parse(credential.payload);
     const network = EvmTypes.networkOf(chargeRequest.methodDetails.chainId);
     if (network !== paymentNetwork) {
-      throw new Error("MPP network does not match environment");
+      throw new Error("MPP network does not match configured network");
     }
     const asset = baseUsdc(network);
     if (
@@ -844,23 +869,22 @@ function requestUrl(input: RequestInfo | URL): string {
 
 function receiptRpcUrl(
   options: CreatePayFetchOptions,
-  environment: "production" | "sandbox",
   network: BasePaymentNetwork,
 ): string {
   const configured = options.rpcUrls?.[network];
   const value =
     configured ??
-    (environment === "sandbox" ? "https://sepolia.base.org" : undefined);
+    (network === "eip155:84532" ? "https://sepolia.base.org" : undefined);
   if (!value) {
     throw new Error(
-      "PAY_RECEIPT_RPC_REQUIRED: production requires rpcUrls['eip155:8453'] or receiptVerifier",
+      "PAY_RECEIPT_RPC_REQUIRED: Base mainnet requires rpcUrls['eip155:8453'] or receiptVerifier",
     );
   }
   const url = new URL(value);
   if (url.protocol !== "https:") {
     throw new Error("PAY_RECEIPT_RPC_INVALID: receipt RPC must use HTTPS");
   }
-  if (environment === "production" && url.hostname === "mainnet.base.org") {
+  if (network === "eip155:8453" && url.hostname === "mainnet.base.org") {
     throw new Error(
       "PAY_RECEIPT_RPC_INVALID: Base public RPC is not for production use",
     );

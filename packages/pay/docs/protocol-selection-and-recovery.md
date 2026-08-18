@@ -6,7 +6,7 @@ Status: RC contract
 
 Evidence state: Implemented without end-to-end evidence; local gates pass
 
-Last verified: 2026-08-17
+Last verified: 2026-08-19
 
 This is the implementation contract for `@0xkey-io/pay/client` and
 `@0xkey-io/pay/server`. The package README is the public quickstart. Generated
@@ -19,8 +19,10 @@ Pay v1 supports two wire protocols over one EVM charge:
 - x402 v2 `exact`;
 - Machine Payments Protocol (MPP) `evm/charge`.
 
-Both settle canonical USDC on Base. Production uses Base mainnet. Sandbox uses
-Base Sepolia. MPP session and all other rails are outside v1.
+Both settle canonical USDC on Base. The caller must choose Base mainnet
+(`eip155:8453`) or Base Sepolia (`eip155:84532`) explicitly. The same product
+account can use both; there is no separate Sandbox workspace. MPP session and
+all other rails are outside v1.
 
 `mppx` owns MPP challenge, credential, receipt, and retry encoding. Official
 `@x402/*` packages own ordinary x402 client encoding. 0xkey does not copy those
@@ -55,11 +57,16 @@ The default order is x402, then MPP. `protocolPreference` may change that order.
 The buyer accepts only enabled hosts, Base, canonical USDC, and an amount at or
 below `maxAmount`.
 
-`environment: "production"` is fixed to Base mainnet. It requires an explicit
-production RPC in `rpcUrls["eip155:8453"]`, or an audited `receiptVerifier`,
-when the buyer is created. The rate-limited Base public RPC is rejected for
-production. `environment: "sandbox"` is fixed to Base Sepolia and may use the
-public Sepolia endpoint.
+`network` is required and cannot be inferred. Base mainnet requires an explicit
+RPC in `rpcUrls["eip155:8453"]`, or an audited `receiptVerifier`, when the buyer
+is created. The rate-limited Base mainnet public RPC is rejected. Base Sepolia
+may use the public Sepolia endpoint.
+
+Server and Admin instances route through the corresponding
+`/base-mainnet` or `/base-sepolia` Pay channel. On `https://pay.0xkey.io`, the
+SDK accepts only the selected canonical channel and rejects every other path.
+Custom local URLs remain available for tests, but they still represent exactly
+the configured network.
 
 `mppx 0.8.17` needs its route-binding extension when it signs ordinary x402.
 Many normal x402 sellers do not send that extension. If this exact error occurs
@@ -88,7 +95,7 @@ sequenceDiagram
     Caller->>Buyer: paid fetch
     Buyer->>Merchant: request without credential
     Merchant-->>Buyer: 402 challenges
-    Buyer->>Buyer: choose protocol, then sign once
+    Buyer->>Buyer: validate configured network, choose protocol, then sign once
     Buyer->>Store: saveIfAbsent(exact signed request)
     alt durable save fails
         Store-->>Buyer: error
@@ -158,6 +165,8 @@ a saved payment exists.
 
 On restart, `resume()` checks the saved payer, protocol, Base network, canonical
 USDC, amount, recipient, host, URL, method, headers, and body before sending.
+A v3 pending snapshot stores the selected network inside its authenticated
+record; opening it under the other network is rejected before sending.
 A plain 2xx, 4xx, or 5xx without a protocol success receipt does not clear it.
 
 A success receipt also does not clear it by itself. The buyer reads the named
@@ -183,6 +192,9 @@ does not claim Mandate or budget assurance.
 
 The public boundary tests cover full receipt-to-effect proof, RPC failure,
 ordinary official x402 receipts, and same-credential recovery for every 5xx.
+The interoperability smoke runs all four x402/MPP × Base mainnet/Sepolia pairs
+and asserts challenge, credential snapshot, facilitator channel, canonical
+asset, settlement response, and receipt evidence never cross networks.
 
 ## Change rules
 
