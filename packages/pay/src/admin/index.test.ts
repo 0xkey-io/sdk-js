@@ -49,6 +49,7 @@ describe("createPayAdminClient", () => {
     };
     const client = createPayAdminClient({
       baseUrl: "https://pay.example",
+      network: "eip155:84532",
       organizationId: paymentWithoutDirection.organizationId,
       stamper,
       fetch: async () => Response.json(paymentWithoutDirection),
@@ -77,6 +78,7 @@ describe("createPayAdminClient", () => {
     }) as typeof globalThis.fetch;
     const client = createPayAdminClient({
       baseUrl: "https://pay.example/",
+      network: "eip155:84532",
       organizationId: "11111111-1111-1111-1111-111111111111",
       stamper,
       fetch,
@@ -92,7 +94,7 @@ describe("createPayAdminClient", () => {
     });
 
     expect(urls).toEqual([
-      "https://pay.example/v1/organizations/11111111-1111-1111-1111-111111111111/payments?status=CONFIRMED&protocol=mpp&limit=10",
+      "https://pay.example/v1/organizations/11111111-1111-1111-1111-111111111111/payments?status=CONFIRMED&network=eip155%3A84532&protocol=mpp&limit=10",
       "https://pay.example/v1/organizations/11111111-1111-1111-1111-111111111111/payments/22222222-2222-2222-2222-222222222222",
     ]);
     expect(stampInputs).toHaveLength(2);
@@ -114,6 +116,7 @@ describe("createPayAdminClient", () => {
     };
     const client = createPayAdminClient({
       baseUrl: "https://pay.example",
+      network: "eip155:84532",
       organizationId: "11111111-1111-1111-1111-111111111111",
       stamper,
       fetch: async () => new Response("denied", { status: 403 }),
@@ -132,6 +135,7 @@ describe("createPayAdminClient", () => {
     };
     const client = createPayAdminClient({
       baseUrl: "https://pay.example",
+      network: "eip155:84532",
       organizationId: "11111111-1111-1111-1111-111111111111",
       stamper,
       fetch: async () =>
@@ -144,5 +148,29 @@ describe("createPayAdminClient", () => {
     await expect(client.payments.list({})).rejects.toThrow(
       "Pay admin request failed with 401: TENANT_CONTEXT_MISMATCH",
     );
+  });
+
+  it("routes the public Pay origin through the configured network channel", async () => {
+    const urls: string[] = [];
+    const client = createPayAdminClient({
+      baseUrl: "https://pay.0xkey.io",
+      network: "eip155:8453",
+      organizationId: "11111111-1111-1111-1111-111111111111",
+      stamper: {
+        async stampRequest() {
+          return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed-v2" };
+        },
+      },
+      fetch: async (input) => {
+        urls.push(String(input));
+        return Response.json({ payments: [] });
+      },
+    });
+
+    await client.payments.list({});
+
+    expect(urls).toEqual([
+      "https://pay.0xkey.io/base-mainnet/v1/organizations/11111111-1111-1111-1111-111111111111/payments?network=eip155%3A8453",
+    ]);
   });
 });

@@ -72,7 +72,7 @@ const termsCheckingFetch: typeof fetch = async (input, init) => {
 const payFetch = createPayFetch({
   account,
   allowHosts: [endpoint.host],
-  environment: "sandbox",
+  network,
   maxAmount: "$0.001",
   protocolPreference: protocol ? [protocol] : ["x402", "mpp"],
   pendingPaymentStore: store,

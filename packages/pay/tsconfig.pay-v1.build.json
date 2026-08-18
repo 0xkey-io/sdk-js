@@ -4,6 +4,7 @@
     "src/index.ts",
     "src/client.ts",
     "src/receipt-verifier.ts",
+    "src/networks.ts",
     "src/server.ts",
     "src/constants.ts",
     "src/errors.ts",

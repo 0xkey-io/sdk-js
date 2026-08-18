@@ -53,7 +53,8 @@ const store = createFilePendingPaymentStore({
 const record = {
   digest: `0x${"33".repeat(32)}` as const,
   payment: {
-    version: 2 as const,
+    version: 3 as const,
+    network: "eip155:84532" as const,
     requestDigest: `0x${"44".repeat(32)}` as const,
     url: "https://pay-uat.example/paid/ping",
     method: "GET",

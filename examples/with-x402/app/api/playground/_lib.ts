@@ -343,6 +343,7 @@ export async function queryRecords(txHash: string) {
   }
   const client = createPayAdminClient({
     baseUrl: PLAYGROUND.facilitatorUrl,
+    network: PLAYGROUND.network,
     organizationId: PLAYGROUND.organizationId,
     apiKey: {
       publicKey: PLAYGROUND.adminPublicKey,

@@ -2,13 +2,21 @@ import { privateKeyToAccount } from "viem/accounts";
 import { encodeFunctionData, keccak256, stringToHex, type Hex } from "viem";
 import {
   createPayFetch as createPayFetchBase,
+  type BasePaymentNetwork,
   type CreatePayFetchOptions,
   type PaymentReceiptVerificationInput,
   type PendingPaymentRecord,
 } from "./client";
 
-function createPayFetch(options: CreatePayFetchOptions) {
-  return createPayFetchBase({ environment: "sandbox", ...options });
+function createPayFetch(
+  options: Omit<CreatePayFetchOptions, "network"> & {
+    network?: BasePaymentNetwork;
+  },
+) {
+  return createPayFetchBase({
+    ...options,
+    network: options.network ?? "eip155:84532",
+  });
 }
 
 jest.mock("mppx", () => ({
@@ -103,6 +111,33 @@ const baseSepoliaUsdc = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const transaction = `0x${"ab".repeat(32)}`;
 const economicEffectId =
   "eip3009:7297f6a4b95314051ed7022053212e243f42dab0269b3ed6ebad7dd0ae6942d6";
+
+describe("network selection", () => {
+  it("requires an explicit supported Base network at runtime", () => {
+    expect(() =>
+      createPayFetchBase({
+        account,
+        allowHosts: ["merchant.example"],
+        maxAmount: "$0.10",
+        allowInMemoryPendingPayment: true,
+        receiptVerifier: async () => true,
+      } as unknown as CreatePayFetchOptions),
+    ).toThrow("PAY_NETWORK_REQUIRED");
+  });
+
+  it("rejects networks outside the two supported Base channels", () => {
+    expect(() =>
+      createPayFetchBase({
+        account,
+        allowHosts: ["merchant.example"],
+        maxAmount: "$0.10",
+        network: "eip155:1" as BasePaymentNetwork,
+        allowInMemoryPendingPayment: true,
+        receiptVerifier: async () => true,
+      }),
+    ).toThrow("PAY_NETWORK_UNSUPPORTED");
+  });
+});
 
 function x402Receipt() {
   return {
@@ -388,6 +423,7 @@ describe("createPayFetch", () => {
         account,
         allowHosts: ["merchant.example"],
         maxAmount: "$0.10",
+        network: "eip155:8453",
         pendingPaymentStore: store,
       }),
     ).toThrow("PAY_RECEIPT_RPC_REQUIRED");
@@ -396,6 +432,7 @@ describe("createPayFetch", () => {
         account,
         allowHosts: ["merchant.example"],
         maxAmount: "$0.10",
+        network: "eip155:8453",
         pendingPaymentStore: store,
         rpcUrls: { "eip155:8453": "https://mainnet.base.org" },
       }),
@@ -1045,6 +1082,32 @@ describe("createPayFetch", () => {
       "PENDING_PAYMENT_POLICY_DENIED",
     );
     expect(rawFetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a restored credential from another configured network", async () => {
+    const first = createPayFetch({
+      account,
+      allowHosts: ["merchant.example"],
+      maxAmount: "$0.10",
+      fetch: async () => new Response(null, { status: 503 }),
+      allowInMemoryPendingPayment: true,
+    });
+    await first("https://merchant.example/weather", {
+      headers: { "PAYMENT-SIGNATURE": "signed-payment" },
+    });
+    const pending = await first.exportPendingPayment();
+
+    expect(() =>
+      createPayFetchBase({
+        account,
+        allowHosts: ["merchant.example"],
+        maxAmount: "$0.10",
+        network: "eip155:8453",
+        pendingPayment: pending!,
+        receiptVerifier: async () => true,
+        allowInMemoryPendingPayment: true,
+      }),
+    ).toThrow("PENDING_PAYMENT_NETWORK_MISMATCH");
   });
 
   it("rejects plain HTTP before any request is sent", async () => {

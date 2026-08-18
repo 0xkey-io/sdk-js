@@ -167,7 +167,7 @@ function createTestPendingPaymentStore() {
 
 const seenWireProtocols = [];
 const server = createPayServer({
-  environment: "sandbox",
+  network: "eip155:84532",
   organizationId: "11111111-1111-1111-1111-111111111111",
   payTo: "0x1111111111111111111111111111111111111111",
   apiKey: { publicKey, privateKey },
@@ -213,7 +213,7 @@ async function pay(preference) {
   const payFetch = createPayFetch({
     account,
     allowHosts: ["merchant.example"],
-    environment: "sandbox",
+    network: "eip155:84532",
     maxAmount: "$0.10",
     protocolPreference: preference,
     pendingPaymentStore,
@@ -246,6 +246,8 @@ assert.throws(
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0",
+      network: "eip155:84532",
+      allowInMemoryPendingPayment: true,
     }),
   /greater than zero/,
 );
@@ -253,7 +255,7 @@ assert.throws(
 const redirectFetch = createPayFetch({
   account,
   allowHosts: ["merchant.example"],
-  environment: "sandbox",
+  network: "eip155:84532",
   maxAmount: "$0.10",
   fetch: async () =>
     new Response(null, {
@@ -269,7 +271,7 @@ await assert.rejects(
 
 const unknownPaymentId = "33333333-3333-3333-3333-333333333333";
 const unknownServer = createPayServer({
-  environment: "sandbox",
+  network: "eip155:84532",
   organizationId: "11111111-1111-1111-1111-111111111111",
   payTo: "0x1111111111111111111111111111111111111111",
   apiKey: { publicKey, privateKey },
@@ -312,7 +314,7 @@ const unknownPendingPaymentStore = createTestPendingPaymentStore();
 const unknownBuyer = createPayFetch({
   account,
   allowHosts: ["unknown.example"],
-  environment: "sandbox",
+  network: "eip155:84532",
   maxAmount: "$0.10",
   protocolPreference: ["mpp"],
   fetch: unknownMerchantFetch,
@@ -336,7 +338,8 @@ assert.equal((await resumedUnknown.json()).paymentId, unknownPaymentId);
 const pendingPayment = JSON.parse(
   JSON.stringify(await unknownBuyer.exportPendingPayment()),
 );
-assert.equal(pendingPayment.version, 2);
+assert.equal(pendingPayment.version, 3);
+assert.equal(pendingPayment.network, "eip155:84532");
 assert.equal(unknownPendingPaymentStore.hasRecord(), true);
 const resumeOnlyAccount = {
   ...account,
@@ -347,7 +350,7 @@ const resumeOnlyAccount = {
 const restoredBuyer = createPayFetch({
   account: resumeOnlyAccount,
   allowHosts: ["unknown.example"],
-  environment: "sandbox",
+  network: "eip155:84532",
   maxAmount: "$0.10",
   protocolPreference: ["mpp"],
   fetch: unknownMerchantFetch,
@@ -470,7 +473,7 @@ async function officialSellerFetch(input, init) {
 const oxkeyBuyer = createPayFetch({
   account,
   allowHosts: ["official.example"],
-  environment: "sandbox",
+  network: "eip155:84532",
   maxAmount: "$0.10",
   protocolPreference: ["x402", "mpp"],
   fetch: officialSellerFetch,

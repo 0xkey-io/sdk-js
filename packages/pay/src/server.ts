@@ -9,6 +9,8 @@ import type {
   VerifyResponse,
 } from "mppx/x402";
 import type { Address } from "viem";
+import { assertBasePaymentNetwork, resolvePayBaseUrl } from "./networks";
+import type { BasePaymentNetwork } from "./receipt-verifier";
 import { createXStampV2Stamper } from "./xstamp";
 import type { PayApiKey, RequestStamper, WireProtocol } from "./xstamp";
 
@@ -104,7 +106,7 @@ export function createFacilitatorClient(options: FacilitatorClientOptions) {
 }
 
 export interface CreatePayServerOptions {
-  environment: "production" | "sandbox";
+  network: BasePaymentNetwork;
   organizationId: string;
   payTo: Address;
   apiKey: PayApiKey;
@@ -153,19 +155,16 @@ export interface PayServer {
 }
 
 export function createPayServer(options: CreatePayServerOptions): PayServer {
+  assertBasePaymentNetwork(options.network);
   if (new TextEncoder().encode(options.mppSecretKey).length < 32) {
     throw new Error("mppSecretKey must contain at least 32 bytes");
   }
   const currency =
-    options.environment === "production"
+    options.network === "eip155:8453"
       ? assets.base.USDC
       : assets.baseSepolia.USDC;
   const facilitator = createFacilitatorClient({
-    baseUrl:
-      options.facilitatorUrl ??
-      (options.environment === "production"
-        ? "https://pay.0xkey.io"
-        : "https://api-pay.staging.0xkey.io"),
+    baseUrl: resolvePayBaseUrl(options.network, options.facilitatorUrl),
     organizationId: options.organizationId,
     apiKey: options.apiKey,
     ...(options.fetch ? { fetch: options.fetch } : {}),

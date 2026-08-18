@@ -36,13 +36,13 @@ const rows = [
     "Base mainnet",
     constant("NETWORK_BASE"),
     constant("USDC_BASE"),
-    "production",
+    "explicit mainnet channel",
   ],
   [
     "Base Sepolia",
     constant("NETWORK_BASE_SEPOLIA"),
     constant("USDC_BASE_SEPOLIA"),
-    "sandbox and tests",
+    "explicit testnet channel",
   ],
 ];
 

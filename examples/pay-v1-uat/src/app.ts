@@ -36,7 +36,7 @@ export function createUatApp(environment: UatEnvironment) {
     "MPP_SECRET_KEY",
   );
   const payments = createPayServer({
-    environment: "sandbox",
+    network: "eip155:84532",
     organizationId,
     payTo,
     apiKey: { publicKey, privateKey },

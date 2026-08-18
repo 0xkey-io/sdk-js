@@ -15,13 +15,21 @@ jest.mock("mppx/server", () => ({
   },
 }));
 jest.mock("mppx/evm/server", () => {
-  const USDC = {
+  const baseUsdc = {
+    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    network: "eip155:8453",
+    transfer: { name: "USD Coin", version: "2" },
+  };
+  const baseSepoliaUsdc = {
     address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     network: "eip155:84532",
     transfer: { name: "USDC", version: "2" },
   };
   return {
-    assets: { base: { USDC }, baseSepolia: { USDC } },
+    assets: {
+      base: { USDC: baseUsdc },
+      baseSepolia: { USDC: baseSepoliaUsdc },
+    },
     charge: jest.fn((config) => config),
   };
 });
@@ -150,7 +158,7 @@ describe("createFacilitatorClient", () => {
 describe("createPayServer", () => {
   it("rejects two credentials before settlement", async () => {
     const server = createPayServer({
-      environment: "sandbox",
+      network: "eip155:84532",
       organizationId: ORG,
       payTo: requirements.payTo as `0x${string}`,
       apiKey: { publicKey: "unused", privateKey: "unused" },
@@ -171,5 +179,42 @@ describe("createPayServer", () => {
         errorCode: "AMBIGUOUS_PAYMENT_CREDENTIAL",
       });
     }
+  });
+
+  it("rejects a facilitator channel for the other Base network", () => {
+    expect(() =>
+      createPayServer({
+        network: "eip155:84532",
+        organizationId: ORG,
+        payTo: requirements.payTo as `0x${string}`,
+        apiKey: { publicKey: "unused", privateKey: "unused" },
+        mppSecretKey: "01234567890123456789012345678901",
+        facilitatorUrl: "https://pay.0xkey.io/base-mainnet",
+      }),
+    ).toThrow("PAY_NETWORK_CHANNEL_MISMATCH");
+  });
+
+  it("configures mppx with canonical Base mainnet USDC", () => {
+    const evmServer = jest.requireMock("mppx/evm/server") as {
+      charge: jest.Mock;
+    };
+    evmServer.charge.mockClear();
+
+    createPayServer({
+      network: "eip155:8453",
+      organizationId: ORG,
+      payTo: requirements.payTo as `0x${string}`,
+      apiKey: { publicKey: "unused", privateKey: "unused" },
+      mppSecretKey: "01234567890123456789012345678901",
+    });
+
+    expect(evmServer.charge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        currency: expect.objectContaining({
+          address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          network: "eip155:8453",
+        }),
+      }),
+    );
   });
 });

@@ -62,7 +62,6 @@ export interface PaymentListResponse {
 export interface PaymentListParams {
   status?: PaymentStatus;
   txHash?: string;
-  network?: string;
   protocol?: "x402" | "mpp";
   /** Filter by either side of the transfer (payer or payTo), case-insensitive. */
   address?: string;

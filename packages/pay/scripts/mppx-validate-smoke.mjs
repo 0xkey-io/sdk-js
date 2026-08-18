@@ -18,7 +18,7 @@ const [publicKey, privateKey] = await Promise.all([
   ),
 ]);
 const paymentServer = createPayServer({
-  environment: "sandbox",
+  network: "eip155:84532",
   organizationId: "11111111-1111-1111-1111-111111111111",
   payTo: "0x1111111111111111111111111111111111111111",
   apiKey: { publicKey, privateKey },
@@ -48,7 +48,7 @@ const httpServer = http.createServer(async (incoming, outgoing) => {
       outgoing.end(
         JSON.stringify({
           openapi: "3.1.0",
-          info: { title: "0xkey Pay validation", version: "0.3.0-rc.2" },
+          info: { title: "0xkey Pay validation", version: "0.3.0-rc.3" },
           paths: {
             "/weather": {
               get: {
