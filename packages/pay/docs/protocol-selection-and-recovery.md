@@ -63,8 +63,9 @@ is created. The rate-limited Base mainnet public RPC is rejected. Base Sepolia
 may use the public Sepolia endpoint.
 
 Server and Admin instances route through the corresponding
-`/base-mainnet` or `/base-sepolia` Pay channel. On `https://pay.0xkey.io`, the
+`/base-mainnet` or `/base-sepolia` Pay channel. On `https://api-pay.0xkey.io`, the
 SDK accepts only the selected canonical channel and rejects every other path.
+`pay.0xkey.io` serves the product website and is never a facilitator base URL.
 Custom local URLs remain available for tests, but they still represent exactly
 the configured network.
 
