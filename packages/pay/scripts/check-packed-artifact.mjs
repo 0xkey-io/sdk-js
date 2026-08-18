@@ -219,12 +219,7 @@ if (options.verifyOnly) {
     await verifyTarball(tarball, sourceManifest);
     await externalInstallSmoke(tarball);
 
-    if (process.env.GITHUB_OUTPUT) {
-      if (ownsPackDirectory) {
-        throw new Error(
-          "--pack-destination is required when writing the tarball path to GITHUB_OUTPUT",
-        );
-      }
+    if (options.packDestination && process.env.GITHUB_OUTPUT) {
       await appendFile(process.env.GITHUB_OUTPUT, `tarball=${tarball}\n`);
     }
 
