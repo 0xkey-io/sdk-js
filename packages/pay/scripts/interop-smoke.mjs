@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { privateKeyToAccount } from "viem/accounts";
+import { Challenge, x402 } from "mppx";
 import { x402Client } from "@x402/core/client";
 import { x402HTTPResourceServer } from "@x402/core/http";
 import { x402ResourceServer } from "@x402/core/server";
@@ -115,6 +116,7 @@ async function testReceiptVerifier(effect) {
 function createTestPendingPaymentStore() {
   const key = randomBytes(32);
   let slot;
+  let lastSaved;
 
   function seal(record) {
     const iv = randomBytes(12);
@@ -151,6 +153,7 @@ function createTestPendingPaymentStore() {
     },
     async saveIfAbsent(record) {
       if (slot) return false;
+      lastSaved = record;
       slot = seal(record);
       return true;
     },
@@ -162,7 +165,166 @@ function createTestPendingPaymentStore() {
     hasRecord() {
       return slot !== undefined;
     },
+    lastSaved() {
+      return lastSaved;
+    },
   };
+}
+
+const channelMatrix = [
+  {
+    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    chainId: 8453,
+    channel: "base-mainnet",
+    network: "eip155:8453",
+  },
+  {
+    asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    chainId: 84532,
+    channel: "base-sepolia",
+    network: "eip155:84532",
+  },
+];
+
+for (const selected of channelMatrix) {
+  for (const protocol of ["x402", "mpp"]) {
+    await assertChannelInterop(selected, protocol);
+  }
+}
+
+assert.throws(
+  () =>
+    createPayServer({
+      network: "eip155:8453",
+      organizationId: "11111111-1111-1111-1111-111111111111",
+      payTo: "0x1111111111111111111111111111111111111111",
+      apiKey: { publicKey, privateKey },
+      mppSecretKey: "01234567890123456789012345678901",
+      facilitatorUrl: "https://pay.0xkey.io/base-sepolia",
+    }),
+  /PAY_NETWORK_CHANNEL_MISMATCH/,
+);
+
+async function assertChannelInterop(selected, protocol) {
+  const facilitatorPaths = [];
+  const settledNetworks = [];
+  const server = createPayServer({
+    network: selected.network,
+    organizationId: "11111111-1111-1111-1111-111111111111",
+    payTo: "0x1111111111111111111111111111111111111111",
+    apiKey: { publicKey, privateKey },
+    mppSecretKey: "01234567890123456789012345678901",
+    async fetch(url, init) {
+      const parsedUrl = new URL(String(url));
+      facilitatorPaths.push(parsedUrl.pathname);
+      assert.match(
+        parsedUrl.pathname,
+        new RegExp(`^/${selected.channel}/(?:verify|settle)$`),
+      );
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.paymentPayload.accepted.network, selected.network);
+      assert.equal(body.paymentRequirements.network, selected.network);
+      assert.equal(
+        body.paymentRequirements.asset.toLowerCase(),
+        selected.asset.toLowerCase(),
+      );
+      const stamp = JSON.parse(
+        Buffer.from(
+          String(new Headers(init?.headers).get("X-Stamp")),
+          "base64url",
+        ).toString(),
+      );
+      assert.equal(stamp.wireProtocol, protocol);
+      if (parsedUrl.pathname.endsWith("/verify")) {
+        return Response.json({
+          isValid: true,
+          payer: body.paymentPayload.payload.authorization.from,
+        });
+      }
+      settledNetworks.push(body.paymentRequirements.network);
+      return Response.json({
+        success: true,
+        transaction: `0x${"ab".repeat(32)}`,
+        network: body.paymentRequirements.network,
+        payer: body.paymentPayload.payload.authorization.from,
+        paymentId: "22222222-2222-2222-2222-222222222222",
+      });
+    },
+  });
+  const signedCredentials = [];
+  async function merchantFetch(input, init) {
+    const request = new Request(input, init);
+    const credential =
+      request.headers.get("PAYMENT-SIGNATURE") ??
+      request.headers.get("Authorization");
+    if (credential) signedCredentials.push(credential);
+    const payment = await server.handle(request, {
+      price: "$0.01",
+      protocols: [protocol],
+    });
+    return payment.status === 200
+      ? payment.withReceipt(Response.json({ matrix: true }))
+      : payment.response;
+  }
+
+  const unsigned = await merchantFetch("https://matrix.example/weather");
+  assert.equal(unsigned.status, 402);
+  if (protocol === "x402") {
+    assert.equal(unsigned.headers.has("WWW-Authenticate"), false);
+    const challenge = x402.Header.decodePaymentRequired(
+      unsigned.headers.get("PAYMENT-REQUIRED"),
+    );
+    const accepted = challenge.accepts[0];
+    assert.equal(accepted.network, selected.network);
+    assert.equal(accepted.asset.toLowerCase(), selected.asset.toLowerCase());
+  } else {
+    assert.equal(unsigned.headers.has("PAYMENT-REQUIRED"), false);
+    const challenge = Challenge.fromResponse(unsigned.clone());
+    assert.equal(challenge.method, "evm");
+    assert.equal(challenge.intent, "charge");
+    assert.equal(
+      `eip155:${challenge.request.methodDetails.chainId}`,
+      selected.network,
+    );
+    assert.equal(
+      challenge.request.currency.toLowerCase(),
+      selected.asset.toLowerCase(),
+    );
+  }
+
+  const receipts = [];
+  const store = createTestPendingPaymentStore();
+  const buyer = createPayFetch({
+    account,
+    allowHosts: ["matrix.example"],
+    network: selected.network,
+    maxAmount: "$0.10",
+    protocolPreference: [protocol],
+    pendingPaymentStore: store,
+    receiptVerifier: async (effect) => {
+      assert.equal(effect.network, selected.network);
+      assert.equal(effect.asset.toLowerCase(), selected.asset.toLowerCase());
+      return true;
+    },
+    fetch: merchantFetch,
+    onReceipt(receipt) {
+      receipts.push(receipt);
+    },
+  });
+  const response = await buyer("https://matrix.example/weather");
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { matrix: true });
+  assert.deepEqual(facilitatorPaths, [
+    `/${selected.channel}/verify`,
+    `/${selected.channel}/settle`,
+  ]);
+  assert.deepEqual(settledNetworks, [selected.network]);
+  assert.equal(signedCredentials.length, 1);
+  assert.equal(store.lastSaved().payment.network, selected.network);
+  assert.equal(receipts[0].protocol, protocol);
+  if (receipts[0].network !== undefined) {
+    assert.equal(receipts[0].network, selected.network);
+  }
 }
 
 const seenWireProtocols = [];

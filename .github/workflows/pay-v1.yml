@@ -5,6 +5,7 @@ on:
     paths:
       - "packages/pay/**"
       - "examples/with-x402/**"
+      - "examples/pay-v1-uat/**"
       - "pnpm-lock.yaml"
       - ".github/workflows/pay-v1.yml"
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - "packages/pay/**"
       - "examples/with-x402/**"
+      - "examples/pay-v1-uat/**"
       - "pnpm-lock.yaml"
       - ".github/workflows/pay-v1.yml"
   workflow_dispatch:
@@ -41,6 +43,9 @@ jobs:
 
       - name: Typecheck the x402 example
         run: pnpm --filter with-x402 exec next typegen && pnpm --filter with-x402 typecheck
+
+      - name: Typecheck and smoke the Pay UAT harness
+        run: pnpm --filter pay-v1-uat typecheck && pnpm --filter pay-v1-uat smoke
 
       - name: Unit and framework tests
         run: pnpm --filter @0xkey-io/pay test:pay-v1
@@ -122,21 +127,7 @@ jobs:
           fi
 
       - name: Verify exact protocol dependency pins
-        run: |
-          node - <<'NODE'
-          const pkg = require('./packages/pay/package.json')
-          const expected = {
-            mppx: '0.8.17',
-            '@x402/core': '2.22.0',
-            '@x402/evm': '2.22.0',
-            '@x402/fetch': '2.22.0',
-          }
-          for (const [name, version] of Object.entries(expected)) {
-            if (pkg.dependencies[name] !== version) {
-              throw new Error(`${name} must be pinned to ${version}`)
-            }
-          }
-          NODE
+        run: pnpm --filter @0xkey-io/pay pins:check
 
       - name: Keep Pay docs in sync
         run: pnpm --filter @0xkey-io/pay docs:check

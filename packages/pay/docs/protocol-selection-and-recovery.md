@@ -191,6 +191,9 @@ does not claim Mandate or budget assurance.
 
 The public boundary tests cover full receipt-to-effect proof, RPC failure,
 ordinary official x402 receipts, and same-credential recovery for every 5xx.
+The interoperability smoke runs all four x402/MPP × Base mainnet/Sepolia pairs
+and asserts challenge, credential snapshot, facilitator channel, canonical
+asset, settlement response, and receipt evidence never cross networks.
 
 ## Change rules
 

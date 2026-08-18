@@ -72,6 +72,7 @@
     "clean": "rimraf ./dist ./.cache",
     "docs:generate": "node scripts/generate-doc-facts.mjs",
     "docs:check": "pnpm run docs:generate && node scripts/check-docs.mjs && git diff --exit-code -- docs/generated-support.md",
+    "pins:check": "node scripts/check-exact-pins.mjs",
     "typecheck": "tsc -p tsconfig.typecheck.json --allowJs false --checkJs false",
     "typecheck:pay-v1": "tsc -p tsconfig.pay-v1.json --allowJs false --checkJs false",
     "test": "jest --detectOpenHandles",
