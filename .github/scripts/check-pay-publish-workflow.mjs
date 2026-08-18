@@ -84,6 +84,9 @@ assert.doesNotMatch(
 const immutableSourceCheck = workflow.indexOf(
   "Verify immutable default-branch source",
 );
+const installDependencies = workflow.indexOf("Install dependencies");
+const dependencyGraphBuild = workflow.indexOf("Build Pay dependency graph");
+const payTypecheck = workflow.indexOf("Typecheck Pay");
 const registryPreflight = workflow.indexOf(
   "Refuse existing version and protect latest",
 );
@@ -95,6 +98,17 @@ const postPublishVerification = workflow.indexOf(
   "Verify published version and npm tags",
 );
 assert.ok(immutableSourceCheck >= 0 && immutableSourceCheck < publish);
+assert.match(
+  workflow,
+  /- name: Build Pay dependency graph\n\s+run: pnpm turbo run build --filter='@0xkey-io\/pay\^\.\.\.'/,
+  "Pay dependency graph build must use the conformance workflow command",
+);
+assert.ok(
+  installDependencies >= 0 &&
+    dependencyGraphBuild > installDependencies &&
+    dependencyGraphBuild < payTypecheck,
+  "Pay dependency graph must build after install and before Pay typecheck",
+);
 assert.ok(registryPreflight >= 0 && registryPreflight < publish);
 assert.ok(finalMutationPreflight >= 0 && finalMutationPreflight < publish);
 assert.ok(postPublishVerification > publish);
