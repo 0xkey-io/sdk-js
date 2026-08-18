@@ -1,5 +1,14 @@
 # @0xkey-io/pay
 
+## 0.3.0-rc.5
+
+- Repair the npm artifact so workspace dependencies are replaced with published
+  versions before release. The publish workflow now verifies, installs, imports,
+  and publishes the same `pnpm pack` tarball.
+- Mark `0.3.0-rc.4` as not installable outside the SDK workspace because its
+  published manifest contains literal `workspace:*` dependencies. This release
+  supersedes rc.4.
+
 ## 0.3.0-rc.4
 
 - Use `https://api-pay.0xkey.io` as the public Pay API origin. The product
