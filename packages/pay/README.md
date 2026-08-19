@@ -103,11 +103,13 @@ sign or send a payment.
 Sandbox workspace. The same organization and API-key model can use either
 Base mainnet or Base Sepolia, but each SDK instance and every signed credential
 belongs to exactly one network. Seller and Admin traffic uses the matching
-`https://api-pay.0xkey.io/base-mainnet` or
-`https://api-pay.0xkey.io/base-sepolia` channel. The public Pay origin rejects any
-other path instead of guessing a network.
+`/base-mainnet` or `/base-sepolia` channel on the configured canonical API
+origin. Production uses `https://api-pay.0xkey.io`; staging uses
+`https://api-pay.staging.0xkey.io`. Both canonical origins reject any other URL
+shape instead of guessing a network.
 
-`pay.0xkey.io` serves the product website and is never a facilitator base URL.
+`pay.0xkey.io` and `pay.staging.0xkey.io` serve the product websites. Neither is
+a facilitator base URL.
 
 For tests and local work only, storage can be disabled explicitly:
 

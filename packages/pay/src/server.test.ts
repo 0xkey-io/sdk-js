@@ -39,6 +39,12 @@ jest.mock("mppx/evm", () => ({
 }));
 
 const ORG = "11111111-1111-1111-1111-111111111111";
+const TEST_API_KEY = {
+  privateKey:
+    "487f361ddfd73440e707f4daa6775b376859e8a3c9f29b3bb694a12927c0213c",
+  publicKey:
+    "02f739f8c77b32f4d5f13265861febd76e7a9c61a1140d296b8c16302508870316",
+};
 
 const requirements = {
   scheme: "exact",
@@ -157,20 +163,109 @@ describe("createFacilitatorClient", () => {
 });
 
 describe("createPayServer", () => {
-  it("uses the canonical production Pay API channel", () => {
-    expect(resolvePayBaseUrl("eip155:8453")).toBe(
+  it.each([
+    [
+      "production root",
+      "eip155:8453",
+      "https://api-pay.0xkey.io",
       "https://api-pay.0xkey.io/base-mainnet",
-    );
-    expect(resolvePayBaseUrl("eip155:84532")).toBe(
+    ],
+    [
+      "production mainnet channel",
+      "eip155:8453",
+      "https://api-pay.0xkey.io/base-mainnet",
+      "https://api-pay.0xkey.io/base-mainnet",
+    ],
+    [
+      "production root",
+      "eip155:84532",
+      "https://api-pay.0xkey.io",
       "https://api-pay.0xkey.io/base-sepolia",
-    );
+    ],
+    [
+      "production Sepolia channel",
+      "eip155:84532",
+      "https://api-pay.0xkey.io/base-sepolia",
+      "https://api-pay.0xkey.io/base-sepolia",
+    ],
+    [
+      "staging root",
+      "eip155:8453",
+      "https://api-pay.staging.0xkey.io",
+      "https://api-pay.staging.0xkey.io/base-mainnet",
+    ],
+    [
+      "staging mainnet channel",
+      "eip155:8453",
+      "https://api-pay.staging.0xkey.io/base-mainnet",
+      "https://api-pay.staging.0xkey.io/base-mainnet",
+    ],
+    [
+      "staging root",
+      "eip155:84532",
+      "https://api-pay.staging.0xkey.io",
+      "https://api-pay.staging.0xkey.io/base-sepolia",
+    ],
+    [
+      "staging Sepolia channel",
+      "eip155:84532",
+      "https://api-pay.staging.0xkey.io/base-sepolia",
+      "https://api-pay.staging.0xkey.io/base-sepolia",
+    ],
+  ] as const)("routes the canonical %s for %s", (_, network, baseUrl, want) => {
+    expect(resolvePayBaseUrl(network, baseUrl)).toBe(want);
   });
 
-  it("rejects the retired Pay Web origin as a facilitator", () => {
-    expect(() =>
-      resolvePayBaseUrl("eip155:8453", "https://pay.0xkey.io/base-mainnet"),
-    ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
-  });
+  it.each(["https://pay.0xkey.io", "https://pay.staging.0xkey.io"])(
+    "rejects the Pay website origin %s as a facilitator",
+    (websiteOrigin) => {
+      expect(() => resolvePayBaseUrl("eip155:8453", websiteOrigin)).toThrow(
+        "PAY_FACILITATOR_ORIGIN_MISMATCH",
+      );
+    },
+  );
+
+  it.each(["https://api-pay.0xkey.io", "https://api-pay.staging.0xkey.io"])(
+    "rejects every non-canonical mainnet URL on %s",
+    (apiOrigin) => {
+      for (const configuredBaseUrl of [
+        `${apiOrigin}/base-sepolia`,
+        `${apiOrigin}/base-mainnet/v1`,
+        `${apiOrigin}/base-mainnet/`,
+        `${apiOrigin}/pay`,
+        `${apiOrigin}/base-mainnet?tenant=wrong`,
+        `${apiOrigin}/base-mainnet#fragment`,
+        apiOrigin.replace("https://", "https://user@"),
+        apiOrigin.replace(".io", ".io:443"),
+        apiOrigin.replace(".io", ".io:8443"),
+      ]) {
+        expect(() =>
+          resolvePayBaseUrl("eip155:8453", configuredBaseUrl),
+        ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
+      }
+    },
+  );
+
+  it.each(["https://api-pay.0xkey.io", "https://api-pay.staging.0xkey.io"])(
+    "rejects every non-canonical Sepolia URL on %s",
+    (apiOrigin) => {
+      for (const configuredBaseUrl of [
+        `${apiOrigin}/base-mainnet`,
+        `${apiOrigin}/base-sepolia/v1`,
+        `${apiOrigin}/base-sepolia/`,
+        `${apiOrigin}/pay`,
+        `${apiOrigin}/base-sepolia?tenant=wrong`,
+        `${apiOrigin}/base-sepolia#fragment`,
+        apiOrigin.replace("https://", "https://user@"),
+        apiOrigin.replace(".io", ".io:443"),
+        apiOrigin.replace(".io", ".io:8443"),
+      ]) {
+        expect(() =>
+          resolvePayBaseUrl("eip155:84532", configuredBaseUrl),
+        ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
+      }
+    },
+  );
 
   it("rejects an opposite canonical channel hidden in a longer path", () => {
     expect(() =>
@@ -225,27 +320,80 @@ describe("createPayServer", () => {
     ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
   });
 
-  it("rejects every non-canonical path on the public Pay origin", () => {
-    for (const facilitatorUrl of [
-      "https://api-pay.0xkey.io/base-mainnet/v1",
-      "https://api-pay.0xkey.io/base-mainnet/",
-      "https://api-pay.0xkey.io/pay",
-      "https://api-pay.0xkey.io/base-mainnet?tenant=wrong",
-      "https://api-pay.0xkey.io/base-mainnet#fragment",
-      "https://user@api-pay.0xkey.io/base-mainnet",
-    ]) {
-      expect(() =>
-        createPayServer({
-          network: "eip155:8453",
-          organizationId: ORG,
-          payTo: requirements.payTo as `0x${string}`,
-          apiKey: { publicKey: "unused", privateKey: "unused" },
-          mppSecretKey: "01234567890123456789012345678901",
-          facilitatorUrl,
-        }),
-      ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
-    }
-  });
+  it.each([
+    ["eip155:8453", "base-mainnet"],
+    ["eip155:84532", "base-sepolia"],
+  ] as const)(
+    "sends staging %s verification through the final /%s/verify URL",
+    async (network, channel) => {
+      const calls: string[] = [];
+      const fetch = jest.fn(async (url: RequestInfo | URL) => {
+        calls.push(String(url));
+        if (String(url).endsWith("/verify")) {
+          return Response.json({ isValid: true });
+        }
+        return Response.json({
+          success: true,
+          paymentId: "22222222-2222-2222-2222-222222222222",
+          transaction: "0xtx",
+        });
+      }) as typeof globalThis.fetch;
+      const evmServer = jest.requireMock("mppx/evm/server") as {
+        charge: jest.Mock;
+      };
+      evmServer.charge.mockClear();
+
+      createPayServer({
+        network,
+        organizationId: ORG,
+        payTo: requirements.payTo as `0x${string}`,
+        apiKey: TEST_API_KEY,
+        mppSecretKey: "01234567890123456789012345678901",
+        facilitatorUrl: "https://api-pay.staging.0xkey.io",
+        fetch,
+      });
+
+      const adapter = evmServer.charge.mock.calls[0]![0] as {
+        settle(input: {
+          credential: { challenge: object };
+          payload: {
+            from: string;
+            nonce: string;
+            signature: string;
+            to: string;
+            validAfter: string;
+            validBefore: string;
+            value: string;
+          };
+          request: { amount: string; currency: string; recipient: string };
+        }): Promise<unknown>;
+      };
+      await adapter.settle({
+        credential: { challenge: {} },
+        payload: {
+          from: "0x2222222222222222222222222222222222222222",
+          nonce: "x402-nonce",
+          signature: `0x${"11".repeat(65)}`,
+          to: requirements.payTo,
+          validAfter: "0",
+          validBefore: "99",
+          value: "1000",
+        },
+        request: {
+          amount: "1000",
+          currency:
+            network === "eip155:8453"
+              ? "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+              : "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          recipient: requirements.payTo,
+        },
+      });
+
+      expect(calls[0]).toBe(
+        `https://api-pay.staging.0xkey.io/${channel}/verify`,
+      );
+    },
+  );
 
   it("configures mppx with canonical Base mainnet USDC", () => {
     const evmServer = jest.requireMock("mppx/evm/server") as {

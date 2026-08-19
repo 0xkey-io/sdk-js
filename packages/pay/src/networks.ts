@@ -1,7 +1,13 @@
 import type { BasePaymentNetwork } from "./receipt-verifier";
 
 export const PAY_API_ORIGIN = "https://api-pay.0xkey.io";
-const RETIRED_PAY_WEB_ORIGIN = "https://pay.0xkey.io";
+export const PAY_STAGING_API_ORIGIN = "https://api-pay.staging.0xkey.io";
+
+const API_ORIGIN_BY_HOSTNAME = {
+  "api-pay.0xkey.io": PAY_API_ORIGIN,
+  "api-pay.staging.0xkey.io": PAY_STAGING_API_ORIGIN,
+} as const;
+const PAY_WEB_HOSTNAMES = new Set(["pay.0xkey.io", "pay.staging.0xkey.io"]);
 
 const CHANNEL_BY_NETWORK = {
   "eip155:8453": "base-mainnet",
@@ -33,15 +39,19 @@ export function resolvePayBaseUrl(
   const url = new URL(configuredBaseUrl);
   const expected = payChannel(network);
 
-  if (url.origin === RETIRED_PAY_WEB_ORIGIN) {
+  if (PAY_WEB_HOSTNAMES.has(url.hostname)) {
     throw new Error(
-      "PAY_FACILITATOR_ORIGIN_MISMATCH: pay.0xkey.io is not a facilitator base URL",
+      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${url.hostname} is not a facilitator base URL`,
     );
   }
 
-  if (url.origin !== PAY_API_ORIGIN) return url.toString().replace(/\/$/, "");
+  const canonicalOrigin =
+    API_ORIGIN_BY_HOSTNAME[url.hostname as keyof typeof API_ORIGIN_BY_HOSTNAME];
+  if (!canonicalOrigin) return url.toString().replace(/\/$/, "");
 
   if (
+    url.origin !== canonicalOrigin ||
+    hasExplicitPort(configuredBaseUrl) ||
     url.username ||
     url.password ||
     url.search ||
@@ -49,10 +59,16 @@ export function resolvePayBaseUrl(
     (url.pathname !== "/" && url.pathname !== `/${expected}`)
   ) {
     throw new Error(
-      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${network} must use ${PAY_API_ORIGIN}/${expected}`,
+      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${network} must use ${canonicalOrigin}/${expected}`,
     );
   }
   if (url.pathname === "/") url.pathname = `/${expected}`;
 
   return url.toString().replace(/\/$/, "");
+}
+
+function hasExplicitPort(value: string): boolean {
+  const authority = value.match(/^[a-z][a-z\d+.-]*:\/\/([^/?#]*)/i)?.[1];
+  const host = authority?.slice(authority.lastIndexOf("@") + 1);
+  return host?.includes(":") ?? false;
 }
