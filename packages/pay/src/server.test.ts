@@ -157,25 +157,167 @@ describe("createFacilitatorClient", () => {
 });
 
 describe("createPayServer", () => {
-  it("uses the canonical production Pay API channel", () => {
-    expect(resolvePayBaseUrl("eip155:8453")).toBe(
+  it.each([
+    [
+      "production root",
+      "eip155:8453",
+      "https://api-pay.0xkey.io",
       "https://api-pay.0xkey.io/base-mainnet",
-    );
-    expect(resolvePayBaseUrl("eip155:84532")).toBe(
+    ],
+    [
+      "production mainnet channel",
+      "eip155:8453",
+      "https://api-pay.0xkey.io/base-mainnet",
+      "https://api-pay.0xkey.io/base-mainnet",
+    ],
+    [
+      "production root",
+      "eip155:84532",
+      "https://api-pay.0xkey.io",
       "https://api-pay.0xkey.io/base-sepolia",
-    );
+    ],
+    [
+      "production Sepolia channel",
+      "eip155:84532",
+      "https://api-pay.0xkey.io/base-sepolia",
+      "https://api-pay.0xkey.io/base-sepolia",
+    ],
+    [
+      "staging root",
+      "eip155:8453",
+      "https://api-pay.staging.0xkey.io",
+      "https://api-pay.staging.0xkey.io/base-mainnet",
+    ],
+    [
+      "staging mainnet channel",
+      "eip155:8453",
+      "https://api-pay.staging.0xkey.io/base-mainnet",
+      "https://api-pay.staging.0xkey.io/base-mainnet",
+    ],
+    [
+      "staging root",
+      "eip155:84532",
+      "https://api-pay.staging.0xkey.io",
+      "https://api-pay.staging.0xkey.io/base-sepolia",
+    ],
+    [
+      "staging Sepolia channel",
+      "eip155:84532",
+      "https://api-pay.staging.0xkey.io/base-sepolia",
+      "https://api-pay.staging.0xkey.io/base-sepolia",
+    ],
+  ] as const)("routes the canonical %s for %s", (_, network, baseUrl, want) => {
+    expect(resolvePayBaseUrl(network, baseUrl)).toBe(want);
   });
 
-  it("rejects the retired Pay Web origin as a facilitator", () => {
-    expect(() =>
-      resolvePayBaseUrl("eip155:8453", "https://pay.0xkey.io/base-mainnet"),
-    ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
-  });
+  describe.each([
+    {
+      label: "production mainnet",
+      network: "eip155:8453" as const,
+      origin: "https://api-pay.0xkey.io",
+      host: "api-pay.0xkey.io",
+      percentHost: "%61pi-pay.0xkey.io",
+      channel: "base-mainnet",
+      oppositeChannel: "base-sepolia",
+    },
+    {
+      label: "production Sepolia",
+      network: "eip155:84532" as const,
+      origin: "https://api-pay.0xkey.io",
+      host: "api-pay.0xkey.io",
+      percentHost: "%61pi-pay.0xkey.io",
+      channel: "base-sepolia",
+      oppositeChannel: "base-mainnet",
+    },
+    {
+      label: "staging mainnet",
+      network: "eip155:8453" as const,
+      origin: "https://api-pay.staging.0xkey.io",
+      host: "api-pay.staging.0xkey.io",
+      percentHost: "%61pi-pay.staging.0xkey.io",
+      channel: "base-mainnet",
+      oppositeChannel: "base-sepolia",
+    },
+    {
+      label: "staging Sepolia",
+      network: "eip155:84532" as const,
+      origin: "https://api-pay.staging.0xkey.io",
+      host: "api-pay.staging.0xkey.io",
+      percentHost: "%61pi-pay.staging.0xkey.io",
+      channel: "base-sepolia",
+      oppositeChannel: "base-mainnet",
+    },
+  ])(
+    "strict canonical API URL: $label",
+    ({ network, origin, host, percentHost, channel, oppositeChannel }) => {
+      it.each([
+        ["root slash", `${origin}/`],
+        ["leading whitespace", ` ${origin}/${channel}`],
+        ["trailing whitespace", `${origin}/${channel} `],
+        ["explicit default port", `https://${host}:443/${channel}`],
+        ["explicit custom port", `https://${host}:8443/${channel}`],
+        ["empty userinfo", `https://@${host}/${channel}`],
+        ["username", `https://user@${host}/${channel}`],
+        ["password-only userinfo", `https://:secret@${host}/${channel}`],
+        ["empty query", `${origin}/${channel}?`],
+        ["query", `${origin}/${channel}?tenant=wrong`],
+        ["empty fragment", `${origin}/${channel}#`],
+        ["fragment", `${origin}/${channel}#fragment`],
+        ["dot segment", `${origin}/extra/../${channel}`],
+        ["encoded dot segment", `${origin}/extra/%2e%2e/${channel}`],
+        ["percent-encoded host", `https://${percentHost}/${channel}`],
+        ["uppercase host", `https://${host.toUpperCase()}/${channel}`],
+        ["trailing-dot host", `https://${host}./${channel}`],
+        ["HTTP scheme", `http://${host}/${channel}`],
+        ["opposite channel", `${origin}/${oppositeChannel}`],
+        ["extra path", `${origin}/${channel}/v1`],
+        ["channel trailing slash", `${origin}/${channel}/`],
+      ])("rejects %s", (_, configuredBaseUrl) => {
+        expect(() => resolvePayBaseUrl(network, configuredBaseUrl)).toThrow(
+          "PAY_FACILITATOR_ORIGIN_MISMATCH",
+        );
+      });
+    },
+  );
 
-  it("rejects an opposite canonical channel hidden in a longer path", () => {
-    expect(() =>
-      resolvePayBaseUrl("eip155:8453", "https://api-pay.0xkey.io/base-sepolia"),
-    ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
+  describe.each([
+    {
+      label: "production",
+      origin: "https://pay.0xkey.io",
+      host: "pay.0xkey.io",
+      percentHost: "p%61y.0xkey.io",
+    },
+    {
+      label: "staging",
+      origin: "https://pay.staging.0xkey.io",
+      host: "pay.staging.0xkey.io",
+      percentHost: "p%61y.staging.0xkey.io",
+    },
+  ])("Pay website URL: $label", ({ origin, host, percentHost }) => {
+    it.each([
+      ["root", origin],
+      ["root slash", `${origin}/`],
+      ["channel path", `${origin}/base-mainnet`],
+      ["leading whitespace", ` ${origin}`],
+      ["trailing whitespace", `${origin} `],
+      ["explicit default port", `https://${host}:443/base-mainnet`],
+      ["explicit custom port", `https://${host}:8443/base-mainnet`],
+      ["empty userinfo", `https://@${host}`],
+      ["username", `https://user@${host}`],
+      ["empty query", `${origin}?`],
+      ["query", `${origin}?tenant=wrong`],
+      ["empty fragment", `${origin}#`],
+      ["fragment", `${origin}#fragment`],
+      ["dot segment", `${origin}/extra/../base-mainnet`],
+      ["percent-encoded host", `https://${percentHost}/base-mainnet`],
+      ["uppercase host", `https://${host.toUpperCase()}/base-mainnet`],
+      ["trailing-dot host", `https://${host}./base-mainnet`],
+      ["HTTP scheme", `http://${host}/base-mainnet`],
+    ])("rejects %s", (_, configuredBaseUrl) => {
+      expect(() => resolvePayBaseUrl("eip155:8453", configuredBaseUrl)).toThrow(
+        "PAY_FACILITATOR_ORIGIN_MISMATCH",
+      );
+    });
   });
 
   it("preserves an explicit third-party facilitator URL", () => {
@@ -223,28 +365,6 @@ describe("createPayServer", () => {
         facilitatorUrl: "https://pay.0xkey.io/base-mainnet",
       }),
     ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
-  });
-
-  it("rejects every non-canonical path on the public Pay origin", () => {
-    for (const facilitatorUrl of [
-      "https://api-pay.0xkey.io/base-mainnet/v1",
-      "https://api-pay.0xkey.io/base-mainnet/",
-      "https://api-pay.0xkey.io/pay",
-      "https://api-pay.0xkey.io/base-mainnet?tenant=wrong",
-      "https://api-pay.0xkey.io/base-mainnet#fragment",
-      "https://user@api-pay.0xkey.io/base-mainnet",
-    ]) {
-      expect(() =>
-        createPayServer({
-          network: "eip155:8453",
-          organizationId: ORG,
-          payTo: requirements.payTo as `0x${string}`,
-          apiKey: { publicKey: "unused", privateKey: "unused" },
-          mppSecretKey: "01234567890123456789012345678901",
-          facilitatorUrl,
-        }),
-      ).toThrow("PAY_FACILITATOR_ORIGIN_MISMATCH");
-    }
   });
 
   it("configures mppx with canonical Base mainnet USDC", () => {

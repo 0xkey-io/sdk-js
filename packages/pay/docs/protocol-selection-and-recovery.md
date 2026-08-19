@@ -63,11 +63,14 @@ is created. The rate-limited Base mainnet public RPC is rejected. Base Sepolia
 may use the public Sepolia endpoint.
 
 Server and Admin instances route through the corresponding
-`/base-mainnet` or `/base-sepolia` Pay channel. On `https://api-pay.0xkey.io`, the
-SDK accepts only the selected canonical channel and rejects every other path.
-`pay.0xkey.io` serves the product website and is never a facilitator base URL.
-Custom local URLs remain available for tests, but they still represent exactly
-the configured network.
+`/base-mainnet` or `/base-sepolia` Pay channel. On the Production
+`https://api-pay.0xkey.io` and staging
+`https://api-pay.staging.0xkey.io` origins, the SDK accepts only the root or the
+selected canonical channel as an exact raw string and rejects every other URL
+shape before normalization. `pay.0xkey.io` and `pay.staging.0xkey.io` serve the
+product websites and are never facilitator base URLs. Custom local and
+third-party URLs remain available, but they still represent exactly the
+configured network.
 
 `mppx 0.8.17` needs its route-binding extension when it signs ordinary x402.
 Many normal x402 sellers do not send that extension. If this exact error occurs

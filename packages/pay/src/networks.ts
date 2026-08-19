@@ -1,7 +1,13 @@
 import type { BasePaymentNetwork } from "./receipt-verifier";
 
 export const PAY_API_ORIGIN = "https://api-pay.0xkey.io";
-const RETIRED_PAY_WEB_ORIGIN = "https://pay.0xkey.io";
+export const PAY_STAGING_API_ORIGIN = "https://api-pay.staging.0xkey.io";
+
+const API_ORIGIN_BY_HOSTNAME = {
+  "api-pay.0xkey.io": PAY_API_ORIGIN,
+  "api-pay.staging.0xkey.io": PAY_STAGING_API_ORIGIN,
+} as const;
+const PAY_WEB_HOSTNAMES = new Set(["pay.0xkey.io", "pay.staging.0xkey.io"]);
 
 const CHANNEL_BY_NETWORK = {
   "eip155:8453": "base-mainnet",
@@ -32,27 +38,25 @@ export function resolvePayBaseUrl(
   assertBasePaymentNetwork(network);
   const url = new URL(configuredBaseUrl);
   const expected = payChannel(network);
+  const ownedHostname = url.hostname.toLowerCase().replace(/\.+$/, "");
 
-  if (url.origin === RETIRED_PAY_WEB_ORIGIN) {
+  if (PAY_WEB_HOSTNAMES.has(ownedHostname)) {
     throw new Error(
-      "PAY_FACILITATOR_ORIGIN_MISMATCH: pay.0xkey.io is not a facilitator base URL",
+      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${ownedHostname} is not a facilitator base URL`,
     );
   }
 
-  if (url.origin !== PAY_API_ORIGIN) return url.toString().replace(/\/$/, "");
+  const canonicalOrigin =
+    API_ORIGIN_BY_HOSTNAME[
+      ownedHostname as keyof typeof API_ORIGIN_BY_HOSTNAME
+    ];
+  if (!canonicalOrigin) return url.toString().replace(/\/$/, "");
 
-  if (
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
-    (url.pathname !== "/" && url.pathname !== `/${expected}`)
-  ) {
-    throw new Error(
-      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${network} must use ${PAY_API_ORIGIN}/${expected}`,
-    );
-  }
-  if (url.pathname === "/") url.pathname = `/${expected}`;
+  const canonicalChannel = `${canonicalOrigin}/${expected}`;
+  if (configuredBaseUrl === canonicalOrigin) return canonicalChannel;
+  if (configuredBaseUrl === canonicalChannel) return canonicalChannel;
 
-  return url.toString().replace(/\/$/, "");
+  throw new Error(
+    `PAY_FACILITATOR_ORIGIN_MISMATCH: ${network} must use ${canonicalChannel}`,
+  );
 }

@@ -206,7 +206,7 @@ assert.throws(
 );
 
 async function assertChannelInterop(selected, protocol) {
-  const facilitatorPaths = [];
+  const facilitatorUrls = [];
   const settledNetworks = [];
   const server = createPayServer({
     network: selected.network,
@@ -214,9 +214,11 @@ async function assertChannelInterop(selected, protocol) {
     payTo: "0x1111111111111111111111111111111111111111",
     apiKey: { publicKey, privateKey },
     mppSecretKey: "01234567890123456789012345678901",
+    facilitatorUrl: "https://api-pay.staging.0xkey.io",
     async fetch(url, init) {
       const parsedUrl = new URL(String(url));
-      facilitatorPaths.push(parsedUrl.pathname);
+      facilitatorUrls.push(String(url));
+      assert.equal(parsedUrl.origin, "https://api-pay.staging.0xkey.io");
       assert.match(
         parsedUrl.pathname,
         new RegExp(`^/${selected.channel}/(?:verify|settle)$`),
@@ -314,9 +316,9 @@ async function assertChannelInterop(selected, protocol) {
   const response = await buyer("https://matrix.example/weather");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { matrix: true });
-  assert.deepEqual(facilitatorPaths, [
-    `/${selected.channel}/verify`,
-    `/${selected.channel}/settle`,
+  assert.deepEqual(facilitatorUrls, [
+    `https://api-pay.staging.0xkey.io/${selected.channel}/verify`,
+    `https://api-pay.staging.0xkey.io/${selected.channel}/settle`,
   ]);
   assert.deepEqual(settledNetworks, [selected.network]);
   assert.equal(signedCredentials.length, 1);
