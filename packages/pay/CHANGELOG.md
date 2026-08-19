@@ -4,8 +4,8 @@
 
 - Treat both `https://api-pay.0xkey.io` and
   `https://api-pay.staging.0xkey.io` as canonical Pay API origins. Both add the
-  selected Base network channel and reject any mismatched URL before a request
-  is signed or sent.
+  selected Base network channel and accept only the exact raw root or exact raw
+  selected-channel URL before a request is signed or sent.
 - Reject both Production and staging Pay website origins as facilitator bases.
   Explicit third-party and self-hosted facilitator URLs remain supported.
 

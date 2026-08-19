@@ -38,37 +38,25 @@ export function resolvePayBaseUrl(
   assertBasePaymentNetwork(network);
   const url = new URL(configuredBaseUrl);
   const expected = payChannel(network);
+  const ownedHostname = url.hostname.toLowerCase().replace(/\.+$/, "");
 
-  if (PAY_WEB_HOSTNAMES.has(url.hostname)) {
+  if (PAY_WEB_HOSTNAMES.has(ownedHostname)) {
     throw new Error(
-      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${url.hostname} is not a facilitator base URL`,
+      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${ownedHostname} is not a facilitator base URL`,
     );
   }
 
   const canonicalOrigin =
-    API_ORIGIN_BY_HOSTNAME[url.hostname as keyof typeof API_ORIGIN_BY_HOSTNAME];
+    API_ORIGIN_BY_HOSTNAME[
+      ownedHostname as keyof typeof API_ORIGIN_BY_HOSTNAME
+    ];
   if (!canonicalOrigin) return url.toString().replace(/\/$/, "");
 
-  if (
-    url.origin !== canonicalOrigin ||
-    hasExplicitPort(configuredBaseUrl) ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
-    (url.pathname !== "/" && url.pathname !== `/${expected}`)
-  ) {
-    throw new Error(
-      `PAY_FACILITATOR_ORIGIN_MISMATCH: ${network} must use ${canonicalOrigin}/${expected}`,
-    );
-  }
-  if (url.pathname === "/") url.pathname = `/${expected}`;
+  const canonicalChannel = `${canonicalOrigin}/${expected}`;
+  if (configuredBaseUrl === canonicalOrigin) return canonicalChannel;
+  if (configuredBaseUrl === canonicalChannel) return canonicalChannel;
 
-  return url.toString().replace(/\/$/, "");
-}
-
-function hasExplicitPort(value: string): boolean {
-  const authority = value.match(/^[a-z][a-z\d+.-]*:\/\/([^/?#]*)/i)?.[1];
-  const host = authority?.slice(authority.lastIndexOf("@") + 1);
-  return host?.includes(":") ?? false;
+  throw new Error(
+    `PAY_FACILITATOR_ORIGIN_MISMATCH: ${network} must use ${canonicalChannel}`,
+  );
 }

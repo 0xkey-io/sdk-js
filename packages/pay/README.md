@@ -106,7 +106,10 @@ belongs to exactly one network. Seller and Admin traffic uses the matching
 `/base-mainnet` or `/base-sepolia` channel on the configured canonical API
 origin. Production uses `https://api-pay.0xkey.io`; staging uses
 `https://api-pay.staging.0xkey.io`. Both canonical origins reject any other URL
-shape instead of guessing a network.
+shape instead of guessing a network. Pass the exact origin or exact selected
+channel string; normalized variants such as credentials, ports, trailing
+slashes, queries, fragments, dot segments, or host spelling changes are
+rejected.
 
 `pay.0xkey.io` and `pay.staging.0xkey.io` serve the product websites. Neither is
 a facilitator base URL.
