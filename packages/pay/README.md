@@ -201,7 +201,7 @@ Pay v1 has one interface per job:
 - server-side dashboard BFF and operations: `createPayAdminClient`.
 
 The RC has no customer compatibility layer. Old `Pay.client`,
-`createPayClient`, paywall helpers, and lowercase payment states are not
+`createPayFetch`, paywall helpers, and lowercase payment states are not
 exported. The Admin client is fixed to its configured organization. Read calls
 cannot supply a different organization ID.
 

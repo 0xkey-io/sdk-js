@@ -1,6 +1,6 @@
 import { createFacilitatorClient, createPayServer } from "./server";
 import { resolvePayBaseUrl } from "./networks";
-import type { PaymentPayload, PaymentRequirements } from "./types";
+import type { PaymentPayload, PaymentRequirements } from "mppx/x402";
 import type { RequestStampInput, RequestStamper } from "./xstamp";
 
 jest.mock("mppx", () => ({

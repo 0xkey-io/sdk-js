@@ -1,4 +1,4 @@
-import { Credential, Receipt, x402 } from "mppx";
+import { Challenge, Credential, Receipt, x402 } from "mppx";
 import { Mppx } from "mppx/client";
 import { assets, Types as EvmTypes } from "mppx/evm";
 import { charge } from "mppx/evm/client";
@@ -159,13 +159,7 @@ export function createPayClient(options: CreatePayClientOptions): PayClient {
       { phase: "configuration" },
     );
   }
-  if (!options.verification) {
-    throw new PayError(
-      "PAY_PROFILE_INVALID",
-      "Receipt verification configuration is required",
-      { phase: "configuration" },
-    );
-  }
+  const verification = validateVerificationProfile(options.verification);
   if (
     options.recovery.protection !== "aead" &&
     options.recovery.protection !== "encryption+hmac"
@@ -194,9 +188,9 @@ export function createPayClient(options: CreatePayClientOptions): PayClient {
         ? { protocolPreference: [...options.policy.preference] }
         : {}),
       pendingPaymentStore: options.recovery,
-      ...(options.verification.verifier
-        ? { receiptVerifier: options.verification.verifier }
-        : { rpcUrls: { [options.network]: options.verification.rpcUrl } }),
+      ...(verification.verifier
+        ? { receiptVerifier: verification.verifier }
+        : { rpcUrls: { [options.network]: verification.rpcUrl } }),
       ...(options.fetch ? { fetch: options.fetch } : {}),
       ...(options.allowInsecureLocalhost
         ? { allowInsecureLocalhost: options.allowInsecureLocalhost }
@@ -239,6 +233,51 @@ export function createPayClient(options: CreatePayClientOptions): PayClient {
       };
     },
   };
+}
+
+function validateVerificationProfile(
+  value: unknown,
+): CreatePayClientOptions["verification"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw invalidPayProfile("Receipt verification configuration is required");
+  }
+  const candidate = value as { rpcUrl?: unknown; verifier?: unknown };
+  const hasRpcUrl = candidate.rpcUrl !== undefined;
+  const hasVerifier = candidate.verifier !== undefined;
+  if (hasRpcUrl === hasVerifier) {
+    throw invalidPayProfile(
+      "Receipt verification requires exactly one rpcUrl or verifier",
+    );
+  }
+  if (hasVerifier) {
+    if (typeof candidate.verifier !== "function") {
+      throw invalidPayProfile("Receipt verifier must be a function");
+    }
+    return { verifier: candidate.verifier as PaymentReceiptVerifier };
+  }
+  if (
+    typeof candidate.rpcUrl !== "string" ||
+    candidate.rpcUrl.trim().length === 0
+  ) {
+    throw invalidPayProfile("Receipt RPC URL must be a non-empty HTTPS URL");
+  }
+  let url: URL;
+  try {
+    url = new URL(candidate.rpcUrl);
+  } catch (error) {
+    throw invalidPayProfile("Receipt RPC URL must be a valid HTTPS URL", error);
+  }
+  if (url.protocol !== "https:") {
+    throw invalidPayProfile("Receipt RPC URL must use HTTPS");
+  }
+  return { rpcUrl: url.toString() };
+}
+
+function invalidPayProfile(message: string, cause?: unknown): PayError {
+  return new PayError("PAY_PROFILE_INVALID", message, {
+    phase: "configuration",
+    ...(cause === undefined ? {} : { cause }),
+  });
 }
 
 function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
@@ -376,36 +415,37 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
       }
     },
   };
-  const payment = Mppx.create({
-    methods: [
-      charge({
-        // mppx pins its own Viem Account type, but only consumes address and
-        // signTypedData. The public seam above prevents that dependency's
-        // minor-version internals from leaking to callers.
-        account: safeAccount as Account,
-        currencies:
-          paymentNetwork === "eip155:8453"
-            ? [assets.base.USDC]
-            : [assets.baseSepolia.USDC],
-        maxAmount,
-        networks: paymentNetwork === "eip155:8453" ? [8453] : [84532],
-      }),
-    ],
-    fetch: guardedFetch,
-    maxPaymentRetries: 1,
-    orderChallenges(candidates) {
-      return candidates
-        .filter((candidate) =>
-          preference.includes(protocolOf(candidate.challenge)),
-        )
-        .sort(
-          (left, right) =>
-            preference.indexOf(protocolOf(left.challenge)) -
-            preference.indexOf(protocolOf(right.challenge)),
-        );
-    },
-    polyfill: false,
-  });
+  const mppFetch = (fetch: typeof globalThis.fetch) =>
+    Mppx.create({
+      methods: [
+        charge({
+          // mppx pins its own Viem Account type, but only consumes address and
+          // signTypedData. The public seam above prevents that dependency's
+          // minor-version internals from leaking to callers.
+          account: safeAccount as Account,
+          currencies:
+            paymentNetwork === "eip155:8453"
+              ? [assets.base.USDC]
+              : [assets.baseSepolia.USDC],
+          maxAmount,
+          networks: paymentNetwork === "eip155:8453" ? [8453] : [84532],
+        }),
+      ],
+      fetch,
+      maxPaymentRetries: 1,
+      orderChallenges(candidates) {
+        return candidates
+          .filter((candidate) =>
+            preference.includes(protocolOf(candidate.challenge)),
+          )
+          .sort(
+            (left, right) =>
+              preference.indexOf(protocolOf(left.challenge)) -
+              preference.indexOf(protocolOf(right.challenge)),
+          );
+      },
+      polyfill: false,
+    }).fetch;
   const officialSigner = toClientEvmSigner({
     address: safeAccount.address,
     signTypedData: (message) => safeAccount.signTypedData(message as never),
@@ -420,10 +460,8 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
           BigInt(requirement.amount) <= displayUsdcToAtomic(maxAmount),
       ),
     );
-  const officialX402Fetch = wrapFetchWithPayment(
-    guardedFetch,
-    officialX402Client,
-  );
+  const officialX402Fetch = (fetch: typeof globalThis.fetch) =>
+    wrapFetchWithPayment(fetch, officialX402Client);
 
   const executeFetch = async function executeFetch(
     input: RequestInfo | URL,
@@ -447,25 +485,25 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
       if (!hostAllowed(url, options.allowHosts)) {
         throw new Error(`PAY_HOST_DENIED: ${new URL(url).host}`);
       }
-      let response: Response;
-      try {
-        response = await payment.fetch(input, init);
-      } catch (error) {
-        // mppx 0.8.17 requires its route-binding extension when it signs x402.
-        // Ordinary x402 servers do not send that extension. No credential has
-        // been signed at this point, so it is safe to hand the same request to
-        // the official x402 client. Both libraries are exact-version pinned.
-        if (
-          !pendingRequest &&
-          preference.includes("x402") &&
-          error instanceof Error &&
-          error.message === "x402 exact EIP-3009 requires route binding."
-        ) {
-          response = await officialX402Fetch(input, init);
-        } else {
-          throw error;
-        }
+      const initialRequest = new Request(input, init);
+      if (!initialRequest.headers.has("Accept-Payment")) {
+        initialRequest.headers.set("Accept-Payment", "evm/charge");
       }
+      const initialResponse = await guardedFetch(initialRequest.clone());
+      if (initialResponse.status !== 402) {
+        return await finishPaymentResponse(initialResponse, url);
+      }
+      const selectedProtocol = classifyPaymentChallenge(
+        initialResponse,
+        preference,
+        paymentNetwork,
+        maxAmountAtomic,
+      );
+      const replayFetch = replayInitialResponse(guardedFetch, initialResponse);
+      const response =
+        selectedProtocol === "x402"
+          ? await officialX402Fetch(replayFetch)(initialRequest.clone())
+          : await mppFetch(replayFetch)(initialRequest.clone());
       return await finishPaymentResponse(response, url);
     } finally {
       paymentInProgress = false;
@@ -673,13 +711,6 @@ function normalizePayError(
 ): PayError {
   if (error instanceof PayError) return error;
   const message = error instanceof Error ? error.message : "";
-  if (/invalid payment challenge|malformed payment challenge/i.test(message)) {
-    return new PayError(
-      "PAYMENT_CHALLENGE_INVALID",
-      "The payment challenge is malformed",
-      { phase: "challenge", cause: error },
-    );
-  }
   const known: Array<{
     marker: string;
     code: PayErrorCode;
@@ -1017,6 +1048,134 @@ function protocolOf(challenge: { id: string; realm: string }): PayProtocol {
     : "mpp";
 }
 
+function classifyPaymentChallenge(
+  response: Response,
+  preference: PayProtocol[],
+  network: BasePaymentNetwork,
+  maxAmountAtomic: bigint,
+): PayProtocol {
+  const eligible = new Set<PayProtocol>();
+  let policyDenied = false;
+
+  const paymentRequired = response.headers.get(x402.paymentRequiredHeader);
+  if (paymentRequired !== null) {
+    let challenge: ReturnType<typeof x402.Header.decodePaymentRequired>;
+    try {
+      challenge = x402.Header.decodePaymentRequired(paymentRequired);
+    } catch (error) {
+      throw invalidPaymentChallenge(error);
+    }
+    for (const requirement of challenge.accepts) {
+      const transferMethod = requirement.extra?.assetTransferMethod;
+      const isEip3009 =
+        transferMethod === undefined || transferMethod === "eip3009";
+      const hasDomain =
+        typeof requirement.extra?.name === "string" &&
+        requirement.extra.name.length > 0 &&
+        typeof requirement.extra?.version === "string" &&
+        requirement.extra.version.length > 0;
+      if (!isEip3009) continue;
+      try {
+        getAddress(requirement.asset);
+        getAddress(requirement.payTo);
+      } catch (error) {
+        throw invalidPaymentChallenge(error);
+      }
+      if (!hasDomain) {
+        throw invalidPaymentChallenge(
+          new Error("EIP-3009 challenge is missing its signing domain"),
+        );
+      }
+      if (
+        requirement.network === network &&
+        supportedX402Requirement(requirement.network, requirement.asset) &&
+        BigInt(requirement.amount) <= maxAmountAtomic
+      ) {
+        eligible.add("x402");
+      } else if (preference.includes("x402")) {
+        policyDenied = true;
+      }
+    }
+  }
+
+  const authenticate = response.headers.get("WWW-Authenticate");
+  if (authenticate !== null && hasNativeMppChallenge(authenticate)) {
+    let challenges: Challenge.Challenge[];
+    try {
+      challenges = Challenge.fromResponseList(response);
+    } catch (error) {
+      throw invalidPaymentChallenge(error);
+    }
+    for (const challenge of challenges) {
+      if (
+        protocolOf(challenge) !== "mpp" ||
+        challenge.method !== EvmTypes.paymentMethod ||
+        challenge.intent !== EvmTypes.chargeIntent
+      ) {
+        continue;
+      }
+      let request: ReturnType<typeof EvmTypes.ChargeRequestSchema.parse>;
+      try {
+        request = EvmTypes.ChargeRequestSchema.parse(challenge.request);
+      } catch (error) {
+        throw invalidPaymentChallenge(error);
+      }
+      const requestNetwork = EvmTypes.networkOf(request.methodDetails.chainId);
+      if (
+        requestNetwork === network &&
+        supportedX402Requirement(requestNetwork, request.currency) &&
+        BigInt(request.amount) <= maxAmountAtomic
+      ) {
+        eligible.add("mpp");
+      } else if (preference.includes("mpp")) {
+        policyDenied = true;
+      }
+    }
+  }
+
+  const selected = preference.find((protocol) => eligible.has(protocol));
+  if (selected) return selected;
+  if (policyDenied) {
+    throw new PayError(
+      "PAYMENT_POLICY_DENIED",
+      "The payment challenge is outside the configured policy",
+      { phase: "policy" },
+    );
+  }
+  throw new PayError(
+    "PAYMENT_OFFER_UNSUPPORTED",
+    "The server did not offer a supported payment method",
+    { phase: "challenge" },
+  );
+}
+
+function hasNativeMppChallenge(value: string): boolean {
+  return /(?:^|,)\s*Payment(?:\s|$)/i.test(value);
+}
+
+function invalidPaymentChallenge(cause: unknown): PayError {
+  return new PayError(
+    "PAYMENT_CHALLENGE_INVALID",
+    "The payment challenge is malformed",
+    { phase: "challenge", cause },
+  );
+}
+
+function replayInitialResponse(
+  fetch: typeof globalThis.fetch,
+  response: Response,
+): typeof globalThis.fetch {
+  let available = true;
+  return async (input, init) => {
+    const request = new Request(input, init);
+    if (available && !hasPaymentCredential(request.headers)) {
+      available = false;
+      return response.clone();
+    }
+    return fetch(request);
+  };
+}
+
 function inspectPendingPayment(
   request: Request,
   accountAddress: string,
@@ -1237,15 +1396,12 @@ function receiptRpcUrl(
   network: BasePaymentNetwork,
 ): string {
   const configured = options.rpcUrls?.[network];
-  const value =
-    configured ??
-    (network === "eip155:84532" ? "https://sepolia.base.org" : undefined);
-  if (!value) {
+  if (!configured) {
     throw new Error(
-      "PAY_RECEIPT_RPC_REQUIRED: Base mainnet requires rpcUrls['eip155:8453'] or receiptVerifier",
+      "PAY_RECEIPT_RPC_REQUIRED: receipt verification requires an RPC URL or verifier",
     );
   }
-  const url = new URL(value);
+  const url = new URL(configured);
   if (url.protocol !== "https:") {
     throw new Error("PAY_RECEIPT_RPC_INVALID: receipt RPC must use HTTPS");
   }

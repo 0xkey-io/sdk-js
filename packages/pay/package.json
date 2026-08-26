@@ -78,6 +78,7 @@
     "typecheck": "tsc -p tsconfig.typecheck.json --allowJs false --checkJs false",
     "typecheck:pay-v1": "tsc -p tsconfig.pay-v1.json --allowJs false --checkJs false",
     "test": "jest --detectOpenHandles",
+    "test:client-boundary": "pnpm run build && node --test scripts/client-boundary-real.test.mjs",
     "test:pay-v1": "jest --detectOpenHandles --runInBand src/client.test.ts src/server.test.ts src/admin/index.test.ts src/xstamp.test.ts src/frameworks.test.ts",
     "test:interop": "pnpm run clean && pnpm run build && node scripts/interop-smoke.mjs && node scripts/mppx-validate-smoke.mjs",
     "test:commerce-contract": "jest --runInBand src/commerce/generated/codec.test.ts"

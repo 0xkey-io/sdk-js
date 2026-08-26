@@ -166,8 +166,8 @@ The buyer keeps the saved request and may call `client.resume()` to resend the
 same credential. A merchant or server operator with the organization API key
 may query payment status through `@0xkey-io/pay/admin`; an ordinary buyer cannot.
 
-It must not make a new signature. A normal `payFetch(...)` call is blocked while
-a saved payment exists.
+It must not make a new signature. A normal `client.fetch(...)` call is blocked
+while a saved payment exists.
 
 On restart, `resume()` checks the saved payer, protocol, Base network, canonical
 USDC, amount, recipient, host, URL, method, headers, and body before sending.

@@ -1,6 +1,7 @@
 import { privateKeyToAccount } from "viem/accounts";
 import {
   encodeFunctionData,
+  getAddress,
   keccak256,
   sha256,
   stringToBytes,
@@ -153,8 +154,51 @@ const account = privateKeyToAccount(
 const payTo = "0x1111111111111111111111111111111111111111";
 const baseSepoliaUsdc = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const transaction = `0x${"ab".repeat(32)}`;
-const economicEffectId =
-  "eip3009:7297f6a4b95314051ed7022053212e243f42dab0269b3ed6ebad7dd0ae6942d6";
+const authorizationNonce = `0x${"11".repeat(32)}`;
+const economicEffectId = `eip3009:${sha256(
+  stringToBytes(
+    JSON.stringify({
+      from: account.address.toLowerCase(),
+      kind: "eip3009/transferWithAuthorization",
+      name: "USDC",
+      network: "eip155:84532",
+      nonce: authorizationNonce,
+      to: payTo.toLowerCase(),
+      validAfter: "0",
+      validBefore: "9999999999",
+      value: "10000",
+      verifyingContract: baseSepoliaUsdc.toLowerCase(),
+      version: "2",
+    }),
+  ),
+).slice(2)}`;
+
+function expectedEconomicEffectDigest(): `0x${string}` {
+  return sha256(
+    stringToBytes(
+      JSON.stringify({
+        network: "eip155:84532",
+        asset: getAddress(baseSepoliaUsdc),
+        authorizationDomain: { name: "USDC", version: "2" },
+        authorization: {
+          from: getAddress(account.address),
+          to: getAddress(payTo),
+          value: "10000",
+          validAfter: "0",
+          validBefore: "9999999999",
+          nonce: authorizationNonce,
+        },
+        economicEffectId,
+      }),
+    ),
+  );
+}
+
+function expectedRequestDigest(
+  payment: Omit<PendingPaymentRecord["payment"], "requestDigest">,
+): `0x${string}` {
+  return sha256(stringToBytes(JSON.stringify(payment)));
+}
 
 function createRecovery(): PendingPaymentStore {
   let record: PendingPaymentRecord | undefined;
@@ -244,6 +288,54 @@ describe("network selection", () => {
         createClientOptions({ network: "eip155:1" as BasePaymentNetwork }),
       ),
     ).toThrow("PAY_NETWORK_UNSUPPORTED");
+  });
+});
+
+describe("receipt verification profile", () => {
+  it.each([
+    ["missing", undefined],
+    ["empty", { rpcUrl: "" }],
+    ["whitespace", { rpcUrl: "   " }],
+    ["malformed", { rpcUrl: "not-a-url" }],
+    ["non-HTTPS", { rpcUrl: "http://rpc.example" }],
+    ["missing both choices", {}],
+    ["non-function verifier", { verifier: "yes" }],
+    [
+      "both choices",
+      { rpcUrl: "https://rpc.example", verifier: async () => true },
+    ],
+  ])("rejects a %s verification configuration", (_name, verification) => {
+    expect(() =>
+      createPayClient(
+        createClientOptions({
+          verification:
+            verification as unknown as CreatePayClientOptions["verification"],
+        }),
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        code: "PAY_PROFILE_INVALID",
+        phase: "configuration",
+        retryable: false,
+      }),
+    );
+  });
+
+  it("accepts exactly one HTTPS RPC URL or verifier function", () => {
+    expect(() =>
+      createPayClient(
+        createClientOptions({
+          verification: { rpcUrl: "https://rpc.example" },
+        }),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      createPayClient(
+        createClientOptions({
+          verification: { verifier: async () => true },
+        }),
+      ),
+    ).not.toThrow();
   });
 });
 
@@ -1261,11 +1353,25 @@ describe("createPayClient", () => {
       body: JSON.stringify({ city: "Shanghai" }),
     });
 
-    expect(saved?.payment).toMatchObject({
+    const expectedUnsigned = {
       version: 3,
+      network: "eip155:84532" as const,
       protocolId: "x402-exact-v2-eip3009",
       adapterRevision: "pay-client-v1",
-      economicEffectDigest: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+      economicEffectDigest: expectedEconomicEffectDigest(),
+      url: "https://merchant.example/weather",
+      method: "POST",
+      headers: [
+        ["accept-payment", "evm/charge"],
+        ["content-type", "application/json"],
+        ["payment-signature", "credential-must-stay-secret"],
+      ] as Array<[string, string]>,
+      bodyBase64: "eyJjaXR5IjoiU2hhbmdoYWkifQ==",
+    } as const;
+    const requestDigest = expectedRequestDigest(expectedUnsigned);
+    expect(saved).toEqual({
+      digest: requestDigest,
+      payment: { ...expectedUnsigned, requestDigest },
     });
     const summary = await client.pending();
     expect(summary).toEqual({
@@ -1289,18 +1395,129 @@ describe("createPayClient", () => {
     ]);
   });
 
-  it("resumes the exact authenticated request bytes", async () => {
-    const sent: Array<{
+  it("binds every serialized field into requestDigest and rejects each mutation", async () => {
+    let saved: PendingPaymentRecord | undefined;
+    const first = createPayClient(
+      createClientOptions({
+        recovery: {
+          protection: "aead",
+          load: async () => undefined,
+          saveIfAbsent: async (record) => {
+            saved = record;
+            return true;
+          },
+          clear: async () => false,
+        },
+        fetch: async () => new Response(null, { status: 401 }),
+      }),
+    );
+    await first.fetch("https://merchant.example/weather", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "PAYMENT-SIGNATURE": "signed-payment",
+      },
+      body: '{"city":"Shanghai"}',
+    });
+
+    const mutations: Array<
+      [string, (payment: PendingPaymentRecord["payment"]) => void]
+    > = [
+      ["version", (payment) => Object.assign(payment, { version: 2 })],
+      [
+        "network",
+        (payment) => Object.assign(payment, { network: "eip155:8453" }),
+      ],
+      [
+        "protocolId",
+        (payment) =>
+          Object.assign(payment, { protocolId: "mpp-evm-charge-v0" }),
+      ],
+      [
+        "adapterRevision",
+        (payment) =>
+          Object.assign(payment, { adapterRevision: "pay-client-v2" }),
+      ],
+      [
+        "economicEffectDigest",
+        (payment) =>
+          Object.assign(payment, {
+            economicEffectDigest: `0x${"ff".repeat(32)}`,
+          }),
+      ],
+      [
+        "url",
+        (payment) =>
+          Object.assign(payment, { url: "https://merchant.example/other" }),
+      ],
+      ["method", (payment) => Object.assign(payment, { method: "PUT" })],
+      [
+        "headers",
+        (payment) =>
+          Object.assign(payment, {
+            headers: [...payment.headers, ["x-mutated", "true"]],
+          }),
+      ],
+      [
+        "bodyBase64",
+        (payment) => Object.assign(payment, { bodyBase64: "e30=" }),
+      ],
+    ];
+
+    for (const [field, mutate] of mutations) {
+      const payment = structuredClone(saved!.payment);
+      mutate(payment);
+      const { requestDigest: _requestDigest, ...unsigned } = payment;
+      if (expectedRequestDigest(unsigned) === saved!.payment.requestDigest) {
+        throw new Error(`${field} is not bound by requestDigest`);
+      }
+      const rawFetch = jest.fn(async () => new Response(null, { status: 401 }));
+      const restored = createPayClient(
+        createClientOptions({
+          recovery: {
+            protection: "aead",
+            load: async () => ({ ...saved!, payment }),
+            saveIfAbsent: async () => false,
+            clear: async () => false,
+          },
+          fetch: rawFetch,
+        }),
+      );
+      let caught: unknown;
+      try {
+        await restored.resume();
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(PayError);
+      if (rawFetch.mock.calls.length !== 0) {
+        throw new Error(`${field} mutation reached the transport`);
+      }
+    }
+  });
+
+  it("loads into a fresh client and resumes the exact authenticated request bytes", async () => {
+    let saved: PendingPaymentRecord | undefined;
+    const firstSent: Array<{
       body: Uint8Array;
       headers: Array<[string, string]>;
       method: string;
       url: string;
     }> = [];
-    const client = createPayClient(
+    const first = createPayClient(
       createClientOptions({
+        recovery: {
+          protection: "aead",
+          load: async () => undefined,
+          saveIfAbsent: async (record) => {
+            saved = record;
+            return true;
+          },
+          clear: async () => false,
+        },
         fetch: async (input, init) => {
           const request = new Request(input, init);
-          sent.push({
+          firstSent.push({
             body: new Uint8Array(await request.clone().arrayBuffer()),
             headers: Array.from(request.headers.entries()),
             method: request.method,
@@ -1311,7 +1528,7 @@ describe("createPayClient", () => {
       }),
     );
 
-    await client.fetch("https://merchant.example/weather", {
+    await first.fetch("https://merchant.example/weather", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1320,10 +1537,37 @@ describe("createPayClient", () => {
       },
       body: '{"city":"Shanghai"}',
     });
-    await client.resume();
+    const secondSent: typeof firstSent = [];
+    const forbiddenSigner = jest.fn(async () => {
+      throw new Error("resume must never sign");
+    });
+    const second = createPayClient(
+      createClientOptions({
+        account: { address: account.address, signTypedData: forbiddenSigner },
+        recovery: {
+          protection: "aead",
+          load: async () => saved,
+          saveIfAbsent: async () => false,
+          clear: async () => false,
+        },
+        fetch: async (input, init) => {
+          const request = new Request(input, init);
+          secondSent.push({
+            body: new Uint8Array(await request.clone().arrayBuffer()),
+            headers: Array.from(request.headers.entries()),
+            method: request.method,
+            url: request.url,
+          });
+          return new Response(null, { status: 401 });
+        },
+      }),
+    );
+    await second.resume();
 
-    expect(sent).toHaveLength(2);
-    expect(sent[1]).toEqual(sent[0]);
+    expect(firstSent).toHaveLength(1);
+    expect(secondSent).toHaveLength(1);
+    expect(secondSent[0]).toEqual(firstSent[0]);
+    expect(forbiddenSigner).not.toHaveBeenCalled();
   });
 
   it("reports a signed 5xx as retryable unknown while keeping recovery state", async () => {
@@ -1376,7 +1620,7 @@ describe("createPayClient", () => {
     expect((caught as Error).message).not.toContain(credential);
   });
 
-  it("classifies unsupported offers and malformed challenges", async () => {
+  it("classifies bare offers without treating transport prose as a challenge", async () => {
     const unsupported = createPayClient(
       createClientOptions({
         fetch: async () => new Response(null, { status: 402 }),
@@ -1400,9 +1644,9 @@ describe("createPayClient", () => {
     await expect(
       malformed.fetch("https://merchant.example/weather"),
     ).rejects.toMatchObject({
-      code: "PAYMENT_CHALLENGE_INVALID",
-      phase: "challenge",
-      retryable: false,
+      code: "PAYMENT_SERVICE_UNAVAILABLE",
+      phase: "request",
+      retryable: true,
     });
   });
 
