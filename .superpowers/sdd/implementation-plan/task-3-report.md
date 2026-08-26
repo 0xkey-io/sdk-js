@@ -4,7 +4,7 @@ Status: **DONE**
 
 Implementation commit: `b95ada0a2` (`feat(pay): add GA server protocol adapters`)
 
-Review-round implementation commit: `PENDING`
+Review-round implementation commit: `d11452f56` (`fix(pay): close GA protocol adapter review`)
 
 Reviewed base: `7811fec0fe79c7c9cf5ef2965f6dc8ad5a32c116`
 
