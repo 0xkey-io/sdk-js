@@ -77,6 +77,12 @@ async function verifyTarball(tarball, sourceManifest) {
     );
   }
 
+  if (manifest.engines?.node !== ">=22.12.0") {
+    throw new Error(
+      `Packed engines.node must be >=22.12.0 for the supported require(ESM) baseline; found ${String(manifest.engines?.node)}`,
+    );
+  }
+
   for (const group of dependencyGroups) {
     for (const [name, value] of Object.entries(manifest[group] ?? {})) {
       if (typeof value === "string" && value.startsWith("workspace:")) {
@@ -137,6 +143,10 @@ async function verifyTarball(tarball, sourceManifest) {
 async function externalInstallSmoke(tarball) {
   const externalRoot = await mkdtemp(join(tmpdir(), "oxkey-pay-external-"));
   try {
+    const [major, minor] = process.versions.node.split(".").map(Number);
+    if (major < 22 || (major === 22 && minor < 12)) {
+      throw new Error("CJS smoke requires the declared Node >=22.12.0 baseline");
+    }
     await writeFile(
       join(externalRoot, "package.json"),
       `${JSON.stringify({ name: "pay-artifact-smoke", private: true, type: "module" })}\n`,

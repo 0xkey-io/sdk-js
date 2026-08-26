@@ -37,7 +37,10 @@ wire types or codecs.
 4. The credential header freezes the protocol. The official x402 server or
    native mppx method validates only its own wire, then maps it through its own
    0xkey-owned command adapter.
-5. x402 calls `/verify`, then `/settle`; MPP calls its command settlement
+5. x402 calls `/verify` with the official private facilitator envelope, then
+   the 0xkey seller converts the verified effect and calls
+   `/v1/settlements/charge` with
+   `{ organizationId, command }`; MPP calls the same command settlement
    endpoint. Every private call uses X-Stamp V2 and an explicit wire protocol.
 6. The facilitator waits until the Base transfer is `CONFIRMED`.
 7. The SDK returns `paymentId` and then calls the merchant handler.

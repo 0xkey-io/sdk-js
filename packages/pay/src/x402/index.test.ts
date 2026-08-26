@@ -119,6 +119,7 @@ describe("create0xkeyFacilitatorClient", () => {
       ["https://facilitator.example/settle", "POST"],
       ["https://facilitator.example/supported", "GET"],
     ]);
+    expect(calls.every(({ init }) => init?.redirect === "error")).toBe(true);
     expect(JSON.parse(String(calls[0]!.init!.body))).toEqual({
       organizationId: ORG,
       x402Version: 2,
@@ -182,6 +183,24 @@ describe("create0xkeyFacilitatorClient", () => {
     }
   });
 
+  it("rejects redirects without forwarding a signed request to a second host", async () => {
+    const { stamper } = fakeStamper();
+    let secondHostCalls = 0;
+    const fetch = jest.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url).startsWith("https://redirect-target.example")) secondHostCalls += 1;
+      expect(init?.redirect).toBe("error");
+      return Response.redirect("https://redirect-target.example/credential", 302);
+    }) as typeof globalThis.fetch;
+    const client = create0xkeyFacilitatorClient({
+      network: "eip155:84532", organizationId: ORG, stamper, fetch,
+    });
+    await expect(client.verify(payload, requirements)).rejects.toMatchObject({
+      code: "PAYMENT_SERVICE_UNAVAILABLE", retryable: true,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(secondHostCalls).toBe(0);
+  });
+
   it("retries only supported 429 for three total attempts", async () => {
     jest.useFakeTimers();
     try {
@@ -206,6 +225,43 @@ describe("create0xkeyFacilitatorClient", () => {
       await jest.runAllTimersAsync();
       await rejection;
       expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it.each([
+    ["HTTP-date", 20_000, 20_000],
+    ["clamped HTTP-date", 120_000, 30_000],
+    ["past HTTP-date", -20_000, 0],
+    ["clamped delta", "999", 30_000],
+  ])("honors and clamps %s Retry-After", async (_label, retryInput, expectedDelay) => {
+    const now = 1_800_000_000_000;
+    jest.useFakeTimers({ now });
+    try {
+      const retryAfter = typeof retryInput === "number"
+        ? new Date(now + retryInput).toUTCString()
+        : retryInput;
+      const { stamper } = fakeStamper();
+      const fetch = jest.fn()
+        .mockResolvedValueOnce(new Response(null, { status: 429, headers: { "Retry-After": retryAfter } }))
+        .mockResolvedValue(Response.json({ kinds: [], extensions: [], signers: {} }));
+      const client = create0xkeyFacilitatorClient({
+        network: "eip155:84532", organizationId: ORG, stamper,
+        fetch: fetch as typeof globalThis.fetch,
+      });
+      const result = client.getSupported();
+      if (expectedDelay === 0) {
+        await jest.advanceTimersByTimeAsync(0);
+        await result;
+        expect(fetch).toHaveBeenCalledTimes(2);
+        return;
+      }
+      await jest.advanceTimersByTimeAsync(expectedDelay - 1);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      await jest.advanceTimersByTimeAsync(1);
+      await result;
+      expect(fetch).toHaveBeenCalledTimes(2);
     } finally {
       jest.useRealTimers();
     }

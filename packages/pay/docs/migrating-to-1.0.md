@@ -3,6 +3,10 @@
 Pay 1.0 intentionally removes the pre-GA callable `createPayFetch()` API. There
 is no compatibility wrapper.
 
+Pay 1.0 requires Node.js 22.12 or later. That is the supported baseline for
+both ESM imports and CommonJS `require()` of Pay's ESM dependency graph; Node 18
+is not a supported CommonJS runtime.
+
 Replace the flat options with explicit policy, recovery, and verification
 groups, then call the returned client's `fetch()` method:
 
@@ -61,3 +65,13 @@ Custom upstream wiring moved to dedicated entries. Use
 resource server, or `create0xkeyEvmChargeMethod` from `@0xkey-io/pay/mpp` with
 `Mppx.create`. The latter is native MPP HTTP only; x402 is a separate seller
 path.
+
+These two x402 server integrations intentionally use different private 0xkey
+request bodies. The public `create0xkeyFacilitatorClient()` preserves the
+official facilitator envelope (`organizationId`, `x402Version`,
+`paymentPayload`, and `paymentRequirements`). The 0xkey-owned
+`createPayServer().protect()` path verifies that envelope, converts the verified
+economic effect to a `ChargeSettlementCommand`, and sends it to the distinct
+`/v1/settlements/charge` path with
+`{ organizationId, command }`. Neither private body is part of an x402 receipt
+or a root package export.

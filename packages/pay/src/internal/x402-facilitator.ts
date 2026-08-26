@@ -74,6 +74,7 @@ export function createX402FacilitatorTransport(
       const signal = AbortSignal.timeout(timeoutMs);
       const response = await fetch(url, {
         method,
+        redirect: "error",
         headers: {
           ...(body === undefined ? {} : { "Content-Type": "application/json" }),
           [stamped.stampHeaderName]: stamped.stampHeaderValue,
@@ -364,8 +365,14 @@ function errorRetryAfter(error: unknown): string | null {
 }
 
 function retryDelayMs(retryAfter: string | null, attempt: number): number {
-  let delay = retryAfter && /^\d+$/.test(retryAfter.trim()) ? Number(retryAfter) * 1000 : 0;
-  if (delay <= 0) delay = 1000 * 2 ** attempt;
+  let delay: number | undefined;
+  if (retryAfter && /^\d+$/.test(retryAfter.trim())) {
+    delay = Number(retryAfter) * 1000;
+  } else if (retryAfter) {
+    const timestamp = Date.parse(retryAfter);
+    if (Number.isFinite(timestamp)) delay = Math.max(0, timestamp - Date.now());
+  }
+  delay ??= 1000 * 2 ** attempt;
   return Math.min(delay, MAX_RETRY_DELAY_MS);
 }
 

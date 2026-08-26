@@ -72,3 +72,40 @@ test.each([
     ),
   ).toThrow("PAYMENT_CHALLENGE_INVALID");
 });
+
+test.each([
+  ["accepted private extra", {
+    ...payload,
+    accepted: { ...requirements, extra: { ...requirements.extra, organizationId: "private" } },
+  }],
+  ["accepted deferred field", {
+    ...payload,
+    accepted: { ...requirements, deferred: true },
+  }],
+  ["payload private field", {
+    ...payload,
+    payload: { ...payload.payload, paymentId: "private" },
+  }],
+  ["payment payload extension", {
+    ...payload,
+    extensions: { provider: "forbidden" },
+  }],
+  ["resource private field", {
+    ...payload,
+    resource: { url: "https://merchant.example/weather", paymentId: "private" },
+  }],
+  ["authorization unknown field", {
+    ...payload,
+    payload: {
+      ...payload.payload,
+      authorization: { ...payload.payload.authorization, provider: "forbidden" },
+    },
+  }],
+] as const)("rejects client-controlled %s before settlement", (_label, candidate) => {
+  expect(() =>
+    new X402ExactV2Adapter("eip155:84532").toCommand(
+      candidate as PaymentPayload,
+      requirements,
+    ),
+  ).toThrow("PAYMENT_CHALLENGE_INVALID");
+});

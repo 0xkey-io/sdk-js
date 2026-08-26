@@ -94,21 +94,19 @@ async function assertInterop(selected, protocol) {
           payer: body.paymentPayload.payload.authorization.from,
         });
       }
-      if (parsed.pathname.endsWith("/settle")) {
+      if (parsed.pathname.endsWith("/v1/settlements/charge")) {
         events.push("settle");
-        if (protocol === "mpp") {
-          assert.equal(body.command.network, selected.network);
-          assert.equal(body.command.asset.toLowerCase(), selected.asset.toLowerCase());
-          assert.equal(body.command.protocolId, "mpp-evm-charge-v0");
-          return Response.json({ success: true, transaction, paymentId });
-        }
-        assert.equal(body.paymentRequirements.network, selected.network);
+        assert.equal(body.command.network, selected.network);
+        assert.equal(body.command.asset.toLowerCase(), selected.asset.toLowerCase());
+        assert.equal(body.command.protocolId,
+          protocol === "mpp" ? "mpp-evm-charge-v0" : "x402-exact-v2-eip3009");
+        assert.equal("paymentPayload" in body, false);
         return Response.json({
           settlement: {
             success: true,
             transaction,
             network: selected.network,
-            payer: body.paymentPayload.payload.authorization.from,
+            payer: body.command.payer,
           },
           paymentId,
         });

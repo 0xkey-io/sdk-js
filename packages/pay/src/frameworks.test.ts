@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import type { PaidHandlerContext, PayRoute, PayServer } from "./server";
 import { paymentMiddleware as expressPayment } from "./express";
 import { paymentMiddleware as honoPayment } from "./hono";
@@ -37,14 +38,15 @@ test("Express translates HTTP objects and delegates all payment behavior to prot
       return Response.json({ weather: "sunny" });
     },
   );
-  const response: any = {
+  const response: any = Object.assign(new EventEmitter(), {
     status: jest.fn(function (this: any, status: number) {
       this.statusCode = status;
       return this;
     }),
     setHeader: (name: string, value: string) => headers.set(name.toLowerCase(), value),
-    send: jest.fn(),
-  };
+    write: jest.fn(() => true),
+    end: jest.fn(),
+  });
 
   await middleware(
     {
@@ -60,7 +62,46 @@ test("Express translates HTTP objects and delegates all payment behavior to prot
 
   expect(events).toEqual(["protect:$0.01", "settled", "handler:pay-1"]);
   expect(headers.get("payment-response")).toBe("receipt");
-  expect(response.send).toHaveBeenCalledWith('{"weather":"sunny"}');
+  expect(Buffer.concat(response.write.mock.calls.map(([chunk]: [Uint8Array]) => Buffer.from(chunk))).toString()).toBe('{"weather":"sunny"}');
+  expect(response.end).toHaveBeenCalledTimes(1);
+});
+
+test("Express caches protect and streams binary multi-chunk bodies without text decoding", async () => {
+  let protectCalls = 0;
+  const server = delegatingServer([]);
+  const originalProtect = server.protect;
+  server.protect = (...args) => {
+    protectCalls += 1;
+    return originalProtect(...args);
+  };
+  const middleware = expressPayment(server, { price: "$0.01" }, async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(Uint8Array.of(0xff));
+        controller.enqueue(Uint8Array.of(0x00));
+        controller.close();
+      },
+    });
+    return new Response(stream);
+  });
+  const chunks: Buffer[] = [];
+  const response: any = Object.assign(new EventEmitter(), {
+    status() { return this; },
+    setHeader() {},
+    write(chunk: Uint8Array) { chunks.push(Buffer.from(chunk)); return true; },
+    end: jest.fn(),
+  });
+  const request = {
+    method: "GET", originalUrl: "/binary", protocol: "https",
+    headers: { host: "api.example.com" }, get: () => "api.example.com",
+  };
+
+  await middleware(request, response, jest.fn());
+  await middleware(request, response, jest.fn());
+
+  expect(protectCalls).toBe(1);
+  expect(Buffer.concat(chunks)).toEqual(Buffer.from([0xff, 0x00, 0xff, 0x00]));
+  expect(response.end).toHaveBeenCalledTimes(2);
 });
 
 test("Hono delegates to protect and returns its Fetch response", async () => {
@@ -78,6 +119,20 @@ test("Hono delegates to protect and returns its Fetch response", async () => {
   expect(events).toEqual(["protect:$0.01", "settled", "handler"]);
   expect(context.set).toHaveBeenCalledWith("paymentId", "pay-1");
   expect(response.headers.get("PAYMENT-RESPONSE")).toBe("receipt");
+});
+
+test("Hono caches protect across requests", async () => {
+  const events: string[] = [];
+  const middleware = honoPayment(delegatingServer(events), { price: "$0.01" });
+  for (let index = 0; index < 2; index += 1) {
+    const context: any = {
+      req: { raw: new Request(`https://api.example.com/weather?i=${index}`) },
+      res: new Response("weather"),
+      set: jest.fn(),
+    };
+    await middleware(context, async () => undefined);
+  }
+  expect(events.filter((event) => event.startsWith("protect:"))).toHaveLength(1);
 });
 
 test("Next delegates the route handler to protect without payment parsing", async () => {
@@ -99,4 +154,20 @@ test("Next delegates the route handler to protect without payment parsing", asyn
 
   expect(events).toEqual(["protect:$0.01", "settled", "handler:pay-1"]);
   expect(response.headers.get("PAYMENT-RESPONSE")).toBe("receipt");
+});
+
+test("Next caches protect while preserving concurrent request contexts", async () => {
+  const events: string[] = [];
+  const handler = withPayment(
+    delegatingServer(events),
+    { price: "$0.01" },
+    async (_request, _payment, context) => Response.json(context),
+  );
+  const [first, second] = await Promise.all([
+    handler(new Request("https://api.example.com/one"), { id: 1 }),
+    handler(new Request("https://api.example.com/two"), { id: 2 }),
+  ]);
+  expect(await first.json()).toEqual({ id: 1 });
+  expect(await second.json()).toEqual({ id: 2 });
+  expect(events.filter((event) => event.startsWith("protect:"))).toHaveLength(1);
 });

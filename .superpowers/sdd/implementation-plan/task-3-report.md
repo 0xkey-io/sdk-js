@@ -1,8 +1,10 @@
 # Task 3 report — Pay 1.0 server and protocol adapters
 
-Status: **DONE_WITH_CONCERNS**
+Status: **DONE**
 
 Implementation commit: `b95ada0a2` (`feat(pay): add GA server protocol adapters`)
+
+Review-round implementation commit: `PENDING`
 
 Reviewed base: `7811fec0fe79c7c9cf5ef2965f6dc8ad5a32c116`
 
@@ -110,6 +112,55 @@ results below are the focused evidence retained during implementation.
   `workspace:*`; and rejects upstream wire imports in root/client/server
   declarations.
 
+### Changes-requested review round
+
+- RED: `pnpm --filter @0xkey-io/pay exec jest --runInBand src/internal/x402-exact-v2-adapter.test.ts src/frameworks.test.ts src/x402/index.test.ts`
+  - 11 failures: x402 accepted/payload unknown keys passed, framework adapters
+    rebuilt `protect()` and Express emitted no binary chunks, signed fetches did
+    not set `redirect: "error"`, and HTTP-date retry happened immediately.
+- GREEN: the same command
+  - 25 tests passed after exact x402 key guards, route-level framework caching,
+    request-local framework context maps, Express stream/backpressure bridging,
+    redirect refusal, and delta/HTTP-date/clamped Retry-After parsing.
+- RED: `pnpm --filter @0xkey-io/pay exec tsx --test src/server.node.test.ts`
+  - valid x402 settle failure was reissued as 402, verify dependency failure
+    reached settlement, seller x402 still sent the official settlement envelope,
+    and MPP accepted an unknown raw payload key.
+- GREEN: the same command
+  - 6 server cases passed. Real valid x402 credentials now produce stable outer
+    502 for private verify unavailability and 503 `PAYMENT_STATUS_UNKNOWN` for
+    settle 5xx/redirect, with no handler and no replacement challenge. Real
+    valid MPP credentials produce 503 for settle 5xx/network failure; captured
+    mppx logging contains no injected secret. Wire failures settle and handle
+    zero times. Route discovery success or failure calls `/supported` once.
+- RED: `pnpm --filter @0xkey-io/pay exec jest --runInBand src/x402/index.test.ts`
+  - past HTTP-date Retry-After timed out because it incorrectly fell back to a
+    one-second exponential delay.
+- GREEN: the same command
+  - 11 tests passed; delta, future/past HTTP-date and the 30-second upper clamp
+    are covered.
+- RED: `pnpm --filter @0xkey-io/pay exec jest --runInBand src/internal/zeroxkey-settlement-adapter.test.ts`
+  - 4 failures against the frozen Task 4 command-contract addendum: command
+    traffic used `/settle`, the caller selected wireProtocol, mismatched
+    protocol/revision reached stamping, and flattened success was accepted.
+- GREEN: the same command
+  - 6 tests passed. Seller commands use only `/v1/settlements/charge`, derive
+    `x402|mpp` from the exact closed protocol/revision pair, reject mismatch
+    before stamping, require strict nested `{settlement,paymentId}`, reject
+    private standard-object keys, and bind response network/payer to the
+    command. The independent public x402 client remains on official
+    `/verify|/settle` envelope calls.
+- RED: the x402 adapter focused command after adding top-level extension and
+  resource-private-key cases
+  - 2 failures; both inputs reached command construction.
+- GREEN: the same command
+  - 11 tests passed after exact top-level/resource allowlists.
+- RED: `node --test packages/pay/scripts/check-packed-artifact.test.mjs`
+  - the new Node baseline fixture reached missing-artifact validation instead
+    of rejecting the `>=18.0.0` engine.
+- GREEN: `pnpm --filter @0xkey-io/pay exec node --test scripts/check-packed-artifact.test.mjs`
+  - 5 tests passed, including exact `>=22.12.0` manifest enforcement.
+
 ## Files and public surface
 
 ### Runtime and adapters
@@ -134,6 +185,7 @@ results below are the focused evidence retained during implementation.
 - `packages/pay/src/mpp/index.node.test.ts`
 - `packages/pay/src/server.node.test.ts`
 - `packages/pay/src/internal/x402-exact-v2-adapter.test.ts`
+- `packages/pay/src/internal/zeroxkey-settlement-adapter.test.ts`
 - `packages/pay/src/frameworks.test.ts`
 - `packages/pay/scripts/interop-smoke.mjs`
 - `packages/pay/scripts/mppx-validate-smoke.mjs`
@@ -186,6 +238,24 @@ results below are the focused evidence retained during implementation.
    Only HTTP 200 commits. A failure produces stable unknown recovery behavior,
    never exception text, bodies, credentials, receipts, or a new signature.
 
+7. **Indeterminate protocol work cannot become a new 402.**
+   x402 uses explicit hook abort/skip results and a request-local failure
+   channel around upstream 2.23 exception swallowing. MPP converts the local
+   original classification to a sanitized mppx `PaymentError`. Both override
+   upstream retry challenges with stable 502/503 responses before any handler.
+
+8. **Seller command transport is distinct from official x402.**
+   `create0xkeyFacilitatorClient()` continues to send the official private
+   envelope to `/verify|/settle`. `protect()` sends validated x402/MPP economic
+   commands only to `/v1/settlements/charge`; the adapter, not its caller,
+   derives X-Stamp wireProtocol. Only nested private settlement responses are
+   accepted.
+
+9. **Node/CJS support is explicit.**
+   Package engines, migration docs, generated support and the fresh-install
+   artifact checker use Node `>=22.12.0`, the LTS baseline supporting
+   `require(ESM)`. No Node 18 CommonJS claim remains.
+
 ## Self-review
 
 ### Standards axis
@@ -217,7 +287,7 @@ results below are the focused evidence retained during implementation.
 The final implementation gate chain (after the last runtime edits) produced:
 
 - `pnpm --filter @0xkey-io/pay test:pay-v1`
-  - PASS: 6 Jest suites / 73 tests; Node tests 6/6.
+  - PASS: 7 Jest suites / 93 tests; Node tests 8/8.
 - `pnpm --filter @0xkey-io/pay typecheck:pay-v1`
   - PASS.
 - `pnpm --filter @0xkey-io/pay build`
@@ -249,8 +319,10 @@ Additional evidence:
 ## Concerns and excluded claims
 
 - The private command settlement envelope and fulfillment PUT are SDK-side
-  contracts in this task. Services implement them in later tasks, so this report
-  does **not** claim cross-repository or deployed end-to-end conformance.
+  contracts in this task. The SDK is aligned to the frozen Task 4 addendum,
+  including the versioned command path and strict response, but services
+  implement and independently validate them in later tasks. This report does
+  **not** claim deployed end-to-end conformance.
 - The x402 npm/source upfront discrepancy is contained and tested, but should be
   removed when a published upstream release exposes the pinned source behavior
   directly.

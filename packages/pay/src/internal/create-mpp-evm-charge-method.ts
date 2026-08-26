@@ -1,4 +1,5 @@
 import { Transport } from "mppx/server";
+import { Errors } from "mppx";
 import { assets, charge } from "mppx/evm/server";
 import { getAddress } from "viem";
 import { PayError } from "../errors";
@@ -25,6 +26,7 @@ export interface MppEvmChargeMethodOptions {
 export function createMppEvmChargeMethod(
   options: MppEvmChargeMethodOptions,
   onSettlement?: (result: ZeroXkeySettlementResult) => void,
+  onFailure?: (error: PayError) => void,
 ): { method: ReturnType<typeof charge> } {
   validateOptions(options);
   const economicAdapter = new MppEvmChargeAdapter(options.network);
@@ -34,7 +36,18 @@ export function createMppEvmChargeMethod(
     recipient: getAddress(options.payTo),
     async settle(validated) {
       const command = economicAdapter.toCommand(validated);
-      const result = await settlementAdapter.settle(command, "mpp");
+      let result: ZeroXkeySettlementResult;
+      try {
+        result = await settlementAdapter.settle(command);
+      } catch (cause) {
+        const error = cause instanceof PayError
+          ? cause
+          : new PayError("PAYMENT_STATUS_UNKNOWN", "settlement outcome is indeterminate", {
+              phase: "request", retryable: true, cause,
+            });
+        onFailure?.(error);
+        throw new Errors.VerificationFailedError({ reason: "settlement unavailable" });
+      }
       onSettlement?.(result);
       return {
         reference: result.reference,

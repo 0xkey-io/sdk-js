@@ -22,6 +22,18 @@ const apiKey = {
   privateKey: readFileSync(new URL("api-key.private", fixtureRoot), "utf8").trim(),
 };
 
+function settlementEnvelope(transaction: string, paymentId: string, payer?: string) {
+  return {
+    settlement: {
+      success: true,
+      transaction,
+      network: "eip155:84532",
+      ...(payer ? { payer } : {}),
+    },
+    paymentId,
+  };
+}
+
 test("protect emits independent standard offers and rejects ambiguous credentials", async () => {
   const calls: string[] = [];
   const server = createPayServer({
@@ -75,10 +87,32 @@ test("protect emits independent standard offers and rejects ambiguous credential
   assert.equal(handlerCalls, 0);
 });
 
+test("route capability discovery is attempted once and a cached failure is stable", async () => {
+  let supportedCalls = 0;
+  const server = createPayServer({
+    network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
+    protocols: ["x402"],
+    async fetch() {
+      supportedCalls += 1;
+      return new Response(null, { status: 503 });
+    },
+  });
+  const route = server.protect({ price: "$0.01" }, () => new Response("must not run"));
+  for (let index = 0; index < 2; index += 1) {
+    const response = await route(new Request(`https://merchant.example/weather?i=${index}`));
+    assert.equal(response.status, 502);
+    assert.deepEqual(await response.json(), {
+      errorCode: "PAYMENT_SERVICE_UNAVAILABLE", retryable: true,
+    });
+  }
+  assert.equal(supportedCalls, 1);
+});
+
 test("x402 protect verifies and settles before the handler, strips paymentId, and persists fulfillment", async () => {
   const events: string[] = [];
   const transaction = `0x${"ab".repeat(32)}`;
   const paymentId = "22222222-2222-4222-8222-222222222222";
+  let supportedCalls = 0;
   const server = createPayServer({
     network: "eip155:84532",
     organizationId: ORG,
@@ -88,6 +122,7 @@ test("x402 protect verifies and settles before the handler, strips paymentId, an
     async fetch(url, init) {
       const path = new URL(String(url)).pathname;
       if (path.endsWith("/supported")) {
+        supportedCalls += 1;
         return Response.json({
           kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
           extensions: [],
@@ -96,6 +131,7 @@ test("x402 protect verifies and settles before the handler, strips paymentId, an
       }
       if (path.endsWith("/verify")) {
         events.push("verify");
+        assert.equal(init?.redirect, "error");
         const body = JSON.parse(String(init?.body));
         assert.equal(body.organizationId, ORG);
         assert.equal(body.paymentRequirements.extra.paymentFlow, "upfront");
@@ -105,22 +141,22 @@ test("x402 protect verifies and settles before the handler, strips paymentId, an
           payer: body.paymentPayload.payload.authorization.from,
         });
       }
-      if (path.endsWith("/settle")) {
+      if (path.endsWith("/v1/settlements/charge")) {
         events.push("settle");
+        assert.equal(init?.redirect, "error");
         const body = JSON.parse(String(init?.body));
-        return Response.json({
-          settlement: {
-            success: true,
-            transaction,
-            network: body.paymentRequirements.network,
-            payer: body.paymentPayload.payload.authorization.from,
-          },
-          paymentId,
-        });
+        assert.equal(body.organizationId, ORG);
+        assert.equal(body.command.protocolId, "x402-exact-v2-eip3009");
+        assert.equal(body.command.adapterRevision, "x402-exact-v2");
+        assert.equal(body.command.network, "eip155:84532");
+        assert.equal(body.command.payTo, PAY_TO);
+        assert.equal("paymentPayload" in body, false);
+        return Response.json(settlementEnvelope(transaction, paymentId, body.command.payer));
       }
       if (path.endsWith(`/v1/payments/${paymentId}/fulfillment`)) {
         events.push("fulfillment");
         assert.equal(init?.method, "PUT");
+        assert.equal(init?.redirect, "error");
         assert.deepEqual(JSON.parse(String(init?.body)), {
           organizationId: ORG,
           state: "FULFILLED",
@@ -159,6 +195,7 @@ test("x402 protect verifies and settles before the handler, strips paymentId, an
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { weather: "sunny" });
   assert.deepEqual(events, ["verify", "settle", "handler", "fulfillment"]);
+  assert.equal(supportedCalls, 1, "route capability discovery must be cached for signed requests");
   const receipt = JSON.parse(
     Buffer.from(response.headers.get("PAYMENT-RESPONSE")!, "base64url").toString("utf8"),
   );
@@ -188,17 +225,8 @@ test("x402 protect verifies and settles before the handler, strips paymentId, an
           payer: body.paymentPayload.payload.authorization.from,
         });
       }
-      if (path.endsWith("/settle")) {
-        const body = JSON.parse(String(init?.body));
-        return Response.json({
-          settlement: {
-            success: true,
-            transaction,
-            network: body.paymentRequirements.network,
-            payer: body.paymentPayload.payload.authorization.from,
-          },
-          paymentId,
-        });
+      if (path.endsWith("/v1/settlements/charge")) {
+        return Response.json(settlementEnvelope(transaction, paymentId));
       }
       if (path.endsWith(`/v1/payments/${paymentId}/fulfillment`)) {
         failureUpdates.push(JSON.parse(String(init?.body)));
@@ -228,6 +256,111 @@ test("x402 protect verifies and settles before the handler, strips paymentId, an
   ]);
 });
 
+test("x402 valid credentials surface fail-closed verify and indeterminate settle outcomes without a new challenge", async () => {
+  let paymentSignature = "";
+  const account = privateKeyToAccount(
+    "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  );
+  const buyer = new x402Client().register(
+    "eip155:84532",
+    new ExactEvmScheme(toClientEvmSigner(account)),
+  );
+  const captureServer = createPayServer({
+    network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
+    protocols: ["x402"],
+    async fetch() {
+      return Response.json({
+        kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+        extensions: [], signers: {},
+      });
+    },
+  });
+  const captureRoute = captureServer.protect({ price: "$0.01" }, () => new Response());
+  await wrapFetchWithPayment((input, init) => {
+    const request = new Request(input, init);
+    paymentSignature = request.headers.get("PAYMENT-SIGNATURE") ?? paymentSignature;
+    return captureRoute(request);
+  }, buyer)("https://merchant.example/weather");
+  assert.ok(paymentSignature);
+
+  const run = async (failure: "verify" | "settle" | "settle-redirect") => {
+    let handlerCalls = 0;
+    let settleCalls = 0;
+    const server = createPayServer({
+      network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
+      protocols: ["x402"],
+      async fetch(url, init) {
+        const path = new URL(String(url)).pathname;
+        if (path.endsWith("/supported")) return Response.json({
+          kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+          extensions: [], signers: {},
+        });
+        if (path.endsWith("/verify")) {
+          if (failure === "verify") return new Response(null, { status: 503 });
+          const body = JSON.parse(String(init?.body));
+          return Response.json({ isValid: true, payer: body.paymentPayload.payload.authorization.from });
+        }
+        if (path.endsWith("/v1/settlements/charge")) {
+          settleCalls += 1;
+          assert.equal(init?.redirect, "error");
+          return failure === "settle-redirect"
+            ? Response.redirect("https://redirect-target.example/credential", 302)
+            : new Response(null, { status: 503 });
+        }
+        throw new Error(`unexpected URL ${url}`);
+      },
+    });
+    const response = await server.protect({ price: "$0.01" }, () => {
+      handlerCalls += 1;
+      return new Response("must not run");
+    })(new Request("https://merchant.example/weather", {
+      headers: { "PAYMENT-SIGNATURE": paymentSignature },
+    }));
+    assert.equal(handlerCalls, 0);
+    assert.equal(settleCalls, failure === "verify" ? 0 : 1);
+    assert.equal(response.status, failure === "verify" ? 502 : 503);
+    assert.equal(response.headers.has("PAYMENT-REQUIRED"), false);
+    assert.deepEqual(await response.json(), {
+      errorCode: failure === "verify" ? "PAYMENT_SERVICE_UNAVAILABLE" : "PAYMENT_STATUS_UNKNOWN",
+      retryable: true,
+    });
+  };
+  await run("verify");
+  await run("settle");
+  await run("settle-redirect");
+
+  const decoded = JSON.parse(Buffer.from(paymentSignature, "base64url").toString("utf8"));
+  decoded.accepted.extra.organizationId = "private";
+  const invalid = Buffer.from(JSON.stringify(decoded)).toString("base64url");
+  let invalidSettleCalls = 0;
+  let invalidHandlerCalls = 0;
+  const invalidServer = createPayServer({
+    network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
+    protocols: ["x402"],
+    async fetch(url) {
+      const path = new URL(String(url)).pathname;
+      if (path.endsWith("/supported")) return Response.json({
+        kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+        extensions: [], signers: {},
+      });
+      if (path.endsWith("/v1/settlements/charge")) invalidSettleCalls += 1;
+      throw new Error("must not call dependency");
+    },
+  });
+  const invalidResponse = await invalidServer.protect({ price: "$0.01" }, () => {
+    invalidHandlerCalls += 1;
+    return new Response();
+  })(new Request("https://merchant.example/weather", {
+    headers: { "PAYMENT-SIGNATURE": invalid },
+  }));
+  assert.equal(invalidResponse.status, 400);
+  assert.deepEqual(await invalidResponse.json(), {
+    errorCode: "PAYMENT_CREDENTIAL_INVALID", retryable: false,
+  });
+  assert.equal(invalidSettleCalls, 0);
+  assert.equal(invalidHandlerCalls, 0);
+});
+
 test("server validates protocol configuration and conditional MPP secret", () => {
   const base = {
     network: "eip155:84532" as const,
@@ -254,7 +387,7 @@ test("MPP real credential is validated before command settlement and returns a s
     mppSecretKey: "01234567890123456789012345678901",
     async fetch(url, init) {
       const path = new URL(String(url)).pathname;
-      if (path.endsWith("/settle")) {
+      if (path.endsWith("/v1/settlements/charge")) {
         settlementCalls += 1;
         events.push("settle");
         const body = JSON.parse(String(init?.body));
@@ -266,7 +399,7 @@ test("MPP real credential is validated before command settlement and returns a s
         assert.equal(body.command.amount, "10000");
         assert.equal(body.command.payTo, PAY_TO);
         assert.equal("paymentPayload" in body, false);
-        return Response.json({ success: true, transaction, paymentId });
+        return Response.json(settlementEnvelope(transaction, paymentId, body.command.payer));
       }
       if (path.endsWith(`/v1/payments/${paymentId}/fulfillment`)) {
         events.push("fulfillment");
@@ -393,6 +526,12 @@ test("MPP real credential is validated before command settlement and returns a s
       wire.challenge.unknownExtension = { provider: "forbidden" };
       return Buffer.from(JSON.stringify(wire)).toString("base64url");
     })(),
+    (() => {
+      const encoded = authorizationHeader.slice("Payment ".length);
+      const wire = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+      wire.payload.provider = "forbidden";
+      return Buffer.from(JSON.stringify(wire)).toString("base64url");
+    })(),
   ];
   for (const [index, credential] of invalidCredentials.entries()) {
     const response = await protectedRoute(
@@ -407,6 +546,69 @@ test("MPP real credential is validated before command settlement and returns a s
   }
   assert.equal(settlementCalls, 1, "invalid MPP inputs must fail before settlement transport");
 
+  const secret = "secret-fetch-cause-must-not-be-logged";
+  const logged: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...values: unknown[]) => logged.push(values);
+  try {
+    for (const mode of ["5xx", "timeout"] as const) {
+      let indeterminateHandlerCalls = 0;
+      const indeterminateServer = createPayServer({
+        network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
+        protocols: ["mpp"], mppSecretKey: "01234567890123456789012345678901",
+        async fetch() {
+          if (mode === "5xx") return new Response(null, { status: 503 });
+          throw new Error(secret);
+        },
+      });
+      const indeterminate = await indeterminateServer.protect({ price: "$0.01" }, () => {
+        indeterminateHandlerCalls += 1;
+        return new Response("must not run");
+      })(new Request("https://merchant.example/weather", {
+        headers: { Authorization: authorizationHeader },
+      }));
+      assert.equal(indeterminate.status, 503);
+      assert.deepEqual(await indeterminate.json(), {
+        errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true,
+      });
+      assert.equal(indeterminateHandlerCalls, 0);
+    }
+    assert.doesNotMatch(JSON.stringify(logged), /secret-fetch-cause/);
+  } finally {
+    console.error = originalConsoleError;
+  }
+
+  let fulfillmentSecondHostCalls = 0;
+  const redirectFulfillmentServer = createPayServer({
+    network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
+    protocols: ["mpp"], mppSecretKey: "01234567890123456789012345678901",
+    async fetch(url, init) {
+      if (String(url).startsWith("https://redirect-target.example")) {
+        fulfillmentSecondHostCalls += 1;
+      }
+      const path = new URL(String(url)).pathname;
+      if (path.endsWith("/v1/settlements/charge")) {
+        return Response.json(settlementEnvelope(transaction, paymentId));
+      }
+      if (path.endsWith("/fulfillment")) {
+        assert.equal(init?.redirect, "error");
+        return Response.redirect("https://redirect-target.example/private-fulfillment", 307);
+      }
+      throw new Error(`unexpected URL ${url}`);
+    },
+  });
+  const fulfillmentRedirect = await redirectFulfillmentServer.protect(
+    { price: "$0.01" },
+    () => new Response("paid"),
+  )(new Request("https://merchant.example/weather", {
+    headers: { Authorization: authorizationHeader },
+  }));
+  assert.equal(fulfillmentRedirect.status, 503);
+  assert.deepEqual(await fulfillmentRedirect.json(), {
+    errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true,
+  });
+  assert.equal(fulfillmentSecondHostCalls, 0);
+
   let failureUpdate: unknown;
   const failureServer = createPayServer({
     network: "eip155:84532",
@@ -417,8 +619,8 @@ test("MPP real credential is validated before command settlement and returns a s
     mppSecretKey: "01234567890123456789012345678901",
     async fetch(url, init) {
       const path = new URL(String(url)).pathname;
-      if (path.endsWith("/settle")) {
-        return Response.json({ success: true, transaction, paymentId });
+      if (path.endsWith("/v1/settlements/charge")) {
+        return Response.json(settlementEnvelope(transaction, paymentId));
       }
       if (path.endsWith(`/v1/payments/${paymentId}/fulfillment`)) {
         failureUpdate = JSON.parse(String(init?.body));
@@ -454,8 +656,8 @@ test("MPP real credential is validated before command settlement and returns a s
       mppSecretKey: "01234567890123456789012345678901",
       async fetch(url) {
         const path = new URL(String(url)).pathname;
-        if (path.endsWith("/settle")) {
-          return Response.json({ success: true, transaction, paymentId });
+        if (path.endsWith("/v1/settlements/charge")) {
+          return Response.json(settlementEnvelope(transaction, paymentId));
         }
         if (path.endsWith(`/v1/payments/${paymentId}/fulfillment`)) {
           return new Response(null, { status: fulfillmentStatus });
@@ -495,11 +697,11 @@ test("MPP real credential is validated before command settlement and returns a s
     mppSecretKey: "01234567890123456789012345678901",
     async fetch(url) {
       const path = new URL(String(url)).pathname;
-      if (path.endsWith("/settle")) {
+      if (path.endsWith("/v1/settlements/charge")) {
         concurrentSettlement += 1;
         const id = `77777777-7777-4777-8777-77777777777${concurrentSettlement}`;
         if (concurrentSettlement === 1) await new Promise((resolve) => setTimeout(resolve, 5));
-        return Response.json({ success: true, transaction, paymentId: id });
+        return Response.json(settlementEnvelope(transaction, id));
       }
       if (path.includes("/fulfillment")) return new Response(null, { status: 200 });
       throw new Error(`unexpected URL ${url}`);

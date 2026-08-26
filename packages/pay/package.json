@@ -91,7 +91,7 @@
     "typecheck:pay-v1": "tsc -p tsconfig.pay-v1.json --allowJs false --checkJs false",
     "test": "jest --detectOpenHandles",
     "test:client-boundary": "pnpm run build && node --test scripts/client-boundary-real.test.mjs",
-    "test:pay-v1": "jest --detectOpenHandles --runInBand src/client.test.ts src/x402/index.test.ts src/internal/x402-exact-v2-adapter.test.ts src/admin/index.test.ts src/xstamp.test.ts src/frameworks.test.ts && tsx --test src/mpp/index.node.test.ts src/server.node.test.ts",
+    "test:pay-v1": "jest --detectOpenHandles --runInBand src/client.test.ts src/x402/index.test.ts src/internal/x402-exact-v2-adapter.test.ts src/internal/zeroxkey-settlement-adapter.test.ts src/admin/index.test.ts src/xstamp.test.ts src/frameworks.test.ts && tsx --test src/mpp/index.node.test.ts src/server.node.test.ts",
     "test:interop": "pnpm run clean && pnpm run build && node scripts/interop-smoke.mjs && node scripts/mppx-validate-smoke.mjs",
     "test:commerce-contract": "jest --runInBand src/commerce/generated/codec.test.ts"
   },
@@ -118,6 +118,6 @@
     "viem": "2.54.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12.0"
   }
 }

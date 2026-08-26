@@ -19,6 +19,11 @@
   dependency-free 0xkey settlement command.
 - Persist private fulfillment success/failure synchronously. Keep `paymentId`
   request-local and out of all standard protocol objects and receipts.
+- Require Node.js 22.12+, fail closed on indeterminate protocol settlement,
+  cache route capability discovery, and preserve binary streaming in adapters.
+- Keep official x402 `/settle` on its standard private envelope; send validated
+  seller x402/MPP commands only to `/v1/settlements/charge` with protocol-derived
+  X-Stamp facts and strict nested settlement responses.
 
 ## 0.3.0-rc.6
 

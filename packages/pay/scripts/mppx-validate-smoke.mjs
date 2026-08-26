@@ -26,10 +26,14 @@ const paymentServer = createPayServer({
   mppSecretKey: "01234567890123456789012345678901",
   async fetch(url, init) {
     const body = JSON.parse(String(init?.body));
-    if (String(url).endsWith("/settle")) {
+    if (String(url).endsWith("/v1/settlements/charge")) {
       return Response.json({
-        success: true,
-        transaction: `0x${"ef".repeat(32)}`,
+        settlement: {
+          success: true,
+          transaction: `0x${"ef".repeat(32)}`,
+          network: "eip155:84532",
+          payer: body.command.payer,
+        },
         paymentId: "22222222-2222-4222-8222-222222222222",
       });
     }

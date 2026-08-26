@@ -2,6 +2,9 @@
 
 Buyer and seller SDK for x402 v2 `exact` and MPP `evm/charge`.
 
+Runtime support starts at Node.js 22.12 for both ESM imports and CommonJS
+`require()`.
+
 Pay v1 supports Base USDC only. A seller settles first. The merchant handler
 runs only after the Base transaction is confirmed.
 
@@ -53,6 +56,11 @@ For direct upstream integration, `@0xkey-io/pay/x402` returns an official
 `FacilitatorClient`, while `@0xkey-io/pay/mpp` returns a native-only mppx EVM
 charge method. These dedicated entries own upstream wire types; root, client,
 and server declarations do not expose them.
+
+The direct x402 client keeps the official private `/verify` and `/settle`
+envelope. The 0xkey seller facade independently validates that wire, derives a
+closed `ChargeSettlementCommand`, and sends seller x402 and MPP commands only
+to `/v1/settlements/charge`; `paymentId` remains outside standard receipts.
 
 ## Buyer
 

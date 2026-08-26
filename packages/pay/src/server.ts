@@ -18,6 +18,11 @@ import { createX402FacilitatorTransport } from "./internal/x402-facilitator";
 import { createMppEvmChargeMethod } from "./internal/create-mpp-evm-charge-method";
 import { assertMppCredentialHasNoUnknownExtensions } from "./internal/mpp-evm-charge-adapter";
 import { X402ExactV2Adapter } from "./internal/x402-exact-v2-adapter";
+import {
+  ZeroXkeySettlementAdapter,
+  type ZeroXkeySettlementResult,
+} from "./internal/zeroxkey-settlement-adapter";
+import type { ChargeSettlementCommand } from "./internal/charge-settlement-command";
 
 export interface CreatePayServerOptions {
   network: BasePaymentNetwork;
@@ -62,11 +67,27 @@ interface FulfillmentUpdate {
   failureCode?: FulfillmentFailureCode;
 }
 
+interface RequestFailure {
+  status: 400 | 502 | 503;
+  errorCode:
+    | "PAYMENT_CREDENTIAL_INVALID"
+    | "PAYMENT_SERVICE_UNAVAILABLE"
+    | "PAYMENT_STATUS_UNKNOWN";
+  retryable: boolean;
+}
+
 export function createPayServer(options: CreatePayServerOptions): PayServer {
   const protocols = validateServerOptions(options);
   const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   const stamper = createXStampV2Stamper(options.apiKey);
   const x402EconomicAdapter = new X402ExactV2Adapter(options.network);
+  const commandSettlement = new ZeroXkeySettlementAdapter({
+    network: options.network,
+    organizationId: options.organizationId,
+    stamper,
+    ...(options.facilitatorUrl ? { facilitatorUrl: options.facilitatorUrl } : {}),
+    fetch,
+  });
   const x402Transport = protocols.includes("x402")
     ? createX402FacilitatorTransport({
         network: options.network,
@@ -78,6 +99,7 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
     : undefined;
   function createMppServer(
     onSettlement?: Parameters<typeof createMppEvmChargeMethod>[1],
+    onFailure?: Parameters<typeof createMppEvmChargeMethod>[2],
   ) {
     if (!protocols.includes("mpp")) return undefined;
     const mppMethod = createMppEvmChargeMethod(
@@ -90,6 +112,7 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
           fetch,
         },
         onSettlement,
+        onFailure,
       ).method;
     return Mppx.create({ methods: [mppMethod], secretKey: options.mppSecretKey! });
   }
@@ -99,21 +122,44 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
       validateRoute(route);
       let x402Http: x402HTTPResourceServer | undefined;
       let x402Initialization: Promise<void> | undefined;
+      let x402Supported: ReturnType<FacilitatorClient["getSupported"]> | undefined;
+
+      const getX402Supported = () => {
+        if (!x402Transport) throw new Error("x402 is not enabled");
+        x402Supported ??= x402Transport.client.getSupported();
+        return x402Supported;
+      };
 
       function createX402Server(
-        onSettlement?: (result: { paymentId: string; reference: string }) => void,
+        state?: {
+          onFailure: (failure: RequestFailure) => void;
+          onSettlement: (result: ZeroXkeySettlementResult) => void;
+        },
       ): x402HTTPResourceServer {
         if (!x402Transport) throw new Error("x402 is not enabled");
+        let command: ChargeSettlementCommand | undefined;
         const facilitator: FacilitatorClient = {
           verify: x402Transport.client.verify,
-          getSupported: x402Transport.client.getSupported,
-          async settle(payload, requirements) {
-            const result = await x402Transport.settlePrivate(payload, requirements);
-            onSettlement?.({
-              paymentId: result.paymentId,
-              reference: result.settlement.transaction,
-            });
-            return result.settlement;
+          getSupported: getX402Supported,
+          async settle(_payload, requirements) {
+            try {
+              if (!command) throw new Error("missing validated x402 command");
+              const result = await commandSettlement.settle(command);
+              state?.onSettlement(result);
+              return {
+                success: true,
+                transaction: result.reference,
+                network: requirements.network,
+                payer: command.payer,
+              };
+            } catch (cause) {
+              state?.onFailure({
+                status: 503,
+                errorCode: "PAYMENT_STATUS_UNKNOWN",
+                retryable: true,
+              });
+              throw cause;
+            }
           },
         };
         const exactScheme = new ExactEvmScheme();
@@ -131,15 +177,33 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
         });
         const resource = new x402ResourceServer(facilitator)
           .register(options.network, exactScheme)
-          .onBeforeVerify(async ({ paymentPayload, requirements }) => ({
-            skip: true,
-            result: await (async () => {
-              const mutablePayload = cloneWire<PaymentPayload>(paymentPayload);
-              const mutableRequirements = cloneWire<PaymentRequirements>(requirements);
-              x402EconomicAdapter.toCommand(mutablePayload, mutableRequirements);
-              return facilitator.verify(mutablePayload, mutableRequirements);
-            })(),
-          }));
+          .onBeforeVerify(async ({ paymentPayload, requirements }) => {
+            const mutablePayload = cloneWire<PaymentPayload>(paymentPayload);
+            const mutableRequirements = cloneWire<PaymentRequirements>(requirements);
+            try {
+              command = x402EconomicAdapter.toCommand(mutablePayload, mutableRequirements);
+            } catch {
+              state?.onFailure({
+                status: 400,
+                errorCode: "PAYMENT_CREDENTIAL_INVALID",
+                retryable: false,
+              });
+              return { abort: true, reason: "invalid_payment", message: "invalid credential" };
+            }
+            try {
+              return {
+                skip: true,
+                result: await facilitator.verify(mutablePayload, mutableRequirements),
+              };
+            } catch {
+              state?.onFailure({
+                status: 502,
+                errorCode: "PAYMENT_SERVICE_UNAVAILABLE",
+                retryable: true,
+              });
+              return { abort: true, reason: "verify_unavailable", message: "verification unavailable" };
+            }
+          });
         return new x402HTTPResourceServer(resource, {
           accepts: {
             scheme: "exact",
@@ -184,17 +248,41 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
 
         if (hasX402) {
           let privateSettlement: { paymentId: string; reference: string } | undefined;
-          const requestServer = createX402Server((settlement) => {
-            privateSettlement = settlement;
+          let requestFailure: RequestFailure | undefined;
+          const requestServer = createX402Server({
+            onFailure(failure) {
+              requestFailure = failure;
+            },
+            onSettlement(settlement) {
+              privateSettlement = {
+                paymentId: settlement.paymentId,
+                reference: settlement.reference,
+              };
+            },
           });
-          await requestServer.initialize();
-          return handleX402(requestServer, request, handler, () => privateSettlement);
+          try {
+            await requestServer.initialize();
+          } catch {
+            return errorResponse(502, "PAYMENT_SERVICE_UNAVAILABLE", true);
+          }
+          return handleX402(
+            requestServer,
+            request,
+            handler,
+            () => privateSettlement,
+            () => requestFailure,
+          );
         }
         if (hasMpp) return handleMpp(request, handler);
 
         const responses: Response[] = [];
         if (protocols.includes("x402")) {
-          const server = await initializeX402();
+          let server: x402HTTPResourceServer;
+          try {
+            server = await initializeX402();
+          } catch {
+            return errorResponse(502, "PAYMENT_SERVICE_UNAVAILABLE", true);
+          }
           responses.push(toResponse(await server.processHTTPRequest(x402Context(request))));
         }
         const challengeMppServer = createMppServer();
@@ -215,8 +303,17 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
         getPrivateSettlement: () =>
           | { paymentId: string; reference: string }
           | undefined,
+        getRequestFailure: () => RequestFailure | undefined,
       ): Promise<Response> {
         const result = await server.processHTTPRequest(x402Context(request));
+        const requestFailure = getRequestFailure();
+        if (requestFailure) {
+          return errorResponse(
+            requestFailure.status,
+            requestFailure.errorCode,
+            requestFailure.retryable,
+          );
+        }
         if (result.type !== "payment-verified") return toResponse(result);
         const completed = result.beforeHandlerSettlement;
         if (!completed) return errorResponse(503, "PAYMENT_STATUS_UNKNOWN", true);
@@ -293,8 +390,15 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
         let privateSettlement:
           | { paymentId: string; reference: string }
           | undefined;
+        let requestFailure: RequestFailure | undefined;
         const requestMppServer = createMppServer((settlement) => {
           privateSettlement = settlement;
+        }, () => {
+          requestFailure = {
+            status: 503,
+            errorCode: "PAYMENT_STATUS_UNKNOWN",
+            retryable: true,
+          };
         });
         if (!requestMppServer) {
           return errorResponse(400, "PAYMENT_PROTOCOL_NOT_ALLOWED", false);
@@ -318,6 +422,13 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
         }
         const result = await requestMppServer.evm
           .charge(mppRouteOptions(route))(canonicalMppRequest(request));
+        if (requestFailure) {
+          return errorResponse(
+            requestFailure.status,
+            requestFailure.errorCode,
+            requestFailure.retryable,
+          );
+        }
         if (result.status === 402) return result.challenge;
         const receiptCarrier = result.withReceipt(new Response());
         const reference = Receipt.fromResponse(receiptCarrier).reference;
@@ -375,6 +486,7 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
           });
           const response = await fetch(url, {
             method: "PUT",
+            redirect: "error",
             headers: {
               "Content-Type": "application/json",
               [stamped.stampHeaderName]: stamped.stampHeaderValue,

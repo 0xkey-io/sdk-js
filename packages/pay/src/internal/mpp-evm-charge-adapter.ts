@@ -70,6 +70,20 @@ export class MppEvmChargeAdapter {
 export function assertMppCredentialHasNoUnknownExtensions(header: string): void {
   const credential = decodeCredentialWire(header);
   assertKnownKeys(credential, ["challenge", "payload", "source"]);
+  const payload = credential.payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("PAYMENT_CHALLENGE_INVALID: invalid MPP payload");
+  }
+  assertKnownKeys(payload, [
+    "from",
+    "nonce",
+    "signature",
+    "to",
+    "type",
+    "validAfter",
+    "validBefore",
+    "value",
+  ]);
   assertKnownKeys(credential.challenge, [
     "description",
     "expires",
