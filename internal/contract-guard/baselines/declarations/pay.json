@@ -3,11 +3,11 @@
   "exports": [
     {
       "kind": "re-export",
-      "name": "createPayFetch"
+      "name": "createPayClient"
     },
     {
       "kind": "re-export",
-      "name": "type CreatePayFetchOptions"
+      "name": "type CreatePayClientOptions"
     },
     {
       "kind": "re-export",
@@ -15,11 +15,19 @@
     },
     {
       "kind": "re-export",
-      "name": "type PayFetch"
+      "name": "type PayClient"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PayEvmAccount"
     },
     {
       "kind": "re-export",
       "name": "type PayProtocol"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PayProtocolId"
     },
     {
       "kind": "re-export",
@@ -28,6 +36,10 @@
     {
       "kind": "re-export",
       "name": "type PendingPaymentStore"
+    },
+    {
+      "kind": "re-export",
+      "name": "type PendingPaymentSummary"
     },
     {
       "kind": "re-export",

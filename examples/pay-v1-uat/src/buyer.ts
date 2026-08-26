@@ -1,6 +1,6 @@
 import { ApiKeyStamper, ZeroXKeyServerClient } from "@0xkey-io/sdk-server";
 import { createAccount } from "@0xkey-io/viem";
-import { createPayFetch, type PayProtocol } from "@0xkey-io/pay/client";
+import { createPayClient, type PayProtocol } from "@0xkey-io/pay/client";
 import { Challenge, x402 } from "mppx";
 import { createInterface } from "node:readline/promises";
 import { getAddress } from "viem";
@@ -69,23 +69,26 @@ const termsCheckingFetch: typeof fetch = async (input, init) => {
   if (response.status === 402) inspectQuote(response.clone(), payTo);
   return response;
 };
-const payFetch = createPayFetch({
+const payments = createPayClient({
   account,
-  allowHosts: [endpoint.host],
   network,
-  maxAmount: "$0.001",
-  protocolPreference: protocol ? [protocol] : ["x402", "mpp"],
-  pendingPaymentStore: store,
+  policy: {
+    allowHosts: [endpoint.host],
+    maxAmount: "$0.001",
+    preference: protocol ? [protocol] : ["x402", "mpp"],
+  },
+  recovery: store,
+  verification: {
+    rpcUrl: process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org",
+  },
   fetch: termsCheckingFetch,
   allowInsecureLocalhost: isLoopbackHttp(endpoint),
-  rpcUrls: {
-    "eip155:84532":
-      process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org",
-  },
 });
 
 const response =
-  command === "resume" ? await payFetch.resume() : await payFetch(endpoint);
+  command === "resume"
+    ? await payments.resume()
+    : await payments.fetch(endpoint);
 const body = await response.text();
 console.info("pay_v1_uat_result", {
   body: parsePublicBody(body),

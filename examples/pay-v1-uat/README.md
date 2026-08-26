@@ -57,7 +57,7 @@ returned only after the staging facilitator reports a confirmed settlement.
 ## Quote and pay with a 0xkey Company Wallet
 
 The buyer uses `@0xkey-io/viem` as the TEE wallet adapter and the released
-`createPayFetch`. It never reads or exports the wallet private key. Configure
+`createPayClient`. It never reads or exports the wallet private key. Configure
 `ZEROXKEY_SIGN_WITH` and `ZEROXKEY_ETHEREUM_ADDRESS` to the dedicated funded
 payer account, not the facilitator relayer.
 

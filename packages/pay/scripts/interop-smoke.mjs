@@ -10,7 +10,7 @@ import { ExactEvmScheme, toClientEvmSigner } from "@x402/evm";
 import { ExactEvmScheme as ExactEvmServerScheme } from "@x402/evm/exact/server";
 import { wrapFetchWithPayment } from "@x402/fetch";
 
-import { createPayFetch } from "../dist/client/index.mjs";
+import { createPayClient } from "../dist/client/index.mjs";
 import { createPayServer } from "../dist/server/index.mjs";
 
 const [
@@ -31,7 +31,7 @@ const [
   import("../dist/next/index.mjs"),
 ]);
 
-assert.equal(typeof clientModule.createPayFetch, "function");
+assert.equal(typeof clientModule.createPayClient, "function");
 assert.equal(typeof serverModule.createPayServer, "function");
 assert.equal(typeof adminModule.createPayAdminClient, "function");
 assert.equal(typeof expressModule.paymentMiddleware, "function");
@@ -53,7 +53,7 @@ for (const [name, module] of Object.entries({
 })) {
   for (const removed of [
     "Pay",
-    "createPayClient",
+    "createPayFetch",
     "handlePaywallRequest",
     "paywallExpress",
     "paywallHono",
@@ -76,6 +76,27 @@ assert.equal(
   false,
   "server must keep the facilitator adapter private",
 );
+
+function testPayClient(options) {
+  return createPayClient({
+    account: options.account,
+    network: options.network,
+    policy: {
+      allowHosts: options.allowHosts,
+      maxAmount: options.maxAmount,
+      ...(options.protocolPreference
+        ? { preference: options.protocolPreference }
+        : {}),
+    },
+    recovery: options.pendingPaymentStore ?? createTestPendingPaymentStore(),
+    verification: {
+      verifier: options.receiptVerifier ?? (async () => true),
+    },
+    ...(options.fetch ? { fetch: options.fetch } : {}),
+    ...(options.onReceipt ? { onReceipt: options.onReceipt } : {}),
+    ...(options.allowInsecureLocalhost ? { allowInsecureLocalhost: true } : {}),
+  });
+}
 
 const fixtureRoot = new URL(
   "../../api-key-stamper/src/__fixtures__/",
@@ -296,7 +317,7 @@ async function assertChannelInterop(selected, protocol) {
 
   const receipts = [];
   const store = createTestPendingPaymentStore();
-  const buyer = createPayFetch({
+  const buyer = testPayClient({
     account,
     allowHosts: ["matrix.example"],
     network: selected.network,
@@ -313,7 +334,7 @@ async function assertChannelInterop(selected, protocol) {
       receipts.push(receipt);
     },
   });
-  const response = await buyer("https://matrix.example/weather");
+  const response = await buyer.fetch("https://matrix.example/weather");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { matrix: true });
   assert.deepEqual(facilitatorUrls, [
@@ -374,7 +395,7 @@ async function merchantFetch(input, init) {
 async function pay(preference) {
   const receipts = [];
   const pendingPaymentStore = createTestPendingPaymentStore();
-  const payFetch = createPayFetch({
+  const payFetch = testPayClient({
     account,
     allowHosts: ["merchant.example"],
     network: "eip155:84532",
@@ -387,7 +408,7 @@ async function pay(preference) {
       receipts.push(receipt);
     },
   });
-  const response = await payFetch("https://merchant.example/weather");
+  const response = await payFetch.fetch("https://merchant.example/weather");
   if (response.status !== 200) {
     throw new Error(
       `pay failed for ${preference.join(",")}: ${response.status} ${await response.text()}`,
@@ -406,17 +427,16 @@ await pay(["mpp"]);
 
 assert.throws(
   () =>
-    createPayFetch({
+    testPayClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0",
       network: "eip155:84532",
-      allowInMemoryPendingPayment: true,
     }),
-  /greater than zero/,
+  /PAY_PROFILE_INVALID/,
 );
 
-const redirectFetch = createPayFetch({
+const redirectFetch = testPayClient({
   account,
   allowHosts: ["merchant.example"],
   network: "eip155:84532",
@@ -426,11 +446,10 @@ const redirectFetch = createPayFetch({
       status: 302,
       headers: { Location: "https://evil.example/paid" },
     }),
-  allowInMemoryPendingPayment: true,
 });
 await assert.rejects(
-  redirectFetch("https://merchant.example/weather"),
-  /PAY_REDIRECT_DENIED: evil\.example/,
+  redirectFetch.fetch("https://merchant.example/weather"),
+  /PAYMENT_POLICY_DENIED/,
 );
 
 const unknownPaymentId = "33333333-3333-3333-3333-333333333333";
@@ -475,7 +494,7 @@ async function unknownMerchantFetch(input, init) {
 }
 const seenUnknownCredentials = [];
 const unknownPendingPaymentStore = createTestPendingPaymentStore();
-const unknownBuyer = createPayFetch({
+const unknownBuyer = testPayClient({
   account,
   allowHosts: ["unknown.example"],
   network: "eip155:84532",
@@ -484,23 +503,29 @@ const unknownBuyer = createPayFetch({
   fetch: unknownMerchantFetch,
   pendingPaymentStore: unknownPendingPaymentStore,
 });
-const unknownResponse = await unknownBuyer("https://unknown.example/weather");
-assert.equal(unknownResponse.status, 503);
-assert.equal(unknownResponse.headers.get("Retry-After"), "2");
-assert.equal((await unknownResponse.json()).paymentId, unknownPaymentId);
-assert.equal(unknownBuyer.hasPendingPayment(), true);
 await assert.rejects(
-  unknownBuyer("https://unknown.example/weather"),
+  unknownBuyer.fetch("https://unknown.example/weather"),
+  (error) =>
+    error.code === "PAYMENT_STATUS_UNKNOWN" &&
+    error.paymentId === unknownPaymentId &&
+    error.retryable === true,
+);
+assert.ok(await unknownBuyer.pending());
+await assert.rejects(
+  unknownBuyer.fetch("https://unknown.example/weather"),
   /PAYMENT_RESUME_REQUIRED/,
 );
-const resumedUnknown = await unknownBuyer.resume();
-assert.equal(resumedUnknown.status, 503);
-assert.equal((await resumedUnknown.json()).paymentId, unknownPaymentId);
+await assert.rejects(
+  unknownBuyer.resume(),
+  (error) =>
+    error.code === "PAYMENT_STATUS_UNKNOWN" &&
+    error.paymentId === unknownPaymentId,
+);
 
 // Export the signed request, restore it in a new SDK instance, and retry it
 // without asking the wallet for another signature.
 const pendingPayment = JSON.parse(
-  JSON.stringify(await unknownBuyer.exportPendingPayment()),
+  JSON.stringify(unknownPendingPaymentStore.lastSaved().payment),
 );
 assert.equal(pendingPayment.version, 3);
 assert.equal(pendingPayment.network, "eip155:84532");
@@ -511,7 +536,7 @@ const resumeOnlyAccount = {
     throw new Error("restoring a pending payment must not sign again");
   },
 };
-const restoredBuyer = createPayFetch({
+const restoredBuyer = testPayClient({
   account: resumeOnlyAccount,
   allowHosts: ["unknown.example"],
   network: "eip155:84532",
@@ -520,18 +545,24 @@ const restoredBuyer = createPayFetch({
   fetch: unknownMerchantFetch,
   pendingPaymentStore: unknownPendingPaymentStore,
 });
-assert.equal(restoredBuyer.hasPendingPayment(), false);
+assert.ok(await restoredBuyer.pending());
 await assert.rejects(
-  restoredBuyer("https://unknown.example/weather"),
+  restoredBuyer.fetch("https://unknown.example/weather"),
   /PAYMENT_RESUME_REQUIRED/,
 );
-assert.equal(restoredBuyer.hasPendingPayment(), true);
-const restoredUnknown = await restoredBuyer.resume();
-assert.equal(restoredUnknown.status, 503);
-assert.equal((await restoredUnknown.json()).paymentId, unknownPaymentId);
+assert.ok(await restoredBuyer.pending());
+await assert.rejects(
+  restoredBuyer.resume(),
+  (error) =>
+    error.code === "PAYMENT_STATUS_UNKNOWN" &&
+    error.paymentId === unknownPaymentId,
+);
 assert.equal(seenUnknownCredentials.length, 3);
 assert.equal(new Set(seenUnknownCredentials).size, 1);
-assert.deepEqual(await restoredBuyer.exportPendingPayment(), pendingPayment);
+assert.deepEqual(
+  unknownPendingPaymentStore.lastSaved().payment,
+  pendingPayment,
+);
 
 // Official x402 buyer -> 0xkey seller.
 const officialBuyer = new x402Client().register(
@@ -634,7 +665,7 @@ async function officialSellerFetch(input, init) {
   return Response.json({ weather: "sunny" }, { headers: settlement.headers });
 }
 
-const oxkeyBuyer = createPayFetch({
+const oxkeyBuyer = testPayClient({
   account,
   allowHosts: ["official.example"],
   network: "eip155:84532",
@@ -644,7 +675,7 @@ const oxkeyBuyer = createPayFetch({
   pendingPaymentStore: createTestPendingPaymentStore(),
   receiptVerifier: testReceiptVerifier,
 });
-const officialSellerResponse = await oxkeyBuyer(
+const officialSellerResponse = await oxkeyBuyer.fetch(
   "https://official.example/weather",
 );
 assert.equal(officialSellerResponse.status, 200);

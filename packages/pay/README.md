@@ -45,19 +45,21 @@ store that event durably, and it does not refund automatically.
 ## Buyer
 
 ```ts
-import { createPayFetch } from "@0xkey-io/pay/client";
+import { createPayClient } from "@0xkey-io/pay/client";
 
-const payFetch = createPayFetch({
+const payments = createPayClient({
   account,
-  allowHosts: ["api.example.com"],
   network: "eip155:8453",
-  maxAmount: "$0.10",
-  rpcUrls: { "eip155:8453": process.env.BASE_RPC_URL! },
-  protocolPreference: ["x402", "mpp"],
-  pendingPaymentStore,
+  policy: {
+    allowHosts: ["api.example.com"],
+    maxAmount: "$0.10",
+    preference: ["x402", "mpp"],
+  },
+  recovery: pendingPaymentStore,
+  verification: { rpcUrl: process.env.BASE_RPC_URL! },
 });
 
-const response = await payFetch("https://api.example.com/weather");
+const response = await payments.fetch("https://api.example.com/weather");
 ```
 
 `account` uses Pay's narrow signer Interface: an EVM `address` plus
@@ -73,7 +75,7 @@ The buyer does not replace global `fetch`. It never falls back after signing.
 HTTPS is required. For local development only, `allowInsecureLocalhost: true`
 allows HTTP to `localhost`, `127.0.0.1`, and `[::1]`.
 
-`pendingPaymentStore` is required by default. It is one durable slot for one
+`recovery` is required. It is one durable slot for one
 unresolved signed request. Its contract is:
 
 - `protection` is `"aead"` or `"encryption+hmac"`.
@@ -93,8 +95,8 @@ canonical block, full `transferWithAuthorization` input, `Transfer` event, and
 time window, nonce, and transaction. A normal official x402 seller works; it
 does not need a 0xkey receipt extension.
 
-For Base mainnet, set `rpcUrls["eip155:8453"]` to a production-grade Base RPC, or
-provide an audited `receiptVerifier` with the same checks. The public
+For Base mainnet, set `verification.rpcUrl` to a production-grade Base RPC, or
+provide an audited `verification.verifier` with the same checks. The public
 `https://mainnet.base.org` endpoint is rejected. Base Sepolia may use its
 public endpoint. This check happens when the buyer is created, before it can
 sign or send a payment.
@@ -114,77 +116,58 @@ rejected.
 `pay.0xkey.io` and `pay.staging.0xkey.io` serve the product websites. Neither is
 a facilitator base URL.
 
-For tests and local work only, storage can be disabled explicitly:
-
-```ts
-const payFetch = createPayFetch({
-  account,
-  allowHosts: ["localhost:3000"],
-  network: "eip155:84532",
-  maxAmount: "$0.10",
-  allowInMemoryPendingPayment: true,
-  allowInsecureLocalhost: true,
-});
-```
-
-This mode is process-only. A crash can lose the signed request. Do not use it
-in production.
+There is no implicit or in-memory production mode. Tests may provide a test
+store, but every client instance uses the same atomic durable-store contract.
 
 ### Resume an unknown payment
 
 If a signed request returns any 5xx, including
-`503 PAYMENT_STATUS_UNKNOWN`, do not make a new payment. Call `resume()`. It
-reuses the saved credential. A normal call is blocked while a payment is
-pending. Treat any unexpected 5xx after signing as unknown, even when it is not
-the normal structured 503 response.
+`503 PAYMENT_STATUS_UNKNOWN`, the client throws a retryable `PayError` with
+code `PAYMENT_STATUS_UNKNOWN` and keeps the saved request. Call `resume()`; it
+reuses the same credential bytes. A normal call is blocked while a payment is
+pending.
 
 ```ts
-const response = await payFetch.resume();
+const response = await payments.resume();
 ```
 
-After a restart, give the same `pendingPaymentStore` to a new buyer. Its first
+After a restart, give the same recovery store to a new buyer. Its first
 call loads the saved request. Call `resume()` to send it again. `resume()` and
 normal calls share one in-process lock.
 
 ```ts
-const payFetch = createPayFetch({
+const payments = createPayClient({
   account,
-  allowHosts: ["api.example.com"],
   network: "eip155:8453",
-  maxAmount: "$0.10",
-  pendingPaymentStore,
-  rpcUrls: { "eip155:8453": process.env.BASE_RPC_URL! },
+  policy: { allowHosts: ["api.example.com"], maxAmount: "$0.10" },
+  recovery: pendingPaymentStore,
+  verification: { rpcUrl: process.env.BASE_RPC_URL! },
 });
 
-const response = await payFetch.resume(); // reuses the original credential
+const response = await payments.resume(); // reuses the original credential
 ```
 
-`pendingPayment` remains available for manual handoff:
+Use `pending()` for safe operational inspection:
 
 ```ts
-const pendingPayment = await payFetch.exportPendingPayment();
-const restored = createPayFetch({
-  account,
-  allowHosts: ["api.example.com"],
-  network: "eip155:8453",
-  maxAmount: "$0.10",
-  pendingPayment,
-  pendingPaymentStore,
-  rpcUrls: { "eip155:8453": process.env.BASE_RPC_URL! },
-});
+const pending = await payments.pending();
 ```
 
-It contains a live credential, headers, and body. Never log it. Its
-`requestDigest` is only an unkeyed checksum for accidental damage. An attacker
-can edit the data and recompute that checksum. Security comes from the store's
-AEAD or encryption plus HMAC, with the key kept outside the record.
+The summary contains only the request digest, protocol alias and stable
+protocol id, network, URL, and method. It never returns headers, body,
+credential, receipt, or the complete Economic Effect. The encrypted store owns
+the full version-3 record; do not log or manually move its plaintext.
 
 On restore, the SDK uses mppx schemas to check the payer, Base network,
 canonical USDC, amount limit, recipient, and challenge. The authenticated
 stored snapshot binds the original URL, method, headers, and body.
-Pending-payment format v3 also binds the selected network. Restoring it through
-an SDK instance configured for the other network fails before any request is
-sent.
+Pending-payment format v3 binds the selected network, stable protocol id,
+literal adapter revision `pay-client-v1`, Economic Effect digest, URL, method,
+headers, and body. An rc.6 version-3 record lacks these new bindings and fails
+with `PENDING_PAYMENT_VERSION_UNSUPPORTED`; it is never upgraded or re-signed.
+
+See [the 1.0 migration guide](./docs/migrating-to-1.0.md) for the intentional
+pre-GA API break.
 
 ## Admin
 
@@ -213,7 +196,7 @@ token in a browser bundle.
 
 Pay v1 has one interface per job:
 
-- buyer: `createPayFetch`;
+- buyer: `createPayClient`;
 - seller: `createPayServer` plus a framework adapter;
 - server-side dashboard BFF and operations: `createPayAdminClient`.
 

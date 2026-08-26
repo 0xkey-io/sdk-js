@@ -15,6 +15,10 @@ import {
   type PaymentReceiptVerificationInput,
 } from "./receipt-verifier";
 import { assertBasePaymentNetwork } from "./networks";
+import { PayError, type PayErrorCode, type PayErrorPhase } from "./errors";
+
+export { PayError } from "./errors";
+export type { PayErrorCode, PayErrorPhase, PayErrorOptions } from "./errors";
 
 export type {
   BasePaymentNetwork,
@@ -23,6 +27,7 @@ export type {
 } from "./receipt-verifier";
 
 export type PayProtocol = "x402" | "mpp";
+export type PayProtocolId = "x402-exact-v2-eip3009" | "mpp-evm-charge-v0";
 
 /**
  * Minimal signer seam used by Pay. Keeping the full Viem Account out of the
@@ -43,7 +48,7 @@ export interface NormalizedPaymentReceipt {
   timestamp?: string;
 }
 
-export interface CreatePayFetchOptions {
+interface CreatePayExecutorOptions {
   account: PayEvmAccount;
   allowHosts: string[];
   maxAmount: string;
@@ -52,18 +57,46 @@ export interface CreatePayFetchOptions {
   protocolPreference?: PayProtocol[];
   /** Local development only. Allows HTTP to exact loopback hostnames. */
   allowInsecureLocalhost?: boolean;
-  /** Local development and tests only. Production payments require pendingPaymentStore. */
-  allowInMemoryPendingPayment?: boolean;
   fetch?: typeof globalThis.fetch;
   /** Overrides Base on-chain receipt checks. Tests may inject a fake. */
   receiptVerifier?: PaymentReceiptVerifier;
   /** RPC endpoints used only for receipt checks. Production must set Base mainnet. */
   rpcUrls?: Partial<Record<BasePaymentNetwork, string>>;
   onReceipt?: (receipt: NormalizedPaymentReceipt, url: string) => void;
-  /** Restore a previously exported signed request. Treat this value as a secret. */
-  pendingPayment?: SerializedPendingPayment;
   /** Durable single-slot storage for one unresolved signed request. */
-  pendingPaymentStore?: PendingPaymentStore;
+  pendingPaymentStore: PendingPaymentStore;
+}
+
+export interface CreatePayClientOptions {
+  account: PayEvmAccount;
+  network: BasePaymentNetwork;
+  policy: {
+    allowHosts: readonly string[];
+    maxAmount: string;
+    preference?: readonly PayProtocol[];
+  };
+  recovery: PendingPaymentStore;
+  verification:
+    | { rpcUrl: string; verifier?: never }
+    | { verifier: PaymentReceiptVerifier; rpcUrl?: never };
+  fetch?: typeof globalThis.fetch;
+  allowInsecureLocalhost?: boolean;
+  onReceipt?: (receipt: NormalizedPaymentReceipt, url: string) => void;
+}
+
+export interface PendingPaymentSummary {
+  requestDigest: `0x${string}`;
+  protocol: PayProtocol;
+  protocolId: PayProtocolId;
+  network: BasePaymentNetwork;
+  url: string;
+  method: string;
+}
+
+export interface PayClient {
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+  resume(): Promise<Response>;
+  pending(): Promise<PendingPaymentSummary | undefined>;
 }
 
 export interface PendingPaymentStore {
@@ -89,6 +122,9 @@ export interface PendingPaymentRecord {
 export interface SerializedPendingPayment {
   version: 3;
   network: BasePaymentNetwork;
+  protocolId: PayProtocolId;
+  adapterRevision: "pay-client-v1";
+  economicEffectDigest: `0x${string}`;
   /** Unkeyed checksum for accidental corruption. This is not tamper protection. */
   requestDigest: `0x${string}`;
   url: string;
@@ -97,13 +133,11 @@ export interface SerializedPendingPayment {
   bodyBase64?: string;
 }
 
-export interface PayFetch {
+interface PayExecutor {
   (input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
   /** Re-send the last signed request. This never creates a new signature. */
   resume(): Promise<Response>;
-  hasPendingPayment(): boolean;
-  /** Export the exact signed request for crash-safe storage. This contains a payment credential. */
-  exportPendingPayment(): Promise<SerializedPendingPayment | undefined>;
+  serializedPending(): Promise<SerializedPendingPayment | undefined>;
 }
 
 interface PendingPaymentFacts {
@@ -117,7 +151,97 @@ interface DecodedPaymentReceipt {
   receipt: NormalizedPaymentReceipt;
 }
 
-export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
+export function createPayClient(options: CreatePayClientOptions): PayClient {
+  if (!options.recovery) {
+    throw new PayError(
+      "PENDING_PAYMENT_STORE_REQUIRED",
+      "Durable pending-payment storage is required",
+      { phase: "configuration" },
+    );
+  }
+  if (!options.verification) {
+    throw new PayError(
+      "PAY_PROFILE_INVALID",
+      "Receipt verification configuration is required",
+      { phase: "configuration" },
+    );
+  }
+  if (
+    options.recovery.protection !== "aead" &&
+    options.recovery.protection !== "encryption+hmac"
+  ) {
+    throw new PayError(
+      "PENDING_PAYMENT_STORE_PROTECTION_REQUIRED",
+      "Pending-payment storage must encrypt and authenticate records",
+      { phase: "configuration" },
+    );
+  }
+  if (options.network !== "eip155:8453" && options.network !== "eip155:84532") {
+    throw new PayError(
+      "PAY_NETWORK_UNSUPPORTED",
+      "Only Base mainnet and Base Sepolia are supported",
+      { phase: "configuration" },
+    );
+  }
+  let executor: PayExecutor;
+  try {
+    executor = createPayExecutor({
+      account: options.account,
+      network: options.network,
+      allowHosts: [...options.policy.allowHosts],
+      maxAmount: options.policy.maxAmount,
+      ...(options.policy.preference
+        ? { protocolPreference: [...options.policy.preference] }
+        : {}),
+      pendingPaymentStore: options.recovery,
+      ...(options.verification.verifier
+        ? { receiptVerifier: options.verification.verifier }
+        : { rpcUrls: { [options.network]: options.verification.rpcUrl } }),
+      ...(options.fetch ? { fetch: options.fetch } : {}),
+      ...(options.allowInsecureLocalhost
+        ? { allowInsecureLocalhost: options.allowInsecureLocalhost }
+        : {}),
+      ...(options.onReceipt ? { onReceipt: options.onReceipt } : {}),
+    });
+  } catch (error) {
+    throw normalizePayError(error, "configuration", "PAY_PROFILE_INVALID");
+  }
+  return {
+    fetch: (input, init) =>
+      runPayOperation(
+        () => executor(input, init),
+        "request",
+        "PAYMENT_SERVICE_UNAVAILABLE",
+      ),
+    resume: () =>
+      runPayOperation(
+        () => executor.resume(),
+        "recovery",
+        "PAYMENT_SERVICE_UNAVAILABLE",
+      ),
+    async pending() {
+      const payment = await runPayOperation(
+        () => executor.serializedPending(),
+        "recovery",
+        "PAYMENT_SERVICE_UNAVAILABLE",
+      );
+      if (!payment) return undefined;
+      const protocol =
+        payment.protocolId === "x402-exact-v2-eip3009" ? "x402" : "mpp";
+      return {
+        requestDigest: payment.requestDigest,
+        protocol,
+        protocolId:
+          protocol === "x402" ? "x402-exact-v2-eip3009" : "mpp-evm-charge-v0",
+        network: payment.network,
+        url: payment.url,
+        method: payment.method,
+      };
+    },
+  };
+}
+
+function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
   assertBasePaymentNetwork(options.network);
   if (!options.allowHosts.length) {
     throw new Error("allowHosts must contain at least one trusted host");
@@ -142,20 +266,6 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
       "protocolPreference must contain unique x402 or mpp values",
     );
   }
-  if (!options.pendingPaymentStore && !options.allowInMemoryPendingPayment) {
-    throw new Error(
-      "PENDING_PAYMENT_STORE_REQUIRED: production payments need durable authenticated storage",
-    );
-  }
-  if (
-    options.pendingPaymentStore &&
-    options.pendingPaymentStore.protection !== "aead" &&
-    options.pendingPaymentStore.protection !== "encryption+hmac"
-  ) {
-    throw new Error(
-      "PENDING_PAYMENT_STORE_PROTECTION_REQUIRED: use AEAD or encryption plus HMAC",
-    );
-  }
   const paymentNetwork = options.network;
   const receiptVerifier =
     options.receiptVerifier ??
@@ -170,7 +280,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
   let pendingPersisted = false;
   let paymentInProgress = false;
   let resumingPending = false;
-  let storeLoaded = options.pendingPaymentStore === undefined;
+  let storeLoaded = false;
   let storeLoad: Promise<void> | undefined;
   const guardedFetch: typeof globalThis.fetch = async (input, init) => {
     const request = new Request(input, { ...init, redirect: "manual" });
@@ -190,6 +300,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
       const candidateRecord = await pendingPaymentRecord(
         candidateRequest,
         paymentNetwork,
+        candidateFacts,
       );
       const isPersistedResume =
         resumingPending &&
@@ -198,7 +309,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
       pendingRequest = candidateRequest;
       pendingFacts = candidateFacts;
       pendingRecord = candidateRecord;
-      if (options.pendingPaymentStore && !isPersistedResume) {
+      if (!isPersistedResume) {
         const claimed =
           await options.pendingPaymentStore.saveIfAbsent(candidateRecord);
         if (!claimed) {
@@ -218,6 +329,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
               maxAmountAtomic,
               paymentNetwork,
             );
+            assertPendingPaymentBindings(stored.payment, pendingFacts);
             pendingPersisted = true;
           }
           throw new Error(
@@ -244,27 +356,33 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
     }
     return response;
   };
-  if (options.pendingPayment) {
-    pendingRequest = restorePendingPayment(
-      options.pendingPayment,
-      options.allowHosts,
-      paymentNetwork,
-      options.allowInsecureLocalhost,
-    );
-  }
   const signTypedData = options.account.signTypedData;
   if (!signTypedData) {
     throw new Error(
       "PAY_SIGNER_UNSUPPORTED: account must support signTypedData",
     );
   }
+  const safeAccount: PayEvmAccount = {
+    address: options.account.address,
+    async signTypedData(...parameters) {
+      try {
+        return await signTypedData(...parameters);
+      } catch (error) {
+        throw new PayError(
+          "PAYMENT_SIGNING_FAILED",
+          "Payment credential signing failed",
+          { phase: "signing", cause: error },
+        );
+      }
+    },
+  };
   const payment = Mppx.create({
     methods: [
       charge({
         // mppx pins its own Viem Account type, but only consumes address and
         // signTypedData. The public seam above prevents that dependency's
         // minor-version internals from leaking to callers.
-        account: options.account as Account,
+        account: safeAccount as Account,
         currencies:
           paymentNetwork === "eip155:8453"
             ? [assets.base.USDC]
@@ -289,8 +407,8 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
     polyfill: false,
   });
   const officialSigner = toClientEvmSigner({
-    address: options.account.address,
-    signTypedData: (message) => signTypedData(message as never),
+    address: safeAccount.address,
+    signTypedData: (message) => safeAccount.signTypedData(message as never),
   });
   const officialX402Client = new x402Client()
     .register(paymentNetwork, new ExactEvmScheme(officialSigner))
@@ -307,7 +425,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
     officialX402Client,
   );
 
-  const payFetch = async function payFetch(
+  const executeFetch = async function executeFetch(
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> {
@@ -321,7 +439,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
       await ensurePendingPaymentLoaded();
       if (pendingRequest) {
         throw new Error(
-          "PAYMENT_RESUME_REQUIRED: call payFetch.resume() before signing again",
+          "PAYMENT_RESUME_REQUIRED: call client.resume() before signing again",
         );
       }
       const url = requestUrl(input);
@@ -352,9 +470,9 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
     } finally {
       paymentInProgress = false;
     }
-  } as PayFetch;
+  } as PayExecutor;
 
-  payFetch.resume = async () => {
+  executeFetch.resume = async () => {
     if (paymentInProgress) {
       throw new Error(
         "PAYMENT_IN_PROGRESS: another payment request is running",
@@ -380,13 +498,16 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
       paymentInProgress = false;
     }
   };
-  payFetch.hasPendingPayment = () => pendingRequest !== undefined;
-  payFetch.exportPendingPayment = async () => {
+  executeFetch.serializedPending = async () => {
     await ensurePendingPaymentLoaded();
     if (!pendingRequest) return undefined;
-    return serializePendingPayment(pendingRequest, paymentNetwork);
+    return serializePendingPayment(
+      pendingRequest,
+      paymentNetwork,
+      pendingFacts!,
+    );
   };
-  return payFetch;
+  return executeFetch;
 
   async function finishPaymentResponse(
     response: Response,
@@ -415,7 +536,7 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
           "PAYMENT_RECEIPT_MISMATCH: receipt does not match pending payment",
         );
       }
-      if (options.pendingPaymentStore && pendingRecord) {
+      if (pendingRecord) {
         const cleared = await options.pendingPaymentStore.clear(
           pendingRecord.digest,
         );
@@ -437,19 +558,36 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
         "PAYMENT_RECEIPT_MISSING: signed request succeeded without a payment receipt",
       );
     }
+    if (pendingRequest && response.status >= 500) {
+      throw await paymentStatusUnknown(response);
+    }
+    if (!pendingRequest && response.status === 402) {
+      throw new PayError(
+        "PAYMENT_OFFER_UNSUPPORTED",
+        "The server did not offer a supported payment method",
+        { phase: "challenge" },
+      );
+    }
     return response;
   }
 
   async function ensurePendingPaymentLoaded(): Promise<void> {
     if (!storeLoaded) {
       storeLoad ??= (async () => {
-        const stored = await options.pendingPaymentStore!.load();
+        const stored = await options.pendingPaymentStore.load();
         if (stored) {
           await assertPendingPaymentRecord(stored);
           if (pendingRequest) {
+            pendingFacts = inspectPendingPayment(
+              pendingRequest,
+              options.account.address,
+              maxAmountAtomic,
+              paymentNetwork,
+            );
             const manual = await pendingPaymentRecord(
               pendingRequest,
               paymentNetwork,
+              pendingFacts,
             );
             if (manual.digest !== stored.digest) {
               throw new Error(
@@ -465,12 +603,26 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
               options.allowInsecureLocalhost,
             );
             pendingRecord = stored;
+            pendingFacts = inspectPendingPayment(
+              pendingRequest,
+              options.account.address,
+              maxAmountAtomic,
+              paymentNetwork,
+            );
+            assertPendingPaymentBindings(stored.payment, pendingFacts);
           }
           pendingPersisted = true;
         } else if (pendingRequest) {
+          pendingFacts = inspectPendingPayment(
+            pendingRequest,
+            options.account.address,
+            maxAmountAtomic,
+            paymentNetwork,
+          );
           pendingRecord = await pendingPaymentRecord(
             pendingRequest,
             paymentNetwork,
+            pendingFacts,
           );
           pendingPersisted = false;
         }
@@ -479,9 +631,16 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
       await storeLoad;
     }
     if (pendingRequest && !pendingRecord) {
+      pendingFacts ??= inspectPendingPayment(
+        pendingRequest,
+        options.account.address,
+        maxAmountAtomic,
+        paymentNetwork,
+      );
       pendingRecord = await pendingPaymentRecord(
         pendingRequest,
         paymentNetwork,
+        pendingFacts,
       );
     }
     if (pendingRequest && !pendingFacts) {
@@ -495,15 +654,175 @@ export function createPayFetch(options: CreatePayFetchOptions): PayFetch {
   }
 }
 
+async function runPayOperation<T>(
+  operation: () => Promise<T>,
+  phase: PayErrorPhase,
+  fallbackCode: PayErrorCode,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    throw normalizePayError(error, phase, fallbackCode);
+  }
+}
+
+function normalizePayError(
+  error: unknown,
+  fallbackPhase: PayErrorPhase,
+  fallbackCode: PayErrorCode,
+): PayError {
+  if (error instanceof PayError) return error;
+  const message = error instanceof Error ? error.message : "";
+  if (/invalid payment challenge|malformed payment challenge/i.test(message)) {
+    return new PayError(
+      "PAYMENT_CHALLENGE_INVALID",
+      "The payment challenge is malformed",
+      { phase: "challenge", cause: error },
+    );
+  }
+  const known: Array<{
+    marker: string;
+    code: PayErrorCode;
+    phase: PayErrorPhase;
+    retryable?: boolean;
+  }> = [
+    { marker: "PAY_HOST_DENIED", code: "PAY_HOST_DENIED", phase: "policy" },
+    {
+      marker: "PAY_INSECURE_TRANSPORT",
+      code: "PAY_INSECURE_TRANSPORT",
+      phase: "request",
+    },
+    {
+      marker: "PAY_REDIRECT_DENIED",
+      code: "PAYMENT_POLICY_DENIED",
+      phase: "policy",
+    },
+    {
+      marker: "PAYMENT_IN_PROGRESS",
+      code: "PAYMENT_IN_PROGRESS",
+      phase: "request",
+      retryable: true,
+    },
+    {
+      marker: "PAYMENT_RESUME_REQUIRED",
+      code: "PAYMENT_RESUME_REQUIRED",
+      phase: "recovery",
+    },
+    {
+      marker: "PAYMENT_RESUME_UNAVAILABLE",
+      code: "PAYMENT_RESUME_UNAVAILABLE",
+      phase: "recovery",
+    },
+    {
+      marker: "PENDING_PAYMENT_CLAIMED",
+      code: "PENDING_PAYMENT_CLAIMED",
+      phase: "recovery",
+      retryable: true,
+    },
+    {
+      marker: "PENDING_PAYMENT_CLEAR_CONFLICT",
+      code: "PENDING_PAYMENT_CLEAR_CONFLICT",
+      phase: "recovery",
+    },
+    {
+      marker: "PENDING_PAYMENT_CONFLICT",
+      code: "PENDING_PAYMENT_CONFLICT",
+      phase: "recovery",
+    },
+    {
+      marker: "PENDING_PAYMENT_POLICY_DENIED",
+      code: "PAYMENT_POLICY_DENIED",
+      phase: "policy",
+    },
+    {
+      marker: "PENDING_PAYMENT_INVALID",
+      code: "PENDING_PAYMENT_CORRUPT",
+      phase: "recovery",
+    },
+    {
+      marker: "PAYMENT_RECEIPT_MISSING",
+      code: "PAYMENT_RECEIPT_MISSING",
+      phase: "receipt",
+    },
+    {
+      marker: "PAYMENT_RECEIPT_MISMATCH",
+      code: "PAYMENT_RECEIPT_MISMATCH",
+      phase: "receipt",
+    },
+    {
+      marker: "PAYMENT_RECEIPT_UNVERIFIED",
+      code: "PAYMENT_RECEIPT_UNVERIFIED",
+      phase: "receipt",
+      retryable: true,
+    },
+    {
+      marker: "PAY_RECEIPT_RPC",
+      code: "PAY_PROFILE_INVALID",
+      phase: "configuration",
+    },
+    {
+      marker: "PAY_SIGNER_UNSUPPORTED",
+      code: "PAY_PROFILE_INVALID",
+      phase: "configuration",
+    },
+  ];
+  const match = known.find(({ marker }) => message.includes(marker));
+  const code = match?.code ?? fallbackCode;
+  const phase = match?.phase ?? fallbackPhase;
+  const retryable = match?.retryable ?? code === "PAYMENT_SERVICE_UNAVAILABLE";
+  return new PayError(code, publicErrorMessage(code), {
+    phase,
+    retryable,
+    cause: error,
+  });
+}
+
+function publicErrorMessage(code: PayErrorCode): string {
+  return code
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/^./, (value) => value.toUpperCase());
+}
+
+async function paymentStatusUnknown(response: Response): Promise<PayError> {
+  let paymentId: string | undefined;
+  try {
+    const value = (await response.clone().json()) as unknown;
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "paymentId" in value &&
+      typeof value.paymentId === "string"
+    ) {
+      paymentId = value.paymentId;
+    }
+  } catch {
+    // Unknown responses may be empty or non-JSON. Recovery still stays pending.
+  }
+  return new PayError(
+    "PAYMENT_STATUS_UNKNOWN",
+    "Payment status is unknown; resume the saved request",
+    {
+      phase: "request",
+      retryable: true,
+      ...(paymentId ? { paymentId } : {}),
+    },
+  );
+}
+
 async function serializePendingPayment(
   requestInput: Request,
   network: BasePaymentNetwork,
+  facts: PendingPaymentFacts,
 ): Promise<SerializedPendingPayment> {
   const request = requestInput.clone();
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   const unsigned = {
     version: 3 as const,
     network,
+    protocolId: protocolId(facts.protocol),
+    adapterRevision: "pay-client-v1" as const,
+    economicEffectDigest: economicEffectDigest(facts.effect),
     url: request.url,
     method: request.method,
     headers: Array.from(request.headers.entries()),
@@ -524,8 +843,9 @@ async function serializePendingPayment(
 async function pendingPaymentRecord(
   request: Request,
   network: BasePaymentNetwork,
+  facts: PendingPaymentFacts,
 ): Promise<PendingPaymentRecord> {
-  const payment = await serializePendingPayment(request, network);
+  const payment = await serializePendingPayment(request, network, facts);
   return {
     digest: pendingPaymentDigest(payment),
     payment,
@@ -541,10 +861,13 @@ function pendingPaymentDigest(
 async function assertPendingPaymentRecord(
   record: PendingPaymentRecord,
 ): Promise<void> {
+  assertPendingPaymentVersion(record.payment);
   assertPendingPaymentChecksum(record.payment);
   if (record.payment.requestDigest !== record.digest) {
-    throw new Error(
-      "PENDING_PAYMENT_STORE_CORRUPT: digest does not match payment",
+    throw new PayError(
+      "PENDING_PAYMENT_CORRUPT",
+      "Pending payment record digest does not match",
+      { phase: "recovery" },
     );
   }
 }
@@ -558,8 +881,28 @@ function pendingRequestDigest(
 function assertPendingPaymentChecksum(payment: SerializedPendingPayment): void {
   const { requestDigest, ...unsigned } = payment;
   if (pendingRequestDigest(unsigned) !== requestDigest) {
-    throw new Error(
-      "PENDING_PAYMENT_CHECKSUM_MISMATCH: URL, method, headers, or body changed",
+    throw new PayError(
+      "PENDING_PAYMENT_CORRUPT",
+      "Pending payment record authentication binding does not match",
+      { phase: "recovery" },
+    );
+  }
+}
+
+function assertPendingPaymentVersion(payment: SerializedPendingPayment): void {
+  const candidate = payment as Partial<SerializedPendingPayment>;
+  if (
+    candidate.version !== 3 ||
+    candidate.adapterRevision !== "pay-client-v1" ||
+    (candidate.protocolId !== "x402-exact-v2-eip3009" &&
+      candidate.protocolId !== "mpp-evm-charge-v0") ||
+    typeof candidate.economicEffectDigest !== "string" ||
+    !/^0x[0-9a-f]{64}$/.test(candidate.economicEffectDigest)
+  ) {
+    throw new PayError(
+      "PENDING_PAYMENT_VERSION_UNSUPPORTED",
+      "Pending payment record is not compatible with pay-client-v1",
+      { phase: "recovery" },
     );
   }
 }
@@ -570,14 +913,12 @@ function restorePendingPayment(
   expectedNetwork: BasePaymentNetwork,
   allowInsecureLocalhost?: boolean,
 ): Request {
-  if (pending.version !== 3) {
-    throw new Error(
-      "PENDING_PAYMENT_INVALID: unsupported pending payment version",
-    );
-  }
+  assertPendingPaymentVersion(pending);
   if (pending.network !== expectedNetwork) {
-    throw new Error(
-      "PENDING_PAYMENT_NETWORK_MISMATCH: pending payment belongs to another network",
+    throw new PayError(
+      "PENDING_PAYMENT_CONFLICT",
+      "Pending payment belongs to another network",
+      { phase: "recovery" },
     );
   }
   assertPendingPaymentChecksum(pending);
@@ -606,6 +947,30 @@ function restorePendingPayment(
       ? { body: base64ToBytes(pending.bodyBase64) }
       : {}),
   });
+}
+
+function protocolId(protocol: PayProtocol): PayProtocolId {
+  return protocol === "x402" ? "x402-exact-v2-eip3009" : "mpp-evm-charge-v0";
+}
+
+function economicEffectDigest(effect: Eip3009EconomicEffect): `0x${string}` {
+  return sha256(stringToBytes(JSON.stringify(effect)));
+}
+
+function assertPendingPaymentBindings(
+  payment: SerializedPendingPayment,
+  facts: PendingPaymentFacts,
+): void {
+  if (
+    payment.protocolId !== protocolId(facts.protocol) ||
+    payment.economicEffectDigest !== economicEffectDigest(facts.effect)
+  ) {
+    throw new PayError(
+      "PENDING_PAYMENT_CORRUPT",
+      "Pending payment protocol or economic-effect binding does not match",
+      { phase: "recovery" },
+    );
+  }
 }
 
 function bytesToBase64(value: Uint8Array): string {
@@ -868,7 +1233,7 @@ function requestUrl(input: RequestInfo | URL): string {
 }
 
 function receiptRpcUrl(
-  options: CreatePayFetchOptions,
+  options: CreatePayExecutorOptions,
   network: BasePaymentNetwork,
 ): string {
   const configured = options.rpcUrls?.[network];

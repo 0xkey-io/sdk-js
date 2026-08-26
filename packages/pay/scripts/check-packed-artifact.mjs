@@ -30,6 +30,7 @@ const requiredEntries = [
     ],
   ),
   "package/docs/generated-support.md",
+  "package/docs/migrating-to-1.0.md",
   "package/docs/protocol-selection-and-recovery.md",
 ];
 
@@ -139,15 +140,53 @@ async function externalInstallSmoke(tarball) {
         "--input-type=module",
         "--eval",
         [
-          'import "@0xkey-io/pay";',
+          'import * as root from "@0xkey-io/pay";',
           'import "@0xkey-io/pay/admin";',
-          'import "@0xkey-io/pay/client";',
+          'import * as client from "@0xkey-io/pay/client";',
           'import "@0xkey-io/pay/express";',
           'import "@0xkey-io/pay/hono";',
           'import "@0xkey-io/pay/next";',
           'import "@0xkey-io/pay/server";',
+          'if (typeof client.createPayClient !== "function") throw new Error("missing createPayClient");',
+          'if ("createPayFetch" in client || "createPayFetch" in root) throw new Error("legacy createPayFetch is exported");',
         ].join("\n"),
       ],
+      { cwd: externalRoot },
+    );
+    await writeFile(
+      join(externalRoot, "public-contract.ts"),
+      [
+        'import { createPayClient, type CreatePayClientOptions, type PayClient, type PayProtocolId } from "@0xkey-io/pay/client";',
+        'import type { PayError, PendingPaymentSummary, SerializedPendingPayment } from "@0xkey-io/pay";',
+        "void createPayClient; void (null as unknown as CreatePayClientOptions); void (null as unknown as PayClient);",
+        "void (null as unknown as PayProtocolId); void (null as unknown as PayError);",
+        "void (null as unknown as PendingPaymentSummary); void (null as unknown as SerializedPendingPayment);",
+        "// @ts-expect-error pre-GA callable API is intentionally removed",
+        'import { createPayFetch } from "@0xkey-io/pay/client";',
+        "// @ts-expect-error upstream x402 wire types are not exported from root",
+        'import type { PaymentPayload } from "@0xkey-io/pay";',
+        "void createPayFetch; void (null as unknown as PaymentPayload);",
+      ].join("\n"),
+    );
+    await writeFile(
+      join(externalRoot, "tsconfig.json"),
+      `${JSON.stringify({
+        compilerOptions: {
+          lib: ["ES2022", "DOM", "DOM.Iterable"],
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          noEmit: true,
+          strict: true,
+          target: "ES2022",
+        },
+        files: ["public-contract.ts"],
+      })}\n`,
+    );
+    await run(
+      process.platform === "win32"
+        ? join(packageRoot, "node_modules", ".bin", "tsc.cmd")
+        : join(packageRoot, "node_modules", ".bin", "tsc"),
+      ["-p", "tsconfig.json", "--pretty", "false"],
       { cwd: externalRoot },
     );
   } finally {

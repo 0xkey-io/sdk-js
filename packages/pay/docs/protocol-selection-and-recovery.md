@@ -53,14 +53,15 @@ idempotency key.
 
 ## Buyer choice
 
-The default order is x402, then MPP. `protocolPreference` may change that order.
+The default order is x402, then MPP. `policy.preference` may change that order.
 The buyer accepts only enabled hosts, Base, canonical USDC, and an amount at or
 below `maxAmount`.
 
-`network` is required and cannot be inferred. Base mainnet requires an explicit
-RPC in `rpcUrls["eip155:8453"]`, or an audited `receiptVerifier`, when the buyer
-is created. The rate-limited Base mainnet public RPC is rejected. Base Sepolia
-may use the public Sepolia endpoint.
+`network` is required and cannot be inferred. `policy` explicitly binds the
+host allowlist, amount ceiling, and optional preference. `recovery` is always a
+durable authenticated store. `verification` contains either one explicit RPC
+URL or one audited verifier. The rate-limited Base mainnet public RPC is
+rejected; Base Sepolia may use its public endpoint.
 
 Server and Admin instances route through the corresponding
 `/base-mainnet` or `/base-sepolia` Pay channel. On the Production
@@ -150,8 +151,9 @@ payment call at a time. More than one process may resend the same saved
 credential, but facilitator Economic Effect idempotency prevents a second
 broadcast.
 
-The in-memory store is for tests and local work only. A process crash can lose
-it.
+There is no client option that disables recovery or silently selects an
+in-memory store. Tests can inject a test implementation of the same store
+contract.
 
 ## Unknown result and resume
 
@@ -160,7 +162,7 @@ provider or chain. It does not mean “not paid”. The normal unknown response 
 `503 PAYMENT_STATUS_UNKNOWN`, with stable `paymentId` and `Retry-After: 2`.
 The buyer treats any unexpected signed-request 5xx the same way.
 
-The buyer keeps the saved request and may call `payFetch.resume()` to resend the
+The buyer keeps the saved request and may call `client.resume()` to resend the
 same credential. A merchant or server operator with the organization API key
 may query payment status through `@0xkey-io/pay/admin`; an ordinary buyer cannot.
 
@@ -170,7 +172,12 @@ a saved payment exists.
 On restart, `resume()` checks the saved payer, protocol, Base network, canonical
 USDC, amount, recipient, host, URL, method, headers, and body before sending.
 A v3 pending snapshot stores the selected network inside its authenticated
-record; opening it under the other network is rejected before sending.
+record. It also stores the stable protocol id, literal adapter revision
+`pay-client-v1`, and a digest of the normalized EIP-3009 Economic Effect. The
+request digest binds those fields together with URL, method, headers, and body.
+Opening it under the other network is rejected before sending. An rc.6-shaped
+version-3 record missing any new binding fails with
+`PENDING_PAYMENT_VERSION_UNSUPPORTED` and is never upgraded or re-signed.
 A plain 2xx, 4xx, or 5xx without a protocol success receipt does not clear it.
 
 A success receipt also does not clear it by itself. The buyer reads the named
@@ -185,6 +192,10 @@ Base transaction and requires all of these facts to match the saved credential:
 A mismatch returns `PAYMENT_RECEIPT_MISMATCH`. An unavailable RPC returns
 `PAYMENT_RECEIPT_UNVERIFIED`. Both leave the durable slot in place and block a
 new signature. `resume()` reuses the same credential.
+
+`pending()` exposes only request digest, protocol alias/id, network, URL, and
+method. Credential-bearing headers, body, receipts, and the complete Economic
+Effect remain confined to the protected store.
 
 ## Receipt names
 

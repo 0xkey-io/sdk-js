@@ -1,5 +1,17 @@
 # @0xkey-io/pay
 
+## 1.0.0-rc.1
+
+- Replace the pre-GA callable buyer with `createPayClient()` and explicit
+  network, policy, durable recovery, and receipt-verification configuration.
+- Add stable structured `PayError` fields and redacted pending summaries.
+- Bind pending-payment v3 records to the stable protocol id,
+  `pay-client-v1` adapter revision, normalized EIP-3009 Economic Effect, and
+  exact authenticated request. Older rc.6-shaped v3 records fail closed and
+  are never upgraded or re-signed.
+- Remove root upstream x402/MPP wire-type exports and the pre-GA in-memory,
+  manual pending export, and callable fetch surfaces.
+
 ## 0.3.0-rc.6
 
 - Treat both `https://api-pay.0xkey.io` and

@@ -25,7 +25,7 @@
     {
       "name": "PayError",
       "kind": "class",
-      "arity": 2
+      "arity": 3
     },
     {
       "name": "USDC_BASE",
@@ -44,7 +44,7 @@
       "kind": "number"
     },
     {
-      "name": "createPayFetch",
+      "name": "createPayClient",
       "kind": "class",
       "arity": 1
     },

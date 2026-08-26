@@ -56,6 +56,9 @@ const record = {
   payment: {
     version: 3 as const,
     network: "eip155:84532" as const,
+    protocolId: "x402-exact-v2-eip3009" as const,
+    adapterRevision: "pay-client-v1" as const,
+    economicEffectDigest: `0x${"55".repeat(32)}` as const,
     requestDigest: `0x${"44".repeat(32)}` as const,
     url: "https://pay-uat.example/paid/ping",
     method: "GET",
