@@ -22,6 +22,18 @@
       "require": "./dist/client/index.js",
       "default": "./dist/client/index.mjs"
     },
+    "./x402": {
+      "types": "./dist/x402/index.d.mts",
+      "import": "./dist/x402/index.mjs",
+      "require": "./dist/x402/index.js",
+      "default": "./dist/x402/index.mjs"
+    },
+    "./mpp": {
+      "types": "./dist/mpp/index.d.mts",
+      "import": "./dist/mpp/index.mjs",
+      "require": "./dist/mpp/index.js",
+      "default": "./dist/mpp/index.mjs"
+    },
     "./admin": {
       "types": "./dist/admin/index.d.ts",
       "import": "./dist/admin/index.mjs",
@@ -79,7 +91,7 @@
     "typecheck:pay-v1": "tsc -p tsconfig.pay-v1.json --allowJs false --checkJs false",
     "test": "jest --detectOpenHandles",
     "test:client-boundary": "pnpm run build && node --test scripts/client-boundary-real.test.mjs",
-    "test:pay-v1": "jest --detectOpenHandles --runInBand src/client.test.ts src/server.test.ts src/admin/index.test.ts src/xstamp.test.ts src/frameworks.test.ts",
+    "test:pay-v1": "jest --detectOpenHandles --runInBand src/client.test.ts src/x402/index.test.ts src/internal/x402-exact-v2-adapter.test.ts src/admin/index.test.ts src/xstamp.test.ts src/frameworks.test.ts && tsx --test src/mpp/index.node.test.ts src/server.node.test.ts",
     "test:interop": "pnpm run clean && pnpm run build && node scripts/interop-smoke.mjs && node scripts/mppx-validate-smoke.mjs",
     "test:commerce-contract": "jest --runInBand src/commerce/generated/codec.test.ts"
   },
@@ -91,11 +103,11 @@
     "@0xkey-io/viem": "workspace:*",
     "@0xkey-io/http": "workspace:*",
     "@0xkey-io/api-key-stamper": "workspace:*",
-    "@x402/core": "2.22.0",
-    "@x402/evm": "2.22.0",
-    "@x402/fetch": "2.22.0",
+    "@x402/core": "2.23.0",
+    "@x402/evm": "2.23.0",
+    "@x402/fetch": "2.23.0",
     "ajv": "8.12.0",
-    "mppx": "0.8.17"
+    "mppx": "0.8.19"
   },
   "devDependencies": {
     "@types/jest": "^29.5.3",

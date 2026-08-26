@@ -29,6 +29,11 @@ const requiredEntries = [
       `package/dist/${entry}/index.d.ts`,
     ],
   ),
+  ...["mpp", "x402"].flatMap((entry) => [
+    `package/dist/${entry}/index.js`,
+    `package/dist/${entry}/index.mjs`,
+    `package/dist/${entry}/index.d.mts`,
+  ]),
   "package/docs/generated-support.md",
   "package/docs/migrating-to-1.0.md",
   "package/docs/protocol-selection-and-recovery.md",
@@ -111,6 +116,21 @@ async function verifyTarball(tarball, sourceManifest) {
     }
   }
 
+  for (const entry of [
+    "package/dist/index.d.ts",
+    "package/dist/client/index.d.ts",
+    "package/dist/server/index.d.ts",
+  ]) {
+    const { stdout: declaration } = await execFileAsync(
+      "tar",
+      ["-xOf", tarball, entry],
+      { maxBuffer: 10 * 1024 * 1024 },
+    );
+    if (/from ["'](?:mppx|@x402\/)/.test(declaration)) {
+      throw new Error(`${entry} leaks an upstream payment wire type`);
+    }
+  }
+
   return manifest;
 }
 
@@ -147,8 +167,24 @@ async function externalInstallSmoke(tarball) {
           'import "@0xkey-io/pay/hono";',
           'import "@0xkey-io/pay/next";',
           'import "@0xkey-io/pay/server";',
+          'import * as mpp from "@0xkey-io/pay/mpp";',
+          'import * as x402 from "@0xkey-io/pay/x402";',
           'if (typeof client.createPayClient !== "function") throw new Error("missing createPayClient");',
+          'if (typeof mpp.create0xkeyEvmChargeMethod !== "function") throw new Error("missing MPP factory");',
+          'if (typeof x402.create0xkeyFacilitatorClient !== "function") throw new Error("missing x402 factory");',
           'if ("createPayFetch" in client || "createPayFetch" in root) throw new Error("legacy createPayFetch is exported");',
+        ].join("\n"),
+      ],
+      { cwd: externalRoot },
+    );
+    await run(
+      process.execPath,
+      [
+        "--input-type=commonjs",
+        "--eval",
+        [
+          'const entries = ["@0xkey-io/pay", "@0xkey-io/pay/client", "@0xkey-io/pay/server", "@0xkey-io/pay/x402", "@0xkey-io/pay/mpp", "@0xkey-io/pay/admin", "@0xkey-io/pay/express", "@0xkey-io/pay/hono", "@0xkey-io/pay/next"];',
+          "for (const entry of entries) require(entry);",
         ].join("\n"),
       ],
       { cwd: externalRoot },
@@ -158,9 +194,14 @@ async function externalInstallSmoke(tarball) {
       [
         'import { createPayClient, type CreatePayClientOptions, type PayClient, type PayProtocolId } from "@0xkey-io/pay/client";',
         'import type { PayError, PendingPaymentSummary, SerializedPendingPayment } from "@0xkey-io/pay";',
+        'import { createPayServer, type PayServer } from "@0xkey-io/pay/server";',
+        'import { create0xkeyFacilitatorClient } from "@0xkey-io/pay/x402";',
+        'import { create0xkeyEvmChargeMethod } from "@0xkey-io/pay/mpp";',
         "void createPayClient; void (null as unknown as CreatePayClientOptions); void (null as unknown as PayClient);",
         "void (null as unknown as PayProtocolId); void (null as unknown as PayError);",
         "void (null as unknown as PendingPaymentSummary); void (null as unknown as SerializedPendingPayment);",
+        "void createPayServer; void (null as unknown as PayServer);",
+        "void create0xkeyFacilitatorClient; void create0xkeyEvmChargeMethod;",
         "// @ts-expect-error pre-GA callable API is intentionally removed",
         'import { createPayFetch } from "@0xkey-io/pay/client";',
         "// @ts-expect-error upstream x402 wire types are not exported from root",
@@ -176,6 +217,7 @@ async function externalInstallSmoke(tarball) {
           module: "NodeNext",
           moduleResolution: "NodeNext",
           noEmit: true,
+          skipLibCheck: true,
           strict: true,
           target: "ES2022",
         },

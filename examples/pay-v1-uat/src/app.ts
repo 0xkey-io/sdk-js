@@ -5,7 +5,6 @@ type Address = `0x${string}`;
 const UAT_ROUTE = {
   description: "0xkey Standalone Pay v1 staging acceptance ping",
   price: "$0.001",
-  protocols: ["x402", "mpp"] as const,
 };
 
 export interface UatEnvironment {
@@ -15,6 +14,7 @@ export interface UatEnvironment {
   ZEROXKEY_PRIVATE_KEY: string;
   MPP_SECRET_KEY: string;
   ZEROXKEY_FACILITATOR_URL?: string;
+  fetch?: typeof globalThis.fetch;
 }
 
 export function createUatApp(environment: UatEnvironment) {
@@ -44,7 +44,18 @@ export function createUatApp(environment: UatEnvironment) {
     ...(environment.ZEROXKEY_FACILITATOR_URL
       ? { facilitatorUrl: environment.ZEROXKEY_FACILITATOR_URL }
       : {}),
+    ...(environment.fetch ? { fetch: environment.fetch } : {}),
   });
+  const paidPing = payments.protect(UAT_ROUTE, ({ paymentId }) =>
+    Response.json(
+      {
+        ok: true,
+        paymentId,
+        message: "standalone-pay-v1-uat-accepted",
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    ),
+  );
 
   return async function handle(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -58,19 +69,7 @@ export function createUatApp(environment: UatEnvironment) {
       );
     }
 
-    const payment = await payments.handle(request, UAT_ROUTE);
-    if (payment.status !== 200) return payment.response;
-
-    return payment.withReceipt(
-      Response.json(
-        {
-          ok: true,
-          paymentId: payment.paymentId,
-          message: "standalone-pay-v1-uat-accepted",
-        },
-        { headers: { "Cache-Control": "no-store" } },
-      ),
-    );
+    return paidPing(request);
   };
 }
 

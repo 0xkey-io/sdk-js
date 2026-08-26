@@ -4,10 +4,10 @@ const packageJson = JSON.parse(
   await readFile(new URL("../package.json", import.meta.url), "utf8"),
 );
 const expected = {
-  mppx: "0.8.17",
-  "@x402/core": "2.22.0",
-  "@x402/evm": "2.22.0",
-  "@x402/fetch": "2.22.0",
+  mppx: "0.8.19",
+  "@x402/core": "2.23.0",
+  "@x402/evm": "2.23.0",
+  "@x402/fetch": "2.23.0",
 };
 
 for (const [name, version] of Object.entries(expected)) {

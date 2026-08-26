@@ -6,7 +6,7 @@ Status: RC contract
 
 Evidence state: Implemented without end-to-end evidence; local gates pass
 
-Last verified: 2026-08-19
+Last verified: 2026-08-27
 
 This is the implementation contract for `@0xkey-io/pay/client` and
 `@0xkey-io/pay/server`. The package README is the public quickstart. Generated
@@ -31,10 +31,14 @@ wire types or codecs.
 ## Seller flow
 
 1. The framework adapter maps the request to one configured route.
-2. `mppx/server` creates the enabled x402 and MPP challenges.
+2. The official x402 resource server and native mppx method independently
+   create the enabled challenges; the facade merges only standard headers.
 3. The buyer retries with exactly one payment credential.
-4. `mppx` verifies the credential and calls the 0xkey facilitator adapter.
-5. The adapter calls `/verify`, then `/settle`, with X-Stamp V2.
+4. The credential header freezes the protocol. The official x402 server or
+   native mppx method validates only its own wire, then maps it through its own
+   0xkey-owned command adapter.
+5. x402 calls `/verify`, then `/settle`; MPP calls its command settlement
+   endpoint. Every private call uses X-Stamp V2 and an explicit wire protocol.
 6. The facilitator waits until the Base transfer is `CONFIRMED`.
 7. The SDK returns `paymentId` and then calls the merchant handler.
 8. The protocol receipt is attached to the merchant response.
@@ -46,10 +50,14 @@ prove that the merchant fulfilled the request.
 If both `PAYMENT-SIGNATURE` and `Authorization: Payment` are present, the SDK
 returns `400 AMBIGUOUS_PAYMENT_CREDENTIAL`. It does not settle either one.
 
-If the merchant handler fails after payment, the response keeps the receipt.
-The SDK calls `onFulfillmentFailed` or writes a small error log. Pay v1 does not
-refund automatically. A handler with side effects must use `paymentId` as its
-idempotency key.
+If the merchant handler succeeds, the SDK synchronously persists `FULFILLED`
+before returning the protocol receipt. A throw or 5xx synchronously persists
+`FAILED` without exception text, credentials, bodies, or receipts. MPP never
+attaches a receipt to a failed handler; x402 uses its official upfront
+failure-path receipt. Only fulfillment HTTP 200 is committed. A timeout or
+non-200 is retryable `PAYMENT_STATUS_UNKNOWN`; recovery resends the same
+credential after a process restart. A handler with side effects must use its
+private `paymentId` context as the idempotency key.
 
 ## Buyer choice
 
@@ -73,10 +81,11 @@ product websites and are never facilitator base URLs. Custom local and
 third-party URLs remain available, but they still represent exactly the
 configured network.
 
-`mppx 0.8.17` needs its route-binding extension when it signs ordinary x402.
-Many normal x402 sellers do not send that extension. If this exact error occurs
-before any credential is signed, the SDK may give the original request to the
-pinned official x402 client.
+Protocol choice is made only from the independently validated challenges and
+configured preference. The seller dispatches only from `PAYMENT-SIGNATURE` or
+the RFC-compatible, case-insensitive `Payment` authorization scheme, including
+comma-separated Authorization fields. It never uses nonce shape, provider
+identity, or dependency error text as a protocol signal.
 
 After any credential is signed, fallback is forbidden. The SDK must not:
 
@@ -159,7 +168,8 @@ contract.
 
 Any 5xx after a credential is signed means the payment may have reached the
 provider or chain. It does not mean “not paid”. The normal unknown response is
-`503 PAYMENT_STATUS_UNKNOWN`, with stable `paymentId` and `Retry-After: 2`.
+`503 PAYMENT_STATUS_UNKNOWN` with `Retry-After: 2`. The private `paymentId`
+never appears in a standard response object, receipt, or header.
 The buyer treats any unexpected signed-request 5xx the same way.
 
 The buyer keeps the saved request and may call `client.resume()` to resend the

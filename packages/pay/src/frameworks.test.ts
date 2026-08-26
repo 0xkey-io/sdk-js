@@ -1,135 +1,102 @@
-import type { PayServer } from "./server";
+import type { PaidHandlerContext, PayRoute, PayServer } from "./server";
 import { paymentMiddleware as expressPayment } from "./express";
 import { paymentMiddleware as honoPayment } from "./hono";
 import { withPayment } from "./next";
 
-function paidServer(events: string[]): PayServer {
+function delegatingServer(events: string[]): PayServer {
   return {
-    async handle() {
-      events.push("settled");
-      return {
-        status: 200,
-        paymentId: "pay-1",
-        reference: "0xtx",
-        withReceipt(response) {
-          const headers = new Headers(response.headers);
-          headers.set("PAYMENT-RESPONSE", "receipt");
-          return new Response(response.body, {
-            status: response.status,
-            headers,
-          });
-        },
+    protect(
+      route: PayRoute,
+      handler: (context: PaidHandlerContext) => Response | Promise<Response>,
+    ) {
+      events.push(`protect:${route.price}`);
+      return async (request) => {
+        events.push("settled");
+        const response = await handler({
+          request,
+          paymentId: "pay-1",
+          reference: "0xtx",
+          protocol: "x402",
+        });
+        const headers = new Headers(response.headers);
+        headers.set("PAYMENT-RESPONSE", "receipt");
+        return new Response(response.body, { status: response.status, headers });
       };
-    },
-    async fulfillmentFailed() {
-      events.push("fulfillment_failed");
     },
   };
 }
 
-test("Express settles before the merchant handler", async () => {
+test("Express translates HTTP objects and delegates all payment behavior to protect", async () => {
   const events: string[] = [];
   const headers = new Map<string, string>();
+  const middleware = expressPayment(
+    delegatingServer(events),
+    { price: "$0.01" },
+    async (_request, context) => {
+      events.push(`handler:${context.paymentId}`);
+      return Response.json({ weather: "sunny" });
+    },
+  );
   const response: any = {
-    locals: {},
-    statusCode: 200,
-    setHeader: (name: string, value: string) => headers.set(name, value),
-    on: jest.fn(),
+    status: jest.fn(function (this: any, status: number) {
+      this.statusCode = status;
+      return this;
+    }),
+    setHeader: (name: string, value: string) => headers.set(name.toLowerCase(), value),
+    send: jest.fn(),
   };
-  const middleware = expressPayment(paidServer(events), {
-    "GET /weather": { price: "$0.01" },
-  });
+
   await middleware(
     {
       method: "GET",
-      path: "/weather",
       originalUrl: "/weather",
       protocol: "https",
       headers: { host: "api.example.com" },
       get: () => "api.example.com",
     },
     response,
-    () => events.push("handler"),
+    jest.fn(),
   );
-  expect(events).toEqual(["settled", "handler"]);
-  expect(response.locals.paymentId).toBe("pay-1");
+
+  expect(events).toEqual(["protect:$0.01", "settled", "handler:pay-1"]);
   expect(headers.get("payment-response")).toBe("receipt");
+  expect(response.send).toHaveBeenCalledWith('{"weather":"sunny"}');
 });
 
-test("Hono settles before next and reports fulfillment failure", async () => {
+test("Hono delegates to protect and returns its Fetch response", async () => {
   const events: string[] = [];
   const context: any = {
-    req: {
-      raw: new Request("https://api.example.com/weather"),
-      method: "GET",
-      path: "/weather",
-    },
-    res: new Response(null, { status: 200 }),
+    req: { raw: new Request("https://api.example.com/weather") },
+    res: new Response("weather", { status: 200 }),
     set: jest.fn(),
-    header: jest.fn(),
   };
-  const middleware = honoPayment(paidServer(events), { price: "$0.01" });
-  await middleware(context, async () => {
+  const middleware = honoPayment(delegatingServer(events), { price: "$0.01" });
+  const response = await middleware(context, async () => {
     events.push("handler");
-    context.res = new Response("failed", { status: 500 });
   });
-  expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
+
+  expect(events).toEqual(["protect:$0.01", "settled", "handler"]);
   expect(context.set).toHaveBeenCalledWith("paymentId", "pay-1");
+  expect(response.headers.get("PAYMENT-RESPONSE")).toBe("receipt");
 });
 
-test("Next settles before the route handler and keeps the receipt on 5xx", async () => {
+test("Next delegates the route handler to protect without payment parsing", async () => {
   const events: string[] = [];
+  const nextContext = { params: { locale: "en" } };
   const handler = withPayment(
-    paidServer(events),
+    delegatingServer(events),
     { price: "$0.01" },
-    async (request) => {
-      events.push("handler");
-      expect(request.headers.get("x-0xkey-payment-id")).toBe("pay-1");
-      return new Response("failed", { status: 500 });
+    async (_request, context, frameworkContext) => {
+      events.push(`handler:${context.paymentId}`);
+      expect(frameworkContext).toBe(nextContext);
+      return new Response("weather");
     },
   );
   const response = await handler(
     new Request("https://api.example.com/weather"),
+    nextContext,
   );
-  expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
-  expect(response.status).toBe(500);
+
+  expect(events).toEqual(["protect:$0.01", "settled", "handler:pay-1"]);
   expect(response.headers.get("PAYMENT-RESPONSE")).toBe("receipt");
-});
-
-test("Hono records a thrown merchant handler after payment", async () => {
-  const events: string[] = [];
-  const context: any = {
-    req: {
-      raw: new Request("https://api.example.com/weather"),
-      method: "GET",
-      path: "/weather",
-    },
-    res: new Response(null, { status: 200 }),
-    set: jest.fn(),
-    header: jest.fn(),
-  };
-  const middleware = honoPayment(paidServer(events), { price: "$0.01" });
-  await expect(
-    middleware(context, async () => {
-      events.push("handler");
-      throw new Error("merchant failed");
-    }),
-  ).rejects.toThrow("merchant failed");
-  expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
-});
-
-test("Next records a thrown merchant handler after payment", async () => {
-  const events: string[] = [];
-  const handler = withPayment(
-    paidServer(events),
-    { price: "$0.01" },
-    async () => {
-      events.push("handler");
-      throw new Error("merchant failed");
-    },
-  );
-  await expect(
-    handler(new Request("https://api.example.com/weather")),
-  ).rejects.toThrow("merchant failed");
-  expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
 });

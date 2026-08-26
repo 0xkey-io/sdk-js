@@ -7,6 +7,8 @@ export default () =>
       "src/index.ts",
       "src/client/index.ts",
       "src/server/index.ts",
+      "src/x402/index.mts",
+      "src/mpp/index.mts",
       "src/admin/index.ts",
       "src/express/index.ts",
       "src/hono/index.ts",

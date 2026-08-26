@@ -14,7 +14,7 @@
     "@0xkey-io/pay": "workspace:*",
     "@0xkey-io/sdk-server": "workspace:*",
     "@0xkey-io/viem": "workspace:*",
-    "mppx": "0.8.17",
+    "mppx": "0.8.19",
     "viem": "2.54.0"
   },
   "devDependencies": {

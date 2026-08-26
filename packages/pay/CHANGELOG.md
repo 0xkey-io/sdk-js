@@ -11,6 +11,14 @@
   are never upgraded or re-signed.
 - Remove root upstream x402/MPP wire-type exports and the pre-GA in-memory,
   manual pending export, and callable fetch surfaces.
+- Replace the pre-GA seller route table with upfront `createPayServer().protect()`
+  and thin Express, Hono, and Next adapters.
+- Add dedicated `@0xkey-io/pay/x402` and `@0xkey-io/pay/mpp` entry points using
+  official `FacilitatorClient` and native-only mppx EVM charge contracts.
+- Pin `@x402/*@2.23.0` and `mppx@0.8.19`; separate their wire adapters behind a
+  dependency-free 0xkey settlement command.
+- Persist private fulfillment success/failure synchronously. Keep `paymentId`
+  request-local and out of all standard protocol objects and receipts.
 
 ## 0.3.0-rc.6
 

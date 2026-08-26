@@ -28,19 +28,31 @@ const payments = createPayServer({
   mppSecretKey: process.env.MPP_SECRET_KEY!,
 });
 
-app.use(
-  paymentMiddleware(payments, {
-    "GET /weather": { price: "$0.01", protocols: ["x402", "mpp"] },
-  }),
+app.get(
+  "/weather",
+  paymentMiddleware(
+    payments,
+    { price: "$0.01", description: "Weather" },
+    (_request, payment) =>
+      Response.json({ weather: "sunny", paymentId: payment.paymentId }),
+  ),
 );
 ```
 
 The same core has `@0xkey-io/pay/hono` and `@0xkey-io/pay/next` adapters.
 The handler receives `paymentId`. Use it as the idempotency key for writes.
 
-If the handler returns 5xx, the payment receipt stays on the response. Pay v1
-calls `onFulfillmentFailed` or logs `fulfillment_failed`; 0xkey does not yet
-store that event durably, and it does not refund automatically.
+`protect()` verifies and settles before the handler. It reports every successful
+handler as `FULFILLED` through the private signed fulfillment endpoint and every
+throw or 5xx as `FAILED`. MPP receipts are attached only to successful handlers;
+x402 uses the official upfront failure-path receipt. A persistence timeout or
+non-200 response becomes retryable `PAYMENT_STATUS_UNKNOWN`, so a retry or
+restart reuses the same credential and `paymentId`.
+
+For direct upstream integration, `@0xkey-io/pay/x402` returns an official
+`FacilitatorClient`, while `@0xkey-io/pay/mpp` returns a native-only mppx EVM
+charge method. These dedicated entries own upstream wire types; root, client,
+and server declarations do not expose them.
 
 ## Buyer
 
