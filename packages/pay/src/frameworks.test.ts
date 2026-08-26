@@ -104,6 +104,73 @@ test("Express caches protect and streams binary multi-chunk bodies without text 
   expect(response.end).toHaveBeenCalledTimes(2);
 });
 
+test("Express cancels the upstream reader and cleans drain listeners when downstream closes", async () => {
+  let cancelCalls = 0;
+  const middleware = expressPayment(
+    delegatingServer([]),
+    { price: "$0.01" },
+    async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(Uint8Array.of(0xff, 0x00));
+      },
+      cancel() {
+        cancelCalls += 1;
+      },
+    })),
+  );
+  const response: any = Object.assign(new EventEmitter(), {
+    status() { return this; },
+    setHeader() {},
+    write() {
+      queueMicrotask(() => this.emit("close"));
+      return false;
+    },
+    end: jest.fn(),
+  });
+  const next = jest.fn();
+
+  await middleware({
+    method: "GET", originalUrl: "/binary", protocol: "https",
+    headers: { host: "api.example.com" }, get: () => "api.example.com",
+  }, response, next);
+
+  expect(cancelCalls).toBe(1);
+  expect(response.end).not.toHaveBeenCalled();
+  expect(next).not.toHaveBeenCalled();
+  expect(response.listenerCount("drain")).toBe(0);
+  expect(response.listenerCount("close")).toBe(0);
+  expect(response.listenerCount("error")).toBe(0);
+});
+
+test("Express cancels upstream and forwards a downstream error without leaking listeners", async () => {
+  let cancelCalls = 0;
+  const middleware = expressPayment(
+    delegatingServer([]),
+    { price: "$0.01" },
+    async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(Uint8Array.of(1)); },
+      cancel() { cancelCalls += 1; },
+    })),
+  );
+  const downstream = new Error("socket failed");
+  const response: any = Object.assign(new EventEmitter(), {
+    status() { return this; }, setHeader() {},
+    write() { queueMicrotask(() => this.emit("error", downstream)); return false; },
+    end: jest.fn(),
+  });
+  const next = jest.fn();
+
+  await middleware({
+    method: "GET", originalUrl: "/binary", protocol: "https",
+    headers: { host: "api.example.com" }, get: () => "api.example.com",
+  }, response, next);
+
+  expect(cancelCalls).toBe(1);
+  expect(next).toHaveBeenCalledWith(downstream);
+  expect(response.end).not.toHaveBeenCalled();
+  expect(response.eventNames()).toEqual([]);
+});
+
 test("Hono delegates to protect and returns its Fetch response", async () => {
   const events: string[] = [];
   const context: any = {

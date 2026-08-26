@@ -1,4 +1,3 @@
-import { once } from "node:events";
 import type { PaidHandlerContext, PayRoute, PayServer } from "../server";
 
 export function paymentMiddleware(
@@ -30,8 +29,21 @@ export function paymentMiddleware(
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            if (!res.write(value)) await once(res, "drain");
+            if (!res.write(value)) {
+              const writable = await waitForWritable(res);
+              if (!writable) {
+                await reader.cancel("downstream response closed");
+                return;
+              }
+            }
           }
+        } catch (error) {
+          try {
+            await reader.cancel("downstream response failed");
+          } catch {
+            // Preserve the original downstream failure.
+          }
+          throw error;
         } finally {
           reader.releaseLock();
         }
@@ -43,4 +55,30 @@ export function paymentMiddleware(
       if (request) requests.delete(request);
     }
   };
+}
+
+function waitForWritable(res: any): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      res.removeListener("drain", onDrain);
+      res.removeListener("close", onClose);
+      res.removeListener("error", onError);
+    };
+    const onDrain = () => {
+      cleanup();
+      resolve(true);
+    };
+    const onClose = () => {
+      cleanup();
+      resolve(false);
+    };
+    const onError = (error: unknown) => {
+      cleanup();
+      reject(error);
+    };
+    res.once("drain", onDrain);
+    res.once("close", onClose);
+    res.once("error", onError);
+    if (res.destroyed || res.closed) onClose();
+  });
 }

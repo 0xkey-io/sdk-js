@@ -24,6 +24,12 @@
 - Keep official x402 `/settle` on its standard private envelope; send validated
   seller x402/MPP commands only to `/v1/settlements/charge` with protocol-derived
   X-Stamp facts and strict nested settlement responses.
+- Surface direct official x402 boundary failures as non-402 errors, and preserve
+  raw `Mppx.create()` indeterminate settlement as an actual challenge-free HTTP
+  503. Require the exact mppx peer for shared `PaymentError` class identity.
+- Decode strict structured command errors and deterministic rejection envelopes,
+  refresh seller capabilities after bounded freshness, and cancel upstream
+  streams when Express clients disconnect.
 
 ## 0.3.0-rc.6
 

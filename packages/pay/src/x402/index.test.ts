@@ -4,6 +4,8 @@ import {
 } from "@x402/core/server";
 import { x402HTTPResourceServer } from "@x402/core/http";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { paymentMiddlewareFromHTTPServer } from "@x402/express";
+import { encodePaymentSignatureHeader } from "@x402/core/http";
 import type {
   PaymentPayload,
   PaymentRequirements,
@@ -62,6 +64,13 @@ describe("create0xkeyFacilitatorClient", () => {
       calls.push({ url: String(url), init });
       if (String(url).endsWith("/verify")) {
         return Response.json({ isValid: true, payer: payload.payload.authorization.from });
+      }
+      if (String(url).endsWith("/supported")) {
+        return Response.json({
+          kinds: [{ x402Version: 2, scheme: "exact", network: requirements.network }],
+          extensions: [],
+          signers: {},
+        });
       }
       if (String(url).endsWith("/settle")) {
         return Response.json({
@@ -175,12 +184,90 @@ describe("create0xkeyFacilitatorClient", () => {
       });
       const promise = client[operation](payload, requirements);
       await expect(promise).rejects.toMatchObject({
-        code: operation === "settle" ? "PAYMENT_STATUS_UNKNOWN" : "PAYMENT_SERVICE_UNAVAILABLE",
-        retryable: true,
-      } satisfies Partial<PayError>);
-      await expect(promise).rejects.not.toThrow("secret upstream body");
+        cause: {
+          code: operation === "settle" ? "PAYMENT_STATUS_UNKNOWN" : "PAYMENT_SERVICE_UNAVAILABLE",
+          retryable: true,
+        } satisfies Partial<PayError>,
+      });
       expect(fetch).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it("surfaces indeterminate settlement through official Express middleware as 502, never 402", async () => {
+    const { stamper } = fakeStamper();
+    const fetch = jest.fn(async (url: RequestInfo | URL) => {
+      if (String(url).endsWith("/verify")) {
+        return Response.json({ isValid: true, payer: payload.payload.authorization.from });
+      }
+      if (String(url).endsWith("/supported")) {
+        return Response.json({
+          kinds: [{ x402Version: 2, scheme: "exact", network: requirements.network }],
+          extensions: [],
+          signers: {},
+        });
+      }
+      return new Response(JSON.stringify({ errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true }), {
+        status: 503,
+      });
+    }) as typeof globalThis.fetch;
+    const client = create0xkeyFacilitatorClient({
+      network: "eip155:84532",
+      organizationId: ORG,
+      stamper,
+      fetch,
+    });
+    const httpServer = {
+      routes: {},
+      requiresPayment: () => true,
+      async processHTTPRequest() {
+        await client.settle(payload, requirements);
+        throw new Error("unreachable");
+      },
+    };
+    const middleware = paymentMiddlewareFromHTTPServer(
+      httpServer as never,
+      undefined,
+      undefined,
+      false,
+    );
+    const req = {
+      body: undefined,
+      headers: { host: "merchant.example" },
+      header(name: string) {
+        if (name.toLowerCase() === "payment-signature") {
+          return encodePaymentSignatureHeader(payload);
+        }
+        return undefined;
+      },
+      method: "GET",
+      originalUrl: "/weather",
+      path: "/weather",
+      protocol: "https",
+      query: {},
+    };
+    const statusCodes: number[] = [];
+    const bodies: unknown[] = [];
+    const res = {
+      status(code: number) {
+        statusCodes.push(code);
+        return this;
+      },
+      json(body: unknown) {
+        bodies.push(body);
+        return this;
+      },
+      setHeader() {
+        return this;
+      },
+    };
+    const next = jest.fn();
+
+    await middleware(req as never, res as never, next);
+
+    expect(statusCodes).toEqual([502]);
+    expect(bodies).toEqual([{ error: "settlement outcome is indeterminate" }]);
+    expect(next).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("rejects redirects without forwarding a signed request to a second host", async () => {
@@ -195,7 +282,7 @@ describe("create0xkeyFacilitatorClient", () => {
       network: "eip155:84532", organizationId: ORG, stamper, fetch,
     });
     await expect(client.verify(payload, requirements)).rejects.toMatchObject({
-      code: "PAYMENT_SERVICE_UNAVAILABLE", retryable: true,
+      cause: { code: "PAYMENT_SERVICE_UNAVAILABLE", retryable: true },
     });
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(secondHostCalls).toBe(0);
@@ -219,8 +306,7 @@ describe("create0xkeyFacilitatorClient", () => {
       });
       const result = client.getSupported();
       const rejection = expect(result).rejects.toMatchObject({
-        code: "PAYMENT_SERVICE_UNAVAILABLE",
-        retryable: true,
+        cause: { code: "PAYMENT_SERVICE_UNAVAILABLE", retryable: true },
       });
       await jest.runAllTimersAsync();
       await rejection;
@@ -276,8 +362,7 @@ describe("create0xkeyFacilitatorClient", () => {
       fetch: async () => Response.json({ success: true, paymentId: "private" }),
     });
     await expect(client.settle(payload, requirements)).rejects.toMatchObject({
-      code: "PAYMENT_STATUS_UNKNOWN",
-      retryable: true,
+      cause: { code: "PAYMENT_STATUS_UNKNOWN", retryable: true },
     });
   });
 
@@ -293,8 +378,7 @@ describe("create0xkeyFacilitatorClient", () => {
     });
     const verification = client.verify(payload, requirements);
     await expect(verification).rejects.toMatchObject({
-      code: "PAYMENT_SERVICE_UNAVAILABLE",
-      retryable: true,
+      cause: { code: "PAYMENT_SERVICE_UNAVAILABLE", retryable: true },
     });
     await expect(verification).rejects.not.toThrow("secret signing backend detail");
   });

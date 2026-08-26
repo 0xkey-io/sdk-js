@@ -6,7 +6,10 @@ import { PayError } from "../errors";
 import { assertBasePaymentNetwork } from "../networks";
 import type { BasePaymentNetwork } from "../receipt-verifier";
 import type { PayApiKey, RequestStamper } from "../xstamp";
-import { MppEvmChargeAdapter } from "./mpp-evm-charge-adapter";
+import {
+  assertMppPayloadHasNoUnknownExtensions,
+  MppEvmChargeAdapter,
+} from "./mpp-evm-charge-adapter";
 import {
   ZeroXkeySettlementAdapter,
   type ZeroXkeySettlementResult,
@@ -46,7 +49,7 @@ export function createMppEvmChargeMethod(
               phase: "request", retryable: true, cause,
             });
         onFailure?.(error);
-        throw new Errors.VerificationFailedError({ reason: "settlement unavailable" });
+        throw new SettlementBoundaryError(error);
       }
       onSettlement?.(result);
       return {
@@ -56,13 +59,91 @@ export function createMppEvmChargeMethod(
     },
   });
 
+  const payloadSchema = method.schema.credential.payload as typeof method.schema.credential.payload & {
+    parse: (value: unknown) => unknown;
+  };
+  const parsePayload = payloadSchema.parse.bind(payloadSchema);
+  payloadSchema.parse = (value: unknown) => {
+    assertMppPayloadHasNoUnknownExtensions(value);
+    return parsePayload(value);
+  };
+
+  const upstreamTransport = Transport.http();
   Object.defineProperty(method, "transport", {
     configurable: false,
     enumerable: true,
-    value: Transport.http(),
+    value: Transport.from({
+      ...upstreamTransport,
+      async respondChallenge(options) {
+        const response = await upstreamTransport.respondChallenge(options);
+        if (
+          !(options.error instanceof SettlementBoundaryError) ||
+          options.error.status === 402
+        ) return response;
+        const headers = new Headers(response.headers);
+        headers.delete("WWW-Authenticate");
+        if (response.status === 503) headers.set("Retry-After", "2");
+        headers.set("Content-Type", "application/problem+json");
+        return new Response(
+          options.error ? JSON.stringify(options.error.toProblemDetails()) : null,
+          {
+            headers,
+            status: response.status,
+            statusText: response.statusText,
+          },
+        );
+      },
+    }),
     writable: false,
   });
   return { method };
+}
+
+class SettlementBoundaryError extends Errors.PaymentError {
+  override readonly name = "SettlementBoundaryError";
+  readonly title = "Settlement Boundary Failure";
+  readonly type = "https://0xkey.io/pay/problems/settlement-boundary";
+  override readonly status: number;
+
+  constructor(error: PayError) {
+    super(
+      error.code === "PAYMENT_STATUS_UNKNOWN"
+        ? "settlement outcome is indeterminate"
+        : "settlement request failed",
+      {
+        details: {
+          errorCode: error.code,
+          retryable: error.retryable,
+          ...(error.paymentId ? { paymentId: error.paymentId } : {}),
+        },
+      },
+    );
+    this.status = statusFor(error);
+  }
+}
+
+function statusFor(error: PayError): number {
+  switch (error.code) {
+    case "PAYMENT_REQUEST_INVALID":
+    case "PAYMENT_NETWORK_MISMATCH":
+    case "PAYMENT_REQUIREMENTS_UNSUPPORTED":
+      return 400;
+    case "PAYMENT_AUTH_INVALID":
+      return 401;
+    case "PAYMENT_AUTH_FORBIDDEN":
+      return 403;
+    case "PAYMENT_INTENT_CONFLICT":
+    case "PAYMENT_PROTOCOL_MISMATCH":
+    case "PAYMENT_REVISION_MISMATCH":
+      return 409;
+    case "PAYMENT_SERVICE_UNAVAILABLE":
+      return 502;
+    case "PAYMENT_AUTH_UNAVAILABLE":
+    case "PAYMENT_STATUS_UNKNOWN":
+      return 503;
+    default:
+      return 402;
+  }
 }
 
 function validateOptions(options: MppEvmChargeMethodOptions): void {

@@ -57,6 +57,22 @@ For direct upstream integration, `@0xkey-io/pay/x402` returns an official
 charge method. These dedicated entries own upstream wire types; root, client,
 and server declarations do not expose them.
 
+The direct x402 client throws the official `FacilitatorResponseError` boundary
+type for dependency and indeterminate settlement failures, so official x402
+HTTP middleware returns 502 instead of issuing another 402. The original
+retryable `PayError` remains available as the error `cause`.
+
+The direct MPP method requires the exact `mppx@0.8.19` peer. With raw
+`Mppx.create({ methods: [method] })`, a post-send indeterminate settlement has
+an internal mppx result discriminant of 402, but its returned HTTP `challenge`
+Response is 503 with `Retry-After: 2`, no `WWW-Authenticate`, and no receipt.
+Return that Response as normal; do not inspect only the internal discriminant.
+The official mppx client does not durably recover a 503. Capture and persist the
+original `Authorization: Payment ...` credential before its first send, then
+retry the same credential after reconciliation. Never create a new credential
+for that unresolved economic effect. `createPayClient()` already implements
+this durable same-credential recovery contract.
+
 The direct x402 client keeps the official private `/verify` and `/settle`
 envelope. The 0xkey seller facade independently validates that wire, derives a
 closed `ChargeSettlementCommand`, and sends seller x402 and MPP commands only

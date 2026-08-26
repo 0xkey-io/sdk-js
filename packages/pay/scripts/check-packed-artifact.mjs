@@ -82,7 +82,6 @@ async function verifyTarball(tarball, sourceManifest) {
       `Packed engines.node must be >=22.12.0 for the supported require(ESM) baseline; found ${String(manifest.engines?.node)}`,
     );
   }
-
   for (const group of dependencyGroups) {
     for (const [name, value] of Object.entries(manifest[group] ?? {})) {
       if (typeof value === "string" && value.startsWith("workspace:")) {
@@ -91,6 +90,12 @@ async function verifyTarball(tarball, sourceManifest) {
         );
       }
     }
+  }
+  if (manifest.peerDependencies?.mppx !== "0.8.19") {
+    throw new Error("Packed peerDependencies.mppx must be exactly 0.8.19 for PaymentError class identity");
+  }
+  if (manifest.peerDependencies?.["@x402/core"] !== "2.23.0") {
+    throw new Error("Packed peerDependencies.@x402/core must be exactly 2.23.0 for facilitator error class identity");
   }
 
   if (sourceManifest) {
@@ -161,9 +166,39 @@ async function externalInstallSmoke(tarball) {
         "--no-package-lock",
         `--registry=${publicRegistry}`,
         tarball,
+        "@x402/express@2.23.0",
+        "express@5.2.1",
       ],
       { cwd: externalRoot },
     );
+    await run(
+      process.platform === "win32" ? "npm.cmd" : "npm",
+      ["ls", "mppx", "--all"],
+      { cwd: externalRoot },
+    );
+    const { stdout: mppxPaths } = await execFileAsync(
+      process.platform === "win32" ? "npm.cmd" : "npm",
+      ["ls", "mppx", "--all", "--parseable"],
+      { cwd: externalRoot },
+    );
+    const installedMppx = mppxPaths.trim().split("\n").filter(Boolean);
+    if (installedMppx.length !== 1) {
+      throw new Error(`Packed Pay must resolve one mppx instance; found ${installedMppx.length}`);
+    }
+    await run(
+      process.platform === "win32" ? "npm.cmd" : "npm",
+      ["ls", "@x402/core", "--all"],
+      { cwd: externalRoot },
+    );
+    const { stdout: x402CorePaths } = await execFileAsync(
+      process.platform === "win32" ? "npm.cmd" : "npm",
+      ["ls", "@x402/core", "--all", "--parseable"],
+      { cwd: externalRoot },
+    );
+    const installedX402Core = x402CorePaths.trim().split("\n").filter(Boolean);
+    if (installedX402Core.length !== 1) {
+      throw new Error(`Packed Pay must resolve one @x402/core instance; found ${installedX402Core.length}`);
+    }
     await run(
       process.execPath,
       [
@@ -187,6 +222,16 @@ async function externalInstallSmoke(tarball) {
       ],
       { cwd: externalRoot },
     );
+    await writeFile(
+      join(externalRoot, "mpp-runtime-smoke.mjs"),
+      mppRuntimeSmoke("esm"),
+    );
+    await writeFile(
+      join(externalRoot, "mpp-runtime-smoke.cjs"),
+      mppRuntimeSmoke("cjs"),
+    );
+    await run(process.execPath, ["mpp-runtime-smoke.mjs"], { cwd: externalRoot });
+    await run(process.execPath, ["mpp-runtime-smoke.cjs"], { cwd: externalRoot });
     await run(
       process.execPath,
       [
@@ -244,6 +289,132 @@ async function externalInstallSmoke(tarball) {
   } finally {
     await rm(externalRoot, { recursive: true, force: true });
   }
+}
+
+function mppRuntimeSmoke(moduleKind) {
+  const imports = moduleKind === "esm"
+    ? [
+        'import assert from "node:assert/strict";',
+        'import { Challenge, Credential } from "mppx";',
+        'import { Mppx } from "mppx/server";',
+        'import { authorizationDomain, authorizationTypes, challengeHash } from "mppx/evm";',
+        'import { privateKeyToAccount } from "viem/accounts";',
+        'import { create0xkeyEvmChargeMethod } from "@0xkey-io/pay/mpp";',
+        'import { create0xkeyFacilitatorClient } from "@0xkey-io/pay/x402";',
+        'import { paymentMiddlewareFromHTTPServer } from "@x402/express";',
+      ]
+    : [
+        'const assert = require("node:assert/strict");',
+        'const { Challenge, Credential } = require("mppx");',
+        'const { Mppx } = require("mppx/server");',
+        'const { authorizationDomain, authorizationTypes, challengeHash } = require("mppx/evm");',
+        'const { privateKeyToAccount } = require("viem/accounts");',
+        'const { create0xkeyEvmChargeMethod } = require("@0xkey-io/pay/mpp");',
+        'const { create0xkeyFacilitatorClient } = require("@0xkey-io/pay/x402");',
+        'const { paymentMiddlewareFromHTTPServer } = require("@x402/express");',
+      ];
+  return `${imports.join("\n")}
+(async () => {
+  const secret = "packed-secret-must-not-be-logged";
+  const logged = [];
+  const originalConsoleError = console.error;
+  console.error = (...values) => logged.push(values);
+  try {
+    const method = create0xkeyEvmChargeMethod({
+      network: "eip155:84532",
+      organizationId: "11111111-1111-4111-8111-111111111111",
+      payTo: "0x1111111111111111111111111111111111111111",
+      stamper: { async stampRequest() { return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" }; } },
+      async fetch() { throw new Error(secret); },
+    });
+    const server = Mppx.create({ methods: [method], secretKey: "01234567890123456789012345678901" });
+    const route = server.evm.charge({ amount: "0.01" });
+    const offered = await route(new Request("https://merchant.example/weather"));
+    assert.equal(offered.status, 402);
+    const challenge = Challenge.fromResponse(offered.challenge.clone());
+    const account = privateKeyToAccount("0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+    const nonce = challengeHash(challenge);
+    const validBefore = String(Math.floor(Date.now() / 1000) + 300);
+    const signature = await account.signTypedData({
+      domain: authorizationDomain({
+        authorization: { name: "USDC", version: "2" },
+        chainId: challenge.request.methodDetails.chainId,
+        currency: challenge.request.currency,
+      }),
+      message: {
+        from: account.address,
+        nonce,
+        to: challenge.request.recipient,
+        validAfter: 0n,
+        validBefore: BigInt(validBefore),
+        value: BigInt(challenge.request.amount),
+      },
+      primaryType: "TransferWithAuthorization",
+      types: authorizationTypes,
+    });
+    const credential = Credential.serialize({ challenge, payload: {
+      from: account.address, nonce, signature, to: challenge.request.recipient,
+      type: "authorization", validAfter: "0", validBefore, value: challenge.request.amount,
+    }});
+    const result = await route(new Request("https://merchant.example/weather", {
+      headers: { Authorization: credential },
+    }));
+    let handlerCalls = 0;
+    const response = result.status === 402
+      ? result.challenge
+      : result.withReceipt((handlerCalls += 1, new Response("paid")));
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get("Retry-After"), "2");
+    assert.equal(response.headers.has("WWW-Authenticate"), false);
+    assert.equal(response.headers.has("Payment-Receipt"), false);
+    assert.equal(handlerCalls, 0);
+    assert.doesNotMatch(JSON.stringify(logged), /packed-secret-must-not-be-logged/);
+
+    const requirements = {
+      scheme: "exact", network: "eip155:84532", amount: "1000",
+      asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      payTo: "0x1111111111111111111111111111111111111111",
+      maxTimeoutSeconds: 300,
+      extra: { assetTransferMethod: "eip3009", paymentFlow: "upfront", name: "USDC", version: "2" },
+    };
+    const payload = {
+      x402Version: 2, accepted: requirements,
+      payload: { signature: "0x" + "11".repeat(65), authorization: {
+        from: account.address, to: requirements.payTo, value: requirements.amount,
+        validAfter: "0", validBefore: "9999999999", nonce: "0x" + "22".repeat(32),
+      }},
+    };
+    let x402Calls = 0;
+    const x402Client = create0xkeyFacilitatorClient({
+      network: "eip155:84532",
+      organizationId: "11111111-1111-4111-8111-111111111111",
+      stamper: { async stampRequest() { return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" }; } },
+      async fetch() { x402Calls += 1; return new Response(null, { status: 503 }); },
+    });
+    const middleware = paymentMiddlewareFromHTTPServer({
+      routes: {}, requiresPayment: () => true,
+      async processHTTPRequest() { await x402Client.settle(payload, requirements); },
+    }, undefined, undefined, false);
+    const statusCodes = [];
+    const bodies = [];
+    const res = {
+      status(code) { statusCodes.push(code); return this; },
+      json(body) { bodies.push(body); return this; },
+      setHeader() { return this; },
+    };
+    let nextCalls = 0;
+    await middleware({
+      body: undefined, headers: { host: "merchant.example" }, header() { return undefined; },
+      method: "GET", originalUrl: "/weather", path: "/weather", protocol: "https", query: {},
+    }, res, () => { nextCalls += 1; });
+    assert.deepEqual(statusCodes, [502]);
+    assert.equal(nextCalls, 0);
+    assert.equal(x402Calls, 1);
+  } finally {
+    console.error = originalConsoleError;
+  }
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+`;
 }
 
 function parseArguments(args) {

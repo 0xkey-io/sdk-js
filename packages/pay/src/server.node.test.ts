@@ -87,25 +87,90 @@ test("protect emits independent standard offers and rejects ambiguous credential
   assert.equal(handlerCalls, 0);
 });
 
-test("route capability discovery is attempted once and a cached failure is stable", async () => {
+test("route capability discovery clears rejected initialization and recovers on the next request", async () => {
   let supportedCalls = 0;
   const server = createPayServer({
     network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
     protocols: ["x402"],
     async fetch() {
       supportedCalls += 1;
-      return new Response(null, { status: 503 });
+      if (supportedCalls === 1) return new Response(null, { status: 503 });
+      return Response.json({
+        kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+        extensions: [], signers: {},
+      });
     },
   });
   const route = server.protect({ price: "$0.01" }, () => new Response("must not run"));
-  for (let index = 0; index < 2; index += 1) {
-    const response = await route(new Request(`https://merchant.example/weather?i=${index}`));
-    assert.equal(response.status, 502);
-    assert.deepEqual(await response.json(), {
-      errorCode: "PAYMENT_SERVICE_UNAVAILABLE", retryable: true,
-    });
-  }
+  const failed = await route(new Request("https://merchant.example/weather?i=0"));
+  assert.equal(failed.status, 502);
+  const recovered = await route(new Request("https://merchant.example/weather?i=1"));
+  assert.equal(recovered.status, 402);
+  assert.equal(supportedCalls, 2);
+});
+
+test("route capability initialization is single-flight for concurrent first requests", async () => {
+  let supportedCalls = 0;
+  let releaseSupported!: () => void;
+  let supportedStarted!: () => void;
+  const supportedGate = new Promise<void>((resolve) => {
+    releaseSupported = resolve;
+  });
+  const supportedEntered = new Promise<void>((resolve) => {
+    supportedStarted = resolve;
+  });
+  const server = createPayServer({
+    network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
+    protocols: ["x402"],
+    async fetch() {
+      supportedCalls += 1;
+      supportedStarted();
+      await supportedGate;
+      return Response.json({
+        kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+        extensions: [], signers: {},
+      });
+    },
+  });
+  const route = server.protect({ price: "$0.01" }, () => new Response("must not run"));
+  const first = route(new Request("https://merchant.example/weather?i=0"));
+  const second = route(new Request("https://merchant.example/weather?i=1"));
+  await supportedEntered;
   assert.equal(supportedCalls, 1);
+  releaseSupported();
+  const responses = await Promise.all([first, second]);
+  assert.deepEqual(responses.map(({ status }) => status), [402, 402]);
+  assert.equal(supportedCalls, 1);
+});
+
+test("route capability success has bounded freshness and observes later admission changes", async () => {
+  const originalNow = Date.now;
+  let now = 1_800_000_000_000;
+  Date.now = () => now;
+  try {
+    let supportedCalls = 0;
+    const server = createPayServer({
+      network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
+      protocols: ["x402"],
+      async fetch() {
+        supportedCalls += 1;
+        return Response.json({
+          kinds: supportedCalls === 1
+            ? []
+            : [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+          extensions: [], signers: {},
+        });
+      },
+    });
+    const route = server.protect({ price: "$0.01" }, () => new Response("must not run"));
+    const unavailable = await route(new Request("https://merchant.example/weather?i=0"));
+    assert.equal(unavailable.status, 502);
+    const recovered = await route(new Request("https://merchant.example/weather?i=1"));
+    assert.equal(recovered.status, 402);
+    assert.equal(supportedCalls, 2);
+  } finally {
+    Date.now = originalNow;
+  }
 });
 
 test("x402 protect verifies and settles before the handler, strips paymentId, and persists fulfillment", async () => {
@@ -283,7 +348,7 @@ test("x402 valid credentials surface fail-closed verify and indeterminate settle
   }, buyer)("https://merchant.example/weather");
   assert.ok(paymentSignature);
 
-  const run = async (failure: "verify" | "settle" | "settle-redirect") => {
+  const run = async (failure: "verify" | "settle" | "settle-redirect" | "settle-conflict" | "settle-rejected") => {
     let handlerCalls = 0;
     let settleCalls = 0;
     const server = createPayServer({
@@ -303,6 +368,23 @@ test("x402 valid credentials surface fail-closed verify and indeterminate settle
         if (path.endsWith("/v1/settlements/charge")) {
           settleCalls += 1;
           assert.equal(init?.redirect, "error");
+          if (failure === "settle-conflict") {
+            return Response.json({
+              errorCode: "PAYMENT_INTENT_CONFLICT",
+              retryable: false,
+              paymentId: "22222222-2222-4222-8222-222222222222",
+            }, { status: 409 });
+          }
+          if (failure === "settle-rejected") {
+            return Response.json({
+              settlement: {
+                success: false,
+                transaction: "",
+                network: "eip155:84532",
+              },
+              paymentId: "22222222-2222-4222-8222-222222222222",
+            });
+          }
           return failure === "settle-redirect"
             ? Response.redirect("https://redirect-target.example/credential", 302)
             : new Response(null, { status: 503 });
@@ -318,16 +400,32 @@ test("x402 valid credentials surface fail-closed verify and indeterminate settle
     }));
     assert.equal(handlerCalls, 0);
     assert.equal(settleCalls, failure === "verify" ? 0 : 1);
-    assert.equal(response.status, failure === "verify" ? 502 : 503);
+    assert.equal(
+      response.status,
+      failure === "verify" ? 502
+        : failure === "settle-conflict" ? 409
+        : failure === "settle-rejected" ? 402
+        : 503,
+    );
     assert.equal(response.headers.has("PAYMENT-REQUIRED"), false);
-    assert.deepEqual(await response.json(), {
-      errorCode: failure === "verify" ? "PAYMENT_SERVICE_UNAVAILABLE" : "PAYMENT_STATUS_UNKNOWN",
-      retryable: true,
-    });
+    assert.equal(
+      response.headers.has("PAYMENT-RESPONSE"),
+      failure === "settle-rejected",
+    );
+    if (failure !== "settle-rejected") {
+      assert.deepEqual(await response.json(), failure === "settle-conflict"
+        ? { errorCode: "PAYMENT_INTENT_CONFLICT", retryable: false }
+        : {
+            errorCode: failure === "verify" ? "PAYMENT_SERVICE_UNAVAILABLE" : "PAYMENT_STATUS_UNKNOWN",
+            retryable: true,
+          });
+    }
   };
   await run("verify");
   await run("settle");
   await run("settle-redirect");
+  await run("settle-conflict");
+  await run("settle-rejected");
 
   const decoded = JSON.parse(Buffer.from(paymentSignature, "base64url").toString("utf8"));
   decoded.accepted.extra.organizationId = "private";
@@ -551,13 +649,20 @@ test("MPP real credential is validated before command settlement and returns a s
   const originalConsoleError = console.error;
   console.error = (...values: unknown[]) => logged.push(values);
   try {
-    for (const mode of ["5xx", "timeout"] as const) {
+    for (const mode of ["5xx", "timeout", "conflict", "rejected"] as const) {
       let indeterminateHandlerCalls = 0;
       const indeterminateServer = createPayServer({
         network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey,
         protocols: ["mpp"], mppSecretKey: "01234567890123456789012345678901",
         async fetch() {
           if (mode === "5xx") return new Response(null, { status: 503 });
+          if (mode === "conflict") return Response.json({
+            errorCode: "PAYMENT_INTENT_CONFLICT", retryable: false,
+          }, { status: 409 });
+          if (mode === "rejected") return Response.json({
+            settlement: { success: false, transaction: "", network: "eip155:84532" },
+            paymentId: "22222222-2222-4222-8222-222222222222",
+          });
           throw new Error(secret);
         },
       });
@@ -567,10 +672,13 @@ test("MPP real credential is validated before command settlement and returns a s
       })(new Request("https://merchant.example/weather", {
         headers: { Authorization: authorizationHeader },
       }));
-      assert.equal(indeterminate.status, 503);
-      assert.deepEqual(await indeterminate.json(), {
-        errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true,
-      });
+      assert.equal(indeterminate.status, mode === "conflict" ? 409 : mode === "rejected" ? 402 : 503);
+      assert.equal(indeterminate.headers.has("Payment-Receipt"), false);
+      if (mode !== "rejected") {
+        assert.deepEqual(await indeterminate.json(), mode === "conflict"
+          ? { errorCode: "PAYMENT_INTENT_CONFLICT", retryable: false }
+          : { errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true });
+      }
       assert.equal(indeterminateHandlerCalls, 0);
     }
     assert.doesNotMatch(JSON.stringify(logged), /secret-fetch-cause/);

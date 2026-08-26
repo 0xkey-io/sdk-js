@@ -6,7 +6,11 @@ import {
   type HTTPProcessResult,
 } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import type { PaymentPayload, PaymentRequirements } from "@x402/core/types";
+import type {
+  PaymentPayload,
+  PaymentRequirements,
+  SupportedResponse,
+} from "@x402/core/types";
 import { Mppx } from "mppx/server";
 import { Credential, Receipt } from "mppx";
 import { getAddress } from "viem";
@@ -68,13 +72,12 @@ interface FulfillmentUpdate {
 }
 
 interface RequestFailure {
-  status: 400 | 502 | 503;
-  errorCode:
-    | "PAYMENT_CREDENTIAL_INVALID"
-    | "PAYMENT_SERVICE_UNAVAILABLE"
-    | "PAYMENT_STATUS_UNKNOWN";
+  status: 400 | 401 | 403 | 409 | 402 | 502 | 503;
+  errorCode: string;
   retryable: boolean;
 }
+
+const X402_CAPABILITY_TTL_MS = 30_000;
 
 export function createPayServer(options: CreatePayServerOptions): PayServer {
   const protocols = validateServerOptions(options);
@@ -121,13 +124,33 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
     protect(route, handler) {
       validateRoute(route);
       let x402Http: x402HTTPResourceServer | undefined;
-      let x402Initialization: Promise<void> | undefined;
-      let x402Supported: ReturnType<FacilitatorClient["getSupported"]> | undefined;
+      let x402Initialization: Promise<x402HTTPResourceServer> | undefined;
+      let x402InitializedUntil = 0;
+      let x402SupportedRequest: Promise<SupportedResponse> | undefined;
+      let x402SupportedCache:
+        | { value: SupportedResponse; expiresAt: number }
+        | undefined;
 
-      const getX402Supported = () => {
+      const getX402Supported = async () => {
         if (!x402Transport) throw new Error("x402 is not enabled");
-        x402Supported ??= x402Transport.client.getSupported();
-        return x402Supported;
+        const now = Date.now();
+        if (x402SupportedCache && x402SupportedCache.expiresAt > now) {
+          return x402SupportedCache.value;
+        }
+        if (!x402SupportedRequest) {
+          x402SupportedRequest = x402Transport.client.getSupported()
+            .then((value) => {
+              x402SupportedCache = {
+                value,
+                expiresAt: Date.now() + X402_CAPABILITY_TTL_MS,
+              };
+              return value;
+            })
+            .finally(() => {
+              x402SupportedRequest = undefined;
+            });
+        }
+        return x402SupportedRequest;
       };
 
       function createX402Server(
@@ -153,11 +176,7 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
                 payer: command.payer,
               };
             } catch (cause) {
-              state?.onFailure({
-                status: 503,
-                errorCode: "PAYMENT_STATUS_UNKNOWN",
-                retryable: true,
-              });
+              state?.onFailure(failureFor(cause));
               throw cause;
             }
           },
@@ -227,10 +246,31 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
       }
 
       async function initializeX402(): Promise<x402HTTPResourceServer> {
-        const server = getX402Server();
-        x402Initialization ??= server.initialize();
-        await x402Initialization;
-        return server;
+        if (x402Http && x402InitializedUntil > Date.now()) {
+          return getX402Server();
+        }
+        if (x402Initialization) return x402Initialization;
+        const server = createX402Server();
+        const initialization = (async () => {
+          await server.initialize();
+          x402Http = server;
+          x402InitializedUntil = x402SupportedCache?.expiresAt ??
+            Date.now() + X402_CAPABILITY_TTL_MS;
+          return server;
+        })();
+        x402Initialization = initialization;
+        try {
+          return await initialization;
+        } catch (cause) {
+          x402InitializedUntil = 0;
+          x402Http = undefined;
+          x402SupportedCache = undefined;
+          throw cause;
+        } finally {
+          if (x402Initialization === initialization) {
+            x402Initialization = undefined;
+          }
+        }
       }
 
       return async (request) => {
@@ -307,7 +347,7 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
       ): Promise<Response> {
         const result = await server.processHTTPRequest(x402Context(request));
         const requestFailure = getRequestFailure();
-        if (requestFailure) {
+        if (requestFailure && requestFailure.status !== 402) {
           return errorResponse(
             requestFailure.status,
             requestFailure.errorCode,
@@ -393,12 +433,8 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
         let requestFailure: RequestFailure | undefined;
         const requestMppServer = createMppServer((settlement) => {
           privateSettlement = settlement;
-        }, () => {
-          requestFailure = {
-            status: 503,
-            errorCode: "PAYMENT_STATUS_UNKNOWN",
-            retryable: true,
-          };
+        }, (error) => {
+          requestFailure = failureFor(error);
         });
         if (!requestMppServer) {
           return errorResponse(400, "PAYMENT_PROTOCOL_NOT_ALLOWED", false);
@@ -422,7 +458,7 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
         }
         const result = await requestMppServer.evm
           .charge(mppRouteOptions(route))(canonicalMppRequest(request));
-        if (requestFailure) {
+        if (requestFailure && requestFailure.status !== 402) {
           return errorResponse(
             requestFailure.status,
             requestFailure.errorCode,
@@ -502,6 +538,35 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
       }
     },
   };
+}
+
+function failureFor(cause: unknown): RequestFailure {
+  if (!(cause instanceof PayError)) {
+    return { status: 503, errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true };
+  }
+  switch (cause.code) {
+    case "PAYMENT_REQUEST_INVALID":
+    case "PAYMENT_NETWORK_MISMATCH":
+    case "PAYMENT_REQUIREMENTS_UNSUPPORTED":
+      return { status: 400, errorCode: cause.code, retryable: cause.retryable };
+    case "PAYMENT_AUTH_INVALID":
+      return { status: 401, errorCode: cause.code, retryable: cause.retryable };
+    case "PAYMENT_AUTH_FORBIDDEN":
+      return { status: 403, errorCode: cause.code, retryable: cause.retryable };
+    case "PAYMENT_INTENT_CONFLICT":
+    case "PAYMENT_PROTOCOL_MISMATCH":
+    case "PAYMENT_REVISION_MISMATCH":
+      return { status: 409, errorCode: cause.code, retryable: cause.retryable };
+    case "PAYMENT_SERVICE_UNAVAILABLE":
+      return { status: 502, errorCode: cause.code, retryable: cause.retryable };
+    case "PAYMENT_AUTH_UNAVAILABLE":
+    case "PAYMENT_STATUS_UNKNOWN":
+      return { status: 503, errorCode: cause.code, retryable: cause.retryable };
+    case "PAYMENT_CHALLENGE_INVALID":
+      return { status: 402, errorCode: cause.code, retryable: false };
+    default:
+      return { status: 503, errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true };
+  }
 }
 
 function validateServerOptions(options: CreatePayServerOptions): PayProtocol[] {

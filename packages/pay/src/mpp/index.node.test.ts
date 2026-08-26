@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Challenge } from "mppx";
+import { Challenge, Credential, Errors } from "mppx";
 import { Mppx } from "mppx/server";
+import { authorizationDomain, authorizationTypes, challengeHash } from "mppx/evm";
+import { privateKeyToAccount } from "viem/accounts";
 import { create0xkeyEvmChargeMethod } from "./index.mts";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
@@ -50,6 +52,29 @@ test("method is accepted by Mppx.create and offers only native MPP HTTP", async 
   );
 });
 
+test("transport preserves ordinary non-boundary mppx error responses", async () => {
+  const method = create0xkeyEvmChargeMethod({
+    network: "eip155:84532", organizationId: ORG,
+    payTo: "0x1111111111111111111111111111111111111111",
+    stamper: { async stampRequest() { return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" }; } },
+  });
+  const server = Mppx.create({ methods: [method], secretKey: "01234567890123456789012345678901" });
+  const request = new Request("https://merchant.example/weather");
+  const result = await server.evm.charge({ amount: "0.01" })(request);
+
+  assert.equal(result.status, 402);
+  if (result.status !== 402) throw new Error("expected transport response");
+  const challenge = Challenge.fromResponse(result.challenge.clone());
+  const response = await method.transport.respondChallenge({
+    challenge,
+    error: new Errors.BadRequestError({ reason: "ordinary bad request" }),
+    input: request,
+  });
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.has("WWW-Authenticate"), true);
+  assert.equal((await response.json()).challengeId, challenge.id);
+});
+
 test("method validates seller configuration", () => {
   const base = {
     network: "eip155:84532" as const,
@@ -70,3 +95,140 @@ test("method validates seller configuration", () => {
     /PAY_PROFILE_INVALID/,
   );
 });
+
+test("raw Mppx.create surfaces UNKNOWN as a real 503 without a retry challenge", async () => {
+  let settlementCalls = 0;
+  const method = create0xkeyEvmChargeMethod({
+    network: "eip155:84532",
+    organizationId: ORG,
+    payTo: "0x1111111111111111111111111111111111111111",
+    stamper: {
+      async stampRequest() {
+        return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" };
+      },
+    },
+    async fetch() {
+      settlementCalls += 1;
+      return Response.json({
+        errorCode: "PAYMENT_STATUS_UNKNOWN",
+        retryable: true,
+        paymentId: "22222222-2222-4222-8222-222222222222",
+      }, { status: 503 });
+    },
+  });
+  const server = Mppx.create({
+    methods: [method],
+    secretKey: "01234567890123456789012345678901",
+  });
+  const route = server.evm.charge({ amount: "0.01" });
+  const offered = await route(new Request("https://merchant.example/weather"));
+  assert.equal(offered.status, 402);
+  if (offered.status !== 402) throw new Error("expected challenge");
+  const challenge = Challenge.fromResponse(offered.challenge.clone());
+  const credential = Credential.serialize({
+    challenge,
+    payload: await validPayload(challenge),
+  });
+  const paid = await route(new Request("https://merchant.example/weather", {
+    headers: { Authorization: credential },
+  }));
+  let handlerCalls = 0;
+  const response = paid.status === 402
+    ? paid.challenge
+    : paid.withReceipt((handlerCalls += 1, new Response("paid")));
+
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("Retry-After"), "2");
+  assert.equal(response.headers.has("WWW-Authenticate"), false);
+  assert.equal(response.headers.has("Payment-Receipt"), false);
+  assert.equal(handlerCalls, 0);
+  assert.equal(settlementCalls, 1);
+  assert.deepEqual(await response.json(), {
+    type: "https://0xkey.io/pay/problems/settlement-boundary",
+    title: "Settlement Boundary Failure",
+    status: 503,
+    detail: "settlement outcome is indeterminate",
+    details: {
+      errorCode: "PAYMENT_STATUS_UNKNOWN",
+      paymentId: "22222222-2222-4222-8222-222222222222",
+      retryable: true,
+    },
+  });
+});
+
+test("raw Mppx.create rejects unknown signed payload keys before settlement transport", async () => {
+  let settlementCalls = 0;
+  const method = create0xkeyEvmChargeMethod({
+    network: "eip155:84532",
+    organizationId: ORG,
+    payTo: "0x1111111111111111111111111111111111111111",
+    stamper: {
+      async stampRequest() {
+        return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" };
+      },
+    },
+    async fetch() {
+      settlementCalls += 1;
+      throw new Error("must not settle");
+    },
+  });
+  const server = Mppx.create({
+    methods: [method],
+    secretKey: "01234567890123456789012345678901",
+  });
+  const route = server.evm.charge({ amount: "0.01" });
+  const offered = await route(new Request("https://merchant.example/weather"));
+  assert.equal(offered.status, 402);
+  if (offered.status !== 402) throw new Error("expected challenge");
+  const challenge = Challenge.fromResponse(offered.challenge.clone());
+  const credential = Credential.serialize({
+    challenge,
+    payload: {
+      ...await validPayload(challenge),
+      providerPrivate: "forbidden",
+    },
+  });
+  const rejected = await route(new Request("https://merchant.example/weather", {
+    headers: { Authorization: credential },
+  }));
+
+  assert.equal(rejected.status, 402);
+  if (rejected.status !== 402) throw new Error("expected payment rejection");
+  assert.equal(rejected.challenge.status, 402);
+  assert.equal(settlementCalls, 0);
+});
+
+async function validPayload(challenge: ReturnType<typeof Challenge.fromResponse>) {
+  const account = privateKeyToAccount(
+    "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  );
+  const nonce = challengeHash(challenge);
+  const validBefore = (Math.floor(Date.now() / 1000) + 300).toString();
+  const signature = await account.signTypedData({
+    domain: authorizationDomain({
+      authorization: { name: "USDC", version: "2" },
+      chainId: challenge.request.methodDetails.chainId,
+      currency: challenge.request.currency,
+    }),
+    message: {
+      from: account.address,
+      nonce,
+      to: challenge.request.recipient,
+      validAfter: 0n,
+      validBefore: BigInt(validBefore),
+      value: BigInt(challenge.request.amount),
+    },
+    primaryType: "TransferWithAuthorization",
+    types: authorizationTypes,
+  });
+  return {
+    from: account.address,
+    nonce,
+    signature,
+    to: challenge.request.recipient,
+    type: "authorization" as const,
+    validAfter: "0",
+    validBefore,
+    value: challenge.request.amount,
+  };
+}

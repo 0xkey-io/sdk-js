@@ -9,6 +9,18 @@ import test from "node:test";
 const execFileAsync = promisify(execFile);
 const checker = new URL("./check-packed-artifact.mjs", import.meta.url);
 
+test("Pay CI and publish select the declared Node 22.12 baseline", async () => {
+  const repositoryRoot = new URL("../../../", import.meta.url);
+  const [ci, publish, setup] = await Promise.all([
+    readFile(new URL(".github/workflows/pay-v1.yml", repositoryRoot), "utf8"),
+    readFile(new URL(".github/workflows/pay-publish.yml", repositoryRoot), "utf8"),
+    readFile(new URL(".github/actions/js-setup/action.yml", repositoryRoot), "utf8"),
+  ]);
+  assert.match(ci, /node-version:\s*["']22\.12\.0["']/);
+  assert.match(publish, /node-version:\s*["']22\.12\.0["']/);
+  assert.match(setup, /inputs:\s*[\s\S]*node-version:/);
+});
+
 test(
   "ignores ambient GITHUB_OUTPUT without a persistent pack destination",
   { timeout: 180_000 },

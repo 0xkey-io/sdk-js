@@ -66,6 +66,19 @@ resource server, or `create0xkeyEvmChargeMethod` from `@0xkey-io/pay/mpp` with
 `Mppx.create`. The latter is native MPP HTTP only; x402 is a separate seller
 path.
 
+Install exactly `mppx@0.8.19`; it is an exact peer because the safe 503 boundary
+depends on one shared `PaymentError` class identity. A direct MPP method returns
+an actual HTTP 503 Response (without a retry challenge or receipt) when command
+settlement is indeterminate, even though mppx's internal method-result
+discriminant remains 402. Return `result.challenge` to the framework. Raw mppx
+does not persist or replay that credential after 503: callers must save the
+original `Authorization` credential and resend those exact bytes, or use
+`createPayClient()` for built-in durable recovery.
+
+The direct x402 client uses the official facilitator boundary error, so
+official x402 middleware surfaces dependency/UNKNOWN failures as 502 rather
+than a new payment challenge.
+
 These two x402 server integrations intentionally use different private 0xkey
 request bodies. The public `create0xkeyFacilitatorClient()` preserves the
 official facilitator envelope (`organizationId`, `x402Version`,

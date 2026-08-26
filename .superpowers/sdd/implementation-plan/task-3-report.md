@@ -329,3 +329,138 @@ Additional evidence:
 - The packed TypeScript smoke uses `skipLibCheck` only because mppx's server
   declaration references its optional MCP peer even when the EVM-only path is
   used. The 0xkey declarations themselves are compiled and separately audited.
+
+## Independent re-review closure (2026-08-27)
+
+This section supersedes the earlier final counts and records the second
+independent review fixes. The public factory names remain unchanged. Two exact
+peer contracts were added because both upstream failure seams use class
+identity: `mppx@0.8.19` for `Errors.PaymentError` and `@x402/core@2.23.0` for
+`FacilitatorResponseError`. Both are also exact dev dependencies. The packed
+fresh npm consumer proves one physical installation of each class owner.
+
+### Upstream API decisions and source evidence
+
+- Frozen mppx 0.8.19 `Mppx.ts:1450-1477` preserves an error only when it is an
+  `instanceof Errors.PaymentError`; its raw result union at `Mppx.ts:2311-2319`
+  remains `200 | 402`.
+- `Errors.ts:14-45` allows a `PaymentError` subclass to set an HTTP status, and
+  `Transport.ts:159-210` uses that status for the actual challenge `Response`.
+  The official Express/Hono/Next middleware returns that Response directly.
+  Therefore `create0xkeyEvmChargeMethod()` truthfully remains a normal Method:
+  raw `MethodFn.Response.status` is still the upstream 402 discriminant, while
+  the actual official HTTP/framework response is 503 for an indeterminate
+  post-send outcome. No fake success or receipt is created.
+- Only the private `SettlementBoundaryError` non-402 path removes
+  `WWW-Authenticate` and adds `Retry-After`; ordinary mppx transport output,
+  including non-boundary errors and HTML/service-worker responses, is returned
+  unchanged. Deterministic `success:false` remains the native 402 result.
+- Frozen x402 2.23.0 resource/middleware code recognizes
+  `FacilitatorResponseError` by class identity and maps it outside the normal
+  settlement-rejection 402 path. The public 0xkey client therefore wraps its
+  internal `PayError` at that exact seam and preserves the original error only
+  as a non-enumerable cause.
+- The frozen charge-command addendum's non-2xx enum does not contain
+  `PAYMENT_NOT_FOUND` or `PAYMENT_NOT_FULFILLABLE`; those codes belong to the
+  separate fulfillment PUT in the Task 4 services brief. Adding them to the
+  charge adapter would accept a response forbidden by its endpoint contract.
+
+The official mppx fetch client does not persist or automatically replay an
+Authorization credential after HTTP 503. The README and recovery/migration
+docs now say that callers must persist and resend the same credential, or use
+`createPayClient()` for 0xkey-managed durable recovery.
+
+### RED and GREEN evidence
+
+- Public x402 official-middleware seam:
+  - RED: `pnpm --filter @0xkey-io/pay exec jest --runInBand src/x402/index.test.ts`
+    returned official middleware HTTP 402 for an indeterminate public-client
+    settle instead of the required non-402 boundary response.
+  - GREEN: the same command passed 12/12 after the exact
+    `FacilitatorResponseError` boundary was installed; the official
+    `@x402/express` middleware test returns 502 and never calls the handler.
+- Structured private command errors:
+  - RED: `pnpm --filter @0xkey-io/pay exec jest --runInBand src/internal/zeroxkey-settlement-adapter.test.ts`
+    reported five failures because structured 400/409/502/503 responses and a
+    deterministic nested `success:false` response collapsed to UNKNOWN.
+  - GREEN: the same command passed 13/13. Exact error keys, status/code and
+    retryability pairs, optional UUID payment id, strict nested success shape,
+    normalized validated EVM payer comparison, and malformed-boundary UNKNOWN
+    are covered.
+- Raw public MPP integration:
+  - RED: `pnpm --filter @0xkey-io/pay exec tsx --test src/mpp/index.node.test.ts`
+    produced actual HTTP 402 for a real signed credential whose settlement
+    transport failed after send, and allowed an unknown raw payload key to
+    reach settlement.
+  - GREEN: the same command passed 5/5. Actual `Mppx.create({methods:[method]})`
+    returns HTTP 503 with `Retry-After: 2`, no retry challenge, no receipt, no
+    handler and no secret log; exact raw payload keys are checked before Zod's
+    lossy parse. A standard non-boundary mppx response is preserved unchanged.
+- Seller deterministic vs indeterminate classification and capability cache:
+  - RED: `pnpm --filter @0xkey-io/pay exec tsx --test src/server.node.test.ts`
+    showed structured deterministic conflicts as UNKNOWN, `success:false` as a
+    custom 400, failed admission trapped in cache, and no explicit concurrent
+    initialization single-flight proof.
+  - GREEN: `pnpm --filter @0xkey-io/pay exec tsx --test src/server.node.test.ts src/mpp/index.node.test.ts`
+    passed 13/13. x402 and MPP `success:false` stay native 402 with handler zero;
+    400/401/403/409/502/503 boundary errors stay stable; successful discovery
+    has a 30-second freshness bound; rejected initialization clears server and
+    capability data; concurrent first requests share one initialization and
+    one `/supported` call.
+- Express response bridge:
+  - RED: `pnpm --filter @0xkey-io/pay exec jest --runInBand src/frameworks.test.ts`
+    timed out on close/error and did not cancel the upstream reader.
+  - GREEN: the same command passed 8/8 after drain/close/error were raced with
+    listener cleanup and reader cancellation; binary `0xff 0x00`, multi-chunk,
+    streaming/backpressure and cached facade construction are covered.
+- Runtime and packed class identity:
+  - RED: `pnpm --filter @0xkey-io/pay artifact:test` initially failed the fresh
+    runtime smoke because the new public x402 factory was not imported.
+  - GREEN: the same command passed 6/6. The installed project runs ESM and CJS
+    real signed MPP UNKNOWN tests and actual public-x402-plus-official-Express
+    UNKNOWN tests. `npm ls --parseable` finds exactly one mppx and one
+    `@x402/core` physical path, with no handler or secret leakage.
+- Capability and deterministic-rejection follow-up RED:
+  - RED: the combined focused Node command passed 9/13: admission recovery
+    remained 502 and both x402/MPP `success:false` responses were custom 400.
+  - GREEN: the same combined command passed 13/13 after rejected cache clearing
+    and restricting the request-local override to non-402 boundary failures.
+
+### Final verification after the last runtime edit
+
+- `pnpm --filter @0xkey-io/pay test:pay-v1` — PASS: 7 Jest suites,
+  103 tests; Node tests 13/13.
+- `pnpm --filter @0xkey-io/pay typecheck:pay-v1` — PASS.
+- `pnpm --filter @0xkey-io/pay build` — PASS, ESM and CJS entries emitted.
+- `pnpm --filter @0xkey-io/pay docs:check` — PASS; generated facts and manual
+  documentation agree.
+- `pnpm --filter @0xkey-io/pay pins:check` — PASS.
+- `pnpm --filter @0xkey-io/pay test:interop` — PASS: official x402 and native
+  MPP across both Base networks; mppx 0.8.19 validator passed.
+- `pnpm --filter @0xkey-io/pay artifact:test` — PASS: 6/6.
+- `pnpm --filter @0xkey-io/pay artifact:check` — PASS: packed, verified,
+  fresh-installed, one exact class owner each, ESM/CJS runtime smoke, official
+  x402 Express injection, and public types.
+- `pnpm --filter pay-v1-uat typecheck` — PASS.
+- `pnpm --filter pay-v1-uat smoke` — PASS (`pay_v1_uat_smoke_passed`).
+- `pnpm --filter @0xkey-io/contract-guard audit:exports` — PASS (existing
+  unrelated unbuilt-package skips only).
+- `pnpm --filter @0xkey-io/contract-guard audit:declarations` — PASS (same
+  unrelated skips).
+- `pnpm --filter @0xkey-io/contract-guard audit:surfaces` — PASS, 23 packages.
+- `git diff --check` — PASS.
+
+### Re-review self-review and remaining concern
+
+- No standard receipt/object or root declaration exposes `paymentId` or a
+  protocol wire type. Seller x402/MPP state remains request-local.
+- UNKNOWN never becomes a fresh 402: official public x402 middleware returns a
+  non-402 boundary response, and raw official mppx HTTP returns 503 without
+  `WWW-Authenticate`. Deterministic credential rejection remains the protocol's
+  native 402.
+- Private stamped settlement and fulfillment requests still set
+  `redirect: "error"`; the redirect tests prove no second-host credential leak.
+- CI/publish select Node 22.12 without changing the whole repository baseline.
+- Remaining external boundary: services do not implement the frozen private
+  charge and fulfillment contracts until Task 4. No deployment or end-to-end
+  service conformance is claimed here.

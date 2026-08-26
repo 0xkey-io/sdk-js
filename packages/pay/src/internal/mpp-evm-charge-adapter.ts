@@ -116,6 +116,22 @@ export function assertMppCredentialHasNoUnknownExtensions(header: string): void 
   assertKnownKeys(methodDetails, ["chainId", "credentialTypes", "decimals", "splits"]);
 }
 
+export function assertMppPayloadHasNoUnknownExtensions(value: unknown): void {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("PAYMENT_CHALLENGE_INVALID: invalid MPP payload");
+  }
+  assertKnownKeys(value, [
+    "from",
+    "nonce",
+    "signature",
+    "to",
+    "type",
+    "validAfter",
+    "validBefore",
+    "value",
+  ]);
+}
+
 function decodeCredentialWire(header: string): Record<string, unknown> & {
   challenge: Record<string, unknown>;
 } {

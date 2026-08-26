@@ -30,6 +30,8 @@ jobs:
 
       - name: Setup JS
         uses: ./.github/actions/js-setup
+        with:
+          node-version: "22.12.0"
 
       - name: Build Pay dependency graph
         run: >-

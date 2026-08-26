@@ -28,6 +28,15 @@ all other rails are outside v1.
 `@x402/*` packages own ordinary x402 client encoding. 0xkey does not copy those
 wire types or codecs.
 
+The direct MPP entry has an exact `mppx@0.8.19` peer so its typed settlement
+boundary error and the consumer's `Mppx.create()` share one class identity.
+For an indeterminate command result, the mppx internal route union still says
+402, but the contained HTTP Response is 503, carries `Retry-After: 2`, and has
+no retry challenge or receipt. Official framework adapters return that Response
+without calling the paid handler. Raw mppx clients do not durably replay a 503;
+the caller must persist and resend the same Authorization credential or use the
+0xkey buyer recovery facade.
+
 ## Seller flow
 
 1. The framework adapter maps the request to one configured route.

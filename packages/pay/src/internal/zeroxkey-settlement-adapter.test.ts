@@ -124,3 +124,90 @@ test.each([
     code: "PAYMENT_STATUS_UNKNOWN",
   });
 });
+
+test.each([
+  [400, "PAYMENT_REQUEST_INVALID", false, undefined],
+  [409, "PAYMENT_INTENT_CONFLICT", false, "22222222-2222-4222-8222-222222222222"],
+  [502, "PAYMENT_SERVICE_UNAVAILABLE", true, undefined],
+  [503, "PAYMENT_STATUS_UNKNOWN", true, "22222222-2222-4222-8222-222222222222"],
+] as const)("preserves structured %i %s settlement errors", async (
+  status,
+  errorCode,
+  retryable,
+  paymentId,
+) => {
+  const adapter = adapterWithResponse(Response.json({
+    errorCode,
+    retryable,
+    ...(paymentId ? { paymentId } : {}),
+  }, { status }));
+
+  await expect(adapter.settle(command)).rejects.toMatchObject({
+    code: errorCode,
+    retryable,
+    ...(paymentId ? { paymentId } : {}),
+  });
+});
+
+test("classifies a strict success:false envelope as deterministic and preserves paymentId", async () => {
+  const adapter = adapterWithResponse(Response.json({
+    settlement: {
+      success: false,
+      transaction: "",
+      network: command.network,
+      payer: command.payer.toUpperCase().replace("0X", "0x"),
+      errorReason: "authorization rejected",
+    },
+    paymentId: "22222222-2222-4222-8222-222222222222",
+  }));
+
+  await expect(adapter.settle(command)).rejects.toMatchObject({
+    code: "PAYMENT_CHALLENGE_INVALID",
+    retryable: false,
+    paymentId: "22222222-2222-4222-8222-222222222222",
+  });
+});
+
+test("accepts checksum/case differences for the same validated EVM payer", async () => {
+  const alphabeticPayer = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
+  const adapter = adapterWithResponse(Response.json({
+    settlement: {
+      success: true,
+      transaction: `0x${"ab".repeat(32)}`,
+      network: command.network,
+      payer: alphabeticPayer.toUpperCase().replace("0X", "0x"),
+    },
+    paymentId: "22222222-2222-4222-8222-222222222222",
+  }));
+
+  await expect(adapter.settle({ ...command, payer: alphabeticPayer })).resolves.toMatchObject({
+    reference: `0x${"ab".repeat(32)}`,
+  });
+});
+
+test("treats malformed or status-mismatched error envelopes as indeterminate", async () => {
+  for (const response of [
+    Response.json({ errorCode: "PAYMENT_INTENT_CONFLICT", retryable: false }, { status: 503 }),
+    Response.json({ errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true, secret: "leak" }, { status: 503 }),
+  ]) {
+    await expect(adapterWithResponse(response).settle(command)).rejects.toMatchObject({
+      code: "PAYMENT_STATUS_UNKNOWN",
+      retryable: true,
+    });
+  }
+});
+
+function adapterWithResponse(response: Response): ZeroXkeySettlementAdapter {
+  return new ZeroXkeySettlementAdapter({
+    network: "eip155:84532",
+    organizationId: "11111111-1111-4111-8111-111111111111",
+    stamper: {
+      async stampRequest() {
+        return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" };
+      },
+    },
+    async fetch() {
+      return response;
+    },
+  });
+}
