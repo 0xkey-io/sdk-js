@@ -41,7 +41,9 @@ jobs:
           --filter='@0xkey-io/viem...'
 
       - name: Typecheck
-        run: pnpm --filter @0xkey-io/pay typecheck:pay-v1
+        run: |
+          pnpm --filter @0xkey-io/pay typecheck
+          pnpm --filter @0xkey-io/pay typecheck:pay-v1
 
       - name: Typecheck the x402 example
         run: pnpm --filter with-x402 exec next typegen && pnpm --filter with-x402 typecheck

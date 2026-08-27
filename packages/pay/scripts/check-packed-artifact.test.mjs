@@ -243,6 +243,22 @@ test("only the dedicated next workflow can mutably publish Pay", async () => {
   assert.ok(changesetConfig.ignore.includes("@0xkey-io/pay"));
 });
 
+test("authoritative Pay workflows run full and public-surface typechecks", async () => {
+  const repositoryRoot = new URL("../../../", import.meta.url);
+  for (const name of ["pay-v1.yml", "pay-publish.yml"]) {
+    const source = await readFile(
+      new URL(`.github/workflows/${name}`, repositoryRoot),
+      "utf8",
+    );
+    assert.match(
+      source,
+      /pnpm --filter @0xkey-io\/pay typecheck(?:\s|$)/,
+      `${name} must run the full package typecheck`,
+    );
+    assert.match(source, /pnpm --filter @0xkey-io\/pay typecheck:pay-v1/);
+  }
+});
+
 test("generic Changesets publisher hides Pay and always restores its manifest", async () => {
   const fixtureRoot = await mkdtemp(join(tmpdir(), "oxkey-pay-publisher-"));
   const changesetRoot = join(fixtureRoot, ".changeset");

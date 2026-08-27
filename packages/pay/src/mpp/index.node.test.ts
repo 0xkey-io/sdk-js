@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Challenge, Credential, Errors } from "mppx";
-import { Mppx } from "mppx/server";
+import { Mppx, Transport } from "mppx/server";
 import { authorizationDomain, authorizationTypes, challengeHash } from "mppx/evm";
 import { assets, charge } from "mppx/evm/server";
 import { privateKeyToAccount } from "viem/accounts";
@@ -67,7 +67,9 @@ test("transport preserves ordinary non-boundary mppx error responses", async () 
   assert.equal(result.status, 402);
   if (result.status !== 402) throw new Error("expected transport response");
   const challenge = Challenge.fromResponse(result.challenge.clone());
-  const response = await method.transport.respondChallenge({
+  const transport = method.transport as unknown as Transport.Http | undefined;
+  assert.ok(transport);
+  const response = await transport.respondChallenge({
     challenge,
     error: new Errors.BadRequestError({ reason: "ordinary bad request" }),
     input: request,
@@ -317,7 +319,9 @@ test("raw credential guard accepts every pinned standard challenge field", async
     header: "Authorization",
     meta: { tenant: "merchant" },
   });
-  assert.doesNotThrow(() => method.transport.getCredential(new Request(
+  const transport = method.transport as unknown as Transport.Http | undefined;
+  assert.ok(transport);
+  assert.doesNotThrow(() => transport.getCredential(new Request(
     "https://merchant.example/weather",
     { headers: { Authorization: encodeCredential(wire) } },
   )));
@@ -329,19 +333,30 @@ async function validPayload(challenge: ReturnType<typeof Challenge.fromResponse>
   );
   const nonce = challengeHash(challenge);
   const validBefore = (Math.floor(Date.now() / 1000) + 300).toString();
+  const { amount, currency, methodDetails, recipient } = challenge.request;
+  if (typeof amount !== "string") throw new Error("expected amount string");
+  if (typeof currency !== "string") throw new Error("expected currency string");
+  assert.match(currency, /^0x[0-9a-fA-F]{40}$/);
+  if (typeof recipient !== "string") throw new Error("expected recipient string");
+  assert.match(recipient, /^0x[0-9a-fA-F]{40}$/);
+  if (!methodDetails || typeof methodDetails !== "object") {
+    throw new Error("expected method details object");
+  }
+  const chainId = (methodDetails as Record<string, unknown>).chainId;
+  if (typeof chainId !== "number") throw new Error("expected chain id number");
   const signature = await account.signTypedData({
     domain: authorizationDomain({
       authorization: { name: "USDC", version: "2" },
-      chainId: challenge.request.methodDetails.chainId,
-      currency: challenge.request.currency,
+      chainId,
+      currency: currency as `0x${string}`,
     }),
     message: {
       from: account.address,
       nonce,
-      to: challenge.request.recipient,
+      to: recipient as `0x${string}`,
       validAfter: 0n,
       validBefore: BigInt(validBefore),
-      value: BigInt(challenge.request.amount),
+      value: BigInt(amount),
     },
     primaryType: "TransferWithAuthorization",
     types: authorizationTypes,
@@ -350,11 +365,11 @@ async function validPayload(challenge: ReturnType<typeof Challenge.fromResponse>
     from: account.address,
     nonce,
     signature,
-    to: challenge.request.recipient,
+    to: recipient,
     type: "authorization" as const,
     validAfter: "0",
     validBefore,
-    value: challenge.request.amount,
+    value: amount,
   };
 }
 

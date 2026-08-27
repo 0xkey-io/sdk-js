@@ -122,7 +122,7 @@ test("Express cancels the upstream reader and cleans drain listeners when downst
     status() { return this; },
     setHeader() {},
     write() {
-      queueMicrotask(() => this.emit("close"));
+      queueMicrotask(() => response.emit("close"));
       return false;
     },
     end: jest.fn(),
@@ -155,7 +155,7 @@ test("Express cancels upstream and forwards a downstream error without leaking l
   const downstream = new Error("socket failed");
   const response: any = Object.assign(new EventEmitter(), {
     status() { return this; }, setHeader() {},
-    write() { queueMicrotask(() => this.emit("error", downstream)); return false; },
+    write() { queueMicrotask(() => response.emit("error", downstream)); return false; },
     end: jest.fn(),
   });
   const next = jest.fn();

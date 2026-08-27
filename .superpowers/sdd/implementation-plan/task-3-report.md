@@ -791,3 +791,81 @@ gated operation, not a result claimed by Task 3.
 
 No publish, push, tag, deploy, registry mutation, or network access occurred.
 No round-4 concern remains.
+
+## Controller full-typecheck closure (2026-08-27)
+
+Controller verification exposed that the Task 3 release evidence had exercised
+only `typecheck:pay-v1`, while the package's existing `typecheck` script also
+includes its test sources. The production-only surface remained clean, but the
+full package gate failed on test fixtures. This closure fixes those test types
+without widening or weakening any production contract, and makes both
+authoritative Pay workflows run both typecheck surfaces.
+
+### RED/GREEN evidence
+
+- Full package typecheck:
+  - RED: `pnpm --filter @0xkey-io/pay typecheck`
+  - result: exit 2 with 21 test-source diagnostics. The failures covered the
+    Express emitter mock, `.mts`/`.ts` imports in a no-emit test config,
+    optional MPP transport typing, lossy MPP `unknown` fields, the `payTo`
+    address literal, spreads of unknown payloads, a type-only `PayError`
+    import, and exact optional-property construction. No production module was
+    implicated.
+  - GREEN: after the focused fixes, the same command exited 0. A subsequent
+    clean-baseline replay (with only the no-emit import setting retained)
+    reproduced 16 remaining diagnostics, and the final command again exited 0.
+- Authoritative release gate:
+  - RED:
+    `node --test --test-name-pattern='authoritative Pay workflows' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 0/1 passed because `pay-v1.yml` and `pay-publish.yml` ran only
+    `typecheck:pay-v1`.
+  - GREEN: the same focused command passed 1/1 after both workflows ran the
+    full package `typecheck` before `typecheck:pay-v1`.
+
+### Design decisions and self-review
+
+1. `allowImportingTsExtensions` is enabled only in
+   `tsconfig.typecheck.json`, whose `noEmit: true` makes source-extension
+   imports valid and prevents emitted JavaScript from retaining TypeScript
+   extensions. The public build/typecheck configuration is unchanged.
+2. Test values from pinned MPP wire types remain `unknown` until explicit
+   runtime guards establish strings, addresses, an object, and numeric chain
+   ID. The method transport is asserted at the test seam as the official
+   `Transport.Http` runtime contract; production method types are unchanged.
+3. Exact optional properties are constructed by omitting `init` when absent,
+   test address constants retain their template-literal type, and credential
+   payloads are proven objects before spread. No `any`, ignore directive, or
+   source-error exclusion was added to hide a production error.
+4. The artifact regression test covers both authoritative Pay workflows so a
+   future removal of either full or public-surface typecheck fails the existing
+   release-safety suite.
+
+### Files
+
+- `.github/workflows/pay-v1.yml`
+- `.github/workflows/pay-publish.yml`
+- `packages/pay/tsconfig.typecheck.json`
+- `packages/pay/scripts/check-packed-artifact.test.mjs`
+- `packages/pay/src/frameworks.test.ts`
+- `packages/pay/src/mpp/index.node.test.ts`
+- `packages/pay/src/server.node.test.ts`
+- `packages/pay/src/x402/index.test.ts`
+- `.superpowers/sdd/implementation-plan/task-3-report.md`
+
+### Final verification
+
+- `pnpm --filter @0xkey-io/pay typecheck` — PASS.
+- `pnpm --filter @0xkey-io/pay typecheck:pay-v1` — PASS.
+- `pnpm --filter @0xkey-io/pay test:pay-v1` — PASS: 7 Jest suites / 126 tests;
+  Node tests 20/20.
+- `pnpm --filter @0xkey-io/pay test` — PASS: 10 Jest suites / 182 tests.
+- `pnpm --filter @0xkey-io/pay artifact:test` — PASS: 12/12, including the
+  authoritative dual-typecheck workflow assertion.
+- `pnpm --filter @0xkey-io/pay pins:check` — PASS.
+- `pnpm --filter @0xkey-io/pay docs:check` — PASS.
+- `pnpm --filter @0xkey-io/pay test:interop` — PASS, including ESM/CJS build,
+  official x402/native MPP smoke, and pinned mppx validation.
+- `git diff --check` — PASS.
+
+No publish, push, tag, deploy, registry mutation, or network access occurred.
+No controller full-typecheck concern remains.

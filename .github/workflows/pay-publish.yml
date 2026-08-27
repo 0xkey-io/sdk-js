@@ -140,7 +140,9 @@ jobs:
         run: pnpm --filter @0xkey-io/pay docs:check
 
       - name: Typecheck Pay
-        run: pnpm --filter @0xkey-io/pay typecheck:pay-v1
+        run: |
+          pnpm --filter @0xkey-io/pay typecheck
+          pnpm --filter @0xkey-io/pay typecheck:pay-v1
 
       - name: Test Pay
         run: pnpm --filter @0xkey-io/pay test:pay-v1

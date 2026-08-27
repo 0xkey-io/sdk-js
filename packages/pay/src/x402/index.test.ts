@@ -10,7 +10,7 @@ import type {
   PaymentPayload,
   PaymentRequirements,
 } from "@x402/core/types";
-import { PayError } from "../errors";
+import type { PayError } from "../errors";
 import { create0xkeyFacilitatorClient } from "./index.mts";
 import type { RequestStampInput, RequestStamper } from "../xstamp";
 
@@ -61,7 +61,7 @@ describe("create0xkeyFacilitatorClient", () => {
     const { inputs, stamper } = fakeStamper();
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetch = jest.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
-      calls.push({ url: String(url), init });
+      calls.push(init === undefined ? { url: String(url) } : { url: String(url), init });
       if (String(url).endsWith("/verify")) {
         return Response.json({ isValid: true, payer: payload.payload.authorization.from });
       }

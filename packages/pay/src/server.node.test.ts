@@ -12,7 +12,7 @@ import { createPayServer } from "./server.ts";
 import { createPayClient, type PendingPaymentRecord } from "./client.ts";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
-const PAY_TO = "0x1111111111111111111111111111111111111111";
+const PAY_TO = "0x1111111111111111111111111111111111111111" as const;
 const TEST_PAYER = privateKeyToAccount(
   "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 ).address;
@@ -571,19 +571,21 @@ test("MPP real credential is validated before command settlement and returns a s
 
   assert.match(authorizationHeader, /^Payment /);
   const submitted = Credential.deserialize(authorizationHeader);
+  assert.ok(submitted.payload && typeof submitted.payload === "object");
+  const submittedPayload = submitted.payload as Record<string, unknown>;
   const invalidCredentials = [
     "not-a-credential",
     Credential.serialize({
       ...submitted,
-      payload: { ...submitted.payload, value: "9999" },
+      payload: { ...submittedPayload, value: "9999" },
     }),
     Credential.serialize({
       ...submitted,
-      payload: { ...submitted.payload, to: "0x2222222222222222222222222222222222222222" },
+      payload: { ...submittedPayload, to: "0x2222222222222222222222222222222222222222" },
     }),
     Credential.serialize({
       ...submitted,
-      payload: { ...submitted.payload, validBefore: "1" },
+      payload: { ...submittedPayload, validBefore: "1" },
     }),
     Credential.serialize({
       ...submitted,
