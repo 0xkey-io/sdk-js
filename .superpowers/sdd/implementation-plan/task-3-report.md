@@ -6,6 +6,9 @@ Implementation commit: `b95ada0a2` (`feat(pay): add GA server protocol adapters`
 
 Review-round implementation commit: `d11452f56` (`fix(pay): close GA protocol adapter review`)
 
+Round-3 implementation commit: `260132339b5c38afbafde24e0d75efed1a34a64d`
+(`fix(pay): isolate dedicated release path`)
+
 Reviewed base: `7811fec0fe79c7c9cf5ef2965f6dc8ad5a32c116`
 
 ## Outcome
