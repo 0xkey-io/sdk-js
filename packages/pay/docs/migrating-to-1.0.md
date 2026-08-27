@@ -60,6 +60,18 @@ at least 32 UTF-8 bytes. The seller is always upfront: settlement precedes the
 handler. Use the handler's private `paymentId` for idempotency, but never copy it
 into x402 objects, MPP credentials, standard receipts, or public headers.
 
+Key-backed constructors now reject malformed or mismatched P-256 credentials
+immediately, including MPP-only sellers before an unsigned challenge can be
+offered. Use a matching 33-byte compressed public key (`02`/`03` plus 64 hex
+characters) and a complete 32-byte private scalar (64 hex characters, non-zero
+and below the P-256 group order). Both hex letter cases are accepted; prefixes,
+whitespace, and shortened scalars are not. Replace dummy credentials in local
+tests with synthetic valid pairs. Failures are redacted `PayError` instances:
+`PAY_PROFILE_INVALID`, phase `configuration`, `retryable: false`, and no
+`paymentId` or retained crypto cause. Custom `RequestStamper` injection remains
+unchanged and does not validate remote credentials; direct adapters still
+require exactly one of `apiKey` and `stamper`.
+
 Custom upstream wiring moved to dedicated entries. Use
 `create0xkeyFacilitatorClient` from `@0xkey-io/pay/x402` for an official x402
 resource server, or `create0xkeyEvmChargeMethod` from `@0xkey-io/pay/mpp` with

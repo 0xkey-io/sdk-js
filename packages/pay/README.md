@@ -45,6 +45,21 @@ app.get(
 The same core has `@0xkey-io/pay/hono` and `@0xkey-io/pay/next` adapters.
 The handler receives `paymentId`. Use it as the idempotency key for writes.
 
+Key-backed Seller and direct x402/MPP adapters validate `apiKey`
+synchronously at construction, before any payment offer or API request. Supply
+a matching P-256 pair: `publicKey` is 33-byte compressed hex (66 characters,
+`02` or `03` prefix); `privateKey` is a 32-byte scalar encoded as 64 hex
+characters, with value greater than zero and below the P-256 group order.
+Uppercase and lowercase hex are accepted without changing the supplied object;
+`0x` prefixes and whitespace are not accepted. The validated key values are
+copied for subsequent stamps, so later caller mutations cannot change the
+signing identity. Invalid or missing material
+throws `PayError` with code `PAY_PROFILE_INVALID`, phase `configuration`,
+`retryable: false`, and no `paymentId` or key-bearing cause. This local check
+does not prove remote admission or API authorization. Direct adapters still
+accept exactly one of `apiKey` or a custom `RequestStamper`; custom stampers
+are not probed or locally credential-validated.
+
 `protect()` verifies and settles before the handler. It reports every successful
 handler as `FULFILLED` through the private signed fulfillment endpoint and every
 throw or 5xx as `FAILED`. MPP receipts are attached only to successful handlers;

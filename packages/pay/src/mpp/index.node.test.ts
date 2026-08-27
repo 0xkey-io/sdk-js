@@ -236,7 +236,10 @@ test("repeated createPayServer challenge construction leaves upstream schema unc
       network: "eip155:84532", organizationId: ORG,
       payTo: "0x1111111111111111111111111111111111111111",
       protocols: ["mpp"], mppSecretKey: "01234567890123456789012345678901",
-      apiKey: { publicKey: "unused", privateKey: "unused" },
+      apiKey: {
+        publicKey: "036b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296",
+        privateKey: "0000000000000000000000000000000000000000000000000000000000000001",
+      },
     });
     const response = await seller.protect({ price: "$0.01" }, () => new Response("paid"))(
       new Request(`https://merchant.example/weather?i=${index}`),

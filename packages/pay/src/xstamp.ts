@@ -1,4 +1,6 @@
 import { ApiKeyStamper, SignatureFormat } from "@0xkey-io/api-key-stamper";
+import { getPublicKey } from "@0xkey-io/crypto";
+import { PayError } from "./errors";
 
 export type WireProtocol = "x402" | "mpp" | "admin";
 
@@ -23,9 +25,34 @@ export interface RequestStamper {
 }
 
 export function createXStampV2Stamper(apiKey: PayApiKey): RequestStamper {
+  let publicKey: string;
+  let privateKey: string;
+  try {
+    ({ publicKey, privateKey } = apiKey);
+    if (
+      typeof publicKey !== "string" ||
+      publicKey.length !== 66 ||
+      !/^0[23][0-9a-f]{64}$/i.test(publicKey) ||
+      typeof privateKey !== "string" ||
+      privateKey.length !== 64 ||
+      !/^[0-9a-f]{64}$/i.test(privateKey) ||
+      Array.from(getPublicKey(privateKey, true), (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join("") !== publicKey.toLowerCase()
+    ) {
+      throw new Error("invalid key material");
+    }
+  } catch {
+    // Crypto errors can include key material; never retain their cause.
+    throw new PayError(
+      "PAY_PROFILE_INVALID",
+      "apiKey must be a matching P-256 key pair",
+      { phase: "configuration" },
+    );
+  }
   const signer = new ApiKeyStamper({
-    apiPublicKey: apiKey.publicKey,
-    apiPrivateKey: apiKey.privateKey,
+    apiPublicKey: publicKey,
+    apiPrivateKey: privateKey,
   });
   return {
     async stampRequest(input) {
@@ -41,7 +68,7 @@ export function createXStampV2Stamper(apiKey: PayApiKey): RequestStamper {
       const signature = await signer.sign(canonical, SignatureFormat.Der);
       const stamp = {
         version: "2",
-        publicKey: apiKey.publicKey,
+        publicKey,
         signature,
         scheme: "SIGNATURE_SCHEME_TK_API_P256",
         timestampMs,

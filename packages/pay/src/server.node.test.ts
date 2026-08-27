@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { inspect } from "node:util";
 import { decodePaymentRequiredHeader } from "@x402/core/http";
 import { x402Client } from "@x402/core/client";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
@@ -8,7 +9,10 @@ import { toClientEvmSigner } from "@x402/evm";
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { privateKeyToAccount } from "viem/accounts";
 import { Credential } from "mppx";
-import { createPayServer } from "./server.ts";
+import { createPayServer, type PayApiKey } from "./server/index.ts";
+import { PayError } from "./index.ts";
+import { create0xkeyFacilitatorClient } from "./x402/index.mts";
+import { create0xkeyEvmChargeMethod } from "./mpp/index.mts";
 import { createPayClient, type PendingPaymentRecord } from "./client.ts";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
@@ -24,6 +28,141 @@ const apiKey = {
   publicKey: readFileSync(new URL("api-key.public", fixtureRoot), "utf8").trim(),
   privateKey: readFileSync(new URL("api-key.private", fixtureRoot), "utf8").trim(),
 };
+
+// Public deterministic test vector: P-256 generator, private scalar 1.
+const syntheticApiKey = Object.freeze({
+  publicKey: "036b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296",
+  privateKey: "0000000000000000000000000000000000000000000000000000000000000001",
+});
+
+const invalidApiKeys: ReadonlyArray<readonly [string, unknown]> = [
+  ["malformed synthetic key", { publicKey: "synthetic-public-key", privateKey: "synthetic-private-key" }],
+  ["missing key", undefined],
+  ["null key", null],
+  ["non-object key", "synthetic-api-key"],
+  ["missing public key", { privateKey: syntheticApiKey.privateKey }],
+  ["missing private key", { publicKey: syntheticApiKey.publicKey }],
+  ["non-string public key", { ...syntheticApiKey, publicKey: 123 }],
+  ["non-string private key", { ...syntheticApiKey, privateKey: 123 }],
+  ["empty public key", { ...syntheticApiKey, publicKey: "" }],
+  ["empty private key", { ...syntheticApiKey, privateKey: "" }],
+  ["short public key", { ...syntheticApiKey, publicKey: syntheticApiKey.publicKey.slice(2) }],
+  ["long public key", { ...syntheticApiKey, publicKey: `${syntheticApiKey.publicKey}00` }],
+  ["short private key", { ...syntheticApiKey, privateKey: "01" }],
+  ["long private key", { ...syntheticApiKey, privateKey: `00${syntheticApiKey.privateKey}` }],
+  ["odd private key", { ...syntheticApiKey, privateKey: syntheticApiKey.privateKey.slice(1) }],
+  ["non-hex public key", { ...syntheticApiKey, publicKey: `03${"gg".repeat(32)}` }],
+  ["non-hex private key", { ...syntheticApiKey, privateKey: "gg".repeat(32) }],
+  ["prefixed public key", { ...syntheticApiKey, publicKey: `0x${syntheticApiKey.publicKey}` }],
+  ["prefixed private key", { ...syntheticApiKey, privateKey: `0x${syntheticApiKey.privateKey}` }],
+  ["public key with trailing newline", { ...syntheticApiKey, publicKey: `${syntheticApiKey.publicKey}\n` }],
+  ["private key with trailing newline", { ...syntheticApiKey, privateKey: `${syntheticApiKey.privateKey}\n` }],
+  ["uncompressed public key", { ...syntheticApiKey, publicKey: `04${syntheticApiKey.publicKey.slice(2)}4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5` }],
+  ["invalid public prefix", { ...syntheticApiKey, publicKey: `05${syntheticApiKey.publicKey.slice(2)}` }],
+  ["off-curve public key", { ...syntheticApiKey, publicKey: `03${"ff".repeat(32)}` }],
+  ["zero scalar", { ...syntheticApiKey, privateKey: "00".repeat(32) }],
+  ["scalar at group order", { ...syntheticApiKey, privateKey: "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551" }],
+  ["scalar above group order", { ...syntheticApiKey, privateKey: "ff".repeat(32) }],
+  ["mismatched pair", { ...syntheticApiKey, privateKey: "0000000000000000000000000000000000000000000000000000000000000002" }],
+  ["opposite public parity", { ...syntheticApiKey, publicKey: `02${syntheticApiKey.publicKey.slice(2)}` }],
+];
+
+function assertRedactedKeyError(error: unknown, key: unknown): boolean {
+  assert.ok(error instanceof PayError);
+  assert.equal(error.code, "PAY_PROFILE_INVALID");
+  assert.equal(error.phase, "configuration");
+  assert.equal(error.retryable, false);
+  assert.equal(Object.hasOwn(error, "paymentId"), false);
+  assert.equal(error.cause, undefined);
+  const diagnostics = `${String(error)}\n${JSON.stringify(error)}\n${inspect(error, { showHidden: true })}`;
+  const values = typeof key === "object" && key !== null ? Object.values(key) : [key];
+  for (const value of [...values, syntheticApiKey.publicKey, syntheticApiKey.privateKey]) {
+    if (typeof value === "string" && value.length >= 4) {
+      assert.equal(diagnostics.includes(value), false, "key material must be redacted");
+    }
+  }
+  return true;
+}
+
+for (const protocols of [["x402"], ["mpp"], ["x402", "mpp"]] as const) {
+  test(`server rejects invalid API keys synchronously before ${protocols.join("+")} offers`, () => {
+    let networkCalls = 0;
+    for (const [label, key] of invalidApiKeys) {
+      assert.throws(() => {
+        createPayServer({
+          network: "eip155:84532", organizationId: ORG, payTo: PAY_TO,
+          protocols, mppSecretKey: "01234567890123456789012345678901",
+          apiKey: key as PayApiKey,
+          async fetch() { networkCalls += 1; throw new Error("unexpected transport"); },
+        });
+      }, (error) => assertRedactedKeyError(error, key), label);
+    }
+    assert.equal(networkCalls, 0);
+  });
+
+  test(`valid frozen API keys still offer ${protocols.join("+")} without invoking the handler`, async () => {
+    // n - 1 is valid and its public point is the generator with opposite parity.
+    const key = Object.freeze({
+      publicKey: `02${syntheticApiKey.publicKey.slice(2)}`.toUpperCase(),
+      privateKey: "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632550",
+    });
+    let handlerCalls = 0;
+    const server = createPayServer({
+      network: "eip155:84532", organizationId: ORG, payTo: PAY_TO, apiKey: key,
+      protocols, mppSecretKey: "01234567890123456789012345678901",
+      async fetch() {
+        return Response.json({
+          kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+          extensions: [], signers: {},
+        });
+      },
+    });
+    const response = await server.protect({ price: "$0.01" }, () => {
+      handlerCalls += 1;
+      return new Response("must not run");
+    })(new Request("https://merchant.example/weather"));
+    assert.equal(response.status, 402);
+    assert.equal(response.headers.has("PAYMENT-REQUIRED"), protocols.some((protocol) => protocol === "x402"));
+    assert.equal(response.headers.has("WWW-Authenticate"), protocols.some((protocol) => protocol === "mpp"));
+    assert.equal(handlerCalls, 0);
+  });
+}
+
+for (const [label, create] of [
+  ["x402", create0xkeyFacilitatorClient],
+  ["mpp", create0xkeyEvmChargeMethod],
+] as const) {
+  test(`${label} adapter rejects invalid API keys synchronously with redacted configuration errors`, () => {
+    let networkCalls = 0;
+    for (const [caseName, key] of invalidApiKeys) {
+      assert.throws(() => create({
+        network: "eip155:84532", organizationId: ORG, payTo: PAY_TO,
+        apiKey: key as PayApiKey,
+        async fetch() { networkCalls += 1; throw new Error("unexpected transport"); },
+      }), (error) => assertRedactedKeyError(error, key), caseName);
+    }
+    assert.equal(networkCalls, 0);
+  });
+
+  test(`${label} adapter preserves custom stamper injection and exactly-one authentication`, () => {
+    let stampCalls = 0;
+    const options = {
+      network: "eip155:84532" as const, organizationId: ORG, payTo: PAY_TO,
+    };
+    const stamper = {
+      async stampRequest() {
+        stampCalls += 1;
+        return { stampHeaderName: "X-Stamp" as const, stampHeaderValue: "external-stamper" };
+      },
+    };
+    assert.doesNotThrow(() => create({ ...options, stamper }));
+    assert.doesNotThrow(() => create({ ...options, apiKey: syntheticApiKey }));
+    assert.equal(stampCalls, 0);
+    assert.throws(() => create(options), (error) => assertRedactedKeyError(error, undefined));
+    assert.throws(() => create({ ...options, stamper, apiKey: syntheticApiKey }),
+      (error) => assertRedactedKeyError(error, syntheticApiKey));
+  });
+}
 
 function settlementEnvelope(transaction: string, paymentId: string, payer = TEST_PAYER) {
   return {

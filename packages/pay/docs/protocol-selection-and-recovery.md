@@ -42,6 +42,13 @@ the caller must persist and resend the same Authorization credential or use the
 
 ## Seller flow
 
+Before this flow, key-backed construction validates complete compressed P-256
+hex encoding, private scalar range, and public/private pairing locally through
+the shared X-Stamp factory. Invalid material fails synchronously with redacted
+`PAY_PROFILE_INVALID` (`configuration`, not retryable, no `paymentId` or crypto
+cause), including MPP-only offers. Custom adapter stampers remain an explicit
+injection contract; their remote credentials are not locally validated.
+
 1. The framework adapter maps the request to one configured route.
 2. The official x402 resource server and native mppx method independently
    create the enabled challenges; the facade merges only standard headers.

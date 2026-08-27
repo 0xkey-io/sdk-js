@@ -2,6 +2,12 @@
 
 ## 1.0.0-rc.1
 
+- Validate key-backed Pay configuration synchronously before offers or API
+  requests: require complete compressed P-256 public-key/private-scalar hex,
+  a valid scalar, and a matching pair. Reject invalid material with redacted
+  `PAY_PROFILE_INVALID` configuration errors (not retryable, no `paymentId`
+  or retained crypto cause). Snapshot validated key values for future stamps
+  without freezing caller objects; preserve custom stamper injection.
 - Replace the pre-GA callable buyer with `createPayClient()` and explicit
   network, policy, durable recovery, and receipt-verification configuration.
 - Add stable structured `PayError` fields and redacted pending summaries.
