@@ -9,6 +9,9 @@ Review-round implementation commit: `d11452f56` (`fix(pay): close GA protocol ad
 Round-3 implementation commit: `260132339b5c38afbafde24e0d75efed1a34a64d`
 (`fix(pay): isolate dedicated release path`)
 
+Round-4 implementation commit: `6d608b6e576e4d56f7c9322b579b2fe7173e2e8b`
+(`fix(pay): close release authority gaps`)
+
 Reviewed base: `7811fec0fe79c7c9cf5ef2965f6dc8ad5a32c116`
 
 ## Outcome
