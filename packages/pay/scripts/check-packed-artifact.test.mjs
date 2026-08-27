@@ -321,6 +321,50 @@ test(
   },
 );
 
+test("accepts exact packed publication metadata with reversed JSON key order", async () => {
+  const fixtureRoot = await mkdtemp(join(tmpdir(), "oxkey-pay-key-order-"));
+  const packageRoot = join(fixtureRoot, "package");
+  const tarball = join(fixtureRoot, "reordered-pay.tgz");
+  try {
+    await mkdir(packageRoot);
+    await writeFile(
+      join(packageRoot, "package.json"),
+      `${JSON.stringify(
+        publicManifest({
+          repository: {
+            directory: "packages/pay",
+            url: "git+https://github.com/0xkey-io/sdk-js.git",
+            type: "git",
+          },
+          publishConfig: {
+            tag: "next",
+            registry: "https://registry.npmjs.org/",
+            access: "public",
+          },
+        }),
+      )}\n`,
+    );
+    await execFileAsync("tar", ["-czf", tarball, "-C", fixtureRoot, "package"]);
+    await assert.rejects(
+      execFileAsync(process.execPath, [
+        checker.pathname,
+        "--verify-only",
+        tarball,
+      ]),
+      (error) => {
+        assert.doesNotMatch(
+          error.stderr,
+          /Packed (?:repository|publishConfig)/,
+        );
+        assert.match(error.stderr, /missing package\/dist\/admin\/index\.js/);
+        return true;
+      },
+    );
+  } finally {
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 for (const dependencyGroup of [
   "dependencies",
   "optionalDependencies",

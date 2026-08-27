@@ -618,7 +618,9 @@ publish`, and the safe publisher module was absent.
 1. Root `.nvmrc` is exactly `v22.12.0`. The initial scanner discovered direct
    Pay references and common workspace-wide aliases, but did not yet cover
    working-directory, composite/reusable actions, setup conditions, or every
-   unfiltered workspace form. Round-5 adds that missing execution model.
+   unfiltered workspace form. Round 5 attempted to add a universal execution
+   model; that attempt was withdrawn and superseded by the bounded Round-6
+   architecture.
 2. Pinned `@changesets/cli@2.29.7` uses `config.ignore` for release planning,
    but its `publish()` path enumerates all public packages. Therefore ignore
    alone is not a truthful publish boundary. The config ignores Pay plus its
@@ -716,8 +718,8 @@ gated operation, not a result claimed by Task 3.
   - GREEN at round-4: the same focused test passed after normalizing shell
     continuations and recognizing reordered recursive flags. Round-5 later
     demonstrated that this whole-line check still allowed a safe command to
-    mask an unsafe command after `;`; the final per-command model is recorded
-    below.
+    mask an unsafe command after `;`. The per-command model attempted below was
+    also incomplete; it is withdrawn and superseded by Round 6.
 
 ### Round-4 design decisions and self-review
 
@@ -756,8 +758,6 @@ gated operation, not a result claimed by Task 3.
 - `node packages/pay/scripts/check-generic-release-exclusion.mjs` — PASS.
 - `pnpm exec changeset status --verbose` — PASS; Pay is absent from the release
   plan (the CLI emitted only its non-interactive `/dev/tty` warning).
-- `pnpm exec changeset status --verbose` — PASS; Pay and its ignored private
-  consumers are absent from the release plan.
 - `pnpm --filter @0xkey-io/pay test` — PASS: 10 Jest suites / 182 tests.
 - `pnpm --filter @0xkey-io/pay test:pay-v1` — PASS: 7 Jest suites / 126 tests;
   Node tests 20/20.
@@ -791,7 +791,7 @@ full package gate failed on test fixtures. This closure fixes those test types
 without widening or weakening any production contract, and makes both
 authoritative Pay workflows run both typecheck surfaces.
 
-### RED/GREEN evidence
+### Historical attempted RED/GREEN evidence — withdrawn
 
 - Full package typecheck:
   - RED: `pnpm --filter @0xkey-io/pay typecheck`
@@ -812,7 +812,7 @@ authoritative Pay workflows run both typecheck surfaces.
   - GREEN: the same focused command passed 1/1 after both workflows ran the
     full package `typecheck` before `typecheck:pay-v1`.
 
-### Design decisions and self-review
+### Attempted design decisions — withdrawn and superseded by Round 6
 
 1. `allowImportingTsExtensions` is enabled only in
    `tsconfig.typecheck.json`, whose `noEmit: true` makes source-extension
@@ -1129,3 +1129,58 @@ No npm publish (including dry-run), push, tag, deploy, dist-tag mutation, or
 registry write was performed. The npm trusted-publisher/environment setup and
 generic-token restriction remain explicit external release gates, not claimed
 completed state.
+
+## Round-7 P2 cleanup (2026-08-27)
+
+Round 7 leaves the accepted release architecture unchanged. It makes exact
+packed publication metadata comparison insensitive to JSON object member order
+while retaining exact keys, values, types, and plain-object validation, then
+reconciles the operator documentation and historical evidence narrative.
+
+### RED/GREEN evidence
+
+- Reversed-key packed metadata:
+  - RED:
+    `node --test --test-name-pattern='reversed JSON key order' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 0/1 because a semantically identical reversed-key `repository`
+    failed the old `JSON.stringify` comparison at the packed-repository
+    validation boundary.
+  - GREEN: the same command passed 1/1 after using Node's
+    `isDeepStrictEqual`. The validator still requires a non-null object,
+    rejects arrays and non-plain prototypes, and deep-strictly rejects missing,
+    additional, or differently typed members.
+
+### Documentation and evidence cleanup
+
+- Removed the duplicated Round-4 Changesets status bullet; distinct historical
+  runs in other round sections remain separate evidence.
+- Marked the earlier Round-3/Round-4 references to the universal Round-5
+  execution model as attempted, withdrawn, and superseded at their points of
+  occurrence. The Round-5 evidence and design headings now carry the same
+  withdrawn status as the section introduction.
+- `RELEASING.md` now distinguishes 22 generic source-public packages from the
+  dedicated public Pay artifact, matching the artifact-aware contract guard's
+  total of 23 externally public artifacts.
+
+### Files
+
+- `packages/pay/scripts/check-packed-artifact.mjs`
+- `packages/pay/scripts/check-packed-artifact.test.mjs`
+- `RELEASING.md`
+- `.superpowers/sdd/implementation-plan/task-3-report.md`
+
+### Final verification
+
+- `npm_config_offline=true pnpm --filter @0xkey-io/pay artifact:test` — PASS:
+  12/12, including the reversed-key packed fixture and real cache-only public
+  artifact pack/install smoke.
+- `node .github/scripts/check-pay-publish-workflow.mjs` — PASS.
+- `pnpm --filter @0xkey-io/pay docs:check` — PASS.
+- `pnpm --filter @0xkey-io/pay typecheck` — PASS.
+- `pnpm --filter @0xkey-io/contract-guard audit:surfaces` — PASS: 23 packages.
+- `pnpm exec prettier --check` over all four Round-7 files — PASS.
+- `git diff --check` — PASS; only the four intended Round-7 paths were modified
+  before commit.
+
+No npm publish, push, deploy, network mutation, dist-tag mutation, or registry
+write was performed.

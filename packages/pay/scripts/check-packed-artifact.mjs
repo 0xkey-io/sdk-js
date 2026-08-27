@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { promisify } from "node:util";
+import { isDeepStrictEqual, promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const packageRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -79,11 +79,14 @@ async function readPackedManifest(tarball) {
 }
 
 function assertExactObject(actual, expected, label) {
+  const prototype =
+    actual && typeof actual === "object" ? Object.getPrototypeOf(actual) : null;
   if (
     !actual ||
     typeof actual !== "object" ||
     Array.isArray(actual) ||
-    JSON.stringify(actual) !== JSON.stringify(expected)
+    prototype !== Object.prototype ||
+    !isDeepStrictEqual(actual, expected)
   ) {
     throw new Error(`${label} must be ${JSON.stringify(expected)}`);
   }

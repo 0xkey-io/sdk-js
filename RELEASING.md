@@ -42,7 +42,7 @@ The publish job in `.github/workflows/version-and-publish.yml` uses the `product
 
 ## Package scope
 
-All 22 public packages publish under `@0xkey-io/*`:
+The repository has 22 generic source-public packages under `@0xkey-io/*`:
 
 ```bash
 npm install @0xkey-io/sdk-browser
@@ -50,7 +50,11 @@ npm install @0xkey-io/react-wallet-kit
 npm install @0xkey-io/core @0xkey-io/viem
 ```
 
-Internal packages (`@0xkey-io/internal-*`, `@0xkey-io/contract-guard`, `@0xkey-io/jest-config`) are `private: true` and are not published.
+Pay adds one dedicated public artifact while remaining `private: true` in
+source, so the artifact-aware contract guard covers 23 externally public
+artifacts in total. Other private packages, including
+`@0xkey-io/internal-*`, `@0xkey-io/contract-guard`, and
+`@0xkey-io/jest-config`, are not published.
 
 ## First release (manual, except Pay)
 
