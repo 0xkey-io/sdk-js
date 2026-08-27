@@ -35,6 +35,36 @@ const BUILDER = "https://github.com/actions/runner/github-hosted";
 const SLICE_LIMIT = 1024 * 1024;
 const PAYLOAD_LIMIT = 256 * 1024;
 
+// Node caches some CA inputs before JavaScript runs. Never clear them and
+// assume native TLS forgot. Direct launch with no runtime flags is required;
+// the snapshot also prevents later in-process deletion from enabling capture.
+// This is not a sandbox for pre-entry preload/env-file/native startup effects.
+const unsupportedRuntimeEnvironment = [
+  "NODE_EXTRA_CA_CERTS",
+  "NODE_OPTIONS",
+  "NODE_TLS_REJECT_UNAUTHORIZED",
+  "NODE_USE_SYSTEM_CA",
+  "NODE_DEBUG",
+  "NODE_DEBUG_NATIVE",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+  "SSLKEYLOGFILE",
+  "OPENSSL_CONF",
+  "OPENSSL_CONF_INCLUDE",
+  "OPENSSL_MODULES",
+  "OPENSSL_ENGINES",
+];
+const hasUnsupportedRuntime = () =>
+  process.execArgv.length !== 0 ||
+  unsupportedRuntimeEnvironment.some((name) =>
+    Object.hasOwn(process.env, name),
+  );
+const unsupportedAtEntry = hasUnsupportedRuntime();
+function admitNativeRuntime() {
+  if (unsupportedAtEntry || hasUnsupportedRuntime())
+    fail("RUNTIME_ENVIRONMENT");
+}
+
 function headers(response, kind, limit) {
   if (response.status !== 200) fail("HTTP_STATUS");
   if (
@@ -113,6 +143,7 @@ function headers(response, kind, limit) {
 // to local unit tests; the CLI has no transport, endpoint, CA or executable flag.
 export function requestRegistry(options, request = https.request) {
   return new Promise((accept, reject) => {
+    admitNativeRuntime();
     const agent = new https.Agent({
       keepAlive: false,
       maxSockets: 1,
@@ -527,6 +558,7 @@ if (
       ["--artifact-id", "--artifact-digest"],
     );
     if (process.versions.node !== "24.3.0") fail("RUNTIME");
+    admitNativeRuntime();
     await collectReceipt({
       checkedTar: args["--checked-tar"],
       contextFile: args["--source-context"],

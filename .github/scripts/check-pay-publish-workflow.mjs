@@ -91,6 +91,12 @@ export function checkPayPublishWorkflow(source) {
   );
 
   const workflow = workflowDocument(source, "pay-publish.yml");
+  assert.deepEqual(
+    Object.keys(workflow).sort(),
+    ["jobs", "name", "on", "permissions"],
+    "publisher top-level execution contract must be closed",
+  );
+  assert.equal(workflow.name, "Publish Pay SDK release candidate");
   assert.deepEqual(workflow.on, {
     workflow_dispatch: {
       inputs: {
@@ -113,15 +119,26 @@ export function checkPayPublishWorkflow(source) {
       },
     },
   });
-  assert.equal(workflow.permissions?.contents, "read");
-  assert.equal(
-    workflow.permissions?.["id-token"],
-    "write",
-    "trusted publishing requires top-level id-token: write",
-  );
+  assert.deepEqual(workflow.permissions, {
+    contents: "read",
+    "id-token": "write",
+  });
 
   const publish = workflow.jobs?.publish;
   assert.ok(publish, "pay-publish.yml must have a publish job");
+  assert.deepEqual(
+    Object.keys(publish).sort(),
+    [
+      "env",
+      "environment",
+      "if",
+      "permissions",
+      "runs-on",
+      "steps",
+      "timeout-minutes",
+    ],
+    "publish job must not add execution contexts or unreviewed tar consumers",
+  );
   assert.equal(publish.if, "${{ inputs.confirm_publish }}");
   assert.equal(
     publish["runs-on"],
@@ -129,21 +146,16 @@ export function checkPayPublishWorkflow(source) {
     "trusted publishing requires a GitHub-hosted runner",
   );
   assert.equal(publish.environment, "production");
-  assert.equal(publish["continue-on-error"], undefined);
-  assert.equal(workflow.env, undefined);
-  assert.equal(workflow.defaults, undefined);
-  assert.equal(publish.defaults, undefined);
+  assert.equal(publish["timeout-minutes"], 30);
   assert.deepEqual(publish.env, {
     PUBLIC_NPM_REGISTRY: "https://registry.npmjs.org/",
     PAY_PUBLISH_DEFAULT_BRANCH: "${{ github.event.repository.default_branch }}",
     PAY_PUBLISH_SOURCE_SHA: "${{ inputs.source_sha }}",
   });
-  assert.equal(publish.permissions?.contents, "read");
-  assert.equal(
-    publish.permissions?.["id-token"],
-    "write",
-    "publish job requires id-token: write",
-  );
+  assert.deepEqual(publish.permissions, {
+    contents: "read",
+    "id-token": "write",
+  });
 
   const steps = publish.steps ?? [];
   assert.deepEqual(Object.keys(workflow.jobs), ["publish"]);

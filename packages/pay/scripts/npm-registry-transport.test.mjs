@@ -41,12 +41,10 @@ function syntheticRequest(send, inspect = () => {}) {
   };
 }
 
-test("production HTTPS request ignores ambient proxy, credentials and custom CA discovery", async () => {
+test("production HTTPS request ignores ambient proxy and npm credentials", async () => {
   const hostile = {
     HTTPS_PROXY: "http://SECRET_SENTINEL.invalid",
     NODE_USE_ENV_PROXY: "1",
-    NODE_EXTRA_CA_CERTS: "/SECRET_SENTINEL",
-    NODE_TLS_REJECT_UNAUTHORIZED: "0",
     NPM_CONFIG_USERCONFIG: "/SECRET_SENTINEL",
     NODE_AUTH_TOKEN: "SECRET_SENTINEL",
   };
@@ -92,6 +90,139 @@ test("production HTTPS request ignores ambient proxy, credentials and custom CA 
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
   }
+});
+
+// Real native TLS initialization is the boundary under test. The injected
+// request stops immediately after context creation, before any socket exists.
+const nativeProbe = `
+(async () => {
+  const { createSecureContext } = await import("node:tls");
+  const { requestRegistry } = await import(${JSON.stringify(new URL("./collect-published-npm-receipt.mjs", import.meta.url).href)});
+  try {
+    await requestRegistry(${JSON.stringify(options)}, config => {
+      process.stdout.write("native-context-called\\n");
+      createSecureContext(config);
+      process.stdout.write("native-context-created\\n");
+      throw new Error("stop before opening any socket");
+    });
+  } catch (error) { process.stdout.write(error.message + "\\n"); }
+})();`;
+
+test("fresh native TLS request rejects startup CA/runtime inputs before native discovery", async (t) => {
+  for (const [key, value] of [
+    ["NODE_EXTRA_CA_CERTS", "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL"],
+    ["NODE_OPTIONS", "--use-bundled-ca"],
+    ["NODE_TLS_REJECT_UNAUTHORIZED", "0"],
+    ["NODE_USE_SYSTEM_CA", "1"],
+    ["SSL_CERT_FILE", "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL"],
+    ["SSL_CERT_DIR", "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL"],
+    ["OPENSSL_CONF", "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL"],
+    ["OPENSSL_CONF_INCLUDE", "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL"],
+    ["OPENSSL_MODULES", "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL"],
+    ["OPENSSL_ENGINES", "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL"],
+    ["SSLKEYLOGFILE", "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL"],
+    ["NODE_DEBUG", "tls"],
+    ["NODE_DEBUG_NATIVE", "tls"],
+    ["NODE_EXTRA_CA_CERTS", ""],
+  ])
+    await t.test(key + (value === "" ? " empty" : ""), () => {
+      const result = spawnSync(process.execPath, [], {
+        input: nativeProbe,
+        encoding: "utf8",
+        env: { [key]: value },
+      });
+      assert.equal(result.status, 0);
+      assert.equal(result.stdout, "PAY_NPM_RUNTIME_ENVIRONMENT\n");
+      assert.equal(result.stderr, "");
+      assert.doesNotMatch(
+        result.stdout + result.stderr,
+        /SECRET_SENTINEL|native-context/,
+      );
+    });
+});
+
+test("fresh clean native TLS request constructs verified bundled-root context without sockets", () => {
+  const result = spawnSync(process.execPath, [], {
+    input: nativeProbe,
+    encoding: "utf8",
+    env: {},
+  });
+  assert.equal(result.status, 0);
+  assert.equal(
+    result.stdout,
+    "native-context-called\nnative-context-created\nPAY_NPM_HTTP_TRANSPORT\n",
+  );
+  assert.equal(result.stderr, "");
+});
+
+test("runtime flags cannot select native TLS configuration", () => {
+  const result = spawnSync(process.execPath, ["--use-bundled-ca"], {
+    input: nativeProbe,
+    encoding: "utf8",
+    env: {},
+  });
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, "PAY_NPM_RUNTIME_ENVIRONMENT\n");
+  assert.equal(result.stderr, "");
+});
+
+test("clearing extra CA after importing collector cannot undo its rejected startup environment", () => {
+  const result = spawnSync(process.execPath, [], {
+    input: nativeProbe.replace(
+      "  try {",
+      "  delete process.env.NODE_EXTRA_CA_CERTS;\n  try {",
+    ),
+    encoding: "utf8",
+    env: { NODE_EXTRA_CA_CERTS: "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL" },
+  });
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, "PAY_NPM_RUNTIME_ENVIRONMENT\n");
+  assert.equal(result.stderr, "");
+});
+
+test("adding an unsupported CA input after module entry also rejects before native TLS", () => {
+  const result = spawnSync(process.execPath, [], {
+    input: nativeProbe.replace(
+      "  try {",
+      '  process.env.NODE_EXTRA_CA_CERTS = "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL";\n  try {',
+    ),
+    encoding: "utf8",
+    env: {},
+  });
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, "PAY_NPM_RUNTIME_ENVIRONMENT\n");
+  assert.equal(result.stderr, "");
+});
+
+test("direct collector CLI rejects unsupported startup environment before reading inputs", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      new URL("./collect-published-npm-receipt.mjs", import.meta.url).pathname,
+      "--checked-tar",
+      "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL",
+      "--source-context",
+      "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL",
+      "--expected-version",
+      "1.0.0-rc.1",
+      "--expected-source",
+      "a".repeat(40),
+      "--output",
+      "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL",
+    ],
+    {
+      encoding: "utf8",
+      env: {
+        NODE_EXTRA_CA_CERTS: "/nonexistent/PAY_NPM_NATIVE_SECRET_SENTINEL",
+      },
+    },
+  );
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.equal(
+    result.stderr,
+    `receipt-capture: PAY_NPM_${process.versions.node === "24.3.0" ? "RUNTIME_ENVIRONMENT" : "RUNTIME"}\n`,
+  );
 });
 
 test("HTTPS stream rejects TLS, redirects, truncation, encoding, framing and size", async (t) => {

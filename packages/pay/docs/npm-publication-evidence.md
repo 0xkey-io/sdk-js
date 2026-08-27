@@ -62,11 +62,24 @@ normalization. `dist.signatures` is never a provenance fallback.
 
 The internal HTTPS client uses explicit verified TLS for the fixed hostname
 with the pinned Node runtime's bundled roots, a private agent, no proxy/config/
-credentials/cookies/custom CA discovery, identity encoding and a total 30-second
+credentials/cookies, identity encoding and a total 30-second
 deadline per request. HTTP 200, bounded headers, suitable JSON/gzip/octet-stream
 content types and consistent declared/actual length are mandatory. Only status,
 bounded Date/content-type and local observation time are recorded. They are
 observations, never trusted signature time. There is no automatic retry loop.
+
+Native TLS admission rejects unsupported runtime configuration **before**
+constructing the agent or invoking the request. Any Node runtime flag or presence
+(even an empty value) of `NODE_EXTRA_CA_CERTS`, `NODE_OPTIONS`,
+`NODE_TLS_REJECT_UNAUTHORIZED`, `NODE_USE_SYSTEM_CA`, `NODE_DEBUG`,
+`NODE_DEBUG_NATIVE`, `SSL_CERT_FILE`, `SSL_CERT_DIR`, `SSLKEYLOGFILE`,
+`OPENSSL_CONF`, `OPENSSL_CONF_INCLUDE`, `OPENSSL_MODULES`, or `OPENSSL_ENGINES`
+fails with `PAY_NPM_RUNTIME_ENVIRONMENT`. The check uses both a module-entry
+snapshot and current values; removing a variable after module entry cannot
+enable capture. Explicit bundled roots alone do not stop Node's native
+extra-CA discovery or raw native warnings, so unsupported inputs are rejected,
+not cleared. Local regression tests use fresh subprocesses and real native TLS
+contexts without sockets; rejection never reaches native context creation.
 
 Both declared SHA1 and canonical SHA512 SRI must match recomputed tar bytes.
 Registry tar bytes must also equal the retained checked tar **byte-for-byte**,
@@ -158,8 +171,14 @@ an old package, retained evidence or candidate source. Use an existing owned
 non-group/world-writable output parent and a new absolute output path with no
 symlink components. The production collector CLI requires the publisher's
 existing Node 24.3.0 pin, including its bundled HTTPS roots; it does not select
-or download that runtime. Independently preserve and validate expected source/version
-and the original context/tar before invoking this command:
+or download that runtime. Launch a **fresh, directly invoked** trusted Node
+process with no runtime flags and none of the unsupported environment inputs
+listed above. Remove such inputs in the parent environment **before launching
+Node**, not from an already-running process. JavaScript cannot undo hostile
+pre-entry preloads, env-file processing, native initialization or their output;
+the collector does not claim to sandbox those effects or recover a process whose
+startup state was hidden before module entry. Independently preserve and validate
+expected source/version and the original context/tar before invoking this command:
 
 ```sh
 node packages/pay/scripts/collect-published-npm-receipt.mjs \
@@ -189,3 +208,11 @@ source/run/attempt names, fail on missing files, prohibit overwrite and retain
 90 days. Artifact ID/archive digest are transport metadata. Export/access/
 durable retention require an external owner before GA; neither runner storage
 nor an expiring Actions artifact satisfies permanent evidence custody.
+
+The fixed publisher validator closes the entire top-level and publish-job key
+sets, exact permissions and 30-minute timeout as well as each complete step.
+Job outputs, container/services, matrix/strategy, defaults, concurrency and other
+unreviewed execution contexts are rejected. Only the three named preparation,
+publication and collection steps consume the checked tar output; no additional
+job-level consumer is permitted. This is a bounded workflow contract, not a
+generic YAML/shell security analyzer.

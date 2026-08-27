@@ -26,6 +26,55 @@ test("publication without original checked-package preservation is rejected", ()
 test("current evidence workflow is accepted", () =>
   assert.doesNotThrow(() => checkPayPublishWorkflow(source)));
 
+test("publisher rejects execution and tar consumers outside the closed step contract", async (t) => {
+  for (const [scope, key, value] of [
+    ["workflow", "name", "Unreviewed publisher"],
+    ["workflow", "run-name", "${{steps.pack.outputs.tarball}}"],
+    ["workflow", "env", { GH_TOKEN: "${{ github.token }}" }],
+    ["workflow", "defaults", { run: { shell: "sh" } }],
+    ["workflow", "concurrency", "unreviewed"],
+    [
+      "workflow",
+      "permissions",
+      { contents: "read", "id-token": "write", packages: "write" },
+    ],
+    ["job", "outputs", { checked_tar: "${{steps.pack.outputs.tarball}}" }],
+    ["job", "container", { image: "example.invalid/unreviewed:latest" }],
+    [
+      "job",
+      "services",
+      { sidecar: { image: "example.invalid/unreviewed:latest" } },
+    ],
+    ["job", "strategy", { matrix: { replica: ["a", "b"] } }],
+    ["job", "defaults", { run: { "working-directory": "/tmp/candidate" } }],
+    ["job", "needs", "unreviewed"],
+    ["job", "concurrency", "unreviewed"],
+    ["job", "name", "${{steps.pack.outputs.tarball}}"],
+    ["job", "timeout-minutes", 360],
+    [
+      "job",
+      "permissions",
+      { contents: "read", "id-token": "write", packages: "write" },
+    ],
+    ["job", "continue-on-error", true],
+    ["job", "uses", "example/other/.github/workflows/publish.yml@main"],
+    ["job", "secrets", "inherit"],
+    ["job", "with", { tar: "${{steps.pack.outputs.tarball}}" }],
+  ])
+    await t.test(`${scope} ${key}`, () => {
+      const workflow = parse(source);
+      (scope === "workflow" ? workflow : workflow.jobs.publish)[key] = value;
+      assert.throws(() => checkPayPublishWorkflow(stringify(workflow)));
+    });
+  for (const scope of ["workflow", "job"])
+    await t.test(`${scope} missing required key`, () => {
+      const workflow = parse(source);
+      if (scope === "workflow") delete workflow.name;
+      else delete workflow.jobs.publish["timeout-minutes"];
+      assert.throws(() => checkPayPublishWorkflow(stringify(workflow)));
+    });
+});
+
 test("evidence preparation, uploads and capture cannot be weakened or moved", async (t) => {
   const names = [
     "Prepare checked npm source context",
