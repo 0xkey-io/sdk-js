@@ -91,7 +91,7 @@
     "build": "rollup -c",
     "clean": "rimraf ./dist ./.cache",
     "artifact:check": "node scripts/check-packed-artifact.mjs",
-    "artifact:test": "node --test scripts/check-packed-artifact.test.mjs scripts/check-publish-source.test.mjs",
+    "artifact:test": "node --test scripts/check-packed-artifact.test.mjs scripts/check-publish-source.test.mjs scripts/npm-publication.test.mjs scripts/npm-publication-workflow.test.mjs scripts/npm-registry-transport.test.mjs",
     "docs:generate": "node scripts/generate-doc-facts.mjs",
     "docs:check": "pnpm run docs:generate && node scripts/check-docs.mjs && git diff --exit-code -- docs/generated-support.md",
     "pins:check": "node scripts/check-exact-pins.mjs",

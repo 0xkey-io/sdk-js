@@ -153,6 +153,25 @@ jobs:
           pnpm --filter @0xkey-io/pay artifact:check \
             --pack-destination "$RUNNER_TEMP/oxkey-pay-publish"
 
+      - name: Prepare checked npm source context
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          CHECKED_TAR: ${{ steps.pack.outputs.tarball }}
+        run: |
+          set -euo pipefail
+          node packages/pay/scripts/prepare-npm-source-context.mjs --checked-tar "$CHECKED_TAR" --expected-version "$EXPECTED_VERSION" --output "$RUNNER_TEMP/pay-checked-package-v1"
+
+      - name: Preserve checked npm package before publication
+        id: checked_package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2, MIT
+        with:
+          name: pay-checked-package-${{ inputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pay-checked-package-v1
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: false
+
       - name: Reconfirm source, package metadata, and npm state before mutation
         env:
           EXPECTED_VERSION: ${{ inputs.expected_version }}
@@ -245,3 +264,24 @@ jobs:
           echo "npm did not expose the expected state after $attempts attempts." >&2
           echo "version=$published_version next=$next latest=$latest" >&2
           exit 1
+
+      - name: Collect immutable public npm publication receipt
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          EXPECTED_SOURCE: ${{ inputs.source_sha }}
+          CHECKED_TAR: ${{ steps.pack.outputs.tarball }}
+          CHECKED_ARTIFACT_ID: ${{ steps.checked_package.outputs.artifact-id }}
+          CHECKED_ARTIFACT_DIGEST: ${{ steps.checked_package.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          node packages/pay/scripts/collect-published-npm-receipt.mjs --checked-tar "$CHECKED_TAR" --source-context "$RUNNER_TEMP/pay-checked-package-v1/source-context.json" --expected-version "$EXPECTED_VERSION" --expected-source "$EXPECTED_SOURCE" --output "$RUNNER_TEMP/pay-npm-publication-receipt-v1" --artifact-id "$CHECKED_ARTIFACT_ID" --artifact-digest "$CHECKED_ARTIFACT_DIGEST"
+
+      - name: Retain immutable npm publication receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2, MIT
+        with:
+          name: pay-npm-publication-receipt-${{ inputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pay-npm-publication-receipt-v1
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: false

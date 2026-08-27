@@ -2,6 +2,12 @@
 
 ## 1.0.0-rc.1
 
+- Preserve the original checked npm tarball and closed source/run context before
+  publication. Collect public registry metadata, matching opaque tar bytes and
+  the exact raw provenance-bundle slice into an immutable six-file observation
+  receipt after successful publication/tag checks. Read-only recapture requires
+  the retained originals and current reviewed collector; it never republishes.
+  Neither local tests nor the receipt establish cryptographic acceptance or GA.
 - Bind the RC publisher's requested, checked-out, current-default-branch, GitHub
   run, and executing-workflow source before builds and immediately before
   publication. Reject mismatched dispatch identity, stale source and dirty

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -145,6 +146,7 @@ export function checkPayPublishWorkflow(source) {
   );
 
   const steps = publish.steps ?? [];
+  assert.deepEqual(Object.keys(workflow.jobs), ["publish"]);
   assert.doesNotMatch(
     steps.map((step) => command(step?.run)).join("\n"),
     /\bnpm dist-tag\b/,
@@ -202,8 +204,8 @@ export function checkPayPublishWorkflow(source) {
   );
   assert.equal(pack.id, "pack");
   assert.equal(
-    command(pack.run),
-    'set -euo pipefail pnpm --filter @0xkey-io/pay artifact:check --pack-destination "$RUNNER_TEMP/oxkey-pay-publish"',
+    pack.run,
+    'set -euo pipefail\npnpm --filter @0xkey-io/pay artifact:check \\\n  --pack-destination "$RUNNER_TEMP/oxkey-pay-publish"\n',
     "artifact step must emit the one checked Pay tarball",
   );
 
@@ -212,7 +214,7 @@ export function checkPayPublishWorkflow(source) {
     "Publish only @0xkey-io/pay to npm next",
   );
   assert.equal(
-    command(publishStep.run),
+    publishStep.run,
     'npm publish "${{ steps.pack.outputs.tarball }}" --tag next --access public --registry="$PUBLIC_NPM_REGISTRY" --provenance --ignore-scripts',
     "publish command must publish only the checked tarball with next and provenance",
   );
@@ -252,9 +254,196 @@ export function checkPayPublishWorkflow(source) {
   );
   assert.equal(
     (source.match(/\$\{\{ steps\.pack\.outputs\.tarball \}\}/g) ?? []).length,
-    1,
-    "checked tarball output must have one consumer",
+    3,
+    "checked tarball output must have exactly three named consumers",
   );
+  checkPublicationEvidence(steps, pack, reconfirm, publishStep);
+}
+
+function checkPublicationEvidence(steps, pack, reconfirm, publishStep) {
+  const prepare = stepNamed(steps, "Prepare checked npm source context");
+  const preserve = stepNamed(
+    steps,
+    "Preserve checked npm package before publication",
+  );
+  const collect = stepNamed(
+    steps,
+    "Collect immutable public npm publication receipt",
+  );
+  const retain = stepNamed(steps, "Retain immutable npm publication receipt");
+  const poll = stepNamed(steps, "Verify published version and npm tags");
+  assert.deepEqual(prepare, {
+    name: "Prepare checked npm source context",
+    shell: "bash",
+    env: {
+      EXPECTED_VERSION: "${{ inputs.expected_version }}",
+      CHECKED_TAR: "${{ steps.pack.outputs.tarball }}",
+    },
+    run: 'set -euo pipefail\nnode packages/pay/scripts/prepare-npm-source-context.mjs --checked-tar "$CHECKED_TAR" --expected-version "$EXPECTED_VERSION" --output "$RUNNER_TEMP/pay-checked-package-v1"\n',
+  });
+  assert.deepEqual(collect, {
+    name: "Collect immutable public npm publication receipt",
+    shell: "bash",
+    env: {
+      EXPECTED_VERSION: "${{ inputs.expected_version }}",
+      EXPECTED_SOURCE: "${{ inputs.source_sha }}",
+      CHECKED_TAR: "${{ steps.pack.outputs.tarball }}",
+      CHECKED_ARTIFACT_ID: "${{ steps.checked_package.outputs.artifact-id }}",
+      CHECKED_ARTIFACT_DIGEST:
+        "${{ steps.checked_package.outputs.artifact-digest }}",
+    },
+    run: 'set -euo pipefail\nnode packages/pay/scripts/collect-published-npm-receipt.mjs --checked-tar "$CHECKED_TAR" --source-context "$RUNNER_TEMP/pay-checked-package-v1/source-context.json" --expected-version "$EXPECTED_VERSION" --expected-source "$EXPECTED_SOURCE" --output "$RUNNER_TEMP/pay-npm-publication-receipt-v1" --artifact-id "$CHECKED_ARTIFACT_ID" --artifact-digest "$CHECKED_ARTIFACT_DIGEST"\n',
+  });
+  for (const [step, prefix, path, id] of [
+    [
+      preserve,
+      "pay-checked-package",
+      "pay-checked-package-v1",
+      "checked_package",
+    ],
+    [
+      retain,
+      "pay-npm-publication-receipt",
+      "pay-npm-publication-receipt-v1",
+      undefined,
+    ],
+  ])
+    assert.deepEqual(step, {
+      name: step.name,
+      ...(id ? { id } : {}),
+      uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+      with: {
+        name: `${prefix}-\${{ inputs.source_sha }}-\${{ github.run_id }}-\${{ github.run_attempt }}`,
+        path: `\${{ runner.temp }}/${path}`,
+        "if-no-files-found": "error",
+        "retention-days": 90,
+        overwrite: false,
+      },
+    });
+  assert.deepEqual(Object.keys(pack).sort(), ["id", "name", "run"]);
+  assert.deepEqual(Object.keys(publishStep).sort(), ["name", "run"]);
+  assert.deepEqual(Object.keys(poll).sort(), ["env", "name", "run"]);
+  assert.deepEqual(poll.env, {
+    EXPECTED_VERSION: "${{ inputs.expected_version }}",
+  });
+  // Exact executable poll semantics: no disabled/no-op poll before collection.
+  assert.equal(
+    poll.run,
+    [
+      "set -euo pipefail",
+      "attempts=12",
+      "wait_seconds=10",
+      'for attempt in $(seq 1 "$attempts"); do',
+      '  published_version="$(npm view "@0xkey-io/pay@$EXPECTED_VERSION" version --registry="$PUBLIC_NPM_REGISTRY" 2>/dev/null || true)"',
+      '  next="$(npm view @0xkey-io/pay dist-tags.next --registry="$PUBLIC_NPM_REGISTRY" 2>/dev/null || true)"',
+      '  latest="$(npm view @0xkey-io/pay dist-tags.latest --registry="$PUBLIC_NPM_REGISTRY" 2>/dev/null || true)"',
+      '  if [ "$published_version" = "$EXPECTED_VERSION" ] \\',
+      '    && [ "$next" = "$EXPECTED_VERSION" ] \\',
+      '    && [ "$latest" = "0.2.0" ]; then',
+      "    exit 0",
+      "  fi",
+      '  if [ "$attempt" -lt "$attempts" ]; then',
+      '    echo "npm has not exposed the expected version and tags yet (attempt $attempt/$attempts); waiting ${wait_seconds}s."',
+      '    sleep "$wait_seconds"',
+      "  fi",
+      "done",
+      'echo "npm did not expose the expected state after $attempts attempts." >&2',
+      'echo "version=$published_version next=$next latest=$latest" >&2',
+      "exit 1",
+      "",
+    ].join("\n"),
+  );
+  const positions = [pack, prepare, preserve, reconfirm].map((step) =>
+    steps.indexOf(step),
+  );
+  assert.ok(
+    positions.every(
+      (position, index) => index === 0 || position === positions[index - 1] + 1,
+    ),
+    "preservation must succeed before final checks and publish",
+  );
+  assert.equal(steps.indexOf(publishStep) + 1, steps.indexOf(poll));
+  assert.equal(steps.indexOf(poll) + 1, steps.indexOf(collect));
+  assert.equal(steps.indexOf(collect) + 1, steps.indexOf(retain));
+  assert.equal(steps.indexOf(retain), steps.length - 1);
+  const expectedNames = [
+    "Checkout the executing workflow source",
+    "Verify immutable default-branch source",
+    "Set up Node and pnpm",
+    "Verify public npm registry configuration",
+    "Install dependencies",
+    "Build Pay dependency graph",
+    "Verify Pay package metadata",
+    "Refuse existing version and protect latest",
+    "Verify exact protocol pins",
+    "Verify Pay documentation",
+    "Typecheck Pay",
+    "Test Pay",
+    "Build Pay",
+    "Run Pay interoperability checks",
+    pack.name,
+    prepare.name,
+    preserve.name,
+    reconfirm.name,
+    "Reconfirm immutable default-branch source",
+    publishStep.name,
+    poll.name,
+    collect.name,
+    retain.name,
+  ];
+  assert.deepEqual(
+    steps.map((step) => step.name),
+    expectedNames,
+    "no extra pack, publish, capture or token-bearing steps",
+  );
+  // Preserve supporting steps from reviewed GateP sdk-js@53050213582d67c96a6510efc45e277d2cbdf8ee.
+  // Without this, an extra quoted publish/pack or tar consumer can hide inside
+  // any earlier run block. This is a fixed workflow contract, not a shell parser.
+  // Sort object keys only; executable run-string bytes are never normalized.
+  const baseline = {
+    "Set up Node and pnpm":
+      "83a60fa34e9f0cf0c08c585758b34f9903fa7ba2bd85461678492fc1e56729a9",
+    "Verify public npm registry configuration":
+      "f1356ec6c34ad24c807b84add4999dceba0862c2b97449f1d349d6097591d151",
+    "Install dependencies":
+      "dc62465b03be017d30bf0ebc6c8f49b6c96dd279649c6ba1fe86d3ad5faba75f",
+    "Build Pay dependency graph":
+      "0e284371f4a819b45285f595276ba462b09b1a6b7ff6fb2dba6fcd416fb31ae6",
+    "Verify Pay package metadata":
+      "299c395e4cfc1f70b0fe78d49c1e67df60246272426620e8d32ff895ed2f3844",
+    "Refuse existing version and protect latest":
+      "b0630567fbd30f06efc5467f7e92ac60770e1c68ec1c2600529327ac539c45ac",
+    "Verify exact protocol pins":
+      "659a0498be26ea89d197879ed2afcadb2fa5a9c14f88fbc6f87b97acc007b2ed",
+    "Verify Pay documentation":
+      "b0794d9c6620771243661825f11e2c9b0dae745b953ecb8380a7f066ca343088",
+    "Typecheck Pay":
+      "2f149abe3f364561460dde0207b0bb755bedf9769abc31a280ae9b3c7c47ef6e",
+    "Test Pay":
+      "bc6d6d2c761d6721b2cbe75d97a4d1a01046067b7af3b5852c203338bad07002",
+    "Build Pay":
+      "1b693a9c5ec2312640525436a098e91b975937071ce70cfd3f742bab59bb8ca9",
+    "Run Pay interoperability checks":
+      "0c609bd766a95b8501890d990f23e2899ffba5484c1b844cc04d695568a36f27",
+    "Reconfirm source, package metadata, and npm state before mutation":
+      "a84876101622d8735516189bcbbf209e3391ddc3e98ade7e0e05496476420a7e",
+  };
+  for (const [name, expected] of Object.entries(baseline)) {
+    const bytes = JSON.stringify(stepNamed(steps, name), (_, value) =>
+      value && typeof value === "object" && !Array.isArray(value)
+        ? Object.fromEntries(
+            Object.entries(value).sort(([left], [right]) =>
+              left.localeCompare(right),
+            ),
+          )
+        : value,
+    );
+    assert.equal(
+      createHash("sha256").update(bytes).digest("hex"),
+      expected,
+      `${name} executable contract changed; review the GateP supporting-step pin`,
+    );
+  }
 }
 
 function checkSourceManifest(manifest) {

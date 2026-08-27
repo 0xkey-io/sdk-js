@@ -278,6 +278,16 @@ The source stays private and only the checked tarball may be published to
 Local guard tests are not publication or signed-provenance evidence; actual
 npm evidence and verifier compatibility remain external release gates.
 
+Before publishing, the workflow preserves the original checked tarball and
+source/run context. After publication and tag checks it captures a six-file
+registry observation receipt, preserving the exact nested bundle bytes without
+reserializing them. A capture failure is recovered read-only from the original
+tar/context, never by republishing or rebuilding a substitute. Both Actions
+uploads expire after 90 days; an owner-approved durable export/access policy is
+required before GA. See the [npm evidence contract](./docs/npm-publication-evidence.md).
+All collected provenance fields remain **unverified** until the independent
+release verifier applies approved trust inputs and signature policy.
+
 ## Keeping docs current
 
 Changes to a protocol, public option, entry point, network, asset, receipt, or

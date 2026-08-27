@@ -173,6 +173,48 @@ A public GA promotion on npm tag `latest` is a separate future gated operation.
 No current generic workflow or documented manual command is authorized to
 publish Pay GA or change Pay's `latest` tag.
 
+#### Preserve and collect npm publication evidence
+
+The checked tar has exactly three named consumers: context preparation, the
+single npm publication, and the post-publication collector. Before the final
+metadata/source checks, preparation preserves it byte-for-byte alongside
+`source-context.json` in a new runner-temporary directory. The context binds
+the original direct `main` dispatch/run/workflow/source and immutable Git tree.
+A pinned `actions/upload-artifact` v4.6.2 upload must succeed before publication;
+the final GateP source guard remains immediately adjacent to `npm publish`.
+
+After the successful publication/tag poll, the dependency-free collector reads
+only the fixed public `@0xkey-io/pay` metadata, tar and advertised attestations
+endpoints. It requires the public tar to equal the original checked bytes,
+indexes all outer attestations, and retains the unique npm SLSA bundle's exact
+raw JSON byte slice (no added newline). Metadata `gitHead` is optional, but
+must match when present. A second pinned upload transports the closed six-file
+receipt described in [the package owner contract](packages/pay/docs/npm-publication-evidence.md).
+Neither an HTTP observation, an Actions artifact digest nor unverified SLSA
+fields establish signing identity, trusted time, provenance acceptance or GA.
+
+Both uploads use unique full-source/run/attempt names, no overwrite, required
+files and 90-day retention. Runner files and expiring Actions artifacts are
+not permanent storage. Before GA, an external retention owner must approve and
+perform durable export, access control and retention; security owners must
+approve independent verifier/root/signer policy and actual npm compatibility.
+No such external approval or execution is claimed by local fixture tests.
+
+If publication succeeds but receipt capture fails, **do not rerun publication**.
+Use the currently reviewed collector from a trusted checkout and the separately
+retained original context/tar. The manual collector is read-only and does not
+require current main to remain at the old publication commit; independent
+source reachability and cryptographic verification belong to GateD. Missing
+originals block recapture, not permission to rebuild, re-sign or re-tag.
+
+The bounded workflow validator pins complete supporting-step contracts from
+reviewed GateP `53050213582d67c96a6510efc45e277d2cbdf8ee` to prevent extra pack,
+publish, credential or tar-consumer commands hiding in otherwise unchanged
+steps. Pins hash JSON with recursively sorted object keys; executable multiline
+strings remain byte-exact. Intentional future step changes require explicit
+pin refresh and review. New evidence steps, pack/publish/poll and both source
+guards have exact semantic checks; no generic shell parser is introduced.
+
 ## Version policy
 
 | Change type            | Semver bump               | Changeset type |

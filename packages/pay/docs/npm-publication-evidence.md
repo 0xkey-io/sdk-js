@@ -1,0 +1,191 @@
+# npm publication evidence (internal release contract)
+
+Owner: Pay SDK release maintainers. Schema v1. These are source expectations
+and unverified registry observations, not an accepted PAY-TIP or a GA claim.
+Local tests use synthetic data only. Actual publication, collection, upload,
+export and cryptographic acceptance require separately authorized operations.
+
+## Before publication: preserve the original
+
+The dedicated publisher first runs the existing checked pack/install/import
+gate. `prepare-npm-source-context.mjs` then reads that original tar as bounded
+opaque bytes, never extracts or executes it, and publishes a new directory
+outside the checkout containing exactly:
+
+```text
+pay-checked-package-v1/
+  source-context.json
+  package.tgz
+```
+
+The closed context has exactly `schemaVersion` (`pay-npm-source-context/v1`),
+`package` (`@0xkey-io/pay`), `version`, `source` and `checkedTar`. The source
+manifest must match its immutable Git blob, be private, and retain the existing
+fixed name/repository/public-registry/next contract. Its exact version is used.
+Tree bytes come from a bounded immutable commit object with replacement refs
+and lazy remote object fetch disabled; no candidate executable is selected.
+
+`source` has exactly `repository`, `server`, `event`, `ref`, `workflowRef`,
+`runId`, `runAttempt`, `runner`, `requestedSha`, `runSha`, `workflowSha`,
+`mainRef`, `mainSha`, and `treeSha`. The fixed identity is `0xkey-io/sdk-js`,
+`https://github.com`, direct `workflow_dispatch`, `refs/heads/main`,
+`.github/workflows/pay-publish.yml`, and `github-hosted`. Requested/run/workflow/
+main SHAs are one full lowercase 40-hex commit; tree SHA is full 40-hex. The
+positive run ID/attempt strings are canonical decimal, at most 20 digits.
+Preparation uses the main tracking SHA already checked by GateP, without a new
+fetch; GateP still freshly checks actual source/main immediately before publish.
+No `GITHUB_*` variable is rewritten or missing coordinate inferred.
+
+`checkedTar` contains exactly byte `size`, lowercase `sha1`, `sha256`, `sha512`
+and one canonical SHA512 `integrity` SRI. The preceding checked-pack gate is
+the package-content authority; preparation performs no second pack or install.
+The preserved tar copy, publication input and later collector input must be
+the same bytes. Preservation/upload failure prevents publication.
+
+## Fixed public observations
+
+For exact canonical semver `V` (at most 128 ASCII characters, each core number
+at most nine digits), requests are restricted to `https://registry.npmjs.org`:
+
+| Observation             | Fixed path                                 | Limit  |
+| ----------------------- | ------------------------------------------ | ------ |
+| Version metadata        | `/@0xkey-io%2fpay/V`                       | 2 MiB  |
+| Opaque tar              | `/@0xkey-io/pay/-/pay-V.tgz`               | 10 MiB |
+| Advertised attestations | `/-/npm/v1/attestations/@0xkey-io%2fpay@V` | 2 MiB  |
+
+The metadata advertisement is mandatory. Only leading `@` or `%40` and scoped
+separator `%2f` or `%2F` spelling variations are accepted in that advertised
+path; the collector requests its own canonical URL and preserves the advertised
+spelling. Raw URL comparisons reject credentials, ports, redirects, queries,
+fragments, whitespace, backslashes, dot segments and alternate encodings before
+normalization. `dist.signatures` is never a provenance fallback.
+
+The internal HTTPS client uses explicit verified TLS for the fixed hostname
+with the pinned Node runtime's bundled roots, a private agent, no proxy/config/
+credentials/cookies/custom CA discovery, identity encoding and a total 30-second
+deadline per request. HTTP 200, bounded headers, suitable JSON/gzip/octet-stream
+content types and consistent declared/actual length are mandatory. Only status,
+bounded Date/content-type and local observation time are recorded. They are
+observations, never trusted signature time. There is no automatic retry loop.
+
+Both declared SHA1 and canonical SHA512 SRI must match recomputed tar bytes.
+Registry tar bytes must also equal the retained checked tar **byte-for-byte**,
+not just a supplied digest. Optional `gitHead` is accepted only as a matching
+full lowercase source SHA. Absence is legitimate for npm's tarball publish path.
+
+## Raw bundle and unverified npm profile
+
+JSON parsing rejects duplicate decoded keys, invalid UTF-8, malformed Unicode,
+nonfinite/unsafe integer values, trailing data, depth over 64, more than 100000
+value tokens, keys over 4096 bytes and string tokens over 1 MiB. It preserves
+primitive types and exact byte ranges, including multibyte prefixes/escapes.
+The outer object contains only `attestations`: 1–8 entries, each exactly
+`predicateType` and `bundle`. Each bundle is at most 1 MiB; the canonical base64
+DSSE payload decodes to at most 256 KiB of strict JSON.
+
+Bundle media types v0.1/v0.2/v0.3 are structural inputs only. Each has one DSSE
+representation with in-toto payload type and 1–8 distinct nonempty base64
+signatures, each at most 16 KiB. Unknown competing bundle/envelope signature
+representations fail. Every retained entry has matching outer/payload predicate
+and one matching PURL/SHA512 subject. Exactly one must be Statement-v1/SLSA-v1.
+Other publish attestations remain indexed unverified data, never a SLSA substitute.
+
+The selected npm profile requires build type
+`https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1`,
+workflow repository `https://github.com/0xkey-io/sdk-js`, exact main ref/publisher
+path, one resolved source `git+https://github.com/0xkey-io/sdk-js@refs/heads/main`
+with matching `gitCommit`, hosted builder
+`https://github.com/actions/runner/github-hosted`, exact run/attempt invocation
+URL and direct-dispatch event. Recorded repository/owner numeric IDs are only
+observations, not independently trusted identity. The image producer's different
+Actions profile cannot substitute for this npm profile.
+
+The selected bundle is copied directly from its raw byte range, without JSON
+serialization, canonicalization or an appended LF. A `.json` file containing
+this single raw object is format-compatible with pinned gh 2.76.2's reader;
+that statement does not establish actual npm cryptographic compatibility.
+GateD must verify the exact bytes under independently approved tool/root/signer/
+freshness policy. Security owners may additionally require a verified registry
+publish attestation; this collector chooses no extra registry-key policy.
+
+## Closed six-file receipt
+
+```text
+pay-npm-publication-receipt-v1/
+  receipt.json
+  receipt.sha256
+  registry-metadata.json
+  package.tgz
+  registry-attestations.json
+  provenance.bundle.json
+```
+
+The four observation files retain exact raw bytes. `receipt.json` contains:
+
+| Field                                             | Meaning                                                                                                                                                         |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion`, `package`, `version`, `registry` | Fixed schema `pay-npm-publication-receipt/v1` and package/registry scope                                                                                        |
+| `sourceExpectations`, `sourceContext`             | Complete source object above; original context-file size/SHA256                                                                                                 |
+| `checkedTar`                                      | Original checked-tar identity above                                                                                                                             |
+| `observations`                                    | Exactly metadata/tar/attestations; actual URL/status/Date/content-type/local observedAt/size/SHA256; tar adds SHA1/SHA512/SRI; attestations adds advertised URL |
+| `files`                                           | Exactly the four retained raw files, each size/SHA256                                                                                                           |
+| `attestations`                                    | Each index/predicate/raw-slice size/SHA256 and byte range                                                                                                       |
+| `provenance`                                      | `verification: unverified`, `representation: raw-json-byte-slice/v1`, selected index/range/SHA256 and checked npm profile                                       |
+| Optional `gitHead`                                | Matching registry observation only                                                                                                                              |
+| Optional `checkedPackageArtifact`                 | Positive artifact ID/archive SHA256 with `meaning: transport-only`; both required together                                                                      |
+
+Ranges are zero-based start-inclusive/end-exclusive byte offsets in raw
+`registry-attestations.json`. Profile fields are `statementType`, `predicateType`,
+`subject`, `buildType`, `workflow`, `sourceSha`, `sourceUri`, `builder`,
+`invocationId`, `event`, and `observedGithubIds`. There is no `verified:true` or
+release-acceptance field. `receipt.sha256` is SHA256 of final receipt bytes once,
+formatted as `<hex>  receipt.json` plus LF; it has no self-reference.
+
+Inputs are bounded regular non-executable single-link files with no symlink
+path components; they are reread after observation to detect concurrent changes.
+Output uses a new same-parent temporary directory, exclusive single-link files,
+read-back byte checks, file/directory fsync and atomic rename under an exclusive
+per-target lock. Completed data is read-only and never overwritten. The local
+parent must be owned by the invoking user and not group/world writable; this is
+a trusted local filesystem boundary, not protection against a malicious same-user
+host. A stale lock is never automatically broken. Failure logs contain stable
+`PAY_NPM_*` codes and phase only, not provider responses or candidate contents.
+
+## Read-only recapture and retention
+
+Run the **currently reviewed** collector from a trusted checkout, not code in
+an old package, retained evidence or candidate source. Use an existing owned
+non-group/world-writable output parent and a new absolute output path with no
+symlink components. The production collector CLI requires the publisher's
+existing Node 24.3.0 pin, including its bundled HTTPS roots; it does not select
+or download that runtime. Independently preserve and validate expected source/version
+and the original context/tar before invoking this command:
+
+```sh
+node packages/pay/scripts/collect-published-npm-receipt.mjs \
+  --checked-tar /retained/pay-checked-package-v1/package.tgz \
+  --source-context /retained/pay-checked-package-v1/source-context.json \
+  --expected-version 1.0.0-rc.1 \
+  --expected-source "$ORIGINAL_REVIEWED_SOURCE_SHA" \
+  --output /owned-output/pay-npm-publication-receipt-v1
+```
+
+Optional `--artifact-id` and `--artifact-digest` add independently retained
+transport coordinates, not provenance. There are no endpoint, CA, provider,
+executable, fake-verifier or test-mode CLI flags. The three required trusted
+code files are `collect-published-npm-receipt.mjs`, `npm-receipt-data.mjs`, and
+`npm-receipt-json.mjs`; preserve their relative paths and reviewed commit/file
+hashes when distributing them. They require only Node built-ins and the SDK's
+Apache-2.0 license, not candidate npm code or dependencies.
+
+Recapture never publishes, installs, builds, packs, executes payload scripts,
+changes tags or requires current main equality. GateD separately checks source
+reachability and signatures. Lost original tar/context blocks strict recovery;
+a rebuilt tar cannot be called the original. Do not automatically rerun the
+publisher after partial external success.
+
+Both workflow uploads pin `actions/upload-artifact` v4.6.2 (MIT), use full
+source/run/attempt names, fail on missing files, prohibit overwrite and retain
+90 days. Artifact ID/archive digest are transport metadata. Export/access/
+durable retention require an external owner before GA; neither runner storage
+nor an expiring Actions artifact satisfies permanent evidence custody.
