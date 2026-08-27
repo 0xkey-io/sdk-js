@@ -10,6 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import test from "node:test";
 
@@ -23,61 +24,162 @@ const genericPublisher = new URL(
   "./publish-generic-release.mjs",
   import.meta.url,
 );
+const releaseAuditor = new URL(
+  "./audit-pay-release-safety.mjs",
+  import.meta.url,
+);
 
-test("every Pay-affecting workflow selects the declared Node 22.12 baseline", async () => {
-  const repositoryRoot = new URL("../../../", import.meta.url);
-  const workflowRoot = new URL(".github/workflows/", repositoryRoot);
-  const workflowNames = (await readdir(workflowRoot)).filter((name) =>
-    /\.ya?ml$/.test(name),
+test("workflow audit is job-local, resolves aliases, and rejects later Node downgrades", async () => {
+  const { auditWorkflowSource } = await import(releaseAuditor);
+  const rootScripts = {
+    build: `turbo --filter "./packages/**" build`,
+    "build-alias": "pnpm run build",
+  };
+  const safeSetup = `
+      - uses: ./.github/actions/js-setup
+      - run: pnpm run build-alias`;
+
+  assert.doesNotThrow(() =>
+    auditWorkflowSource({
+      name: "safe.yml",
+      source: `jobs:\n  safe:\n    steps:${safeSetup}\n`,
+      rootScripts,
+      rootNodeVersion: "v22.12.0",
+    }),
   );
-  const [workflows, setup, nodeBaseline] = await Promise.all([
-    Promise.all(
-      workflowNames.map(async (name) => ({
-        name,
-        source: await readFile(new URL(name, workflowRoot), "utf8"),
-      })),
-    ),
-    readFile(
-      new URL(".github/actions/js-setup/action.yml", repositoryRoot),
-      "utf8",
-    ),
-    readFile(new URL(".nvmrc", repositoryRoot), "utf8"),
+  assert.throws(
+    () =>
+      auditWorkflowSource({
+        name: "cross-job.yml",
+        source: `jobs:
+  setup_only:
+    steps:
+      - uses: ./.github/actions/js-setup
+  unsafe:
+    steps:
+      - run: pnpm run build-alias
+`,
+        rootScripts,
+        rootNodeVersion: "v22.12.0",
+      }),
+    /cross-job\.yml.*unsafe.*before a supported Node setup/i,
+  );
+  assert.throws(
+    () =>
+      auditWorkflowSource({
+        name: "downgrade.yml",
+        source: `jobs:
+  pay:
+    steps:
+      - uses: ./.github/actions/js-setup
+      - run: pnpm run build
+      - uses: actions/setup-node@pinned
+        with:
+          node-version: "20"
+`,
+        rootScripts,
+        rootNodeVersion: "v22.12.0",
+      }),
+    /downgrade\.yml.*pay.*unsupported Node 20/i,
+  );
+  assert.throws(
+    () =>
+      auditWorkflowSource({
+        name: "dynamic.yml",
+        source: `jobs:
+  pay:
+    steps:
+      - uses: actions/setup-node@pinned
+        with:
+          node-version: \${{ matrix.node }}
+      - run: pnpm run build
+`,
+        rootScripts,
+        rootNodeVersion: "v22.12.0",
+      }),
+    /dynamic\.yml.*pay.*cannot prove Node/i,
+  );
+  assert.throws(
+    () =>
+      auditWorkflowSource({
+        name: "mixed-command.yml",
+        source: `jobs:
+  pay:
+    steps:
+      - run: |
+          pnpm --filter '!@0xkey-io/pay' publish -r --dry-run
+          pnpm -r test
+`,
+        rootScripts: {},
+        rootNodeVersion: "v22.12.0",
+      }),
+    /mixed-command\.yml.*pay.*before a supported Node setup/i,
+  );
+  assert.doesNotThrow(() =>
+    auditWorkflowSource({
+      name: "excluded-only.yml",
+      source: `jobs:
+  generic:
+    steps:
+      - run: pnpm --filter '!@0xkey-io/pay' publish -r --dry-run
+`,
+      rootScripts: {},
+      rootNodeVersion: "v22.12.0",
+    }),
+  );
+});
+
+test("repository audit parses every workflow job and authoritative release document", async () => {
+  const { auditRepositoryReleaseSafety, auditPublishText } = await import(
+    releaseAuditor
+  );
+  const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
+  const [releasing, contributing] = await Promise.all([
+    readFile(join(repositoryRoot, "RELEASING.md"), "utf8"),
+    readFile(join(repositoryRoot, "CONTRIBUTING.md"), "utf8"),
   ]);
-
-  assert.equal(nodeBaseline.trim(), "v22.12.0");
-  assert.match(setup, /node-version-file:\s*["']?\.nvmrc["']?/);
-
-  for (const { name, source } of workflows) {
-    for (const match of source.matchAll(
-      /node-version:\s*["']?v?(\d+)(?:\.(\d+))?/g,
-    )) {
-      const major = Number(match[1]);
-      const minor = Number(match[2] ?? 0);
-      assert.ok(
-        major > 22 || (major === 22 && minor >= 12),
-        `${name} selects unsupported Node ${match[1]}${match[2] ? `.${match[2]}` : ""}`,
-      );
-    }
-  }
-
-  const payExecution =
-    /@0xkey-io\/pay|packages\/pay|\b(?:build-all|typecheck-all|test-all)\b|changeset\s+(?:version|publish)|pnpm\s+publish\s+-r|--filter\s+["']\.\/packages/;
-  const payWorkflows = workflows.filter(({ source }) =>
-    payExecution.test(source),
+  const rootManifest = JSON.parse(
+    await readFile(join(repositoryRoot, "package.json"), "utf8"),
   );
-  for (const genericWorkflow of ["js-build.yml", "version-and-publish.yml"]) {
-    assert.ok(
-      payWorkflows.some(({ name }) => name === genericWorkflow),
-      `${genericWorkflow} must remain discoverable as Pay-affecting`,
-    );
-  }
-  for (const { name, source } of payWorkflows) {
-    assert.ok(
-      source.includes("./.github/actions/js-setup") ||
-        /node-version:\s*["']?v?(?:2[3-9]|22\.(?:1[2-9]|[2-9]\d))/.test(source),
-      `${name} executes Pay without the repository Node baseline or a supported override`,
-    );
-  }
+
+  assert.equal(rootManifest.devDependencies["@changesets/read"], "0.6.5");
+  assert.equal(rootManifest.devDependencies.yaml, "2.8.1");
+  assert.match(
+    releasing,
+    /Pay release candidate[\s\S]*checked tarball[\s\S]*`next`/i,
+  );
+  assert.match(
+    releasing,
+    /public GA[\s\S]*`latest`[\s\S]*future gated operation/i,
+  );
+  assert.match(
+    contributing,
+    /recursive publish[\s\S]*exclude `@0xkey-io\/pay`/i,
+  );
+  await auditRepositoryReleaseSafety(repositoryRoot);
+  assert.throws(
+    () =>
+      auditPublishText({
+        name: "unsafe.md",
+        source: "```bash\npnpm publish -r --no-git-checks\n```",
+      }),
+    /unsafe\.md.*must exclude @0xkey-io\/pay/i,
+  );
+  assert.throws(
+    () =>
+      auditPublishText({
+        name: "reordered.md",
+        source: "```bash\npnpm -r publish --no-git-checks\n```",
+      }),
+    /reordered\.md.*must exclude @0xkey-io\/pay/i,
+  );
+  assert.doesNotThrow(() =>
+    auditPublishText({
+      name: "safe.md",
+      source:
+        "```bash\npnpm --filter '!@0xkey-io/pay' publish -r --no-git-checks\n```",
+    }),
+  );
 });
 
 test("only the dedicated next workflow can mutably publish Pay", async () => {
@@ -202,21 +304,29 @@ test("generic release guard refuses any Pay release candidate", async () => {
       join(changesetRoot, "config.json"),
       `${JSON.stringify({ ignore: ["@0xkey-io/pay"] })}\n`,
     );
-    await writeFile(
-      join(changesetRoot, "pay-candidate.md"),
-      `---\n"@0xkey-io/pay": patch\n---\n\nPay candidate.\n`,
-    );
-    await assert.rejects(
-      execFileAsync(process.execPath, [
-        genericReleaseChecker.pathname,
-        "--root",
-        fixtureRoot,
-      ]),
-      (error) => {
-        assert.match(error.stderr, /refuses.*@0xkey-io\/pay/i);
-        return true;
-      },
-    );
+    for (const frontmatter of [
+      `"@0xkey-io/pay": patch`,
+      `"@0xkey-io/pay": "patch"`,
+      `  '@0xkey-io/pay'  :  patch # release candidate`,
+      `{ "@0xkey-io/pay": patch }`,
+      `\r\n  "@0xkey-io/pay" : patch  \r`,
+    ]) {
+      await writeFile(
+        join(changesetRoot, "pay-candidate.md"),
+        `---\n${frontmatter}\n---\n\nPay candidate.\n`,
+      );
+      await assert.rejects(
+        execFileAsync(process.execPath, [
+          genericReleaseChecker.pathname,
+          "--root",
+          fixtureRoot,
+        ]),
+        (error) => {
+          assert.match(error.stderr, /refuses.*@0xkey-io\/pay/i);
+          return true;
+        },
+      );
+    }
 
     await rm(join(changesetRoot, "pay-candidate.md"));
     await writeFile(
@@ -228,6 +338,40 @@ test("generic release guard refuses any Pay release candidate", async () => {
       "--root",
       fixtureRoot,
     ]);
+
+    await writeFile(
+      join(changesetRoot, "malformed.md"),
+      `---\n"@0xkey-io/crypto": [unterminated\n---\n\nBroken.\n`,
+    );
+    await assert.rejects(
+      execFileAsync(process.execPath, [
+        genericReleaseChecker.pathname,
+        "--root",
+        fixtureRoot,
+      ]),
+      (error) => {
+        assert.match(error.stderr, /could not parse changeset/i);
+        return true;
+      },
+    );
+    await rm(join(changesetRoot, "malformed.md"));
+
+    await mkdir(join(changesetRoot, "unreadable.md"));
+    await assert.rejects(
+      execFileAsync(process.execPath, [
+        genericReleaseChecker.pathname,
+        "--root",
+        fixtureRoot,
+      ]),
+      (error) => {
+        assert.match(error.stderr, /cannot read Changesets/i);
+        return true;
+      },
+    );
+    await rm(join(changesetRoot, "unreadable.md"), {
+      recursive: true,
+      force: true,
+    });
 
     await writeFile(
       join(changesetRoot, "config.json"),

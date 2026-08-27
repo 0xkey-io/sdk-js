@@ -1,4 +1,5 @@
-import { readFile, readdir } from "node:fs/promises";
+import readChangesets from "@changesets/read";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -14,14 +15,6 @@ function parseRoot(arguments_) {
   throw new Error("Usage: check-generic-release-exclusion.mjs [--root PATH]");
 }
 
-function changesetNames(source) {
-  const frontmatter = source.match(/^---\s*\n([\s\S]*?)\n---(?:\s*\n|$)/)?.[1];
-  if (!frontmatter) return [];
-  return [
-    ...frontmatter.matchAll(/^\s*["']?([^"']+?)["']?\s*:\s*\w+\s*$/gm),
-  ].map((match) => match[1].trim());
-}
-
 export async function assertGenericReleaseExcludesPay(repositoryRoot) {
   const changesetRoot = resolve(repositoryRoot, ".changeset");
   const config = JSON.parse(
@@ -33,13 +26,19 @@ export async function assertGenericReleaseExcludesPay(repositoryRoot) {
     );
   }
 
-  const entries = await readdir(changesetRoot, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
-    const source = await readFile(resolve(changesetRoot, entry.name), "utf8");
-    if (changesetNames(source).includes(PAY_PACKAGE)) {
+  let changesets;
+  try {
+    changesets = await readChangesets(repositoryRoot);
+  } catch (error) {
+    throw new Error(
+      `Generic release cannot read Changesets: ${error instanceof Error ? error.message : "unknown parse failure"}`,
+      { cause: error },
+    );
+  }
+  for (const changeset of changesets) {
+    if (changeset.releases.some(({ name }) => name === PAY_PACKAGE)) {
       throw new Error(
-        `Generic release refuses ${PAY_PACKAGE} candidate in .changeset/${entry.name}; use pay-publish.yml`,
+        `Generic release refuses ${PAY_PACKAGE} candidate in .changeset/${changeset.id}.md; use pay-publish.yml`,
       );
     }
   }

@@ -37,9 +37,11 @@ npm install @0xkey-io/core @0xkey-io/viem
 
 Internal packages (`@0xkey-io/internal-*`, `@0xkey-io/contract-guard`, `@0xkey-io/jest-config`) are `private: true` and are not published.
 
-## First release (manual)
+## First release (manual, except Pay)
 
-Recommended for the initial `0.1.0` release:
+Recommended for the initial `0.1.0` release of the general SDK packages. Every
+recursive command must exclude `@0xkey-io/pay`; Pay has a separate checked
+tarball release path described below.
 
 ```bash
 # Login as a member of the @0xkey-io npm org
@@ -50,12 +52,15 @@ pnpm install
 pnpm run build-all
 pnpm run contract-guard
 
-# Dry-run: verify tarball contents for all packages
-pnpm publish -r --dry-run --no-git-checks
+# Dry-run: verify tarball contents for all public packages except Pay
+pnpm --filter '!@0xkey-io/pay' publish -r --dry-run --no-git-checks
 
-# Publish all public packages
-pnpm publish -r --no-git-checks
+# Publish all public packages except Pay
+pnpm --filter '!@0xkey-io/pay' publish -r --no-git-checks
 ```
+
+These commands must never be changed to include Pay. Changesets `ignore` does
+not protect a direct recursive pnpm publish.
 
 ## Subsequent releases (Changesets + CI)
 
@@ -83,8 +88,13 @@ The workflow will:
 1. Build and validate pending changesets
 2. Run `changeset version` and bump package versions
 3. Run integration tests (preprod → prod)
-4. Publish to npm with `pnpm publish -r`
+4. Dry-run the generic packages with an explicit Pay exclusion, then invoke the
+   guarded generic publisher. The wrapper makes Pay private for the child
+   Changesets process and restores its manifest afterward.
 5. Create a GitHub Release
+
+This general workflow versions and publishes other SDK packages only. It
+rejects a changeset naming `@0xkey-io/pay` and cannot publish Pay.
 
 ### Pay release candidates
 
@@ -92,10 +102,15 @@ Use **Publish Pay SDK release candidate** (`.github/workflows/pay-publish.yml`)
 for a reviewed `@0xkey-io/pay` release candidate. It is manual only and takes
 the full merged default-branch `source_sha`, the exact `expected_version`, and
 `confirm_publish: true`. The workflow checks that the SHA is still the current
-default-branch head, verifies Pay's package gates and tarball, then publishes
-only `@0xkey-io/pay` with npm tag `next` after `production` approval. It refuses
-an existing version and keeps npm `latest` at `0.2.0`; do not use the general
-changeset workflow for this release.
+default-branch head, verifies Pay's package gates, and publishes only the
+checked tarball for `@0xkey-io/pay` with npm tag `next` after `production`
+approval. It refuses an existing version and keeps npm `latest` at `0.2.0`; do
+not use the general Changesets workflow or a manual recursive command for this
+release.
+
+A public GA promotion on npm tag `latest` is a separate future gated operation.
+No current generic workflow or documented manual command is authorized to
+publish Pay GA or change Pay's `latest` tag.
 
 ## Version policy
 
@@ -114,7 +129,7 @@ Before any release:
 ```bash
 pnpm run build-all
 pnpm run contract-guard
-pnpm publish -r --dry-run --no-git-checks
+pnpm --filter '!@0xkey-io/pay' publish -r --dry-run --no-git-checks
 ```
 
 Optional:

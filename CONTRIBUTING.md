@@ -7,6 +7,10 @@
 - [`internal/`](/internal/): Internal scripts and configs. Won't be published to npm.
 
 See [RELEASING.md](/RELEASING.md) for npm publishing instructions.
+Every recursive publish must explicitly exclude `@0xkey-io/pay`. Pay release
+candidates are published only from the checked tarball in the protected
+`pay-publish.yml` workflow with npm tag `next`; a public GA `latest` release is
+a separate future gated operation.
 
 ## Getting started
 
