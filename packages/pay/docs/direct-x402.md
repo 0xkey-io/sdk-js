@@ -103,4 +103,9 @@ and blocks the handler. A syntactically malformed receipt currently produces
 `PAYMENT_RECEIPT_UNVERIFIED`. All retain the same authenticated record. Only the
 default verifier's full Economic Effect proof permits compare-and-delete.
 Repeated same-credential backend requests are not duplicate economic broadcasts.
+Successful same-credential retries can nevertheless reenter the paid handler.
+The response-only framework example has no business side effects; direct
+consumers own business-operation deduplication. The standard facilitator does
+not expose the private `paymentId`. Use the 0xkey-owned `protect()` facade when
+you need `paymentId`-based handler context for idempotent business writes.
 See [the full recovery contract](./protocol-selection-and-recovery.md).

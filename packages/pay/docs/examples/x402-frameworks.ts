@@ -15,6 +15,10 @@ export function honoPayment(options: Create0xkeyFacilitatorClientOptions, payTo:
 }
 export function nextPayment(options: Create0xkeyFacilitatorClientOptions, payTo: string) {
   return withX402FromHTTPServer(
+    // Response only: successful same-credential retries can reenter this handler.
+    // Direct consumers own business deduplication; the standard facilitator
+    // exposes no private paymentId. Use the 0xkey-owned protect() facade for
+    // paymentId-based handler context when implementing idempotent writes.
     async () => NextResponse.json({ paid: true }),
     createUpfrontHTTPServer(options, payTo),
   );
