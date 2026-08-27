@@ -271,6 +271,186 @@ describe("Pay client 1.0 public contract", () => {
   });
 });
 
+describe("buyer error provenance", () => {
+  // Each former marker must be inert at unowned callback boundaries, even
+  // when the text is an exact match rather than incidental diagnostic prose.
+  const markers = [
+    "PAY_HOST_DENIED",
+    "PAY_INSECURE_TRANSPORT",
+    "PAY_REDIRECT_DENIED",
+    "PAYMENT_IN_PROGRESS",
+    "PAYMENT_RESUME_REQUIRED",
+    "PAYMENT_RESUME_UNAVAILABLE",
+    "PENDING_PAYMENT_CLAIMED",
+    "PENDING_PAYMENT_CLEAR_CONFLICT",
+    "PENDING_PAYMENT_CONFLICT",
+    "PENDING_PAYMENT_POLICY_DENIED",
+    "PENDING_PAYMENT_INVALID",
+    "PAYMENT_RECEIPT_MISSING",
+    "PAYMENT_RECEIPT_MISMATCH",
+    "PAYMENT_RECEIPT_UNVERIFIED",
+    "PAY_RECEIPT_RPC",
+    "PAY_SIGNER_UNSUPPORTED",
+  ];
+  const cases: Array<[string, unknown]> = markers.flatMap((marker) => [
+    [`${marker}-exact`, new Error(marker)],
+    [`${marker}-prefix`, new Error(`${marker}: diagnostic`)],
+    [`${marker}-embedded`, new Error(`diagnostic ${marker} detail`)],
+  ]);
+  cases.push(
+    ["multiple-markers", new Error(markers.join(" "))],
+    ["string", "PAY_HOST_DENIED"],
+    ["null", null],
+    ["undefined", undefined],
+    ["number", 7],
+    [
+      "forged-object",
+      {
+        name: "PayError",
+        message: "PAY_HOST_DENIED",
+        code: "PAY_HOST_DENIED",
+        phase: "policy",
+        retryable: false,
+      },
+    ],
+    [
+      "forged-error",
+      Object.assign(new Error("PAY_HOST_DENIED"), {
+        name: "PayError",
+        code: "PAY_HOST_DENIED",
+        phase: "policy",
+        retryable: false,
+      }),
+    ],
+    [
+      "throwing-message",
+      Object.defineProperty(new Error(), "message", {
+        get() {
+          throw new Error("message must not be inspected");
+        },
+      }),
+    ],
+  );
+  describe.each(["fetch", "pending", "resume"] as const)("%s", (operation) => {
+    it.each(cases)("uses operation context for %s", async (_label, cause) => {
+      const recovery = createRecovery();
+      const client = createPayClient(
+        createClientOptions({
+          recovery:
+            operation === "fetch"
+              ? recovery
+              : {
+                  ...recovery,
+                  async load() {
+                    throw cause;
+                  },
+                },
+          fetch: async () => {
+            throw cause;
+          },
+        }),
+      );
+      const result =
+        operation === "fetch"
+          ? client.fetch("https://merchant.example/weather")
+          : client[operation]();
+      let caught: unknown;
+      try {
+        await result;
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(PayError);
+      expect(caught).toMatchObject({
+        code: "PAYMENT_SERVICE_UNAVAILABLE",
+        phase: operation === "fetch" ? "request" : "recovery",
+        retryable: true,
+      });
+      expect((caught as PayError).message).toBe(
+        "PAYMENT_SERVICE_UNAVAILABLE: Payment service unavailable",
+      );
+      expect((caught as PayError).cause).toBe(cause);
+      expect((caught as PayError).paymentId).toBeUndefined();
+    });
+
+    it("preserves a local typed error and its identity", async () => {
+      const cause = new PayError("PAYMENT_AUTH_FORBIDDEN", "owned failure", {
+        phase: "policy",
+        retryable: false,
+      });
+      const recovery = createRecovery();
+      const client = createPayClient(
+        createClientOptions({
+          recovery: {
+            ...recovery,
+            async load() {
+              throw cause;
+            },
+          },
+        }),
+      );
+      const result =
+        operation === "fetch"
+          ? client.fetch("https://merchant.example/weather")
+          : client[operation]();
+      await expect(result).rejects.toBe(cause);
+    });
+  });
+
+  it("uses configuration context for an unowned policy getter failure", () => {
+    const cause = new Error("PAYMENT_IN_PROGRESS");
+    const options = createClientOptions();
+    Object.defineProperty(options.policy, "allowHosts", {
+      get() {
+        throw cause;
+      },
+    });
+    expect(() => createPayClient(options)).toThrow(
+      expect.objectContaining({
+        code: "PAY_PROFILE_INVALID",
+        phase: "configuration",
+        retryable: false,
+        cause,
+      }),
+    );
+  });
+
+  it("wraps even a local typed signer exception before handing it to the protocol", async () => {
+    const cause = new PayError("PAY_HOST_DENIED", "signer rejected", {
+      phase: "policy",
+    });
+    createPayClient(
+      createClientOptions({
+        account: {
+          address: account.address,
+          async signTypedData() {
+            throw cause;
+          },
+        },
+      }),
+    );
+    // Capture only the protocol dependency seam; the SDK's signer wrapper is real.
+    const dependency = jest.requireMock("@x402/evm") as {
+      toClientEvmSigner: jest.Mock;
+    };
+    const signer = dependency.toClientEvmSigner.mock.calls.at(-1)![0];
+    let caught: unknown;
+    try {
+      await signer.signTypedData({});
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(PayError);
+    expect(caught).toMatchObject({
+      code: "PAYMENT_SIGNING_FAILED",
+      phase: "signing",
+      retryable: false,
+    });
+    expect((caught as PayError).cause).toBe(cause);
+    expect(caught).not.toBe(cause);
+  });
+});
+
 describe("network selection", () => {
   it("requires an explicit supported Base network at runtime", () => {
     expect(() =>
@@ -622,6 +802,40 @@ describe("createPayClient", () => {
     ).toThrow("PAY_PROFILE_INVALID");
   });
 
+  it("wraps a credential decoder exception as owned policy denial with direct cause", async () => {
+    const cause = new Error("decoder diagnostic PAY_HOST_DENIED");
+    const native = jest.requireMock("mppx");
+    native.x402.Header.decodePaymentSignature.mockImplementation(() => {
+      throw cause;
+    });
+    let sends = 0;
+    const client = createPayClient(
+      createClientOptions({
+        fetch: async () => {
+          sends++;
+          return new Response(null);
+        },
+      }),
+    );
+    let caught: unknown;
+    try {
+      await client.fetch("https://merchant.example/weather", {
+        headers: { "PAYMENT-SIGNATURE": "signed-payment" },
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(PayError);
+    expect(caught).toMatchObject({
+      code: "PAYMENT_POLICY_DENIED",
+      phase: "policy",
+      retryable: false,
+    });
+    expect((caught as PayError).cause).toBe(cause);
+    expect(sends).toBe(0);
+    await expect(client.pending()).resolves.toBeUndefined();
+  });
+
   it("requires durable pending-payment storage by default", () => {
     expect(() =>
       createPayClient(
@@ -797,6 +1011,89 @@ describe("createPayClient", () => {
     expect(rawFetch).not.toHaveBeenCalled();
     expect(await payFetch.pending()).toBeDefined();
   });
+
+  it.each(["save", "clear", "onReceipt"] as const)(
+    "preserves lifecycle when %s throws marker-bearing prose",
+    async (boundary) => {
+      const cause = new Error("diagnostic PAY_HOST_DENIED PAYMENT_IN_PROGRESS");
+      const events: string[] = [];
+      let stored: PendingPaymentRecord | undefined;
+      const native = jest.requireMock("mppx");
+      native.x402.Header.decodePaymentResponse.mockReturnValue(x402Receipt());
+      const client = createPayClient(
+        createClientOptions({
+          recovery: {
+            protection: "aead",
+            async load() {
+              events.push("load");
+              return stored;
+            },
+            async saveIfAbsent(record) {
+              events.push("save");
+              if (boundary === "save") throw cause;
+              stored = record;
+              return true;
+            },
+            async clear(digest) {
+              events.push("clear");
+              expect(digest).toBe(stored?.digest);
+              if (boundary === "clear") throw cause;
+              stored = undefined;
+              return true;
+            },
+          },
+          fetch: async () => {
+            events.push("send");
+            return new Response(null, {
+              headers: { "PAYMENT-RESPONSE": "receipt" },
+            });
+          },
+          verification: {
+            verifier: async () => {
+              events.push("verify");
+              return true;
+            },
+          },
+          onReceipt() {
+            events.push("callback");
+            throw cause;
+          },
+        }),
+      );
+      let caught: unknown;
+      try {
+        await client.fetch("https://merchant.example/weather", {
+          headers: { "PAYMENT-SIGNATURE": "signed-payment" },
+        });
+      } catch (error) {
+        caught = error;
+      }
+      expect(events).toEqual(
+        boundary === "save"
+          ? ["load", "save"]
+          : boundary === "clear"
+            ? ["load", "save", "send", "verify", "clear"]
+            : ["load", "save", "send", "verify", "clear", "callback"],
+      );
+      expect(Boolean(stored)).toBe(boundary === "clear");
+      expect(Boolean(await client.pending())).toBe(boundary !== "onReceipt");
+      if (boundary !== "onReceipt") {
+        await expect(
+          client.fetch("https://merchant.example/weather"),
+        ).rejects.toMatchObject({
+          code: "PAYMENT_RESUME_REQUIRED",
+          phase: "recovery",
+          retryable: false,
+        });
+      }
+      expect(caught).toMatchObject({
+        code: "PAYMENT_SERVICE_UNAVAILABLE",
+        phase: "request",
+        retryable: true,
+      });
+      expect((caught as PayError).cause).toBe(cause);
+    },
+  );
 
   it("keeps the signed request after any response without a receipt", async () => {
     const store = {

@@ -326,7 +326,9 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
     const url = request.url;
     assertSecureTransport(url, options.allowInsecureLocalhost);
     if (!hostAllowed(url, options.allowHosts)) {
-      throw new Error(`PAY_HOST_DENIED: ${new URL(url).host}`);
+      throw new PayError("PAY_HOST_DENIED", "Pay host denied", {
+        phase: "policy",
+      });
     }
     if (hasPaymentCredential(request.headers)) {
       const candidateRequest = request.clone();
@@ -371,8 +373,10 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
             assertPendingPaymentBindings(stored.payment, pendingFacts);
             pendingPersisted = true;
           }
-          throw new Error(
-            "PENDING_PAYMENT_CLAIMED: another process owns an unresolved payment",
+          throw new PayError(
+            "PENDING_PAYMENT_CLAIMED",
+            "Pending payment claimed",
+            { phase: "recovery", retryable: true },
           );
         }
         pendingPersisted = true;
@@ -382,7 +386,9 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
     if (response.url) {
       assertSecureTransport(response.url, options.allowInsecureLocalhost);
       if (!hostAllowed(response.url, options.allowHosts)) {
-        throw new Error(`PAY_HOST_DENIED: ${new URL(response.url).host}`);
+        throw new PayError("PAY_HOST_DENIED", "Pay host denied", {
+          phase: "policy",
+        });
       }
     }
     if (response.status >= 300 && response.status < 400) {
@@ -390,16 +396,18 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
       if (location) {
         const redirectUrl = new URL(location, url).toString();
         assertSecureTransport(redirectUrl, options.allowInsecureLocalhost);
-        throw new Error(`PAY_REDIRECT_DENIED: ${new URL(redirectUrl).host}`);
+        throw new PayError("PAYMENT_POLICY_DENIED", "Payment policy denied", {
+          phase: "policy",
+        });
       }
     }
     return response;
   };
   const signTypedData = options.account.signTypedData;
   if (!signTypedData) {
-    throw new Error(
-      "PAY_SIGNER_UNSUPPORTED: account must support signTypedData",
-    );
+    throw new PayError("PAY_PROFILE_INVALID", "Pay profile invalid", {
+      phase: "configuration",
+    });
   }
   const safeAccount: PayEvmAccount = {
     address: options.account.address,
@@ -468,22 +476,27 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
     init?: RequestInit,
   ): Promise<Response> {
     if (paymentInProgress) {
-      throw new Error(
-        "PAYMENT_IN_PROGRESS: another payment request is running",
-      );
+      throw new PayError("PAYMENT_IN_PROGRESS", "Payment in progress", {
+        phase: "request",
+        retryable: true,
+      });
     }
     paymentInProgress = true;
     try {
       await ensurePendingPaymentLoaded();
       if (pendingRequest) {
-        throw new Error(
-          "PAYMENT_RESUME_REQUIRED: call client.resume() before signing again",
+        throw new PayError(
+          "PAYMENT_RESUME_REQUIRED",
+          "Payment resume required",
+          { phase: "recovery" },
         );
       }
       const url = requestUrl(input);
       assertSecureTransport(url, options.allowInsecureLocalhost);
       if (!hostAllowed(url, options.allowHosts)) {
-        throw new Error(`PAY_HOST_DENIED: ${new URL(url).host}`);
+        throw new PayError("PAY_HOST_DENIED", "Pay host denied", {
+          phase: "policy",
+        });
       }
       const initialRequest = new Request(input, init);
       if (!initialRequest.headers.has("Accept-Payment")) {
@@ -512,16 +525,19 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
 
   executeFetch.resume = async () => {
     if (paymentInProgress) {
-      throw new Error(
-        "PAYMENT_IN_PROGRESS: another payment request is running",
-      );
+      throw new PayError("PAYMENT_IN_PROGRESS", "Payment in progress", {
+        phase: "request",
+        retryable: true,
+      });
     }
     paymentInProgress = true;
     try {
       await ensurePendingPaymentLoaded();
       if (!pendingRequest) {
-        throw new Error(
-          "PAYMENT_RESUME_UNAVAILABLE: no signed request is pending",
+        throw new PayError(
+          "PAYMENT_RESUME_UNAVAILABLE",
+          "Payment resume unavailable",
+          { phase: "recovery" },
         );
       }
       const url = pendingRequest.url;
@@ -564,14 +580,17 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
             )),
         );
       } catch (error) {
-        throw new Error(
-          "PAYMENT_RECEIPT_UNVERIFIED: Base receipt could not be checked",
-          { cause: error },
+        throw new PayError(
+          "PAYMENT_RECEIPT_UNVERIFIED",
+          "Payment receipt unverified",
+          { phase: "receipt", retryable: true, cause: error },
         );
       }
       if (!matches) {
-        throw new Error(
-          "PAYMENT_RECEIPT_MISMATCH: receipt does not match pending payment",
+        throw new PayError(
+          "PAYMENT_RECEIPT_MISMATCH",
+          "Payment receipt mismatch",
+          { phase: "receipt" },
         );
       }
       if (pendingRecord) {
@@ -579,8 +598,10 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
           pendingRecord.digest,
         );
         if (!cleared) {
-          throw new Error(
-            "PENDING_PAYMENT_CLEAR_CONFLICT: durable payment record was not cleared",
+          throw new PayError(
+            "PENDING_PAYMENT_CLEAR_CONFLICT",
+            "Pending payment clear conflict",
+            { phase: "recovery" },
           );
         }
       }
@@ -592,9 +613,9 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
       return response;
     }
     if (pendingRequest && response.ok) {
-      throw new Error(
-        "PAYMENT_RECEIPT_MISSING: signed request succeeded without a payment receipt",
-      );
+      throw new PayError("PAYMENT_RECEIPT_MISSING", "Payment receipt missing", {
+        phase: "receipt",
+      });
     }
     if (pendingRequest && response.status >= 500) {
       throw await paymentStatusUnknown(response);
@@ -628,8 +649,10 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
               pendingFacts,
             );
             if (manual.digest !== stored.digest) {
-              throw new Error(
-                "PENDING_PAYMENT_CONFLICT: store and pendingPayment differ",
+              throw new PayError(
+                "PENDING_PAYMENT_CONFLICT",
+                "Pending payment conflict",
+                { phase: "recovery" },
               );
             }
             pendingRecord = manual;
@@ -710,100 +733,11 @@ function normalizePayError(
   fallbackCode: PayErrorCode,
 ): PayError {
   if (error instanceof PayError) return error;
-  const message = error instanceof Error ? error.message : "";
-  const known: Array<{
-    marker: string;
-    code: PayErrorCode;
-    phase: PayErrorPhase;
-    retryable?: boolean;
-  }> = [
-    { marker: "PAY_HOST_DENIED", code: "PAY_HOST_DENIED", phase: "policy" },
-    {
-      marker: "PAY_INSECURE_TRANSPORT",
-      code: "PAY_INSECURE_TRANSPORT",
-      phase: "request",
-    },
-    {
-      marker: "PAY_REDIRECT_DENIED",
-      code: "PAYMENT_POLICY_DENIED",
-      phase: "policy",
-    },
-    {
-      marker: "PAYMENT_IN_PROGRESS",
-      code: "PAYMENT_IN_PROGRESS",
-      phase: "request",
-      retryable: true,
-    },
-    {
-      marker: "PAYMENT_RESUME_REQUIRED",
-      code: "PAYMENT_RESUME_REQUIRED",
-      phase: "recovery",
-    },
-    {
-      marker: "PAYMENT_RESUME_UNAVAILABLE",
-      code: "PAYMENT_RESUME_UNAVAILABLE",
-      phase: "recovery",
-    },
-    {
-      marker: "PENDING_PAYMENT_CLAIMED",
-      code: "PENDING_PAYMENT_CLAIMED",
-      phase: "recovery",
-      retryable: true,
-    },
-    {
-      marker: "PENDING_PAYMENT_CLEAR_CONFLICT",
-      code: "PENDING_PAYMENT_CLEAR_CONFLICT",
-      phase: "recovery",
-    },
-    {
-      marker: "PENDING_PAYMENT_CONFLICT",
-      code: "PENDING_PAYMENT_CONFLICT",
-      phase: "recovery",
-    },
-    {
-      marker: "PENDING_PAYMENT_POLICY_DENIED",
-      code: "PAYMENT_POLICY_DENIED",
-      phase: "policy",
-    },
-    {
-      marker: "PENDING_PAYMENT_INVALID",
-      code: "PENDING_PAYMENT_CORRUPT",
-      phase: "recovery",
-    },
-    {
-      marker: "PAYMENT_RECEIPT_MISSING",
-      code: "PAYMENT_RECEIPT_MISSING",
-      phase: "receipt",
-    },
-    {
-      marker: "PAYMENT_RECEIPT_MISMATCH",
-      code: "PAYMENT_RECEIPT_MISMATCH",
-      phase: "receipt",
-    },
-    {
-      marker: "PAYMENT_RECEIPT_UNVERIFIED",
-      code: "PAYMENT_RECEIPT_UNVERIFIED",
-      phase: "receipt",
-      retryable: true,
-    },
-    {
-      marker: "PAY_RECEIPT_RPC",
-      code: "PAY_PROFILE_INVALID",
-      phase: "configuration",
-    },
-    {
-      marker: "PAY_SIGNER_UNSUPPORTED",
-      code: "PAY_PROFILE_INVALID",
-      phase: "configuration",
-    },
-  ];
-  const match = known.find(({ marker }) => message.includes(marker));
-  const code = match?.code ?? fallbackCode;
-  const phase = match?.phase ?? fallbackPhase;
-  const retryable = match?.retryable ?? code === "PAYMENT_SERVICE_UNAVAILABLE";
-  return new PayError(code, publicErrorMessage(code), {
-    phase,
-    retryable,
+  // Only this package's PayError carries owned classification. Callback and
+  // dependency errors (including foreign copies) keep the operation context.
+  return new PayError(fallbackCode, publicErrorMessage(fallbackCode), {
+    phase: fallbackPhase,
+    retryable: fallbackCode === "PAYMENT_SERVICE_UNAVAILABLE",
     cause: error,
   });
 }
@@ -955,20 +889,22 @@ function restorePendingPayment(
   assertPendingPaymentChecksum(pending);
   assertSecureTransport(pending.url, allowInsecureLocalhost);
   if (!hostAllowed(pending.url, allowHosts)) {
-    throw new Error(
-      "PENDING_PAYMENT_INVALID: unsupported or untrusted request",
-    );
+    throw new PayError("PENDING_PAYMENT_CORRUPT", "Pending payment corrupt", {
+      phase: "recovery",
+    });
   }
   const method = pending.method.toUpperCase();
   const headers = new Headers(pending.headers);
   if (!hasPaymentCredential(headers)) {
-    throw new Error("PENDING_PAYMENT_INVALID: payment credential is missing");
+    throw new PayError("PENDING_PAYMENT_CORRUPT", "Pending payment corrupt", {
+      phase: "recovery",
+    });
   }
   const hasBody = method !== "GET" && method !== "HEAD";
   if (!hasBody && pending.bodyBase64 !== undefined) {
-    throw new Error(
-      "PENDING_PAYMENT_INVALID: GET or HEAD request cannot contain a body",
-    );
+    throw new PayError("PENDING_PAYMENT_CORRUPT", "Pending payment corrupt", {
+      phase: "recovery",
+    });
   }
   return new Request(pending.url, {
     method,
@@ -1021,7 +957,9 @@ function base64ToBytes(value: string): Uint8Array {
       value,
     )
   ) {
-    throw new Error("PENDING_PAYMENT_INVALID: body is not base64");
+    throw new PayError("PENDING_PAYMENT_CORRUPT", "Pending payment corrupt", {
+      phase: "recovery",
+    });
   }
   const binary = atob(value);
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
@@ -1297,12 +1235,10 @@ function inspectPendingPayment(
       protocol: "mpp",
     };
   } catch (error) {
-    throw new Error(
-      "PENDING_PAYMENT_POLICY_DENIED: signed request is not allowed",
-      {
-        cause: error,
-      },
-    );
+    throw new PayError("PAYMENT_POLICY_DENIED", "Payment policy denied", {
+      phase: "policy",
+      cause: error,
+    });
   }
 }
 
@@ -1397,18 +1333,20 @@ function receiptRpcUrl(
 ): string {
   const configured = options.rpcUrls?.[network];
   if (!configured) {
-    throw new Error(
-      "PAY_RECEIPT_RPC_REQUIRED: receipt verification requires an RPC URL or verifier",
-    );
+    throw new PayError("PAY_PROFILE_INVALID", "Pay profile invalid", {
+      phase: "configuration",
+    });
   }
   const url = new URL(configured);
   if (url.protocol !== "https:") {
-    throw new Error("PAY_RECEIPT_RPC_INVALID: receipt RPC must use HTTPS");
+    throw new PayError("PAY_PROFILE_INVALID", "Pay profile invalid", {
+      phase: "configuration",
+    });
   }
   if (network === "eip155:8453" && url.hostname === "mainnet.base.org") {
-    throw new Error(
-      "PAY_RECEIPT_RPC_INVALID: Base public RPC is not for production use",
-    );
+    throw new PayError("PAY_PROFILE_INVALID", "Pay profile invalid", {
+      phase: "configuration",
+    });
   }
   return url.toString();
 }
@@ -1435,9 +1373,9 @@ function assertSecureTransport(
     hostname === "127.0.0.1" ||
     hostname === "[::1]";
   if (parsed.protocol === "http:" && allowInsecureLocalhost && loopback) return;
-  throw new Error(
-    "PAY_INSECURE_TRANSPORT: HTTPS is required; HTTP is allowed only for explicit loopback development",
-  );
+  throw new PayError("PAY_INSECURE_TRANSPORT", "Pay insecure transport", {
+    phase: "request",
+  });
 }
 
 function hasPaymentCredential(headers: Headers): boolean {

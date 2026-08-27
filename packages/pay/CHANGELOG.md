@@ -2,6 +2,12 @@
 
 ## 1.0.0-rc.1
 
+- Classify buyer failures by typed ownership and explicit operation context,
+  not free-text error markers. Preserve local `PayError` identity, safe unknown
+  fallback messages and original unknown causes. Keep owned policy, recovery
+  and receipt failures distinct; signing, storage, receipt verification and
+  synchronous `onReceipt` propagation/order are unchanged.
+
 - Add optional direct MPP `paymentError` ownership configuration, captured and
   safely validated before I/O. Pinned native 0.8.19/0.8.17 constructors preserve
   settlement 503/403 across physical module owners; exact peers stay unchanged.

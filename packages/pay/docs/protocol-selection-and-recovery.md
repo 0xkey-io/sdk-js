@@ -247,6 +247,23 @@ contract.
 
 ## Unknown result and resume
 
+Buyer error classification follows typed provenance, not error text. Only a
+local `PayError` preserves its supplied classification and identity. Unknown
+errors, non-Error thrown values and foreign/lookalike errors use the explicit
+operation fallback with safe fixed text and the original value as `cause`:
+`PAYMENT_SERVICE_UNAVAILABLE`, retryable, in `request` for `fetch` or `recovery`
+for `resume`/`pending`; caught construction failures use `PAY_PROFILE_INVALID`,
+`configuration`, not retryable. Owned policy, storage-state and receipt checks
+produce typed errors at their source. Signer and receipt-verifier exceptions
+are explicitly wrapped even if they are already typed; verifier exceptions are
+the direct `cause` of `PAYMENT_RECEIPT_UNVERIFIED`.
+
+Classification does not change recovery state. A failed `saveIfAbsent` stops
+before send and keeps the in-process pending request. A thrown or false `clear`
+does not clear pending. After a verified receipt and successful clear, pending
+is cleared before synchronous `onReceipt`; a callback exception still propagates
+and does not restore the cleared payment. Callback failures are not swallowed.
+
 Any 5xx after a credential is signed means the payment may have reached the
 provider or chain. It does not mean “not paid”. The normal unknown response is
 `503 PAYMENT_STATUS_UNKNOWN` with `Retry-After: 2`. The private `paymentId`

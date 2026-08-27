@@ -42,6 +42,21 @@ All client failures are `PayError` instances. Branch on `code`, `phase`, and
 `retryable`, not message text. A signed 5xx becomes retryable
 `PAYMENT_STATUS_UNKNOWN`; call `resume()` and do not create a new payment.
 
+Unknown callback/dependency failures cannot select a code by message, name or
+lookalike fields. They use `PAYMENT_SERVICE_UNAVAILABLE` (retryable) in the
+calling operation's phase: `request` for `fetch`, `recovery` for `pending` and
+`resume`. Unknown construction failures caught by the configuration boundary
+use `PAY_PROFILE_INVALID` (`configuration`, not retryable). Messages are fixed
+safe text, with the original thrown value retained as `cause`. A `PayError`
+from the same local module owner retains its identity; a foreign copy does not.
+The signer and receipt-verifier boundaries still wrap any exception as
+`PAYMENT_SIGNING_FAILED` and `PAYMENT_RECEIPT_UNVERIFIED`, respectively. The
+verifier's original exception is now the direct typed error's `cause`, without
+the former intermediate marker error.
+If an upstream protocol replaces that typed error with an ordinary error
+(as the pinned x402 fetch client does for signing failures), the public result
+uses the operation fallback and retains the upstream error as its cause.
+
 ## Seller migration
 
 The former route-table `server.handle()` surface is removed. Create one

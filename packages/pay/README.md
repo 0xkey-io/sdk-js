@@ -161,6 +161,13 @@ by x402 and MPP; Pay does not copy a second wallet adapter. See the tested
 [`with-x402` example](../../examples/with-x402/README.md#2-company-wallet-signing).
 
 The buyer does not replace global `fetch`. It never falls back after signing.
+Buyer failures use `PayError` code, phase and retryability, never dependency
+message text. A local `PayError` keeps its identity; other thrown values from
+fetch or recovery callbacks use the operation's safe fallback and are retained
+as `cause`. A foreign package copy or a lookalike error is not a local typed
+owner. Signer and receipt-verifier exceptions remain explicitly wrapped.
+If an upstream protocol replaces a typed error with an ordinary error, the
+public boundary uses the fallback; text cannot restore the lost ownership.
 HTTPS is required. For local development only, `allowInsecureLocalhost: true`
 allows HTTP to `localhost`, `127.0.0.1`, and `[::1]`.
 
