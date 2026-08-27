@@ -78,14 +78,40 @@ resource server, or `create0xkeyEvmChargeMethod` from `@0xkey-io/pay/mpp` with
 `Mppx.create`. The latter is native MPP HTTP only; x402 is a separate seller
 path.
 
-Install exactly `mppx@0.8.19`; it is an exact peer because the safe 503 boundary
-depends on one shared `PaymentError` class identity. A direct MPP method returns
+Install exactly `mppx@0.8.19` for Pay's peer contract. For direct wiring pass
+`paymentError: Errors.PaymentError` from the same physical public `mppx` module
+as your `Mppx.create()` owner. Omission keeps the SDK-resolved constructor;
+matching versions alone do not establish ownership. The
+[typed recipe](./examples/mpp-upfront.ts) accepts the pinned native 0.8.19 and
+0.8.17 constructors without casts. Separate 0.8.17 owner/wire compatibility
+does not relax Pay's exact peer or approve a peer-invalid downgrade.
+
+The option is captured and probed synchronously with synthetic public values,
+before payment I/O. Nonconstructible, throwing or incompatible configuration
+fails as redacted `PAY_PROFILE_INVALID` (`configuration`, not retryable, no
+`paymentId` or retained constructor cause). It never silently falls back.
+Shape validation cannot verify the owner of a separately created Mppx;
+supplying a structurally valid wrong owner remains an integration-profile
+error. Arbitrary constructors and cross-realm behavior are not supported.
+Settlement Problem Details now expose only `errorCode` and `retryable` in
+`details`; incidental private `paymentId` data is no longer forwarded.
+
+A direct MPP method returns
 an actual HTTP 503 Response (without a retry challenge or receipt) when command
 settlement is indeterminate, even though mppx's internal method-result
 discriminant remains 402. Return `result.challenge` to the framework. Raw mppx
 does not persist or replay that credential after 503: callers must save the
 original `Authorization` credential and resend those exact bytes, or use
 `createPayClient()` for built-in durable recovery.
+
+Both direct MPP receipt wrapping and the protected facade now emit receipts
+only on 2xx, stripping even handler-supplied receipts on every non-2xx status.
+Status, status text, body stream, Location and unrelated headers are preserved,
+as is each path's existing cache policy. Fulfillment classification is unchanged:
+handler throw/5xx means `FAILED`; other returned statuses mean `FULFILLED`.
+`FULFILLED` does not prove an application side effect. In particular, 3xx/4xx
+have no MPP receipt and cannot clear buyer pending. Persistence failure keeps
+the existing 503/no-receipt behavior, with no new challenge or settlement.
 
 Keep the complete peer contract installed: `@x402/core@2.23.0`,
 `mppx@0.8.19`, and `viem>=2.54.0 <3`. Private settle success now fails closed

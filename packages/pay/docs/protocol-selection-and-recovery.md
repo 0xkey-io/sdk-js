@@ -43,8 +43,24 @@ and strict public examples define the tested 2.22/2.23 natural upfront path.
 This direct path settles before the handler and echoes its settlement once;
 the following seller flow describes the separate 0xkey-owned facade.
 
-The direct MPP entry has an exact `mppx@0.8.19` peer so its typed settlement
-boundary error and the consumer's `Mppx.create()` share one class identity.
+The direct MPP entry keeps its exact `mppx@0.8.19` peer. Its optional
+`paymentError` takes native `Errors.PaymentError` from the same physical public
+`mppx` module as the consumer's `Mppx.create()`. Omission keeps the SDK-resolved
+owner; exact version agreement is not proof of identity. The typed
+[public recipe](./examples/mpp-upfront.ts) supports pinned native 0.8.19 and
+0.8.17 constructor composition, not arbitrary constructors or cross-realm
+plugins. A separate 0.8.17 owner is not a peer-clean downgrade claim.
+
+The factory captures this dependency and creates its settlement-error subclass
+and transport recognition per factory. It synchronously validates the safe
+Problem Details shape using only synthetic public probe values, before payment
+I/O. Invalid configuration fails redacted with `PAY_PROFILE_INVALID`, phase
+`configuration`, not retryable, no `paymentId` or retained constructor cause;
+there is no fallback. Shape validation cannot attest the owner of a separately
+created Mppx: a valid wrong physical constructor is an integration-profile
+failure, not promised early rejection. Public settlement Problem Details only
+include `errorCode` and `retryable` under `details`; private payment identity,
+original causes, credentials, stamps and provider data are never forwarded.
 For an indeterminate command result, the mppx internal route union still says
 402, but the contained HTTP Response is 503, carries `Retry-After: 2`, and has
 no retry challenge or receipt. Official framework adapters return that Response
@@ -78,7 +94,8 @@ injection contract; their remote credentials are not locally validated.
    network, verified payer, non-zero success transaction, and correctly typed
    optional fields.
 7. The SDK returns `paymentId` and then calls the merchant handler.
-8. The protocol receipt is attached to the merchant response.
+8. The MPP receipt is attached only to a 2xx merchant response; x402 retains
+   its official upfront receipt behavior.
 
 `CONFIRMED` is the v1 delivery bar. `FINALIZED` is observed later. A protocol
 receipt proves that the protocol payment reached its success bar. It does not
@@ -106,11 +123,19 @@ remain non-402 without a fresh challenge or receipt. A signed buyer receiving
 even a malformed-credential 402 keeps its pending record and must not sign
 again, switch protocol/provider, or clear pending on the fresh challenge.
 
-If the merchant handler succeeds, the SDK synchronously persists `FULFILLED`
-before returning the protocol receipt. A throw or 5xx synchronously persists
+For any MPP handler response below 500, the SDK synchronously requests
+`FULFILLED`. A throw or 5xx synchronously requests
 `FAILED` without exception text, credentials, bodies, or receipts. MPP never
-attaches a receipt to a failed handler; x402 uses its official upfront
-failure-path receipt. Only fulfillment HTTP 200 is committed. A timeout or
+attaches a receipt to any non-2xx response, and removes a handler-supplied
+`Payment-Receipt` even on the 5xx early-return path. This is independent of
+fulfillment classification: 3xx/4xx remain `FULFILLED` but have no receipt and
+cannot clear buyer pending. `FULFILLED` does not prove an application side
+effect. Direct method receipt wrapping follows the same 2xx-only rule and
+stays synchronous. All paths preserve status/status text/body stream/Location
+and unrelated headers. Receipt wrapping retains native private-cache treatment;
+the facade's 5xx early return retains its existing cache policy. x402 uses its
+unchanged official upfront failure-path receipt. Only fulfillment HTTP 200 is
+accepted as persistence acknowledgment. A timeout or
 non-200 is retryable `PAYMENT_STATUS_UNKNOWN`; recovery resends the same
 credential after a process restart. A handler with side effects must use its
 private `paymentId` context as the idempotency key.

@@ -20,6 +20,7 @@ import type { BasePaymentNetwork } from "./receipt-verifier";
 import { createXStampV2Stamper, type PayApiKey } from "./xstamp";
 import { createX402FacilitatorTransport } from "./internal/x402-facilitator";
 import { createMppEvmChargeMethod } from "./internal/create-mpp-evm-charge-method";
+import { withoutMppReceipt } from "./internal/mpp-response";
 import { X402ExactV2Adapter } from "./internal/x402-exact-v2-adapter";
 import {
   ZeroXkeySettlementAdapter,
@@ -474,7 +475,7 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
             failureCode: "HANDLER_ERROR",
           });
           return persistence.ok
-            ? response
+            ? withoutMppReceipt(response)
             : errorResponse(503, "PAYMENT_STATUS_UNKNOWN", true);
         }
         const persistence = await updateFulfillment(paymentId, "mpp", {

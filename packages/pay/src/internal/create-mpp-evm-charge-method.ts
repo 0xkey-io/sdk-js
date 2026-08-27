@@ -6,6 +6,7 @@ import { PayError } from "../errors";
 import { assertBasePaymentNetwork } from "../networks";
 import type { BasePaymentNetwork } from "../receipt-verifier";
 import type { PayApiKey, RequestStamper } from "../xstamp";
+import { withoutMppReceipt } from "./mpp-response";
 import {
   assertMppCredentialHasNoUnknownExtensions,
   MppEvmChargeAdapter,
@@ -24,6 +25,7 @@ export interface MppEvmChargeMethodOptions {
   facilitatorUrl?: string;
   fetch?: typeof globalThis.fetch;
   timeoutMs?: number;
+  paymentError?: typeof Errors.PaymentError;
 }
 
 export function createMppEvmChargeMethod(
@@ -31,6 +33,7 @@ export function createMppEvmChargeMethod(
   onSettlement?: (result: ZeroXkeySettlementResult) => void,
   onFailure?: (error: PayError) => void,
 ): { method: ReturnType<typeof charge> } {
+  const SettlementBoundaryError = captureSettlementError(options);
   validateOptions(options);
   const economicAdapter = new MppEvmChargeAdapter(options.network);
   const settlementAdapter = new ZeroXkeySettlementAdapter(options);
@@ -49,7 +52,7 @@ export function createMppEvmChargeMethod(
               phase: "request", retryable: true, cause,
             });
         onFailure?.(error);
-        throw new SettlementBoundaryError(error);
+        throw new SettlementBoundaryError(error.code, error.retryable, statusFor(error));
       }
       onSettlement?.(result);
       return {
@@ -91,33 +94,75 @@ export function createMppEvmChargeMethod(
           },
         );
       },
+      respondReceipt(options) {
+        if (options.response.status >= 200 && options.response.status < 300) {
+          return upstreamTransport.respondReceipt(options);
+        }
+        return withoutMppReceipt(options.response, true);
+      },
     }),
     writable: false,
   });
   return { method };
 }
 
-class SettlementBoundaryError extends Errors.PaymentError {
-  override readonly name = "SettlementBoundaryError";
-  readonly title = "Settlement Boundary Failure";
-  readonly type = "https://0xkey.io/pay/problems/settlement-boundary";
-  override readonly status: number;
+function captureSettlementError(options: MppEvmChargeMethodOptions) {
+  try {
+    const configured = options.paymentError;
+    const ErrorConstructor = configured === undefined ? Errors.PaymentError : configured;
+    // Both the upstream nominal owner and our transport recognition belong to
+    // this factory. Never give caller configuration a private PayError/cause.
+    class SettlementBoundaryError extends ErrorConstructor {
+      override readonly name = "SettlementBoundaryError";
+      readonly title = "Settlement Boundary Failure";
+      readonly type = "https://0xkey.io/pay/problems/settlement-boundary";
+      override readonly status: number;
 
-  constructor(error: PayError) {
-    super(
-      error.code === "PAYMENT_STATUS_UNKNOWN"
-        ? "settlement outcome is indeterminate"
-        : "settlement request failed",
-      {
-        details: {
-          errorCode: error.code,
-          retryable: error.retryable,
-          ...(error.paymentId ? { paymentId: error.paymentId } : {}),
-        },
-      },
-    );
-    this.status = statusFor(error);
+      constructor(errorCode: PayError["code"], retryable: boolean, status: number) {
+        super(errorCode === "PAYMENT_STATUS_UNKNOWN"
+          ? "settlement outcome is indeterminate"
+          : "settlement request failed", { details: { errorCode, retryable } });
+        this.status = status;
+      }
+    }
+    // This tests the subclass contract with synthetic public values only. It
+    // cannot attest ownership of a separately constructed consumer Mppx.
+    for (const [code, retryable, status] of [
+      ["PAYMENT_STATUS_UNKNOWN", true, 503],
+      ["PAYMENT_AUTH_FORBIDDEN", false, 403],
+    ] as const) {
+      const probe = new SettlementBoundaryError(code, retryable, status);
+      const detail = code === "PAYMENT_STATUS_UNKNOWN"
+        ? "settlement outcome is indeterminate" : "settlement request failed";
+      const expected = {
+        type: "https://0xkey.io/pay/problems/settlement-boundary",
+        title: "Settlement Boundary Failure", status, detail,
+        details: { errorCode: code, retryable },
+      };
+      const problem = probe.toProblemDetails();
+      if (!(probe instanceof Error) || probe.message !== detail ||
+        probe.cause !== undefined || !safeProblemMatches(problem, expected)) {
+        throw new Error();
+      }
+    }
+    return SettlementBoundaryError;
+  } catch {
+    throw new PayError("PAY_PROFILE_INVALID", "invalid MPP payment error constructor", {
+      phase: "configuration",
+    });
   }
+}
+
+function safeProblemMatches(actual: unknown, expected: Record<string, unknown>): boolean {
+  if (!actual || typeof actual !== "object" || Object.getPrototypeOf(actual) !== Object.prototype) return false;
+  if (Reflect.ownKeys(actual).length !== Object.keys(expected).length) return false;
+  return Object.entries(expected).every(([key, value]) => {
+    const descriptor = Object.getOwnPropertyDescriptor(actual, key);
+    if (!descriptor || !("value" in descriptor)) return false;
+    return typeof value === "object" && value !== null
+      ? safeProblemMatches(descriptor.value, value as Record<string, unknown>)
+      : descriptor.value === value;
+  });
 }
 
 function statusFor(error: PayError): number {

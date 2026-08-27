@@ -58,7 +58,7 @@ export function tlsFetch(ca, allowed) {
         res.on("data", chunk => { length += chunk.length; if (length > 262144) req.destroy(new Error("response-size-bound")); else chunks.push(chunk); });
         res.on("error", reject); res.on("end", () => {
           if (res.statusCode >= 300 && res.statusCode < 400) return reject(new Error("redirect-forbidden"));
-          const response = new Response(Buffer.concat(chunks), { status: res.statusCode, headers: res.headers });
+          const response = new Response([204, 205, 304].includes(res.statusCode) ? null : Buffer.concat(chunks), { status: res.statusCode, headers: res.headers });
           Object.defineProperty(response, "url", { value: url.href }); accept(response);
         });
       });

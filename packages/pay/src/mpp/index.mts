@@ -11,6 +11,8 @@ export interface Create0xkeyEvmChargeMethodOptions {
   facilitatorUrl?: string;
   fetch?: typeof globalThis.fetch;
   timeoutMs?: number;
+  /** Native PaymentError from the same physical mppx used by the consumer's Mppx.create. */
+  paymentError?: typeof import("mppx").Errors.PaymentError;
 }
 
 export function create0xkeyEvmChargeMethod(

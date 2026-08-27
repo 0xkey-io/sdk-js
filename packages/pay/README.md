@@ -60,10 +60,13 @@ does not prove remote admission or API authorization. Direct adapters still
 accept exactly one of `apiKey` or a custom `RequestStamper`; custom stampers
 are not probed or locally credential-validated.
 
-`protect()` verifies and settles before the handler. It reports every successful
-handler as `FULFILLED` through the private signed fulfillment endpoint and every
-throw or 5xx as `FAILED`. MPP receipts are attached only to successful handlers;
-x402 uses the official upfront failure-path receipt. A persistence timeout or
+`protect()` verifies and settles before the handler. It reports every returned
+status below 500 as `FULFILLED` through the private signed fulfillment endpoint
+and every throw or 5xx as `FAILED`. This classification does not prove an
+application side effect. MPP receipts are eligible only on 2xx responses:
+3xx/4xx remain `FULFILLED` but have no receipt and cannot clear buyer pending.
+All non-2xx responses also discard a handler-supplied MPP receipt. x402 uses
+the unchanged official upfront failure-path receipt. A persistence timeout or
 non-200 response becomes retryable `PAYMENT_STATUS_UNKNOWN`, so a retry or
 restart reuses the same credential and `paymentId`.
 
@@ -94,8 +97,22 @@ and produce an incorrect 402. See the
 
 The package retains the peer contract `mppx@0.8.19`, `@x402/core@2.23.0`,
 and `viem>=2.54.0 <3`. The Viem peer supplies the public runtime signer/address
-dependency. The direct MPP method requires that
-exact mppx peer. With raw
+dependency. For direct MPP composition, pass `paymentError: Errors.PaymentError`
+from the same physical `mppx` module used by your `Mppx.create()`; see the
+[typed public recipe](./docs/examples/mpp-upfront.ts). Omission uses Pay's
+SDK-resolved constructor. Exact versions do not guarantee physical ownership.
+The supported constructor contract is the pinned native 0.8.19/0.8.17 classes,
+not arbitrary executable configuration or cross-realm plugins; the package's
+exact 0.8.19 peer is unchanged. A separate 0.8.17 owner/wire composition is not
+a peer-clean downgrade claim. The constructor is captured and its safe Problem
+Details contract validated synchronously before payment I/O. Invalid
+configuration throws redacted `PAY_PROFILE_INVALID` (`configuration`, not
+retryable, no `paymentId` or constructor cause), with no fallback. Shape
+validation cannot prove the owner of a separately created Mppx instance: a
+valid but wrong physical constructor is an integration-profile error, not a
+promised early rejection. Only `errorCode` and `retryable` appear in settlement
+Problem Details extensions; private `paymentId` and causes stay internal.
+With raw
 `Mppx.create({ methods: [method] })`, a post-send indeterminate settlement has
 an internal mppx result discriminant of 402, but its returned HTTP `challenge`
 Response is 503 with `Retry-After: 2`, no `WWW-Authenticate`, and no receipt.

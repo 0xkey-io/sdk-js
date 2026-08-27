@@ -2,6 +2,18 @@
 
 ## 1.0.0-rc.1
 
+- Add optional direct MPP `paymentError` ownership configuration, captured and
+  safely validated before I/O. Pinned native 0.8.19/0.8.17 constructors preserve
+  settlement 503/403 across physical module owners; exact peers stay unchanged.
+  Public Problem Details retain only `errorCode`/`retryable` extensions, not
+  private payment identities or causes. A valid wrong owner remains a caller
+  integration-profile error, not something structural validation can prove.
+- Emit MPP receipts only on 2xx in both direct and protected paths, removing
+  handler-injected receipts on non-2xx while preserving response/cache behavior.
+  Keep throw/5xx `FAILED` and other returned statuses `FULFILLED`; this state
+  does not prove an application side effect, and 3xx/4xx cannot clear pending.
+  Local synthetic packed tests are not durable-buyer, chain, DB or GA evidence.
+
 - Add the private conformance 7A foundation: exact portable fixture manifests,
   locks and source/license provenance, bounded isolated process controls, and
   fail-closed immutable reports for the complete planned matrix. Protocol
@@ -63,7 +75,8 @@
   X-Stamp facts and strict nested settlement responses.
 - Surface direct official x402 boundary failures as non-402 errors, and preserve
   raw `Mppx.create()` indeterminate settlement as an actual challenge-free HTTP
-  503. Require the exact mppx peer for shared `PaymentError` class identity.
+  503. Retain the exact mppx peer and explicitly configure native error ownership
+  when the consumer uses a separate physical module.
 - Decode strict structured command errors and deterministic rejection envelopes,
   refresh seller capabilities after bounded freshness, and cancel upstream
   streams when Express clients disconnect.

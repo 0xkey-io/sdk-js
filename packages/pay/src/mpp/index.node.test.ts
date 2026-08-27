@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Challenge, Credential, Errors } from "mppx";
+import { Challenge, Credential, Errors, Receipt } from "mppx";
+import { inspect } from "node:util";
+import { PayError } from "../errors.ts";
 import { Mppx, Transport } from "mppx/server";
 import { authorizationDomain, authorizationTypes, challengeHash } from "mppx/evm";
 import { assets, charge } from "mppx/evm/server";
@@ -154,7 +156,6 @@ test("raw Mppx.create surfaces UNKNOWN as a real 503 without a retry challenge",
     detail: "settlement outcome is indeterminate",
     details: {
       errorCode: "PAYMENT_STATUS_UNKNOWN",
-      paymentId: "22222222-2222-4222-8222-222222222222",
       retryable: true,
     },
   });
@@ -383,4 +384,133 @@ function decodeCredential(value: string): Record<string, unknown> {
 
 function encodeCredential(value: Record<string, unknown>): string {
   return `Payment ${Buffer.from(JSON.stringify(value)).toString("base64url")}`;
+}
+
+// Break caught: bad application error-owner configuration reaches payment I/O
+// or retains the constructor's private cause instead of failing synchronously.
+for (const [label, paymentError] of [
+  ["null", null],
+  ["object", {}],
+  ["arrow", () => undefined],
+  ["plain Error", Error],
+  ["throwing", class { constructor() { throw new Error("private-constructor-sentinel"); } }],
+  ["wrong problem shape", class extends Errors.PaymentError {
+    readonly title = "wrong";
+    readonly type = "wrong";
+    override toProblemDetails() { return { type: "wrong", title: "wrong", status: 402, detail: "wrong" }; }
+  }],
+  ["extra problem field", class extends Errors.PaymentError {
+    readonly title = "wrong";
+    readonly type = "wrong";
+    override toProblemDetails() { return { ...super.toProblemDetails(), privateField: "private-constructor-sentinel" }; }
+  }],
+] as const) {
+  test(`MPP rejects ${label} error constructor before I/O`, () => {
+    let io = 0;
+    assert.throws(() => create0xkeyEvmChargeMethod({
+      network: "eip155:84532", organizationId: ORG,
+      payTo: "0x1111111111111111111111111111111111111111",
+      paymentError: paymentError as unknown as typeof Errors.PaymentError,
+      stamper: { async stampRequest() { io++; throw new Error("unexpected stamp"); } },
+      async fetch() { io++; throw new Error("unexpected fetch"); },
+    }), error => {
+      assert.ok(error instanceof PayError);
+      assert.equal(error.code, "PAY_PROFILE_INVALID");
+      assert.equal(error.phase, "configuration");
+      assert.equal(error.retryable, false);
+      assert.equal(error.paymentId, undefined);
+      assert.equal(error.cause, undefined);
+      assert.equal(inspect(error, { showHidden: true }).includes("private-constructor-sentinel"), false);
+      return true;
+    });
+    assert.equal(io, 0);
+  });
+}
+
+// Break caught: receipt emission on non-2xx, loss of a response stream/header,
+// or loss of native private-cache protection when suppressing the receipt.
+for (const status of [200, 201, 204, 299, 302, 400, 404, 500]) {
+  test(`direct receipt hook preserves response ${status} and emits only on 2xx`, async () => {
+    const method = create0xkeyEvmChargeMethod({
+      network: "eip155:84532", organizationId: ORG,
+      payTo: "0x1111111111111111111111111111111111111111",
+      stamper: { async stampRequest() { throw new Error("receipt hook must not stamp"); } },
+    });
+    const transport = method.transport as unknown as Transport.Http;
+    const response = new Response(status === 204 ? null : "preserved bytes", {
+      status, statusText: "Merchant Status",
+      headers: { "Payment-Receipt": "injected", "Cache-Control": "no-store", Location: "/destination", "X-Merchant": "preserved" },
+    });
+    const originalBody = response.body;
+    const receipt = { method: "evm", status: "success" as const, reference: `0x${"ab".repeat(32)}`, timestamp: "2026-08-28T00:00:00.000Z" };
+    const result = transport.respondReceipt({ receipt, response } as Parameters<Transport.Http["respondReceipt"]>[0]);
+    assert.ok(result instanceof Response, "native receipt wrapping must stay synchronous");
+    assert.equal(result.status, status);
+    assert.equal(result.statusText, "Merchant Status");
+    assert.equal(result.body, originalBody);
+    assert.equal(result.headers.get("Location"), "/destination");
+    assert.equal(result.headers.get("X-Merchant"), "preserved");
+    assert.equal(result.headers.get("Cache-Control"), "no-store, private");
+    assert.equal(result.headers.has("Payment-Receipt"), status < 300);
+    if (status < 300) assert.equal(Receipt.fromResponse(result).reference, receipt.reference);
+    assert.equal(await result.text(), status === 204 ? "" : "preserved bytes");
+    assert.equal(response.headers.get("Payment-Receipt"), "injected", "caller response headers remain unmodified");
+  });
+}
+
+// Break caught: facade's >=500 bypass leaks manually supplied receipts; 3xx/4xx
+// keep their fulfillment classification but must not emit a success receipt.
+for (const mode of [200, 201, 204, 299, 302, 400, 404, 500, "throw", "persistence"] as const) {
+  test(`protected MPP ${mode} retains fulfillment policy independently of receipts`, async () => {
+    const events: string[] = [];
+    const updates: unknown[] = [];
+    const paymentId = "22222222-2222-4222-8222-222222222222";
+    const server = createPayServer({
+      network: "eip155:84532", organizationId: ORG,
+      payTo: "0x1111111111111111111111111111111111111111",
+      protocols: ["mpp"], mppSecretKey: "01234567890123456789012345678901",
+      apiKey: {
+        publicKey: "036b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296",
+        privateKey: "0000000000000000000000000000000000000000000000000000000000000001",
+      },
+      async fetch(input, init) {
+        const wire = JSON.parse(String(init?.body));
+        if (String(input).endsWith("/v1/settlements/charge")) {
+          events.push("settle");
+          return Response.json({ settlement: { success: true, transaction: `0x${"ab".repeat(32)}`, network: "eip155:84532", payer: wire.command.payer }, paymentId });
+        }
+        assert.ok(String(input).endsWith(`/v1/payments/${paymentId}/fulfillment`));
+        assert.equal(init?.method, "PUT");
+        events.push("fulfillment"); updates.push(wire);
+        return new Response(null, { status: mode === "persistence" ? 503 : 200 });
+      },
+    });
+    const route = server.protect({ price: "$0.01" }, context => {
+      assert.equal(context.paymentId, paymentId);
+      assert.deepEqual(events, ["settle"]);
+      events.push("handler");
+      if (mode === "throw") throw new Error("private-handler-sentinel");
+      return new Response(mode === 204 ? null : "preserved bytes", {
+        status: typeof mode === "number" ? mode : 200,
+        statusText: "Merchant Status",
+        headers: { "Payment-Receipt": "injected", "Cache-Control": "no-store", Location: "/destination", "X-Merchant": "preserved" },
+      });
+    });
+    const challenge = Challenge.fromResponse(await route(new Request("https://merchant.example/paid")));
+    const credential = Credential.serialize({ challenge, payload: await validPayload(challenge) });
+    const result = await route(new Request("https://merchant.example/paid", { headers: { Authorization: credential } }));
+    assert.deepEqual(events, ["settle", "handler", "fulfillment"]);
+    const failed = mode === 500 || mode === "throw";
+    assert.deepEqual(updates, [{ organizationId: ORG, state: failed ? "FAILED" : "FULFILLED", ...(failed ? { failureCode: "HANDLER_ERROR" } : {}) }]);
+    assert.equal(result.status, mode === "throw" ? 500 : mode === "persistence" ? 503 : mode);
+    assert.equal(result.headers.has("Payment-Receipt"), typeof mode === "number" && mode < 300);
+    assert.equal(result.headers.has("WWW-Authenticate"), false);
+    if (typeof mode === "number") {
+      assert.equal(result.statusText, "Merchant Status");
+      assert.equal(result.headers.get("Location"), "/destination");
+      assert.equal(result.headers.get("X-Merchant"), "preserved");
+      assert.equal(result.headers.get("Cache-Control"), mode >= 500 ? "no-store" : "no-store, private");
+      assert.equal(await result.text(), mode === 204 ? "" : "preserved bytes");
+    } else assert.equal(result.headers.get("Cache-Control"), null);
+  });
 }
