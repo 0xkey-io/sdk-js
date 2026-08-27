@@ -2,6 +2,14 @@
 
 ## 1.0.0-rc.1
 
+- Add optional `facilitatorResponseError` to the direct x402 factory so callers
+  can supply their official public `core/server` constructor. Capture and
+  structurally validate it synchronously with redacted configuration failures;
+  keep the default 2.23 owner, safe messages, nonenumerable PayError cause,
+  exact peers, transport behavior, and public three-method client unchanged.
+  Document single-owner and natural upfront composition with strict 2.22/2.23
+  examples and native/framework/loopback fresh-process recovery tests. These
+  bounded synthetic tests are not production settlement or release approval.
 - Preserve the original checked npm tarball and closed source/run context before
   publication. Collect public registry metadata, matching opaque tar bytes and
   the exact raw provenance-bundle slice into an immutable six-file observation

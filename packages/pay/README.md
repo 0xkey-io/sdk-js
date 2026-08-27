@@ -72,14 +72,21 @@ For direct upstream integration, `@0xkey-io/pay/x402` returns an official
 charge method. These dedicated entries own upstream wire types; root, client,
 and server declarations do not expose them.
 
-The direct x402 client throws the official `FacilitatorResponseError` boundary
-type for dependency and indeterminate settlement failures, so official x402
-HTTP middleware returns 502 instead of issuing another 402. The original
-retryable `PayError` remains available as the error `cause`.
+For direct x402 integration, pass `facilitatorResponseError:
+FacilitatorResponseError`, imported from the same public `@x402/core/server`
+module that owns the consumer's resource/HTTP server and framework catch.
+Dependency and indeterminate settlement failures then remain that owner's
+official error, with the original retryable `PayError` as a nonenumerable
+`cause`; the tested official middleware returns 502 without a new challenge
+or paid handler. Omission uses Pay's imported 2.23 constructor. Exact versions
+alone do not ensure one owner: unconfigured 2.22, duplicate physical packages,
+mixed CJS/ESM conditions, and the CJS `core/http` subpath can lose the exception
+and produce an incorrect 402. See the
+[public upfront recipe and tested boundaries](./docs/direct-x402.md).
 
-The package has one peer contract: `mppx@0.8.19` and `@x402/core@2.23.0`
-preserve upstream error class identity, while `viem>=2.54.0 <3` supplies the
-public runtime signer/address dependency. The direct MPP method requires that
+The package retains the peer contract `mppx@0.8.19`, `@x402/core@2.23.0`,
+and `viem>=2.54.0 <3`. The Viem peer supplies the public runtime signer/address
+dependency. The direct MPP method requires that
 exact mppx peer. With raw
 `Mppx.create({ methods: [method] })`, a post-send indeterminate settlement has
 an internal mppx result discriminant of 402, but its returned HTTP `challenge`

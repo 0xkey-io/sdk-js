@@ -1,5 +1,6 @@
 import {
   x402ResourceServer,
+  FacilitatorResponseError,
   type FacilitatorClient,
 } from "@x402/core/server";
 import { x402HTTPResourceServer } from "@x402/core/http";
@@ -11,7 +12,7 @@ import type {
   PaymentRequirements,
 } from "@x402/core/types";
 import type { PayError } from "../errors";
-import { create0xkeyFacilitatorClient } from "./index.mts";
+import { create0xkeyFacilitatorClient, type Create0xkeyFacilitatorClientOptions } from "./index.mts";
 import type { RequestStampInput, RequestStamper } from "../xstamp";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
@@ -57,6 +58,104 @@ function fakeStamper() {
 }
 
 describe("create0xkeyFacilitatorClient", () => {
+  it.each([
+    ["null", null],
+    ["number", 1],
+    ["plain object", {}],
+    ["arrow", () => new Error("private configuration sentinel")],
+    ["throwing", class { constructor() { throw new Error("private configuration sentinel"); } }],
+    ["non-Error", class {}],
+    ["frozen", class extends Error { constructor(message: string) { super(message); Object.freeze(this); } }],
+    ["locked cause", class extends Error { constructor(message: string) { super(message); Object.defineProperty(this, "cause", { value: "private configuration sentinel" }); } }],
+    ["locked undefined cause", class extends Error { constructor(message: string) { super(message); Object.defineProperty(this, "cause", { value: undefined }); } }],
+  ])("rejects invalid facilitator error constructor %s synchronously before I/O", (_label, candidate) => {
+    const { stamper, inputs } = fakeStamper();
+    const fetch = jest.fn();
+    const options = {
+      network: "eip155:84532", organizationId: ORG, stamper, fetch,
+      facilitatorResponseError: candidate,
+    } as unknown as Create0xkeyFacilitatorClientOptions;
+    let failure: unknown;
+    try { create0xkeyFacilitatorClient(options); } catch (error) { failure = error; }
+    expect(failure).toMatchObject({ code: "PAY_PROFILE_INVALID", phase: "configuration", retryable: false });
+    expect(failure).not.toHaveProperty("paymentId");
+    expect((failure as PayError).cause).toBeUndefined();
+    expect(String(failure)).not.toContain("private configuration sentinel");
+    expect(JSON.stringify(failure)).not.toContain("private configuration sentinel");
+    expect(inputs).toEqual([]);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("captures the consumer owner and gives it only safe single-message arguments", async () => {
+    const argumentsSeen: unknown[][] = [];
+    class ConsumerError extends Error {
+      constructor(...args: [string]) { super(...args); argumentsSeen.push(args); }
+    }
+    const { stamper } = fakeStamper();
+    const options = {
+      network: "eip155:84532" as const, organizationId: ORG, stamper,
+      facilitatorResponseError: ConsumerError,
+      fetch: async (input: RequestInfo | URL) => Response.json(String(input).endsWith("/settle")
+        ? { errorCode: "PAYMENT_STATUS_UNKNOWN", retryable: true, paymentId: "22222222-2222-4222-8222-222222222222" }
+        : {}, { status: 503 }),
+    };
+    const client = create0xkeyFacilitatorClient(options);
+    options.facilitatorResponseError = class LaterError extends Error {};
+    for (const operation of ["getSupported", "verify", "settle"] as const) {
+      const failure = await (operation === "getSupported" ? client.getSupported() : client[operation](payload, requirements)).catch(error => error);
+      expect(failure).toBeInstanceOf(ConsumerError);
+      expect(Object.getOwnPropertyDescriptor(failure, "cause")).toMatchObject({
+        enumerable: false, configurable: false, writable: false,
+      });
+      expect(failure.cause).toMatchObject({
+        code: operation === "settle" ? "PAYMENT_STATUS_UNKNOWN" : "PAYMENT_SERVICE_UNAVAILABLE",
+        phase: "request", retryable: true,
+      });
+      expect(JSON.stringify(failure)).not.toContain("paymentId");
+    }
+    expect(argumentsSeen).toEqual([
+      ["payment service is unavailable"], // synchronous structural probe
+      ["payment service is unavailable"], ["payment service is unavailable"],
+      ["settlement outcome is indeterminate"],
+    ]);
+  });
+
+  it.each(["getSupported", "verify", "settle"] as const)("preserves the default owner and no-new-retry fault policy for %s", async operation => {
+    for (const fault of ["503", "disconnect", "timeout", "malformed-json", "malformed-shape"] as const) {
+      const { stamper, inputs } = fakeStamper();
+      const fetch = jest.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        if (fault === "disconnect") throw new Error("private disconnect sentinel");
+        if (fault === "timeout") return new Promise<Response>((_resolve, reject) => {
+          init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason), { once: true });
+        });
+        if (fault === "503") return new Response("private body sentinel", { status: 503 });
+        return new Response(fault === "malformed-json" ? "private malformed sentinel" : "{}", { status: 200 });
+      });
+      const client = create0xkeyFacilitatorClient({ network: "eip155:84532", organizationId: ORG, stamper, fetch, timeoutMs: 5 });
+      const before = JSON.stringify({ payload, requirements });
+      const failure = await (operation === "getSupported" ? client.getSupported() : client[operation](payload, requirements)).catch(error => error);
+      expect(failure).toBeInstanceOf(FacilitatorResponseError);
+      expect(failure.cause).toMatchObject({ code: operation === "settle" ? "PAYMENT_STATUS_UNKNOWN" : "PAYMENT_SERVICE_UNAVAILABLE", phase: "request", retryable: true });
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(inputs).toHaveLength(1);
+      expect(inputs[0]!.wireProtocol).toBe("x402");
+      expect(JSON.stringify({ payload, requirements })).toBe(before);
+      if (operation !== "getSupported") expect(JSON.parse(inputs[0]!.body!)).toEqual({ organizationId: ORG, x402Version: 2, paymentPayload: payload, paymentRequirements: requirements });
+      expect(String(failure)).not.toContain("sentinel");
+    }
+  });
+
+  it("leaves programming errors before the transport catch unchanged", async () => {
+    const failure = new TypeError("circular input");
+    const malformed = { ...payload, toJSON() { throw failure; } };
+    const { stamper, inputs } = fakeStamper();
+    const fetch = jest.fn();
+    const client = create0xkeyFacilitatorClient({ network: "eip155:84532", organizationId: ORG, stamper, fetch });
+    await expect(client.verify(malformed, requirements)).rejects.toBe(failure);
+    expect(inputs).toEqual([]);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("is the official FacilitatorClient and signs exact immutable envelopes", async () => {
     const { inputs, stamper } = fakeStamper();
     const calls: Array<{ url: string; init?: RequestInit }> = [];

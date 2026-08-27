@@ -92,9 +92,26 @@ Keep the complete peer contract installed: `@x402/core@2.23.0`,
 unless its exact nested envelope binds the configured network and verified
 payer and contains a non-zero transaction hash.
 
-The direct x402 client uses the official facilitator boundary error, so
-official x402 middleware surfaces dependency/UNKNOWN failures as 502 rather
-than a new payment challenge.
+For direct x402 wiring, additionally pass `facilitatorResponseError` from the
+same public `@x402/core/server` import as your resource and HTTP server. Ensure
+the framework catch shares that actual owner, including its physical package
+and module condition. Exact pins do not establish that identity. Omission
+retains Pay's imported 2.23 constructor; unconfigured 2.22 and mixed-owner
+failures can incorrectly become 402. Do not use `core/http`'s CJS constructor
+or a plain `Error` as a substitute. The
+[strict public upfront example](./examples/x402-upfront.ts) typechecks against
+the exact published 2.22 and 2.23 consumer APIs without casts. Pay's own 2.23
+peer is unchanged; a separately locked 2.22 consumer is compatibility evidence,
+not permission to install an invalid peer graph.
+
+Native exact-scheme defaults support authorization, not the required upfront
+flow. Use the example's public EIP-3009/upfront registration and the official
+framework's `*FromHTTPServer` adapter, without a verification hook. With the
+correct owner, dependency/UNKNOWN failures return 502, no challenge or receipt,
+and no paid handler. On success, the framework echoes the before-handler
+settlement rather than settling twice. See [tested boundaries](./direct-x402.md).
+Raw official buyers still own durable same-credential recovery after 5xx;
+changing the error owner does not add storage, retries, or a recovery service.
 
 These two x402 server integrations intentionally use different private 0xkey
 request bodies. The public `create0xkeyFacilitatorClient()` preserves the

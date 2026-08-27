@@ -6,7 +6,7 @@ Status: RC contract
 
 Evidence state: Implemented without end-to-end evidence; local gates pass
 
-Last verified: 2026-08-27
+Last verified: 2026-08-28
 
 This is the implementation contract for `@0xkey-io/pay/client` and
 `@0xkey-io/pay/server`. The package README is the public quickstart. Generated
@@ -28,8 +28,20 @@ all other rails are outside v1.
 `@x402/*` packages own ordinary x402 client encoding. 0xkey does not copy those
 wire types or codecs.
 
-The package peer contract keeps one `@x402/core@2.23.0` and `mppx@0.8.19`
-class owner and retains the public `viem>=2.54.0 <3` runtime dependency.
+The package peer contract requires `@x402/core@2.23.0` and `mppx@0.8.19`
+and retains the public `viem>=2.54.0 <3` runtime dependency. Exact version
+agreement alone cannot enforce JavaScript class ownership across physical
+copies, subpaths, or CJS/ESM conditions.
+
+For the dedicated direct x402 entry, configure `facilitatorResponseError` with
+the official constructor from the consumer's actual `@x402/core/server` owner.
+The resource, HTTP server, and framework must share that owner. Omission keeps
+Pay's imported 2.23 constructor; unconfigured 2.22 or mixed-owner error paths
+can incorrectly become 402. Structural constructor validation cannot detect
+a valid but wrong owner. The [direct integration contract](./direct-x402.md)
+and strict public examples define the tested 2.22/2.23 natural upfront path.
+This direct path settles before the handler and echoes its settlement once;
+the following seller flow describes the separate 0xkey-owned facade.
 
 The direct MPP entry has an exact `mppx@0.8.19` peer so its typed settlement
 boundary error and the consumer's `Mppx.create()` share one class identity.

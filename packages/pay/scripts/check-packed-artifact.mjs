@@ -365,6 +365,10 @@ async function externalInstallSmoke(tarball) {
       ].join("\n"),
     );
     await writeFile(
+      join(externalRoot, "public-x402-upfront.ts"),
+      await readFile(join(externalRoot, "node_modules/@0xkey-io/pay/docs/examples/x402-upfront.ts"), "utf8"),
+    );
+    await writeFile(
       join(externalRoot, "tsconfig.json"),
       `${JSON.stringify({
         compilerOptions: {
@@ -376,7 +380,7 @@ async function externalInstallSmoke(tarball) {
           strict: true,
           target: "ES2022",
         },
-        files: ["public-contract.ts"],
+        files: ["public-contract.ts", "public-x402-upfront.ts"],
       })}\n`,
     );
     await run(
@@ -403,6 +407,9 @@ function mppRuntimeSmoke(moduleKind) {
           'import { create0xkeyEvmChargeMethod } from "@0xkey-io/pay/mpp";',
           'import { create0xkeyFacilitatorClient } from "@0xkey-io/pay/x402";',
           'import { paymentMiddlewareFromHTTPServer } from "@x402/express";',
+          'import { FacilitatorResponseError, x402ResourceServer, x402HTTPResourceServer } from "@x402/core/server";',
+          'import { ExactEvmScheme } from "@x402/evm/exact/server";',
+          'import { encodePaymentSignatureHeader } from "@x402/core/http";',
         ]
       : [
           'const assert = require("node:assert/strict");',
@@ -413,6 +420,9 @@ function mppRuntimeSmoke(moduleKind) {
           'const { create0xkeyEvmChargeMethod } = require("@0xkey-io/pay/mpp");',
           'const { create0xkeyFacilitatorClient } = require("@0xkey-io/pay/x402");',
           'const { paymentMiddlewareFromHTTPServer } = require("@x402/express");',
+          'const { FacilitatorResponseError, x402ResourceServer, x402HTTPResourceServer } = require("@x402/core/server");',
+          'const { ExactEvmScheme } = require("@x402/evm/exact/server");',
+          'const { encodePaymentSignatureHeader } = require("@x402/core/http");',
         ];
   return `${imports.join("\n")}
 (async () => {
@@ -486,16 +496,28 @@ function mppRuntimeSmoke(moduleKind) {
       }},
     };
     let x402Calls = 0;
+    for (const configured of [false, true]) {
     const x402Client = create0xkeyFacilitatorClient({
       network: "eip155:84532",
       organizationId: "11111111-1111-4111-8111-111111111111",
+      ...(configured ? { facilitatorResponseError: FacilitatorResponseError } : {}),
       stamper: { async stampRequest() { return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" }; } },
-      async fetch() { x402Calls += 1; return new Response(null, { status: 503 }); },
+      async fetch(url) {
+        if (String(url).endsWith("/supported")) return Response.json({ kinds: [{ x402Version: 2, scheme: "exact", network: requirements.network }], extensions: [], signers: {} });
+        x402Calls += 1; return new Response(null, { status: 503 });
+      },
     });
-    const middleware = paymentMiddlewareFromHTTPServer({
-      routes: {}, requiresPayment: () => true,
-      async processHTTPRequest() { await x402Client.settle(payload, requirements); },
-    }, undefined, undefined, false);
+    const exact = new ExactEvmScheme();
+    const resource = new x402ResourceServer(x402Client).register(requirements.network, {
+      scheme: exact.scheme, defaultAssetTransferMethod: exact.defaultAssetTransferMethod,
+      paymentFlows: { eip3009: { supported: ["upfront"], default: "upfront" } },
+      parsePrice: exact.parsePrice.bind(exact), enhancePaymentRequirements: exact.enhancePaymentRequirements.bind(exact), getAssetDecimals: exact.getAssetDecimals.bind(exact),
+    });
+    const httpServer = new x402HTTPResourceServer(resource, { "GET /weather": { accepts: {
+      scheme: "exact", network: requirements.network, payTo: requirements.payTo, price: "$0.001",
+      extra: { assetTransferMethod: "eip3009", paymentFlow: "upfront" },
+    } } });
+    const middleware = paymentMiddlewareFromHTTPServer(httpServer);
     const statusCodes = [];
     const bodies = [];
     const res = {
@@ -505,12 +527,13 @@ function mppRuntimeSmoke(moduleKind) {
     };
     let nextCalls = 0;
     await middleware({
-      body: undefined, headers: { host: "merchant.example" }, header() { return undefined; },
+      body: undefined, headers: { host: "merchant.example" }, header(name) { return name.toLowerCase() === "payment-signature" ? encodePaymentSignatureHeader(payload) : undefined; },
       method: "GET", originalUrl: "/weather", path: "/weather", protocol: "https", query: {},
     }, res, () => { nextCalls += 1; });
     assert.deepEqual(statusCodes, [502]);
     assert.equal(nextCalls, 0);
-    assert.equal(x402Calls, 1);
+    assert.equal(x402Calls, configured ? 2 : 1);
+    }
   } finally {
     console.error = originalConsoleError;
   }
