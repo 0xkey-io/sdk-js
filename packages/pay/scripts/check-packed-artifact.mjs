@@ -10,12 +10,22 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const packageRoot = fileURLToPath(new URL("../", import.meta.url));
 const publicRegistry = "https://registry.npmjs.org/";
+const expectedRepository = {
+  type: "git",
+  url: "git+https://github.com/0xkey-io/sdk-js.git",
+  directory: "packages/pay",
+};
+const expectedPublishConfig = {
+  access: "public",
+  registry: publicRegistry,
+  tag: "next",
+};
 const dependencyGroups = [
   "dependencies",
   "optionalDependencies",
@@ -68,6 +78,53 @@ async function readPackedManifest(tarball) {
   return JSON.parse(stdout);
 }
 
+function assertExactObject(actual, expected, label) {
+  if (
+    !actual ||
+    typeof actual !== "object" ||
+    Array.isArray(actual) ||
+    JSON.stringify(actual) !== JSON.stringify(expected)
+  ) {
+    throw new Error(`${label} must be ${JSON.stringify(expected)}`);
+  }
+}
+
+function assertSourceManifest(manifest) {
+  if (manifest.name !== "@0xkey-io/pay") {
+    throw new Error("Pay source package name must be @0xkey-io/pay");
+  }
+  if (manifest.private !== true) {
+    throw new Error("Pay source package must remain private:true");
+  }
+  assertExactObject(
+    manifest.repository,
+    expectedRepository,
+    "Pay source repository",
+  );
+  assertExactObject(
+    manifest.publishConfig,
+    expectedPublishConfig,
+    "Pay source publishConfig",
+  );
+}
+
+export async function withPublicPayManifest(manifestPath, operation) {
+  const originalBytes = await readFile(manifestPath);
+  const sourceManifest = JSON.parse(originalBytes.toString("utf8"));
+  assertSourceManifest(sourceManifest);
+  const publicManifest = { ...sourceManifest, private: false };
+
+  try {
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify(publicManifest, null, 2)}\n`,
+    );
+    return await operation(publicManifest);
+  } finally {
+    await writeFile(manifestPath, originalBytes);
+  }
+}
+
 async function verifyTarball(tarball, sourceManifest) {
   const manifest = await readPackedManifest(tarball);
 
@@ -76,6 +133,19 @@ async function verifyTarball(tarball, sourceManifest) {
       `Packed package name must be @0xkey-io/pay; found ${String(manifest.name)}`,
     );
   }
+  if (manifest.private !== false) {
+    throw new Error("Packed Pay artifact must be public with private:false");
+  }
+  assertExactObject(
+    manifest.repository,
+    expectedRepository,
+    "Packed repository",
+  );
+  assertExactObject(
+    manifest.publishConfig,
+    expectedPublishConfig,
+    "Packed publishConfig",
+  );
 
   if (manifest.engines?.node !== ">=22.12.0") {
     throw new Error(
@@ -92,13 +162,19 @@ async function verifyTarball(tarball, sourceManifest) {
     }
   }
   if (manifest.peerDependencies?.mppx !== "0.8.19") {
-    throw new Error("Packed peerDependencies.mppx must be exactly 0.8.19 for PaymentError class identity");
+    throw new Error(
+      "Packed peerDependencies.mppx must be exactly 0.8.19 for PaymentError class identity",
+    );
   }
   if (manifest.peerDependencies?.["@x402/core"] !== "2.23.0") {
-    throw new Error("Packed peerDependencies.@x402/core must be exactly 2.23.0 for facilitator error class identity");
+    throw new Error(
+      "Packed peerDependencies.@x402/core must be exactly 2.23.0 for facilitator error class identity",
+    );
   }
   if (manifest.peerDependencies?.viem !== ">=2.54.0 <3") {
-    throw new Error("Packed peerDependencies.viem must preserve the >=2.54.0 <3 public runtime contract");
+    throw new Error(
+      "Packed peerDependencies.viem must preserve the >=2.54.0 <3 public runtime contract",
+    );
   }
 
   if (sourceManifest) {
@@ -153,7 +229,9 @@ async function externalInstallSmoke(tarball) {
   try {
     const [major, minor] = process.versions.node.split(".").map(Number);
     if (major < 22 || (major === 22 && minor < 12)) {
-      throw new Error("CJS smoke requires the declared Node >=22.12.0 baseline");
+      throw new Error(
+        "CJS smoke requires the declared Node >=22.12.0 baseline",
+      );
     }
     await writeFile(
       join(externalRoot, "package.json"),
@@ -187,7 +265,9 @@ async function externalInstallSmoke(tarball) {
     );
     const installedMppx = mppxPaths.trim().split("\n").filter(Boolean);
     if (installedMppx.length !== 1) {
-      throw new Error(`Packed Pay must resolve one mppx instance; found ${installedMppx.length}`);
+      throw new Error(
+        `Packed Pay must resolve one mppx instance; found ${installedMppx.length}`,
+      );
     }
     await run(
       process.platform === "win32" ? "npm.cmd" : "npm",
@@ -201,7 +281,9 @@ async function externalInstallSmoke(tarball) {
     );
     const installedX402Core = x402CorePaths.trim().split("\n").filter(Boolean);
     if (installedX402Core.length !== 1) {
-      throw new Error(`Packed Pay must resolve one @x402/core instance; found ${installedX402Core.length}`);
+      throw new Error(
+        `Packed Pay must resolve one @x402/core instance; found ${installedX402Core.length}`,
+      );
     }
     await run(
       process.platform === "win32" ? "npm.cmd" : "npm",
@@ -241,8 +323,12 @@ async function externalInstallSmoke(tarball) {
       join(externalRoot, "mpp-runtime-smoke.cjs"),
       mppRuntimeSmoke("cjs"),
     );
-    await run(process.execPath, ["mpp-runtime-smoke.mjs"], { cwd: externalRoot });
-    await run(process.execPath, ["mpp-runtime-smoke.cjs"], { cwd: externalRoot });
+    await run(process.execPath, ["mpp-runtime-smoke.mjs"], {
+      cwd: externalRoot,
+    });
+    await run(process.execPath, ["mpp-runtime-smoke.cjs"], {
+      cwd: externalRoot,
+    });
     await run(
       process.execPath,
       [
@@ -303,27 +389,28 @@ async function externalInstallSmoke(tarball) {
 }
 
 function mppRuntimeSmoke(moduleKind) {
-  const imports = moduleKind === "esm"
-    ? [
-        'import assert from "node:assert/strict";',
-        'import { Challenge, Credential } from "mppx";',
-        'import { Mppx } from "mppx/server";',
-        'import { authorizationDomain, authorizationTypes, challengeHash } from "mppx/evm";',
-        'import { privateKeyToAccount } from "viem/accounts";',
-        'import { create0xkeyEvmChargeMethod } from "@0xkey-io/pay/mpp";',
-        'import { create0xkeyFacilitatorClient } from "@0xkey-io/pay/x402";',
-        'import { paymentMiddlewareFromHTTPServer } from "@x402/express";',
-      ]
-    : [
-        'const assert = require("node:assert/strict");',
-        'const { Challenge, Credential } = require("mppx");',
-        'const { Mppx } = require("mppx/server");',
-        'const { authorizationDomain, authorizationTypes, challengeHash } = require("mppx/evm");',
-        'const { privateKeyToAccount } = require("viem/accounts");',
-        'const { create0xkeyEvmChargeMethod } = require("@0xkey-io/pay/mpp");',
-        'const { create0xkeyFacilitatorClient } = require("@0xkey-io/pay/x402");',
-        'const { paymentMiddlewareFromHTTPServer } = require("@x402/express");',
-      ];
+  const imports =
+    moduleKind === "esm"
+      ? [
+          'import assert from "node:assert/strict";',
+          'import { Challenge, Credential } from "mppx";',
+          'import { Mppx } from "mppx/server";',
+          'import { authorizationDomain, authorizationTypes, challengeHash } from "mppx/evm";',
+          'import { privateKeyToAccount } from "viem/accounts";',
+          'import { create0xkeyEvmChargeMethod } from "@0xkey-io/pay/mpp";',
+          'import { create0xkeyFacilitatorClient } from "@0xkey-io/pay/x402";',
+          'import { paymentMiddlewareFromHTTPServer } from "@x402/express";',
+        ]
+      : [
+          'const assert = require("node:assert/strict");',
+          'const { Challenge, Credential } = require("mppx");',
+          'const { Mppx } = require("mppx/server");',
+          'const { authorizationDomain, authorizationTypes, challengeHash } = require("mppx/evm");',
+          'const { privateKeyToAccount } = require("viem/accounts");',
+          'const { create0xkeyEvmChargeMethod } = require("@0xkey-io/pay/mpp");',
+          'const { create0xkeyFacilitatorClient } = require("@0xkey-io/pay/x402");',
+          'const { paymentMiddlewareFromHTTPServer } = require("@x402/express");',
+        ];
   return `${imports.join("\n")}
 (async () => {
   const secret = "packed-secret-must-not-be-logged";
@@ -443,15 +530,19 @@ function parseArguments(args) {
   );
 }
 
-const options = parseArguments(process.argv.slice(2));
+async function main(args) {
+  const options = parseArguments(args);
+  if (options.verifyOnly) {
+    await verifyTarball(options.verifyOnly);
+    process.stdout.write(
+      `Verified packed Pay artifact ${options.verifyOnly}\n`,
+    );
+    return;
+  }
 
-if (options.verifyOnly) {
-  await verifyTarball(options.verifyOnly);
-  process.stdout.write(`Verified packed Pay artifact ${options.verifyOnly}\n`);
-} else {
-  const sourceManifest = JSON.parse(
-    await readFile(join(packageRoot, "package.json"), "utf8"),
-  );
+  const manifestPath = join(packageRoot, "package.json");
+  const sourceManifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assertSourceManifest(sourceManifest);
   const ownsPackDirectory = !options.packDestination;
   const packDirectory =
     options.packDestination ??
@@ -473,10 +564,12 @@ if (options.verifyOnly) {
       ["run", "build"],
       { cwd: packageRoot },
     );
-    await run(
-      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-      ["pack", "--pack-destination", packDirectory],
-      { cwd: packageRoot },
+    await withPublicPayManifest(manifestPath, async () =>
+      run(
+        process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+        ["pack", "--pack-destination", packDirectory],
+        { cwd: packageRoot },
+      ),
     );
 
     const tarballs = (await readdir(packDirectory)).filter((entry) =>
@@ -504,4 +597,16 @@ if (options.verifyOnly) {
       await rm(packDirectory, { recursive: true, force: true });
     }
   }
+}
+
+if (
+  process.argv[1] &&
+  pathToFileURL(resolve(process.argv[1])).href === import.meta.url
+) {
+  main(process.argv.slice(2)).catch((error) => {
+    process.stderr.write(
+      `${error instanceof Error ? error.message : "Pay artifact check failed"}\n`,
+    );
+    process.exitCode = 1;
+  });
 }

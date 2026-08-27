@@ -1,6 +1,12 @@
 {
   "name": "@0xkey-io/pay",
   "version": "1.0.0-rc.1",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xkey-io/sdk-js.git",
+    "directory": "packages/pay"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "exports": {
@@ -76,7 +82,9 @@
     "README.md"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "tag": "next"
   },
   "scripts": {
     "prepublishOnly": "pnpm run clean && pnpm run build",

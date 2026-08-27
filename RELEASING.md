@@ -14,14 +14,29 @@ If your npm user account is `0xkey-io`:
 2. Add team members who need publish access
 3. Confirm the org page exists at `https://www.npmjs.com/org/0xkey-io`
 
-### 2. Automation token for CI
+### 2. Automation token for generic packages
 
 1. npmjs.com → Access Tokens → **Generate New Token**
 2. Choose **Granular Access Token** or **Automation** (recommended for CI; bypasses 2FA)
-3. Scope: `@0xkey-io/*`, permission: **Read and write**
+3. Scope it to the generic packages that this workflow releases. It must not
+   have write permission to `@0xkey-io/pay`.
 4. Add the token to GitHub repo secrets as `NPM_TOKEN`
 
-### 3. GitHub environment
+`NPM_TOKEN` is used only by the generic Changesets workflow. Pay publication
+uses npm trusted publishing and does not consume this token.
+
+### 3. Pay trusted publisher and GitHub environment
+
+Before any Pay RC publication, an npm organization owner must configure the
+trusted publisher for the exact `0xkey-io/sdk-js` repository, workflow filename
+`pay-publish.yml`, and GitHub environment `production`. The workflow uses a
+GitHub-hosted runner, Node 24.3.0, npm 11.5.1, and GitHub OIDC with
+`id-token: write`; it does not use `NPM_TOKEN`.
+
+These external npm/GitHub settings are release prerequisites, not state this
+repository can prove. As of this document, they are not claimed to be
+configured. The generic `NPM_TOKEN` must additionally be restricted so it
+cannot write `@0xkey-io/pay`.
 
 The publish job in `.github/workflows/version-and-publish.yml` uses the `production` environment and requires manual approval before publishing.
 
@@ -89,8 +104,9 @@ The workflow will:
 2. Run `changeset version` and bump package versions
 3. Run integration tests (preprod → prod)
 4. Dry-run the generic packages with an explicit Pay exclusion, then invoke the
-   guarded generic publisher. The wrapper makes Pay private for the child
-   Changesets process and restores its manifest afterward.
+   guarded generic publisher. The wrapper verifies that the official
+   Changesets parser sees no Pay release candidate and that Pay remains private
+   in source; it never mutates the Pay manifest.
 5. Create a GitHub Release
 
 This general workflow versions and publishes other SDK packages only. It
@@ -107,6 +123,17 @@ checked tarball for `@0xkey-io/pay` with npm tag `next` after `production`
 approval. It refuses an existing version and keeps npm `latest` at `0.2.0`; do
 not use the general Changesets workflow or a manual recursive command for this
 release.
+
+`packages/pay/package.json` is deliberately `private: true`, so npm refuses
+publication from the source directory. Its `publishConfig` fixes the public npm
+registry, public access, and `next` tag. The artifact checker asserts that
+private source contract, builds Pay, changes only the manifest to
+`private: false` while `pnpm pack` creates the RC tarball, and restores the
+exact original bytes in `finally` before it verifies or emits the tarball. The
+packed manifest is then checked as public with the exact package name, version,
+repository, registry, access, tag, exports, types, and protocol pins. The
+dedicated workflow publishes exactly that emitted tarball once with explicit
+`next`, public access, npmjs registry, and provenance options.
 
 A public GA promotion on npm tag `latest` is a separate future gated operation.
 No current generic workflow or documented manual command is authorized to

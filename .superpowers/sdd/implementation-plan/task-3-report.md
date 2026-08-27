@@ -579,10 +579,10 @@ claim that those later service gates have run.
 
 Round-3 changed no protocol or runtime contract. It introduced the Node 22.12
 baseline and the generic Changesets exclusion/wrapper. Independent round-5
-review later proved that its first workflow and publisher scanner did not yet
-model every executable command or Actions execution context; the round-5
-closure below replaces those incomplete claims. No GA or `latest` success was
-claimed.
+review later proved that attempts to model arbitrary shell and Actions
+execution were not a sound security boundary. Round 6 removes that model and
+replaces it with the source-private/public-artifact boundary recorded below.
+No GA or `latest` success was claimed.
 
 ### Round-3 RED/GREEN evidence
 
@@ -624,19 +624,16 @@ publish`, and the safe publisher module was absent.
    alone is not a truthful publish boundary. The config ignores Pay plus its
    only two private workspace dependents (`pay-v1-uat` and `with-x402`) so
    Changesets validation and version planning succeed. A separate generic
-   publisher re-runs the guard, temporarily makes the Pay source manifest
-   private for the child `changeset publish` process, and restores the original
-   bytes in `finally`. A hard process termination can at worst leave Pay private
-   in the ephemeral release checkout; it cannot publish Pay.
+   publisher re-runs the guard. Round 6 makes the Pay source manifest
+   permanently private instead of relying on child-process mutation.
 3. The preflight rejects a changeset that names Pay even though Pay is ignored.
    This makes an attempted generic Pay candidate visible and fail-closed rather
    than silently consuming it. The pre-publish assertion runs again on the
    release branch. The generic recursive `pnpm publish` remains dry-run-only and
    is filtered with `!@0xkey-io/pay`.
 4. The round-3 static test checked line prefixes and known command spellings;
-   it found the then-current checked-tarball command but did not prove the sole
-   mutation boundary. Round-5 replaces it with per-command parsing and exact
-   tarball binding.
+   it did not prove the sole mutation boundary. Round 6 replaces that approach
+   with the npm-enforced private source boundary and an exact public artifact.
 
 ### Round-3 files
 
@@ -728,21 +725,15 @@ gated operation, not a result claimed by Task 3.
    interpreting YAML itself. `@changesets/read@0.6.5` is an exact root
    development dependency and uses the pinned Changesets parser for all
    `.changeset/*.md`; any reader/parser exception is wrapped as a stable
-   fail-closed release error. The existing temporary-private publish wrapper is
-   unchanged.
-2. Workflow files are parsed as YAML with exact `yaml@2.8.1`. The round-4
-   implementation established job-local setup ordering and fixed-point root
-   aliases, but did not yet model Actions working directories, conditions,
-   composite/reusable actions, or all unfiltered workspace commands. Round-5
-   closes those specific gaps.
-3. The round-4 repository audit scanned workflow and Markdown text broadly.
-   That caught the canonical unsafe commands but also treated prose/comments
-   as executable and recognized only partial publisher spellings. Round-5
-   restricts Markdown to executable shell fences and applies one command model
-   to the full direct-publisher boundary.
+   fail-closed release error. Round 6 removes the temporary-private wrapper.
+2. Workflow files were parsed as YAML with exact `yaml@2.8.1`, but the attempt
+   to infer arbitrary future execution semantics was later rejected and is
+   deleted in round 6.
+3. The broad repository shell/Markdown audit was also rejected as the wrong
+   abstraction and is deleted in round 6.
 4. Canonical operator docs explicitly state why Changesets `ignore` does not
    protect direct pnpm recursive publish, describe the generic wrapper's
-   temporary-private behavior, and prohibit both the generic/manual paths from
+   release isolation, and prohibit both the generic/manual paths from
    publishing a Pay RC or changing `latest`.
 
 ### Round-4 files
@@ -763,6 +754,8 @@ gated operation, not a result claimed by Task 3.
 - `node packages/pay/scripts/audit-pay-release-safety.mjs` — PASS across every
   workflow job and authoritative Markdown release instruction.
 - `node packages/pay/scripts/check-generic-release-exclusion.mjs` — PASS.
+- `pnpm exec changeset status --verbose` — PASS; Pay is absent from the release
+  plan (the CLI emitted only its non-interactive `/dev/tty` warning).
 - `pnpm exec changeset status --verbose` — PASS; Pay and its ignored private
   consumers are absent from the release plan.
 - `pnpm --filter @0xkey-io/pay test` — PASS: 10 Jest suites / 182 tests.
@@ -867,13 +860,13 @@ authoritative Pay workflows run both typecheck surfaces.
 No publish, push, tag, deploy, registry mutation, or network access occurred.
 No controller full-typecheck concern remains.
 
-## Round-5 release-auditor closure (2026-08-27)
+## Round-5 release-auditor attempt — withdrawn (2026-08-27)
 
-Round-5 changes only repository release-safety tooling, its fixtures, and this
-evidence report. It replaces the earlier line/text heuristics with one literal
-shell command model shared by Pay execution discovery and direct-publisher
-classification. The public Pay protocol/runtime and the official Changesets
-reader/wrapper are unchanged.
+The evidence below records the tests that passed at the time, but every claim
+that the shell/Actions model formed a complete security boundary is withdrawn.
+Round-6 review demonstrated fail-open cases and rejected the abstraction. The
+implementation, fixtures, and active claims are deleted in round 6; this
+historical section is not release evidence.
 
 ### RED/GREEN evidence
 
@@ -990,4 +983,149 @@ reader/wrapper are unchanged.
 - `git diff --check` — PASS.
 
 No publish, push, tag, deploy, registry mutation, or network access occurred.
-No round-5 release-auditor concern remains.
+This round did not close release isolation. Round 6 below supersedes it.
+
+## Round-6 structural release isolation (2026-08-27)
+
+Round 6 replaces the unsound attempt to interpret arbitrary shell and GitHub
+Actions execution with an npm-enforced structural boundary. Pay is permanently
+private in source. Only the artifact checker creates a public RC manifest, only
+for the duration of `pnpm pack`, and it restores the exact source bytes before
+verification or output. The generic Changesets publisher never mutates Pay.
+
+### RED/GREEN evidence
+
+- Permanent source boundary:
+  - RED:
+    `node --test --test-name-pattern='Pay source is structurally private' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 0/1; `packages/pay/package.json` had no `private` field.
+  - GREEN: 1/1 after setting `private:true`, exact
+    `git+https://github.com/0xkey-io/sdk-js.git` repository metadata with
+    `packages/pay` directory, and exact public npmjs/public/`next`
+    `publishConfig`.
+- Byte-restoring public artifact scope:
+  - RED: the initial focused run imported the old top-level artifact checker,
+    which had no `withPublicPayManifest` scope and packed the source manifest
+    directly.
+  - GREEN:
+    `node --test --test-name-pattern='Pay source|artifact manifest scope|generic Changesets publisher' packages/pay/scripts/check-packed-artifact.test.mjs`
+    passed 3/3. Success and thrown-operation fixtures both observe
+    `private:false` only inside the scoped operation and exact CRLF/source-byte
+    restoration afterward. The generic publisher sees identical permanently
+    private bytes on success and failure and performs no temporary mutation.
+- Dedicated trusted-publishing workflow:
+  - RED:
+    `node --test --test-name-pattern='bounded workflow checker' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 0/1 because the old checker exported no bounded validator and the
+    workflow still used Node 22.12 plus `NPM_TOKEN`.
+  - GREEN: 1/1 after moving the dedicated workflow to GitHub OIDC with
+    top-level/job `id-token:write`, GitHub-hosted `ubuntu-latest`, Node 24.3.0,
+    exact npm 11.5.1, environment `production`, no npm token, and one exact
+    checked-tarball publish using `next`, public access, npmjs, provenance, and
+    ignored lifecycle scripts.
+  - A follow-up RED failed because the bounded checker did not export an exact
+    validator for the shared `js-setup` composite. GREEN passed after requiring
+    exactly the `.nvmrc` and explicit-input `setup-node` branches plus exact npm
+    11.5.1; replacing `.nvmrc` now fails the fixture.
+- Default-head proof:
+  - RED: the bounded workflow fixture returned 0/1 after replacing the
+    immutable-source `git fetch` with an echo; the first bounded checker only
+    required the step name.
+  - GREEN: 1/1 after the checker required both initial and final
+    default-branch-head fetch/comparison seams, checkout by requested SHA,
+    exact manifest cleanliness/private checks, and ordering of artifact,
+    final preflight, and publication.
+- Real artifact:
+  - `pnpm --filter @0xkey-io/pay artifact:test`
+  - result: 11/11. The real retained tarball had `private:false`, exact
+    `publishConfig` and repository metadata; source bytes matched before/after
+    the full build, pack, strict external install, ESM/CJS, x402, and MPP
+    checks. No publish command was invoked.
+- Contract-guard classification:
+  - RED: `pnpm --filter @0xkey-io/contract-guard audit:surfaces` failed because
+    the old public-package discovery dropped every `private:true` source,
+    including the intentionally public Pay artifact.
+  - A focused regression test then failed 0/1 because
+    `listPublicPackages()` omitted Pay.
+  - GREEN: the focused test and `audit:surfaces` passed after classifying only
+    exact-name Pay with its exact repository and public npmjs/`next` metadata
+    as a source-private public artifact. Runtime export and declaration guards
+    were rerun and passed with Pay included.
+
+### Design decisions and self-review
+
+1. Source `private:true` is the primary generic/manual publication guard.
+   Changesets `ignore` plus the official `@changesets/read@0.6.5` candidate
+   check remains defense in depth, and the generic wrapper asserts private
+   source before and after its child publisher without writing the manifest.
+2. The artifact checker builds while source remains private, writes an exact
+   public manifest only inside `withPublicPayManifest`, packs, restores the
+   original byte buffer in `finally`, and only then locates, verifies, smoke
+   installs, or emits the tarball. Both the source and packed metadata are
+   exact-object checks.
+3. `audit-pay-release-safety.mjs` and its general shell/Actions/Markdown
+   fixtures were deleted. The remaining workflow checker deliberately has no
+   arbitrary command interpreter: it parses the current seven-file workflow
+   inventory, explicitly classifies the one non-Pay workflow, validates Node
+   selections in the six known Pay-affecting workflows, and validates the
+   dedicated publish job's exact current structure.
+4. npm trusted publishing is an external prerequisite. Canonical docs require
+   the npm publisher to name exact workflow `pay-publish.yml` and environment
+   `production`, and require the generic `NPM_TOKEN` to lack Pay write access.
+   This repository does not claim either external setting is configured.
+5. `ChargeSettlementCommand.resource` was removed because neither adapter
+   produced it, the strict command transport did not accept it, and it was not
+   serialized. This removes type/runtime divergence without changing the wire.
+6. The dedicated workflow remains RC-only. It may publish only `next`; public
+   GA `latest` remains a separate future gated workflow and no GA success is
+   claimed.
+
+### Files
+
+- `packages/pay/package.json`
+- `packages/pay/scripts/check-packed-artifact.mjs`
+- `packages/pay/scripts/check-packed-artifact.test.mjs`
+- `packages/pay/scripts/publish-generic-release.mjs`
+- `packages/pay/scripts/audit-pay-release-safety.mjs` (deleted)
+- `packages/pay/src/internal/charge-settlement-command.ts`
+- `internal/contract-guard/scripts/lib/paths.mjs`
+- `.github/scripts/check-pay-publish-workflow.mjs`
+- `.github/workflows/pay-publish.yml`
+- `.github/workflows/version-and-publish.yml`
+- `RELEASING.md`
+- `CONTRIBUTING.md`
+- `.superpowers/sdd/implementation-plan/task-3-report.md`
+
+### Final verification
+
+- `node .github/scripts/check-pay-publish-workflow.mjs` — PASS; bounded workflow
+  inventory, exact js-setup branches, source manifest, and dedicated OIDC job.
+- `node packages/pay/scripts/check-generic-release-exclusion.mjs` — PASS.
+- `pnpm --filter @0xkey-io/pay typecheck` — PASS.
+- `pnpm --filter @0xkey-io/pay typecheck:pay-v1` — PASS.
+- `pnpm --filter @0xkey-io/pay test:pay-v1` — PASS: 7/7 Jest suites,
+  126/126 Jest tests, and 20/20 Node tests.
+- `pnpm --filter @0xkey-io/pay test` — PASS: 10/10 suites, 182/182 tests.
+- `pnpm --filter @0xkey-io/pay build` — PASS: ESM/CJS bundles.
+- `pnpm --filter @0xkey-io/pay pins:check` — PASS.
+- `pnpm --filter @0xkey-io/pay docs:check` — PASS.
+- `pnpm --filter @0xkey-io/pay test:interop` — PASS: official x402/native
+  MPP across Base networks and pinned mppx validation.
+- `pnpm --filter @0xkey-io/pay artifact:test` — PASS: 11/11, including real
+  public tarball and source-byte restoration.
+- `npm_config_offline=true pnpm --filter @0xkey-io/pay artifact:check` — PASS:
+  packed, verified, cache-only strict install, exact class owners, direct Viem,
+  ESM/CJS, official x402, and raw MPP UNKNOWN behavior.
+- `pnpm --filter pay-v1-uat typecheck` — PASS.
+- `pnpm --filter pay-v1-uat smoke` — PASS (`pay_v1_uat_smoke_passed`).
+- Contract guard `audit:exports`, `audit:declarations`, and `audit:surfaces` —
+  PASS; surfaces covered 23 packages and the established unrelated unbuilt
+  package skips were unchanged.
+- `pnpm exec prettier --check` over all round-6 owned files — PASS.
+- `git diff --check` — PASS; the pre-commit status contained only the 13
+  intended round-6 paths (including the deleted general auditor).
+
+No npm publish (including dry-run), push, tag, deploy, dist-tag mutation, or
+registry write was performed. The npm trusted-publisher/environment setup and
+generic-token restriction remain explicit external release gates, not claimed
+completed state.

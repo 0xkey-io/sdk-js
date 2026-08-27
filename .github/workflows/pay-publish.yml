@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -26,6 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    permissions:
+      contents: read
+      id-token: write
     env:
       PUBLIC_NPM_REGISTRY: https://registry.npmjs.org/
     steps:
@@ -61,8 +65,7 @@ jobs:
       - name: Set up Node and pnpm
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
-          node-version: "22.12.0"
-          registry-url: https://registry.npmjs.org/
+          node-version: "24.3.0"
 
       - name: Verify public npm registry configuration
         run: |
@@ -75,7 +78,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install --global corepack@0.34.1 --registry="$PUBLIC_NPM_REGISTRY"
+          npm install --global npm@11.5.1 corepack@0.34.1 --registry="$PUBLIC_NPM_REGISTRY"
           corepack enable
           pnpm install -r --frozen-lockfile --registry "$PUBLIC_NPM_REGISTRY"
 
@@ -97,6 +100,9 @@ jobs:
           if (packageJson.name !== "@0xkey-io/pay") {
             throw new Error("packages/pay must be exactly @0xkey-io/pay");
           }
+          if (packageJson.private !== true) {
+            throw new Error("packages/pay source must remain private");
+          }
           if (packageJson.version !== expectedVersion) {
             throw new Error(
               `Expected ${expectedVersion}; found ${packageJson.version}`,
@@ -107,7 +113,6 @@ jobs:
       - name: Refuse existing version and protect latest
         env:
           EXPECTED_VERSION: ${{ inputs.expected_version }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           latest="$(npm view @0xkey-io/pay dist-tags.latest --registry="$PUBLIC_NPM_REGISTRY")"
@@ -164,7 +169,6 @@ jobs:
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           EXPECTED_VERSION: ${{ inputs.expected_version }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
@@ -194,6 +198,9 @@ jobs:
           );
           if (packageJson.name !== "@0xkey-io/pay") {
             throw new Error("packages/pay must be exactly @0xkey-io/pay");
+          }
+          if (packageJson.private !== true) {
+            throw new Error("packages/pay source must remain private");
           }
           if (packageJson.version !== expectedVersion) {
             throw new Error(
@@ -225,19 +232,17 @@ jobs:
           rm -f "$stderr_file"
 
       - name: Publish only @0xkey-io/pay to npm next
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: >-
           npm publish "${{ steps.pack.outputs.tarball }}"
           --tag next
           --access public
-          --ignore-scripts
           --registry="$PUBLIC_NPM_REGISTRY"
+          --provenance
+          --ignore-scripts
 
       - name: Verify published version and npm tags
         env:
           EXPECTED_VERSION: ${{ inputs.expected_version }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           attempts=12

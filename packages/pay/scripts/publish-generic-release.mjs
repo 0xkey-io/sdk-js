@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertGenericReleaseExcludesPay } from "./check-generic-release-exclusion.mjs";
@@ -38,17 +38,23 @@ export async function publishGenericRelease({
   const manifestPath = resolve(repositoryRoot, "packages/pay/package.json");
   const originalSource = await readFile(manifestPath, "utf8");
   const manifest = JSON.parse(originalSource);
-  if (manifest.name !== PAY_PACKAGE || manifest.private === true) {
-    throw new Error(`Expected public ${PAY_PACKAGE} source manifest`);
+  if (manifest.name !== PAY_PACKAGE || manifest.private !== true) {
+    throw new Error(
+      `Expected permanently private ${PAY_PACKAGE} source manifest`,
+    );
   }
-
-  const hiddenManifest = { ...manifest, private: true };
-  await writeFile(manifestPath, `${JSON.stringify(hiddenManifest, null, 2)}\n`);
+  let publishFailure;
   try {
     await publish();
-  } finally {
-    await writeFile(manifestPath, originalSource);
+  } catch (error) {
+    publishFailure = error;
   }
+  if ((await readFile(manifestPath, "utf8")) !== originalSource) {
+    throw new Error(
+      `${PAY_PACKAGE} source manifest changed during generic publish`,
+    );
+  }
+  if (publishFailure) throw publishFailure;
 }
 
 if (

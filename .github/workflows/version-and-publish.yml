@@ -286,9 +286,9 @@ jobs:
         run: |
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           echo "Publishing packages to NPM..."
-          # The wrapper makes Pay private only for the child Changesets process,
-          # then restores its source manifest even when publishing fails. Pay is
-          # released exclusively from the checked tarball in pay-publish.yml.
+          # Pay is permanently private in source. The wrapper verifies the
+          # official Changesets ignore/candidate boundary without mutating it.
+          # Pay is released exclusively from the checked tarball in pay-publish.yml.
           node packages/pay/scripts/publish-generic-release.mjs || {
             echo "❌ Publish failed. Check logs above.";
             exit 1;

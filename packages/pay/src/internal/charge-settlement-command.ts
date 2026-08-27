@@ -22,8 +22,4 @@ export interface ChargeSettlementCommand {
     validBefore: string;
     signature: `0x${string}`;
   };
-  resource?: {
-    url: string;
-    digest: `0x${string}`;
-  };
 }
