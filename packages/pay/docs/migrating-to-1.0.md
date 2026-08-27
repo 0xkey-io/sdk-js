@@ -75,6 +75,11 @@ does not persist or replay that credential after 503: callers must save the
 original `Authorization` credential and resend those exact bytes, or use
 `createPayClient()` for built-in durable recovery.
 
+Keep the complete peer contract installed: `@x402/core@2.23.0`,
+`mppx@0.8.19`, and `viem>=2.54.0 <3`. Private settle success now fails closed
+unless its exact nested envelope binds the configured network and verified
+payer and contains a non-zero transaction hash.
+
 The direct x402 client uses the official facilitator boundary error, so
 official x402 middleware surfaces dependency/UNKNOWN failures as 502 rather
 than a new payment challenge.

@@ -16,6 +16,10 @@ import {
   type PayApiKey,
   type RequestStamper,
 } from "../xstamp";
+import {
+  parsePrivateSettlementEnvelope,
+  parsePrivateSettlementError,
+} from "./private-settlement-response";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUT_MS = 2_147_483_647;
@@ -84,6 +88,17 @@ export function createX402FacilitatorTransport(
       });
       const text = await response.text();
       if (!response.ok) {
+        if (operation === "settle") {
+          try {
+            const classified = parsePrivateSettlementError(
+              JSON.parse(text),
+              response.status,
+            );
+            if (classified) throw classified;
+          } catch (cause) {
+            if (cause instanceof PayError) throw cause;
+          }
+        }
         throw dependencyError(
           operation,
           response.status,
@@ -125,11 +140,23 @@ export function createX402FacilitatorTransport(
     paymentPayload: PaymentPayload,
     paymentRequirements: PaymentRequirements,
   ): Promise<PrivateSettlementResult> {
+    if (paymentRequirements.network !== options.network) {
+      throw new PayError(
+        "PAYMENT_NETWORK_MISMATCH",
+        "payment requirements do not match the configured network",
+        { phase: "request" },
+      );
+    }
+    const payer = paymentPayloadPayer(paymentPayload);
     return request(
       "settle",
       "POST",
       envelope(options.organizationId, paymentPayload, paymentRequirements),
-      parsePrivateSettlement,
+      (value) => parsePrivateSettlementEnvelope(value, {
+        amount: paymentRequirements.amount,
+        network: options.network,
+        payer,
+      }),
     ) as Promise<PrivateSettlementResult>;
   }
 
@@ -253,35 +280,20 @@ function parseVerifyResponse(value: unknown): VerifyResponse {
   };
 }
 
-function parsePrivateSettlement(value: unknown): PrivateSettlementResult {
-  const record = requireRecord(value);
-  if (!isUuid(record.paymentId)) throw new Error("invalid private payment id");
-  return {
-    settlement: parseSettleResponse(record.settlement),
-    paymentId: record.paymentId,
-  };
-}
-
-function parseSettleResponse(value: unknown): SettleResponse {
-  const record = requireRecord(value);
+function paymentPayloadPayer(paymentPayload: PaymentPayload): string {
+  const wire = requireRecord(paymentPayload.payload);
+  const authorization = requireRecord(wire.authorization);
   if (
-    typeof record.success !== "boolean" ||
-    typeof record.transaction !== "string" ||
-    typeof record.network !== "string"
+    typeof authorization.from !== "string" ||
+    !/^0x[0-9a-f]{40}$/i.test(authorization.from)
   ) {
-    throw new Error("invalid settle response");
+    throw new PayError(
+      "PAYMENT_CHALLENGE_INVALID",
+      "payment payload does not contain a valid payer",
+      { phase: "request" },
+    );
   }
-  return {
-    success: record.success,
-    transaction: record.transaction,
-    network: record.network,
-    ...optionalString(record, "errorReason"),
-    ...optionalString(record, "errorMessage"),
-    ...optionalString(record, "payer"),
-    ...optionalString(record, "amount"),
-    ...optionalRecord(record, "extensions"),
-    ...optionalRecord(record, "extra"),
-  } as SettleResponse;
+  return authorization.from;
 }
 
 function parseSupportedResponse(value: unknown): SupportedResponse {

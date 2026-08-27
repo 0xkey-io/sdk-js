@@ -22,4 +22,8 @@ for (const [name, version] of [["mppx", "0.8.19"], ["@x402/core", "2.23.0"]]) {
   }
 }
 
+if (packageJson.peerDependencies?.viem !== ">=2.54.0 <3") {
+  throw new Error("peerDependencies.viem must preserve >=2.54.0 <3");
+}
+
 process.stdout.write("Pay protocol dependency pins are exact.\n");

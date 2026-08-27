@@ -107,6 +107,44 @@ test.each([
     },
     paymentId: "22222222-2222-4222-8222-222222222222",
   }],
+  ["missing success payer", {
+    settlement: {
+      success: true,
+      transaction: `0x${"ab".repeat(32)}`,
+      network: "eip155:84532",
+    },
+    paymentId: "22222222-2222-4222-8222-222222222222",
+  }],
+  ["invalid optional amount", {
+    settlement: {
+      success: true,
+      transaction: `0x${"ab".repeat(32)}`,
+      network: "eip155:84532",
+      payer: command.payer,
+      amount: 0,
+    },
+    paymentId: "22222222-2222-4222-8222-222222222222",
+  }],
+  ["invalid optional error", {
+    settlement: {
+      success: true,
+      transaction: `0x${"ab".repeat(32)}`,
+      network: "eip155:84532",
+      payer: command.payer,
+      errorReason: { private: true },
+    },
+    paymentId: "22222222-2222-4222-8222-222222222222",
+  }],
+  ["invalid optional object", {
+    settlement: {
+      success: true,
+      transaction: `0x${"ab".repeat(32)}`,
+      network: "eip155:84532",
+      payer: command.payer,
+      extra: [],
+    },
+    paymentId: "22222222-2222-4222-8222-222222222222",
+  }],
 ])("rejects %s success", async (_label, responseBody) => {
   const adapter = new ZeroXkeySettlementAdapter({
     network: "eip155:84532",

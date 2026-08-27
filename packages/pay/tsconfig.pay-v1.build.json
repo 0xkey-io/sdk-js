@@ -9,6 +9,7 @@
     "src/internal/charge-settlement-command.ts",
     "src/internal/create-mpp-evm-charge-method.ts",
     "src/internal/mpp-evm-charge-adapter.ts",
+    "src/internal/private-settlement-response.ts",
     "src/internal/x402-facilitator.ts",
     "src/internal/x402-exact-v2-adapter.ts",
     "src/internal/zeroxkey-settlement-adapter.ts",

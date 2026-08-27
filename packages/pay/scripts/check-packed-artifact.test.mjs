@@ -9,16 +9,34 @@ import test from "node:test";
 const execFileAsync = promisify(execFile);
 const checker = new URL("./check-packed-artifact.mjs", import.meta.url);
 
-test("Pay CI and publish select the declared Node 22.12 baseline", async () => {
+test("every Pay-affecting workflow selects the declared Node 22.12 baseline", async () => {
   const repositoryRoot = new URL("../../../", import.meta.url);
-  const [ci, publish, setup] = await Promise.all([
-    readFile(new URL(".github/workflows/pay-v1.yml", repositoryRoot), "utf8"),
-    readFile(new URL(".github/workflows/pay-publish.yml", repositoryRoot), "utf8"),
+  const payWorkflows = [
+    "pay-v1.yml",
+    "pay-publish.yml",
+    "commerce-contract.yml",
+    "commerce-verifier.yml",
+  ];
+  const [workflows, setup] = await Promise.all([
+    Promise.all(payWorkflows.map(async (name) => ({
+      name,
+      source: await readFile(new URL(`.github/workflows/${name}`, repositoryRoot), "utf8"),
+    }))),
     readFile(new URL(".github/actions/js-setup/action.yml", repositoryRoot), "utf8"),
   ]);
-  assert.match(ci, /node-version:\s*["']22\.12\.0["']/);
-  assert.match(publish, /node-version:\s*["']22\.12\.0["']/);
+  for (const { name, source } of workflows) {
+    assert.match(source, /node-version:\s*["']?22\.12\.0["']?/, name);
+  }
   assert.match(setup, /inputs:\s*[\s\S]*node-version:/);
+});
+
+test("source manifest has one complete exact peer contract", async () => {
+  const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.deepEqual(manifest.peerDependencies, {
+    "@x402/core": "2.23.0",
+    mppx: "0.8.19",
+    viem: ">=2.54.0 <3",
+  });
 });
 
 test(

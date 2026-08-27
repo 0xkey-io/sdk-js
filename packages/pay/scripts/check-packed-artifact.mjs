@@ -97,6 +97,9 @@ async function verifyTarball(tarball, sourceManifest) {
   if (manifest.peerDependencies?.["@x402/core"] !== "2.23.0") {
     throw new Error("Packed peerDependencies.@x402/core must be exactly 2.23.0 for facilitator error class identity");
   }
+  if (manifest.peerDependencies?.viem !== ">=2.54.0 <3") {
+    throw new Error("Packed peerDependencies.viem must preserve the >=2.54.0 <3 public runtime contract");
+  }
 
   if (sourceManifest) {
     for (const field of ["name", "version"]) {
@@ -164,6 +167,7 @@ async function externalInstallSmoke(tarball) {
         "--no-audit",
         "--no-fund",
         "--no-package-lock",
+        "--strict-peer-deps",
         `--registry=${publicRegistry}`,
         tarball,
         "@x402/express@2.23.0",
@@ -200,6 +204,11 @@ async function externalInstallSmoke(tarball) {
       throw new Error(`Packed Pay must resolve one @x402/core instance; found ${installedX402Core.length}`);
     }
     await run(
+      process.platform === "win32" ? "npm.cmd" : "npm",
+      ["ls", "viem", "--all"],
+      { cwd: externalRoot },
+    );
+    await run(
       process.execPath,
       [
         "--input-type=module",
@@ -214,9 +223,11 @@ async function externalInstallSmoke(tarball) {
           'import "@0xkey-io/pay/server";',
           'import * as mpp from "@0xkey-io/pay/mpp";',
           'import * as x402 from "@0xkey-io/pay/x402";',
+          'import { getAddress } from "viem";',
           'if (typeof client.createPayClient !== "function") throw new Error("missing createPayClient");',
           'if (typeof mpp.create0xkeyEvmChargeMethod !== "function") throw new Error("missing MPP factory");',
           'if (typeof x402.create0xkeyFacilitatorClient !== "function") throw new Error("missing x402 factory");',
+          'if (getAddress("0x1111111111111111111111111111111111111111").length !== 42) throw new Error("direct viem peer import failed");',
           'if ("createPayFetch" in client || "createPayFetch" in root) throw new Error("legacy createPayFetch is exported");',
         ].join("\n"),
       ],

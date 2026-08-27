@@ -30,6 +30,11 @@
 - Decode strict structured command errors and deterministic rejection envelopes,
   refresh seller capabilities after bounded freshness, and cancel upstream
   streams when Express clients disconnect.
+- Share the strict private settlement decoder across official x402 and command
+  paths; bind success to network, payer, amount, and a non-zero transaction.
+  Guard all five raw MPP credential layers without mutating upstream schemas,
+  restore the Viem peer contract, and cover disconnects across the full Express
+  response lifetime.
 
 ## 0.3.0-rc.6
 

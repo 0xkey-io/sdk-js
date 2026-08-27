@@ -353,6 +353,29 @@ describe("create0xkeyFacilitatorClient", () => {
     }
   });
 
+  it("keeps a strict deterministic private rejection as standard success:false", async () => {
+    const { stamper } = fakeStamper();
+    const client = create0xkeyFacilitatorClient({
+      network: "eip155:84532", organizationId: ORG, stamper,
+      fetch: async () => Response.json({
+        settlement: {
+          success: false,
+          transaction: "",
+          network: requirements.network,
+          payer: payload.payload.authorization.from,
+          errorReason: "authorization rejected",
+        },
+        paymentId: "22222222-2222-4222-8222-222222222222",
+      }),
+    });
+    await expect(client.settle(payload, requirements)).resolves.toMatchObject({
+      success: false,
+      transaction: "",
+      network: requirements.network,
+      payer: payload.payload.authorization.from,
+    });
+  });
+
   it("fails closed on malformed successful responses", async () => {
     const { stamper } = fakeStamper();
     const client = create0xkeyFacilitatorClient({
@@ -364,6 +387,137 @@ describe("create0xkeyFacilitatorClient", () => {
     await expect(client.settle(payload, requirements)).rejects.toMatchObject({
       cause: { code: "PAYMENT_STATUS_UNKNOWN", retryable: true },
     });
+  });
+
+  it.each([
+    ["outer extension", {
+      settlement: {
+        success: true, transaction: `0x${"ab".repeat(32)}`,
+        network: requirements.network, payer: payload.payload.authorization.from,
+      },
+      paymentId: "22222222-2222-4222-8222-222222222222",
+      privateMetadata: true,
+    }],
+    ["nested extension", {
+      settlement: {
+        success: true, transaction: `0x${"ab".repeat(32)}`,
+        network: requirements.network, payer: payload.payload.authorization.from,
+        providerPrivate: true,
+      },
+      paymentId: "22222222-2222-4222-8222-222222222222",
+    }],
+    ["wrong network", {
+      settlement: {
+        success: true, transaction: `0x${"ab".repeat(32)}`,
+        network: "eip155:8453", payer: payload.payload.authorization.from,
+      },
+      paymentId: "22222222-2222-4222-8222-222222222222",
+    }],
+    ["wrong payer", {
+      settlement: {
+        success: true, transaction: `0x${"ab".repeat(32)}`,
+        network: requirements.network, payer: requirements.payTo,
+      },
+      paymentId: "22222222-2222-4222-8222-222222222222",
+    }],
+    ["missing payer", {
+      settlement: {
+        success: true, transaction: `0x${"ab".repeat(32)}`,
+        network: requirements.network,
+      },
+      paymentId: "22222222-2222-4222-8222-222222222222",
+    }],
+    ["zero transaction", {
+      settlement: {
+        success: true, transaction: `0x${"00".repeat(32)}`,
+        network: requirements.network, payer: payload.payload.authorization.from,
+      },
+      paymentId: "22222222-2222-4222-8222-222222222222",
+    }],
+    ["malformed optional amount", {
+      settlement: {
+        success: true, transaction: `0x${"ab".repeat(32)}`,
+        network: requirements.network, payer: payload.payload.authorization.from,
+        amount: 0,
+      },
+      paymentId: "22222222-2222-4222-8222-222222222222",
+    }],
+    ["malformed optional extensions", {
+      settlement: {
+        success: true, transaction: `0x${"ab".repeat(32)}`,
+        network: requirements.network, payer: payload.payload.authorization.from,
+        extensions: [],
+      },
+      paymentId: "22222222-2222-4222-8222-222222222222",
+    }],
+  ])("rejects strict private settlement violation: %s", async (_label, body) => {
+    const { stamper } = fakeStamper();
+    const client = create0xkeyFacilitatorClient({
+      network: "eip155:84532", organizationId: ORG, stamper,
+      fetch: async () => Response.json(body),
+    });
+    await expect(client.settle(payload, requirements)).rejects.toMatchObject({
+      cause: { code: "PAYMENT_STATUS_UNKNOWN", retryable: true },
+    });
+  });
+
+  it.each([
+    [400, "PAYMENT_REQUEST_INVALID", false, undefined],
+    [401, "PAYMENT_AUTH_INVALID", false, undefined],
+    [403, "PAYMENT_AUTH_FORBIDDEN", false, undefined],
+    [409, "PAYMENT_INTENT_CONFLICT", false, "22222222-2222-4222-8222-222222222222"],
+    [502, "PAYMENT_SERVICE_UNAVAILABLE", true, undefined],
+    [503, "PAYMENT_STATUS_UNKNOWN", true, "22222222-2222-4222-8222-222222222222"],
+  ] as const)("preserves official settle structured %i %s", async (
+    status,
+    errorCode,
+    retryable,
+    paymentId,
+  ) => {
+    const { stamper } = fakeStamper();
+    const client = create0xkeyFacilitatorClient({
+      network: "eip155:84532", organizationId: ORG, stamper,
+      fetch: async () => Response.json({
+        errorCode, retryable, ...(paymentId ? { paymentId } : {}),
+      }, { status }),
+    });
+    await expect(client.settle(payload, requirements)).rejects.toMatchObject({
+      cause: {
+        code: errorCode,
+        retryable,
+        ...(paymentId ? { paymentId } : {}),
+      },
+    });
+  });
+
+  it("does not let official middleware continue after an unbound private success", async () => {
+    const { stamper } = fakeStamper();
+    const client = create0xkeyFacilitatorClient({
+      network: "eip155:84532", organizationId: ORG, stamper,
+      fetch: async () => Response.json({
+        settlement: {
+          success: true, transaction: "", network: "wrong",
+          payer: requirements.payTo,
+        },
+        paymentId: "22222222-2222-4222-8222-222222222222",
+      }),
+    });
+    const middleware = paymentMiddlewareFromHTTPServer({
+      routes: {}, requiresPayment: () => true,
+      async processHTTPRequest() { await client.settle(payload, requirements); },
+    } as never, undefined, undefined, false);
+    const statusCodes: number[] = [];
+    const res = {
+      status(code: number) { statusCodes.push(code); return this; },
+      json() { return this; }, setHeader() { return this; },
+    };
+    const next = jest.fn();
+    await middleware({
+      body: undefined, headers: { host: "merchant.example" }, header() { return undefined; },
+      method: "GET", originalUrl: "/weather", path: "/weather", protocol: "https", query: {},
+    } as never, res as never, next);
+    expect(statusCodes).toEqual([502]);
+    expect(next).not.toHaveBeenCalled();
   });
 
   it("maps stamping failures to stable safe dependency errors", async () => {

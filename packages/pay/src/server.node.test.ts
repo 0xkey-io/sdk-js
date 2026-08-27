@@ -13,6 +13,9 @@ import { createPayClient, type PendingPaymentRecord } from "./client.ts";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
 const PAY_TO = "0x1111111111111111111111111111111111111111";
+const TEST_PAYER = privateKeyToAccount(
+  "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+).address;
 const fixtureRoot = new URL(
   "../../api-key-stamper/src/__fixtures__/",
   import.meta.url,
@@ -22,13 +25,13 @@ const apiKey = {
   privateKey: readFileSync(new URL("api-key.private", fixtureRoot), "utf8").trim(),
 };
 
-function settlementEnvelope(transaction: string, paymentId: string, payer?: string) {
+function settlementEnvelope(transaction: string, paymentId: string, payer = TEST_PAYER) {
   return {
     settlement: {
       success: true,
       transaction,
       network: "eip155:84532",
-      ...(payer ? { payer } : {}),
+      payer,
     },
     paymentId,
   };

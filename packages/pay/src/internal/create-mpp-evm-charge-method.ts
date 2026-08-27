@@ -1,5 +1,5 @@
 import { Transport } from "mppx/server";
-import { Errors } from "mppx";
+import { Credential, Errors } from "mppx";
 import { assets, charge } from "mppx/evm/server";
 import { getAddress } from "viem";
 import { PayError } from "../errors";
@@ -7,7 +7,7 @@ import { assertBasePaymentNetwork } from "../networks";
 import type { BasePaymentNetwork } from "../receipt-verifier";
 import type { PayApiKey, RequestStamper } from "../xstamp";
 import {
-  assertMppPayloadHasNoUnknownExtensions,
+  assertMppCredentialHasNoUnknownExtensions,
   MppEvmChargeAdapter,
 } from "./mpp-evm-charge-adapter";
 import {
@@ -59,21 +59,19 @@ export function createMppEvmChargeMethod(
     },
   });
 
-  const payloadSchema = method.schema.credential.payload as typeof method.schema.credential.payload & {
-    parse: (value: unknown) => unknown;
-  };
-  const parsePayload = payloadSchema.parse.bind(payloadSchema);
-  payloadSchema.parse = (value: unknown) => {
-    assertMppPayloadHasNoUnknownExtensions(value);
-    return parsePayload(value);
-  };
-
   const upstreamTransport = Transport.http();
   Object.defineProperty(method, "transport", {
     configurable: false,
     enumerable: true,
     value: Transport.from({
       ...upstreamTransport,
+      getCredential(input) {
+        const header = input.headers.get("Authorization");
+        if (header && Credential.extractPaymentScheme(header)) {
+          assertMppCredentialHasNoUnknownExtensions(header);
+        }
+        return upstreamTransport.getCredential(input);
+      },
       async respondChallenge(options) {
         const response = await upstreamTransport.respondChallenge(options);
         if (

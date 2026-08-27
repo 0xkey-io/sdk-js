@@ -1,4 +1,4 @@
-import { Credential } from "mppx";
+import { Credential, PaymentRequest } from "mppx";
 import type { Types } from "mppx/evm";
 import type { ChargeSettlementCommand } from "./charge-settlement-command";
 import type { BasePaymentNetwork } from "../receipt-verifier";
@@ -16,10 +16,13 @@ export class MppEvmChargeAdapter {
     assertKnownKeys(validated.credential, ["challenge", "payload", "source"]);
     assertKnownKeys(validated.credential.challenge, [
       "description",
+      "digest",
       "expires",
+      "header",
       "id",
       "intent",
       "method",
+      "meta",
       "opaque",
       "realm",
       "request",
@@ -86,22 +89,25 @@ export function assertMppCredentialHasNoUnknownExtensions(header: string): void 
   ]);
   assertKnownKeys(credential.challenge, [
     "description",
+    "digest",
     "expires",
+    "header",
     "id",
     "intent",
     "method",
+    "meta",
     "opaque",
     "realm",
     "request",
   ]);
-  const extracted = Credential.extractPaymentScheme(header);
-  if (!extracted) {
-    throw new Error("PAYMENT_CHALLENGE_INVALID: missing MPP credential");
+  if (typeof credential.challenge.request !== "string") {
+    throw new Error("PAYMENT_CHALLENGE_INVALID: malformed MPP request");
   }
-  const normalized = Credential.deserialize(
-    extracted.replace(/^Payment\s+/i, "Payment "),
-  );
-  assertKnownKeys(normalized.challenge.request, [
+  const rawRequest = PaymentRequest.deserialize(credential.challenge.request);
+  if (!rawRequest || typeof rawRequest !== "object" || Array.isArray(rawRequest)) {
+    throw new Error("PAYMENT_CHALLENGE_INVALID: malformed MPP request");
+  }
+  assertKnownKeys(rawRequest, [
     "amount",
     "currency",
     "description",
@@ -109,27 +115,22 @@ export function assertMppCredentialHasNoUnknownExtensions(header: string): void 
     "methodDetails",
     "recipient",
   ]);
+  const rawMethodDetails = rawRequest.methodDetails;
+  if (!rawMethodDetails || typeof rawMethodDetails !== "object" || Array.isArray(rawMethodDetails)) {
+    throw new Error("PAYMENT_CHALLENGE_INVALID: invalid MPP method details");
+  }
+  assertKnownKeys(rawMethodDetails, ["chainId", "credentialTypes", "decimals", "splits"]);
+  const extracted = Credential.extractPaymentScheme(header);
+  if (!extracted) {
+    throw new Error("PAYMENT_CHALLENGE_INVALID: missing MPP credential");
+  }
+  const normalized = Credential.deserialize(
+    extracted.replace(/^Payment\s+/i, "Payment "),
+  );
   const methodDetails = normalized.challenge.request.methodDetails;
   if (!methodDetails || typeof methodDetails !== "object" || Array.isArray(methodDetails)) {
     throw new Error("PAYMENT_CHALLENGE_INVALID: invalid MPP method details");
   }
-  assertKnownKeys(methodDetails, ["chainId", "credentialTypes", "decimals", "splits"]);
-}
-
-export function assertMppPayloadHasNoUnknownExtensions(value: unknown): void {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("PAYMENT_CHALLENGE_INVALID: invalid MPP payload");
-  }
-  assertKnownKeys(value, [
-    "from",
-    "nonce",
-    "signature",
-    "to",
-    "type",
-    "validAfter",
-    "validBefore",
-    "value",
-  ]);
 }
 
 function decodeCredentialWire(header: string): Record<string, unknown> & {

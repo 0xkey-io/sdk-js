@@ -464,3 +464,107 @@ docs now say that callers must persist and resend the same credential, or use
 - Remaining external boundary: services do not implement the frozen private
   charge and fulfillment contracts until Task 4. No deployment or end-to-end
   service conformance is claimed here.
+
+## Round-2 re-review closure (2026-08-27)
+
+Round 2 found one remaining economic fail-open in the public official x402
+settle decoder, a process-global mppx schema mutation, an incomplete raw MPP
+wire guard, and three release/runtime consistency gaps. All findings are closed
+without changing a public factory name or expanding into Task 4.
+
+### RED/GREEN evidence
+
+- Shared strict private settlement decoder:
+  - RED: `pnpm --filter @0xkey-io/pay exec jest --runInBand src/x402/index.test.ts src/internal/zeroxkey-settlement-adapter.test.ts`
+    failed 15/42. Official `/settle` accepted outer/nested extensions, wrong
+    network, wrong/missing payer and zero transaction; the command decoder
+    accepted incorrectly typed optional fields; every structured official
+    error collapsed to UNKNOWN.
+  - GREEN: the same focused suites passed 44/44, then 45/45 after adding the
+    explicit standard `success:false` regression. Both transports now call
+    `private-settlement-response.ts`, which enforces exact outer/nested keys,
+    UUID, configured network, requested amount when returned, matching valid
+    payer, a non-zero transaction on success, an empty transaction on
+    deterministic failure, and exact optional field types. The official path
+    preserves strict structured 400/401/403/409/502/503 errors as the original
+    `PayError` cause and never reaches official middleware continuation after
+    an unbound success.
+- Request-local full raw MPP guard:
+  - RED: `pnpm --filter @0xkey-io/pay exec tsx --test src/mpp/index.node.test.ts`
+    passed 6/9 and failed the singleton-schema identity plus unknown outer and
+    challenge key cases; the invalid credentials settled successfully.
+  - GREEN: the focused suite passed 11/11 after moving the guard to the
+    per-method `Transport.http().getCredential` boundary. The final suite is
+    12/12 with a repeated `createPayServer()` isolation regression. Raw outer,
+    challenge, payload, serialized request, and methodDetails keys are checked
+    before mppx parsing; standard `description`, `digest`, `expires`, `header`,
+    `meta`, `opaque`, realm/id/method/intent/request fields remain accepted.
+    Two direct factories and repeated seller challenge creation leave an
+    unrelated upstream charge schema's `parse` reference unchanged.
+- Express full-lifetime cancellation:
+  - RED: `pnpm --filter @0xkey-io/pay exec jest --runInBand src/frameworks.test.ts`
+    passed 8/11; close before the first chunk, close between chunks, and error
+    during a pending first read all remained blocked.
+  - GREEN: the same suite passed 11/11. One lifecycle listener pair now races
+    every `reader.read()` and drain wait, cancels the upstream reader on close
+    or error, preserves the original downstream error, and removes only its own
+    close/error/drain listeners in `finally`.
+- Peer manifest and all Pay-affecting workflow runtimes:
+  - RED: `pnpm --filter @0xkey-io/pay artifact:test` passed 5/7. The static
+    guard found Commerce Contract on Node 20 and the parsed manifest lacked its
+    Viem peer (Commerce Verifier had the same Node defect).
+  - GREEN: the same command passed 7/7. One `peerDependencies` object now has
+    exact class owners `@x402/core@2.23.0`, `mppx@0.8.19`, and the retained
+    `viem>=2.54.0 <3` runtime contract. The packed checker asserts all three,
+    installs with npm `--strict-peer-deps`, lists Viem, and imports it directly.
+    Its workflow list covers Pay GA, Pay publish, Commerce Contract, and
+    Commerce Verifier; all select Node 22.12.0.
+- Type gate stabilization:
+  - RED: `pnpm --filter @0xkey-io/pay typecheck:pay-v1` identified two computed
+    optional-field narrowing errors and the new deep module missing from the
+    explicit build file list.
+  - GREEN: the same command passed after local-value narrowing and adding the
+    module to `tsconfig.pay-v1.build.json`.
+
+### Design and contract decisions
+
+1. `private-settlement-response.ts` is an upstream-independent deep module.
+   It returns a private structural settlement type rather than importing an
+   x402 wire type, so the 0xkey command adapter stays protocol-independent.
+   The official x402 transport converts that structural result only at its own
+   dedicated seam.
+2. Successful private settlements require `payer`, despite the JSON Schema
+   listing it as an optional property, because the frozen normative prose says
+   success binds the verified signer. Deterministic `success:false` may omit it
+   and remains each protocol's native 402.
+3. The raw MPP request is decoded with the official `PaymentRequest` codec only
+   to inspect exact raw keys, then the official `Credential.deserialize` and
+   normal mppx method schemas remain authoritative for types and signatures.
+   No upstream singleton or consumer `node_modules` is patched.
+4. The Viem peer remains the pre-existing compatible range, while the two
+   error-class owners remain exact pins. Fresh strict npm installation resolved
+   one physical mppx and one physical x402 core owner and a direct Viem import.
+
+### Round-2 final verification
+
+- `pnpm --filter @0xkey-io/pay test:pay-v1` — PASS: 7 Jest suites / 126 tests;
+  Node tests 20/20.
+- `pnpm --filter @0xkey-io/pay typecheck:pay-v1` — PASS.
+- `pnpm --filter @0xkey-io/pay build` — PASS, ESM and CJS.
+- `pnpm --filter @0xkey-io/pay pins:check` — PASS.
+- `pnpm --filter @0xkey-io/pay docs:check` — PASS.
+- `pnpm --filter @0xkey-io/pay test:interop` — PASS, official x402/native MPP
+  across both Base networks and mppx 0.8.19 validation.
+- `pnpm --filter @0xkey-io/pay artifact:test` — PASS, 7/7.
+- `pnpm --filter @0xkey-io/pay artifact:check` — PASS: packed, verified,
+  strict-peer fresh install, ESM/CJS runtime, one class owner each, direct Viem,
+  official x402 middleware and raw MPP UNKNOWN behavior.
+- `pnpm --filter pay-v1-uat typecheck` — PASS.
+- `pnpm --filter pay-v1-uat smoke` — PASS (`pay_v1_uat_smoke_passed`).
+- Contract guard exports/declarations/surfaces — PASS (23 package surfaces;
+  only the pre-existing unrelated unbuilt-package skips).
+- `git diff --check` — PASS.
+
+No new concern was introduced. Task 4 still owns service implementation and
+deployment of the already frozen private contracts; this SDK task makes no
+claim that those later service gates have run.

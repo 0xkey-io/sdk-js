@@ -62,7 +62,10 @@ type for dependency and indeterminate settlement failures, so official x402
 HTTP middleware returns 502 instead of issuing another 402. The original
 retryable `PayError` remains available as the error `cause`.
 
-The direct MPP method requires the exact `mppx@0.8.19` peer. With raw
+The package has one peer contract: `mppx@0.8.19` and `@x402/core@2.23.0`
+preserve upstream error class identity, while `viem>=2.54.0 <3` supplies the
+public runtime signer/address dependency. The direct MPP method requires that
+exact mppx peer. With raw
 `Mppx.create({ methods: [method] })`, a post-send indeterminate settlement has
 an internal mppx result discriminant of 402, but its returned HTTP `challenge`
 Response is 503 with `Retry-After: 2`, no `WWW-Authenticate`, and no receipt.
@@ -74,7 +77,10 @@ for that unresolved economic effect. `createPayClient()` already implements
 this durable same-credential recovery contract.
 
 The direct x402 client keeps the official private `/verify` and `/settle`
-envelope. The 0xkey seller facade independently validates that wire, derives a
+envelope. Both private settle decoders require exact keys, the configured
+network, a matching verified payer and non-zero transaction on success, and
+strictly typed optional fields. The 0xkey seller facade independently validates
+that wire, derives a
 closed `ChargeSettlementCommand`, and sends seller x402 and MPP commands only
 to `/v1/settlements/charge`; `paymentId` remains outside standard receipts.
 

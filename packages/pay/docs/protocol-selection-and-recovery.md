@@ -28,6 +28,9 @@ all other rails are outside v1.
 `@x402/*` packages own ordinary x402 client encoding. 0xkey does not copy those
 wire types or codecs.
 
+The package peer contract keeps one `@x402/core@2.23.0` and `mppx@0.8.19`
+class owner and retains the public `viem>=2.54.0 <3` runtime dependency.
+
 The direct MPP entry has an exact `mppx@0.8.19` peer so its typed settlement
 boundary error and the consumer's `Mppx.create()` share one class identity.
 For an indeterminate command result, the mppx internal route union still says
@@ -52,6 +55,9 @@ the caller must persist and resend the same Authorization credential or use the
    `{ organizationId, command }`; MPP calls the same command settlement
    endpoint. Every private call uses X-Stamp V2 and an explicit wire protocol.
 6. The facilitator waits until the Base transfer is `CONFIRMED`.
+   Both private settle paths accept only the exact nested envelope, configured
+   network, verified payer, non-zero success transaction, and correctly typed
+   optional fields.
 7. The SDK returns `paymentId` and then calls the merchant handler.
 8. The protocol receipt is attached to the merchant response.
 

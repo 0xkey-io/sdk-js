@@ -3,8 +3,10 @@ import test from "node:test";
 import { Challenge, Credential, Errors } from "mppx";
 import { Mppx } from "mppx/server";
 import { authorizationDomain, authorizationTypes, challengeHash } from "mppx/evm";
+import { assets, charge } from "mppx/evm/server";
 import { privateKeyToAccount } from "viem/accounts";
 import { create0xkeyEvmChargeMethod } from "./index.mts";
+import { createPayServer } from "../server.ts";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
 
@@ -198,6 +200,129 @@ test("raw Mppx.create rejects unknown signed payload keys before settlement tran
   assert.equal(settlementCalls, 0);
 });
 
+test("method construction never mutates the upstream singleton credential schema", () => {
+  const unrelated = charge({
+    currency: assets.baseSepolia.USDC,
+    recipient: "0x1111111111111111111111111111111111111111",
+    async settle() { return { reference: `0x${"ab".repeat(32)}` }; },
+  });
+  const originalParse = unrelated.schema.credential.payload.parse;
+  const options = {
+    network: "eip155:84532" as const,
+    organizationId: ORG,
+    payTo: "0x1111111111111111111111111111111111111111" as const,
+    stamper: {
+      async stampRequest() {
+        return { stampHeaderName: "X-Stamp" as const, stampHeaderValue: "signed" };
+      },
+    },
+  };
+  create0xkeyEvmChargeMethod(options);
+  create0xkeyEvmChargeMethod(options);
+  assert.equal(unrelated.schema.credential.payload.parse, originalParse);
+});
+
+test("repeated createPayServer challenge construction leaves upstream schema unchanged", async () => {
+  const unrelated = charge({
+    currency: assets.baseSepolia.USDC,
+    recipient: "0x1111111111111111111111111111111111111111",
+    async settle() { return { reference: `0x${"ab".repeat(32)}` }; },
+  });
+  const originalParse = unrelated.schema.credential.payload.parse;
+  for (let index = 0; index < 2; index += 1) {
+    const seller = createPayServer({
+      network: "eip155:84532", organizationId: ORG,
+      payTo: "0x1111111111111111111111111111111111111111",
+      protocols: ["mpp"], mppSecretKey: "01234567890123456789012345678901",
+      apiKey: { publicKey: "unused", privateKey: "unused" },
+    });
+    const response = await seller.protect({ price: "$0.01" }, () => new Response("paid"))(
+      new Request(`https://merchant.example/weather?i=${index}`),
+    );
+    assert.equal(response.status, 402);
+  }
+  assert.equal(unrelated.schema.credential.payload.parse, originalParse);
+});
+
+for (const target of ["outer", "challenge", "request", "methodDetails"] as const) {
+  test(`raw Mppx.create rejects unknown signed ${target} keys before settlement`, async () => {
+    let settlementCalls = 0;
+    const method = create0xkeyEvmChargeMethod({
+      network: "eip155:84532", organizationId: ORG,
+      payTo: "0x1111111111111111111111111111111111111111",
+      stamper: { async stampRequest() { return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" }; } },
+      async fetch() {
+        settlementCalls += 1;
+        return Response.json({
+          settlement: {
+            success: true, transaction: `0x${"ab".repeat(32)}`,
+            network: "eip155:84532",
+          },
+          paymentId: "22222222-2222-4222-8222-222222222222",
+        });
+      },
+    });
+    const server = Mppx.create({
+      methods: [method], secretKey: "01234567890123456789012345678901",
+    });
+    const route = server.evm.charge({ amount: "0.01" });
+    const offered = await route(new Request("https://merchant.example/weather"));
+    assert.equal(offered.status, 402);
+    if (offered.status !== 402) throw new Error("expected challenge");
+    const challenge = Challenge.fromResponse(offered.challenge.clone());
+    const wire = decodeCredential(Credential.serialize({
+      challenge, payload: await validPayload(challenge),
+    }));
+    if (target === "outer") wire.providerPrivate = "forbidden";
+    else if (target === "challenge") {
+      (wire.challenge as Record<string, unknown>).providerPrivate = "forbidden";
+    } else {
+      const challengeWire = wire.challenge as Record<string, unknown>;
+      const requestWire = JSON.parse(Buffer.from(
+        challengeWire.request as string,
+        "base64url",
+      ).toString("utf8")) as Record<string, unknown>;
+      if (target === "request") requestWire.providerPrivate = "forbidden";
+      else (requestWire.methodDetails as Record<string, unknown>).providerPrivate = "forbidden";
+      challengeWire.request = Buffer.from(JSON.stringify(requestWire)).toString("base64url");
+    }
+    const result = await route(new Request("https://merchant.example/weather", {
+      headers: { Authorization: encodeCredential(wire) },
+    }));
+    assert.equal(result.status, 402);
+    assert.equal(settlementCalls, 0);
+  });
+}
+
+test("raw credential guard accepts every pinned standard challenge field", async () => {
+  const method = create0xkeyEvmChargeMethod({
+    network: "eip155:84532", organizationId: ORG,
+    payTo: "0x1111111111111111111111111111111111111111",
+    stamper: { async stampRequest() { return { stampHeaderName: "X-Stamp", stampHeaderValue: "signed" }; } },
+  });
+  const server = Mppx.create({
+    methods: [method], secretKey: "01234567890123456789012345678901",
+  });
+  const route = server.evm.charge({ amount: "0.01" });
+  const offered = await route(new Request("https://merchant.example/weather"));
+  assert.equal(offered.status, 402);
+  if (offered.status !== 402) throw new Error("expected challenge");
+  const challenge = Challenge.fromResponse(offered.challenge.clone());
+  const wire = decodeCredential(Credential.serialize({
+    challenge, payload: await validPayload(challenge),
+  }));
+  Object.assign(wire.challenge as Record<string, unknown>, {
+    description: "weather",
+    digest: "sha-256=YWJj",
+    header: "Authorization",
+    meta: { tenant: "merchant" },
+  });
+  assert.doesNotThrow(() => method.transport.getCredential(new Request(
+    "https://merchant.example/weather",
+    { headers: { Authorization: encodeCredential(wire) } },
+  )));
+});
+
 async function validPayload(challenge: ReturnType<typeof Challenge.fromResponse>) {
   const account = privateKeyToAccount(
     "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
@@ -231,4 +356,13 @@ async function validPayload(challenge: ReturnType<typeof Challenge.fromResponse>
     validBefore,
     value: challenge.request.amount,
   };
+}
+
+function decodeCredential(value: string): Record<string, unknown> {
+  const encoded = value.replace(/^Payment\s+/i, "");
+  return JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+}
+
+function encodeCredential(value: Record<string, unknown>): string {
+  return `Payment ${Buffer.from(JSON.stringify(value)).toString("base64url")}`;
 }

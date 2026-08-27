@@ -171,6 +171,89 @@ test("Express cancels upstream and forwards a downstream error without leaking l
   expect(response.eventNames()).toEqual([]);
 });
 
+test.each(["before-first-chunk", "between-chunks"] as const)(
+  "Express cancels a pending reader when downstream closes %s",
+  async (timing) => {
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    let cancelCalls = 0;
+    let firstWrite!: () => void;
+    const firstWritten = new Promise<void>((resolve) => { firstWrite = resolve; });
+    const middleware = expressPayment(
+      delegatingServer([]),
+      { price: "$0.01" },
+      async () => new Response(new ReadableStream<Uint8Array>({
+        start(value) {
+          controller = value;
+          if (timing === "between-chunks") value.enqueue(Uint8Array.of(1));
+        },
+        cancel() { cancelCalls += 1; },
+      })),
+    );
+    const response: any = Object.assign(new EventEmitter(), {
+      status() { return this; }, setHeader() {},
+      write() { firstWrite(); return true; },
+      end: jest.fn(),
+    });
+    const next = jest.fn();
+    const running = middleware({
+      method: "GET", originalUrl: "/binary", protocol: "https",
+      headers: { host: "api.example.com" }, get: () => "api.example.com",
+    }, response, next);
+    if (timing === "between-chunks") await firstWritten;
+    else await new Promise((resolve) => setImmediate(resolve));
+    response.emit("close");
+    const outcome = await Promise.race([
+      running.then(() => "completed"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 20)),
+    ]);
+    if (outcome === "blocked") controller.close();
+    await running;
+    expect(outcome).toBe("completed");
+    expect(cancelCalls).toBe(1);
+    expect(response.end).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+    expect(response.listenerCount("close")).toBe(0);
+    expect(response.listenerCount("error")).toBe(0);
+  },
+);
+
+test("Express cancels a pending first read and forwards downstream error", async () => {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let cancelCalls = 0;
+  const middleware = expressPayment(
+    delegatingServer([]),
+    { price: "$0.01" },
+    async () => new Response(new ReadableStream<Uint8Array>({
+      start(value) { controller = value; },
+      cancel() { cancelCalls += 1; },
+    })),
+  );
+  const response: any = Object.assign(new EventEmitter(), {
+    status() { return this; }, setHeader() {}, write() { return true; }, end: jest.fn(),
+  });
+  const externalErrorListener = () => undefined;
+  response.on("error", externalErrorListener);
+  const next = jest.fn();
+  const running = middleware({
+    method: "GET", originalUrl: "/binary", protocol: "https",
+    headers: { host: "api.example.com" }, get: () => "api.example.com",
+  }, response, next);
+  await new Promise((resolve) => setImmediate(resolve));
+  const downstream = new Error("socket failed before first chunk");
+  response.emit("error", downstream);
+  const outcome = await Promise.race([
+    running.then(() => "completed"),
+    new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 20)),
+  ]);
+  if (outcome === "blocked") controller.close();
+  await running;
+  expect(outcome).toBe("completed");
+  expect(cancelCalls).toBe(1);
+  expect(next).toHaveBeenCalledWith(downstream);
+  expect(response.listeners("error")).toEqual([externalErrorListener]);
+  expect(response.listenerCount("close")).toBe(0);
+});
+
 test("Hono delegates to protect and returns its Fetch response", async () => {
   const events: string[] = [];
   const context: any = {

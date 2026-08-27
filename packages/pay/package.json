@@ -95,9 +95,6 @@
     "test:interop": "pnpm run clean && pnpm run build && node scripts/interop-smoke.mjs && node scripts/mppx-validate-smoke.mjs",
     "test:commerce-contract": "jest --runInBand src/commerce/generated/codec.test.ts"
   },
-  "peerDependencies": {
-    "viem": ">=2.54.0 <3"
-  },
   "dependencies": {
     "@0xkey-io/crypto": "workspace:*",
     "@0xkey-io/viem": "workspace:*",
@@ -120,7 +117,8 @@
   },
   "peerDependencies": {
     "@x402/core": "2.23.0",
-    "mppx": "0.8.19"
+    "mppx": "0.8.19",
+    "viem": ">=2.54.0 <3"
   },
   "engines": {
     "node": ">=22.12.0"
