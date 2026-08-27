@@ -568,3 +568,109 @@ without changing a public factory name or expanding into Task 4.
 No new concern was introduced. Task 4 still owns service implementation and
 deployment of the already frozen private contracts; this SDK task makes no
 claim that those later service gates have run.
+
+## Round-3 release-path closure (2026-08-27)
+
+Round-3 changed no protocol or runtime contract. It closes the remaining
+repository release-path gap: every workflow source is now audited against the
+Node 22.12 baseline, and the generic Changesets workflow is structurally unable
+to version or publish `@0xkey-io/pay`. The dedicated `pay-publish.yml` checked
+tarball path remains the only mutable Pay npm publish and still uses `next`; no
+GA or `latest` success is claimed.
+
+### Round-3 RED/GREEN evidence
+
+- Node and workflow discovery RED:
+  - `pnpm --filter @0xkey-io/pay artifact:test`
+  - result: 6/9 passed. Three new tests failed because `.nvmrc` was still
+    `v20.17.0`, the generic dry run did not filter Pay, and the fail-closed
+    release checker did not exist.
+- Initial release guard GREEN:
+  - `node --test --test-name-pattern='every Pay-affecting|only the dedicated|generic release guard' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 3/3 passed after upgrading the root baseline and JS E2E override,
+    filtering the recursive dry run, adding Changesets exclusions, and wiring
+    the guard before status/version/publish.
+- Real Changesets publish seam RED:
+  - `node --test --test-name-pattern='only the dedicated|generic Changesets publisher' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 0/2 passed. The generic workflow still invoked raw `changeset
+publish`, and the safe publisher module was absent.
+- Real Changesets publish seam GREEN:
+  - `node --test --test-name-pattern='only the dedicated|generic Changesets publisher|generic release guard' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 3/3 passed. The fixture observes `private:true` for Pay inside the
+    child-publisher boundary and exact manifest restoration after both success
+    and a thrown publisher failure.
+- Historical Jest entry RED/GREEN:
+  - RED: `pnpm --filter @0xkey-io/pay test` passed 182 assertions but Jest tried
+    to load two `.node.test.ts` ESM suites intended for `tsx --test`, causing two
+    loader failures (`import.meta` and native mppx ESM).
+  - GREEN: the same command passed 10/10 suites and 182/182 tests after the Jest
+    config excluded only `.node.test.ts`; `test:pay-v1` continues to execute
+    those suites with the correct Node runner.
+
+### Release design decisions and self-review
+
+1. Root `.nvmrc` is exactly `v22.12.0`. The audit reads every YAML workflow,
+   rejects every explicit version below 22.12, discovers Pay-affecting sources
+   from direct Pay references plus workspace-wide build/test/version/publish
+   commands, and verifies each discovered workflow uses the root setup or a
+   supported explicit override. `js-build.yml` and
+   `version-and-publish.yml` are explicit discovery sentinels, not a manually
+   maintained workflow allowlist.
+2. Pinned `@changesets/cli@2.29.7` uses `config.ignore` for release planning,
+   but its `publish()` path enumerates all public packages. Therefore ignore
+   alone is not a truthful publish boundary. The config ignores Pay plus its
+   only two private workspace dependents (`pay-v1-uat` and `with-x402`) so
+   Changesets validation and version planning succeed. A separate generic
+   publisher re-runs the guard, temporarily makes the Pay source manifest
+   private for the child `changeset publish` process, and restores the original
+   bytes in `finally`. A hard process termination can at worst leave Pay private
+   in the ephemeral release checkout; it cannot publish Pay.
+3. The preflight rejects a changeset that names Pay even though Pay is ignored.
+   This makes an attempted generic Pay candidate visible and fail-closed rather
+   than silently consuming it. The pre-publish assertion runs again on the
+   release branch. The generic recursive `pnpm publish` remains dry-run-only and
+   is filtered with `!@0xkey-io/pay`.
+4. Static tests scan all workflow sources and prove the only command beginning
+   a mutable `npm publish` is the checked-tarball command in
+   `pay-publish.yml`, with `--tag next`; no mutable recursive `pnpm publish` or
+   raw workflow `changeset publish` remains.
+
+### Round-3 files
+
+- `.nvmrc`
+- `.changeset/config.json`
+- `.github/workflows/js-build.yml`
+- `.github/workflows/version-and-publish.yml`
+- `packages/pay/jest.config.js`
+- `packages/pay/scripts/check-generic-release-exclusion.mjs`
+- `packages/pay/scripts/publish-generic-release.mjs`
+- `packages/pay/scripts/check-packed-artifact.test.mjs`
+- `.superpowers/sdd/implementation-plan/task-3-report.md`
+
+### Round-3 final verification
+
+- `pnpm --filter @0xkey-io/pay test` — PASS: 10 Jest suites / 182 tests.
+- `pnpm --filter @0xkey-io/pay test:pay-v1` — PASS: 7 Jest suites / 126 tests;
+  Node tests 20/20.
+- `pnpm --filter @0xkey-io/pay typecheck:pay-v1` — PASS.
+- `pnpm --filter @0xkey-io/pay build` — PASS, ESM and CJS.
+- `pnpm --filter @0xkey-io/pay pins:check` — PASS.
+- `pnpm --filter @0xkey-io/pay docs:check` — PASS.
+- `pnpm --filter @0xkey-io/pay test:interop` — PASS, official x402/native MPP
+  across both Base networks and mppx 0.8.19 validation.
+- `pnpm --filter @0xkey-io/pay artifact:test` — PASS, 10/10 including
+  discovery-based workflow runtime checks and release exclusion fixtures.
+- `pnpm exec changeset status --verbose` — PASS; no Pay or ignored private Pay
+  consumer is present in the version plan.
+- `pnpm --filter @0xkey-io/pay artifact:check` — PASS: packed, verified,
+  strict-peer fresh install, ESM/CJS runtime, single class owners, direct Viem,
+  official x402 middleware and raw MPP UNKNOWN behavior.
+- `pnpm --filter pay-v1-uat typecheck` — PASS.
+- `pnpm --filter pay-v1-uat smoke` — PASS (`pay_v1_uat_smoke_passed`).
+- Contract guard exports/declarations/surfaces — PASS (23 package surfaces;
+  only the pre-existing unrelated unbuilt-package skips).
+- `git diff --check` — PASS.
+
+No publish, push, tag, deploy, or registry mutation was performed. No round-3
+concern remains; the dedicated Pay publisher is still a protected prerelease
+path, not evidence of GA publication.
