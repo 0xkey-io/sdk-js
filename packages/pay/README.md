@@ -72,6 +72,14 @@ For direct upstream integration, `@0xkey-io/pay/x402` returns an official
 charge method. These dedicated entries own upstream wire types; root, client,
 and server declarations do not expose them.
 
+One selected malformed MPP credential (including invalid encoding or unknown
+raw fields) returns native mppx `402`, a fresh `WWW-Authenticate: Payment`
+challenge, and `malformed-credential` Problem Details before settlement. It
+never returns a payment receipt. Dual credential ambiguity and a credential
+for a disabled protocol remain `400`; settlement dependency/UNKNOWN responses
+remain non-402 without a fresh challenge. A buyer with a saved credential must
+not sign a replacement even when it receives a fresh challenge.
+
 For direct x402 integration, pass `facilitatorResponseError:
 FacilitatorResponseError`, imported from the same public `@x402/core/server`
 module that owns the consumer's resource/HTTP server and framework catch.

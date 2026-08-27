@@ -20,7 +20,6 @@ import type { BasePaymentNetwork } from "./receipt-verifier";
 import { createXStampV2Stamper, type PayApiKey } from "./xstamp";
 import { createX402FacilitatorTransport } from "./internal/x402-facilitator";
 import { createMppEvmChargeMethod } from "./internal/create-mpp-evm-charge-method";
-import { assertMppCredentialHasNoUnknownExtensions } from "./internal/mpp-evm-charge-adapter";
 import { X402ExactV2Adapter } from "./internal/x402-exact-v2-adapter";
 import {
   ZeroXkeySettlementAdapter,
@@ -439,23 +438,8 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
         if (!requestMppServer) {
           return errorResponse(400, "PAYMENT_PROTOCOL_NOT_ALLOWED", false);
         }
-        try {
-          assertMppCredentialHasNoUnknownExtensions(
-            request.headers.get("Authorization")!,
-          );
-        } catch {
-          return Response.json(
-            {
-              type: "about:blank",
-              title: "Malformed payment credential",
-              status: 400,
-            },
-            {
-              status: 400,
-              headers: { "Content-Type": "application/problem+json" },
-            },
-          );
-        }
+        // The method's pre-lossy raw-wire guard rejects malformed credentials;
+        // mppx owns their fresh challenge and malformed-credential Problem Details.
         const result = await requestMppServer.evm
           .charge(mppRouteOptions(route))(canonicalMppRequest(request));
         if (requestFailure && requestFailure.status !== 402) {

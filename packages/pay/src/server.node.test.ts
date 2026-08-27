@@ -8,7 +8,8 @@ import { ExactEvmScheme } from "@x402/evm/exact/client";
 import { toClientEvmSigner } from "@x402/evm";
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { privateKeyToAccount } from "viem/accounts";
-import { Credential } from "mppx";
+import { Challenge, Credential } from "mppx";
+import { ApiKeyStamper } from "@0xkey-io/api-key-stamper";
 import { createPayServer, type PayApiKey } from "./server/index.ts";
 import { PayError } from "./index.ts";
 import { create0xkeyFacilitatorClient } from "./x402/index.mts";
@@ -611,6 +612,116 @@ test("server validates protocol configuration and conditional MPP secret", () =>
   assert.throws(() => createPayServer({ ...base, protocols: [] }), /PAY_PROFILE_INVALID/);
   assert.throws(() => createPayServer({ ...base, protocols: ["mpp"] }), /PAY_PROFILE_INVALID/);
   assert.doesNotThrow(() => createPayServer({ ...base, protocols: ["x402"] }));
+});
+
+for (const protocols of [["mpp"], ["x402", "mpp"]] as const) {
+  for (const [label, encoded] of [
+    ["invalid base64url", "%%%not-base64url%%%"],
+    ["non-JSON", "dGhpcyBpcyBnYXJiYWdl"],
+  ]) {
+    test(`selected MPP ${label} keeps native malformed-credential response (${protocols.join("+")})`, async (t) => {
+      // A seller preflight that returns custom 400 breaks this native contract.
+      let fetchCalls = 0;
+      let handlerCalls = 0;
+      const stamp = t.mock.method(ApiKeyStamper.prototype, "sign");
+      const route = createPayServer({
+        network: "eip155:84532", organizationId: ORG, payTo: PAY_TO,
+        apiKey: syntheticApiKey, protocols,
+        mppSecretKey: "01234567890123456789012345678901",
+        async fetch() { fetchCalls += 1; throw new Error("unexpected private transport"); },
+      }).protect({ price: "$0.01" }, () => {
+        handlerCalls += 1;
+        return new Response("must not run");
+      });
+      const response = await route(new Request("https://merchant.example/weather", {
+        headers: { Authorization: `Bearer application-token, pAyMeNt ${encoded}` },
+      }));
+      assert.equal(response.status, 402);
+      assert.match(response.headers.get("Content-Type")!, /^application\/problem\+json/);
+      assert.equal(response.headers.has("Payment-Receipt"), false);
+      assert.equal(response.headers.has("PAYMENT-REQUIRED"), false);
+      const challenge = Challenge.fromResponse(response.clone());
+      assert.equal(challenge.method, "evm");
+      assert.equal(challenge.intent, "charge");
+      const body = await response.text();
+      const problem = JSON.parse(body);
+      assert.equal(problem.type, "https://paymentauth.org/problems/malformed-credential");
+      assert.equal(problem.status, 402);
+      assert.equal(problem.challengeId, challenge.id);
+      assert.equal(body.includes(encoded!), false);
+      assert.equal(fetchCalls, 0);
+      assert.equal(handlerCalls, 0);
+      assert.equal(stamp.mock.callCount(), 0);
+    });
+  }
+}
+
+test("native malformed MPP 402 keeps one signed credential pending across resume", async () => {
+  const account = privateKeyToAccount(
+    "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  );
+  let signingCalls = 0;
+  let privateCalls = 0;
+  let handlerCalls = 0;
+  let clearCalls = 0;
+  let saveCalls = 0;
+  let record: PendingPaymentRecord | undefined;
+  const sent: string[] = [];
+  const route = createPayServer({
+    network: "eip155:84532", organizationId: ORG, payTo: PAY_TO,
+    apiKey: syntheticApiKey, protocols: ["mpp"],
+    mppSecretKey: "01234567890123456789012345678901",
+    async fetch() { privateCalls += 1; throw new Error("must not settle"); },
+  }).protect({ price: "$0.01" }, () => { handlerCalls += 1; return new Response("paid"); });
+  const client = createPayClient({
+    account: { address: account.address, signTypedData: async (parameters) => {
+      signingCalls += 1;
+      return account.signTypedData(parameters);
+    } },
+    network: "eip155:84532",
+    policy: { allowHosts: ["merchant.example"], maxAmount: "$0.10", preference: ["mpp", "x402"] },
+    recovery: {
+      protection: "aead",
+      async load() { return record; },
+      async saveIfAbsent(value) { saveCalls += 1; if (record) return false; record = value; return true; },
+      async clear() { clearCalls += 1; return false; },
+    },
+    verification: { verifier: async () => { throw new Error("no receipt to verify"); } },
+    async fetch(input, init) {
+      const request = new Request(input, init);
+      assert.equal(request.url, "https://merchant.example/weather");
+      assert.equal(request.headers.has("PAYMENT-SIGNATURE"), false);
+      const authorization = request.headers.get("Authorization");
+      if (!authorization) return route(request);
+      sent.push(authorization);
+      // Fault injection after save/send: corrupt only the wire copy received
+      // by the seller, never the original authenticated pending record.
+      const wire = JSON.parse(Buffer.from(authorization.slice(8), "base64url").toString());
+      wire.payload.unknownExtension = "rejected";
+      const headers = new Headers(request.headers);
+      headers.set("Authorization", `Payment ${Buffer.from(JSON.stringify(wire)).toString("base64url")}`);
+      return route(new Request(request, { headers }));
+    },
+  });
+  const response = await client.fetch("https://merchant.example/weather");
+  assert.equal(response.status, 402);
+  assert.equal((await response.json()).type, "https://paymentauth.org/problems/malformed-credential");
+  assert.equal(response.headers.has("WWW-Authenticate"), true);
+  assert.ok(record);
+  const saved = structuredClone(record);
+  const resumed = await client.resume();
+  assert.equal(resumed.status, 402);
+  assert.equal(resumed.headers.has("WWW-Authenticate"), true);
+  assert.deepEqual(record, saved);
+  await assert.rejects(client.fetch("https://merchant.example/weather"),
+    (error: unknown) => error instanceof PayError && error.code === "PAYMENT_RESUME_REQUIRED");
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0], sent[1]);
+  assert.equal(signingCalls, 1);
+  assert.equal(saveCalls, 1);
+  assert.equal(clearCalls, 0);
+  assert.equal(privateCalls, 0);
+  assert.equal(handlerCalls, 0);
 });
 
 test("MPP real credential is validated before command settlement and returns a standard receipt", async () => {

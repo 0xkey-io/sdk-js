@@ -87,6 +87,25 @@ prove that the merchant fulfilled the request.
 If both `PAYMENT-SIGNATURE` and `Authorization: Payment` are present, the SDK
 returns `400 AMBIGUOUS_PAYMENT_CREDENTIAL`. It does not settle either one.
 
+A credential for a disabled protocol returns `400 PAYMENT_PROTOCOL_NOT_ALLOWED`.
+For exactly one selected MPP credential, the method checks raw outer, challenge,
+payload, serialized-request, and method-details fields before native lossy
+parsing. Invalid encoding/JSON, nonobject shapes, and unknown fields are
+rejected with native mppx `402`, a fresh `WWW-Authenticate: Payment` challenge,
+and `https://paymentauth.org/problems/malformed-credential` Problem Details.
+No signing, private settlement, handler, fulfillment, or receipt follows that
+rejection. An allowed raw payload missing typed fields retains native
+`invalid-payload` 402; altering an otherwise allowed echoed challenge can fail
+native HMAC provenance validation with `invalid-challenge` 402. The raw guard
+does not duplicate native method schemas or challenge verification.
+Headers without an extractable Payment credential remain outside
+this selected-MPP category. x402 malformed-wire policy is unchanged.
+
+This does not reclassify settlement dependency failures or `UNKNOWN`: those
+remain non-402 without a fresh challenge or receipt. A signed buyer receiving
+even a malformed-credential 402 keeps its pending record and must not sign
+again, switch protocol/provider, or clear pending on the fresh challenge.
+
 If the merchant handler succeeds, the SDK synchronously persists `FULFILLED`
 before returning the protocol receipt. A throw or 5xx synchronously persists
 `FAILED` without exception text, credentials, bodies, or receipts. MPP never

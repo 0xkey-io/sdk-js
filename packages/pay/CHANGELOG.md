@@ -2,6 +2,11 @@
 
 ## 1.0.0-rc.1
 
+- Preserve native mppx 402 challenges and malformed-credential Problem Details
+  for a single selected malformed MPP credential. Keep all five raw-wire
+  guards before lossy parsing, ambiguity/disabled-protocol 400, non-402
+  dependency/UNKNOWN responses, and same-credential zero-resign recovery.
+
 - Add optional `facilitatorResponseError` to the direct x402 factory so callers
   can supply their official public `core/server` constructor. Capture and
   structurally validate it synchronously with redacted configuration failures;
