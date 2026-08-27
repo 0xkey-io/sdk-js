@@ -121,12 +121,41 @@ rejects a changeset naming `@0xkey-io/pay` and cannot publish Pay.
 Use **Publish Pay SDK release candidate** (`.github/workflows/pay-publish.yml`)
 for a reviewed `@0xkey-io/pay` release candidate. It is manual only and takes
 the full merged default-branch `source_sha`, the exact `expected_version`, and
-`confirm_publish: true`. The workflow checks that the SHA is still the current
-default-branch head, verifies Pay's package gates, and publishes only the
+`confirm_publish: true`. Dispatch on the default branch itself, not a tag or
+another branch at the same commit. The workflow checks that the SHA is still
+the current default-branch head, verifies Pay's package gates, and publishes only the
 checked tarball for `@0xkey-io/pay` with npm tag `next` after `production`
 approval. It refuses an existing version and keeps npm `latest` at `0.2.0`; do
 not use the general Changesets workflow or a manual recursive command for this
 release.
+
+Before dependency/build code and again immediately before the sole publication,
+the workflow requires exact equality of the full lowercase requested SHA,
+actual checkout HEAD, freshly fetched default-branch HEAD, `GITHUB_SHA`, and
+`GITHUB_WORKFLOW_SHA`. It also requires the direct `workflow_dispatch` event,
+repository `0xkey-io/sdk-js`, server `https://github.com`, the exact default-branch
+run ref, and workflow ref
+`0xkey-io/sdk-js/.github/workflows/pay-publish.yml@refs/heads/<default_branch>`.
+Missing or malformed coordinates, a dirty index/worktree, and unexpected
+untracked files stop publication. The final check rereads HEAD, not just diff.
+
+The checkout is selected by the executing workflow SHA, never by candidate
+input. Both gates load the same source checker from that workflow's immutable
+Git blob with replacement objects disabled, so a changed checkout cannot
+substitute the checker. Source-status checks disable global/system Git config,
+fsmonitor, hooks, external diff/textconv, and reject local clean/process filters.
+This is a direct, same-repository workflow contract, not reusable-workflow
+support; adding `workflow_call` requires a separately reviewed caller/called
+identity model.
+
+A rerun retains its original GitHub identity and is allowed only while all these
+source checks and the version-absence check still hold. After main advances or
+any identity mismatch, start a fresh correctly matched dispatch; never override
+GitHub variables to make provenance describe a caller-selected checkout. A final
+fetch observes main at that moment and is not atomic with later main movement.
+These local guards do not prove an npm publication occurred. Actual npm tarball,
+registry and signed provenance evidence, including compatibility with the
+eventual verifier policy, remains a separate external artifact gate.
 
 `packages/pay/package.json` is deliberately `private: true`, so npm refuses
 publication from the source directory. Its `publishConfig` fixes the public npm

@@ -50,6 +50,18 @@ function stepNamed(steps, name) {
   return matches[0];
 }
 
+function checkSourceBindingStep(step) {
+  // This is an exact bounded workflow contract, not a shell-code substring
+  // audit. Comments, conditionals and failure suppression cannot satisfy it.
+  assert.deepEqual(Object.keys(step).sort(), ["name", "run", "shell"]);
+  assert.equal(step.shell, "bash");
+  assert.equal(
+    command(step.run),
+    'set -euo pipefail [[ "${GITHUB_WORKFLOW_SHA:-}" =~ ^[0-9a-f]{40}$ ]] git --no-replace-objects show "$GITHUB_WORKFLOW_SHA:.github/scripts/check-pay-publish-source.sh" | bash --noprofile --norc',
+    "source binding must execute the trusted workflow blob with pipefail and no replacement objects",
+  );
+}
+
 function versionAtLeast(value, major, minor) {
   const match = /^v?(\d+)\.(\d+)(?:\.\d+)?$/.exec(String(value));
   return (
@@ -110,6 +122,15 @@ export function checkPayPublishWorkflow(source) {
     "trusted publishing requires a GitHub-hosted runner",
   );
   assert.equal(publish.environment, "production");
+  assert.equal(publish["continue-on-error"], undefined);
+  assert.equal(workflow.env, undefined);
+  assert.equal(workflow.defaults, undefined);
+  assert.equal(publish.defaults, undefined);
+  assert.deepEqual(publish.env, {
+    PUBLIC_NPM_REGISTRY: "https://registry.npmjs.org/",
+    PAY_PUBLISH_DEFAULT_BRANCH: "${{ github.event.repository.default_branch }}",
+    PAY_PUBLISH_SOURCE_SHA: "${{ inputs.source_sha }}",
+  });
   assert.equal(publish.permissions?.contents, "read");
   assert.equal(
     publish.permissions?.["id-token"],
@@ -123,17 +144,33 @@ export function checkPayPublishWorkflow(source) {
     /\bnpm dist-tag\b/,
     "pay-publish.yml must not mutate dist-tags",
   );
-  const checkout = stepNamed(steps, "Checkout the requested source commit");
-  assert.equal(checkout.with?.ref, "${{ inputs.source_sha }}");
-  const immutableSource = command(
-    stepNamed(steps, "Verify immutable default-branch source").run,
+  const checkout = stepNamed(steps, "Checkout the executing workflow source");
+  assert.deepEqual(Object.keys(checkout).sort(), ["name", "uses", "with"]);
+  assert.match(checkout.uses, /^actions\/checkout@[0-9a-f]{40}$/);
+  assert.deepEqual(
+    checkout.with,
+    {
+      "fetch-depth": 0,
+      ref: "${{ github.workflow_sha }}",
+    },
+    "candidate input must not select executable checker code",
   );
-  assert.match(
-    immutableSource,
-    /git fetch --no-tags origin "\$DEFAULT_BRANCH"/,
-    "immutable source step must fetch the default-branch head",
+  const immutableSource = stepNamed(
+    steps,
+    "Verify immutable default-branch source",
   );
-  assert.match(immutableSource, /requested_sha.*default_head/);
+  const finalSource = stepNamed(
+    steps,
+    "Reconfirm immutable default-branch source",
+  );
+  checkSourceBindingStep(immutableSource);
+  checkSourceBindingStep(finalSource);
+  assert.equal(steps.indexOf(checkout), 0, "trusted checkout must be first");
+  assert.equal(
+    steps.indexOf(immutableSource),
+    1,
+    "source binding must precede dependency and artifact code",
+  );
   const node = stepNamed(steps, "Set up Node and pnpm");
   assert.match(node.uses, /^actions\/setup-node@[0-9a-f]{40}$/);
   assert.equal(
@@ -196,17 +233,16 @@ export function checkPayPublishWorkflow(source) {
     "Reconfirm source, package metadata, and npm state before mutation",
   );
   const reconfirmCommand = command(reconfirm.run);
-  assert.match(
-    reconfirmCommand,
-    /git fetch --no-tags origin "\$DEFAULT_BRANCH"/,
-    "final preflight must fetch the default-branch head",
-  );
-  assert.match(reconfirmCommand, /git diff --quiet git diff --cached --quiet/);
   assert.match(reconfirmCommand, /packageJson\.private !== true/);
   assert.ok(
     steps.indexOf(pack) < steps.indexOf(reconfirm) &&
-      steps.indexOf(reconfirm) < steps.indexOf(publishStep),
+      steps.indexOf(reconfirm) < steps.indexOf(finalSource),
     "artifact check and final preflight must precede publication",
+  );
+  assert.equal(
+    steps.indexOf(finalSource) + 1,
+    steps.indexOf(publishStep),
+    "final source binding must immediately precede publication",
   );
   assert.equal(
     (source.match(/\$\{\{ steps\.pack\.outputs\.tarball \}\}/g) ?? []).length,

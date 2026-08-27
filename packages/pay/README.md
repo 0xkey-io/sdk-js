@@ -267,6 +267,17 @@ The Admin payment record uses only the new uppercase state machine. It includes
 It does not add a fixed `direction` field. Shared-relayer balances are internal
 operations data and are not exposed by this SDK.
 
+## Release source integrity
+
+The dedicated RC publisher binds the requested source, checkout, current
+default branch, GitHub run, and executing workflow to one exact commit before
+builds and immediately before publishing. Only a direct same-repository
+default-branch dispatch is accepted; stale reruns must use a fresh dispatch.
+The source stays private and only the checked tarball may be published to
+`next`. See [release guidance](../../RELEASING.md#pay-release-candidates).
+Local guard tests are not publication or signed-provenance evidence; actual
+npm evidence and verifier compatibility remain external release gates.
+
 ## Keeping docs current
 
 Changes to a protocol, public option, entry point, network, asset, receipt, or

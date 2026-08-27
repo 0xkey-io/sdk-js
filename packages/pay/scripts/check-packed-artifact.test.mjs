@@ -132,13 +132,13 @@ test("bounded workflow checker enforces current OIDC Pay publish path", async ()
       /exactly one npm publish/i,
     ],
     [
-      "missing default-head proof",
+      "missing source-binding invocation",
       (value) =>
         value.replace(
-          'git fetch --no-tags origin "$DEFAULT_BRANCH"',
-          'echo "skip default head"',
+          'git --no-replace-objects show "$GITHUB_WORKFLOW_SHA:.github/scripts/check-pay-publish-source.sh" | bash --noprofile --norc',
+          'echo "skip source binding"',
         ),
-      /default-branch head/i,
+      /source binding/i,
     ],
   ]) {
     assert.throws(

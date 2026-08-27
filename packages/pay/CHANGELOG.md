@@ -2,6 +2,12 @@
 
 ## 1.0.0-rc.1
 
+- Bind the RC publisher's requested, checked-out, current-default-branch, GitHub
+  run, and executing-workflow source before builds and immediately before
+  publication. Reject mismatched dispatch identity, stale source and dirty
+  checkouts; load both guards from the executing workflow's immutable Git blob.
+  No publication is claimed by this release-engineering change; actual npm
+  provenance verification remains a separate external artifact gate.
 - Validate key-backed Pay configuration synchronously before offers or API
   requests: require complete compressed P-256 public-key/private-scalar hex,
   a valid scalar, and a matching pair. Reject invalid material with redacted

@@ -32,35 +32,23 @@ jobs:
       id-token: write
     env:
       PUBLIC_NPM_REGISTRY: https://registry.npmjs.org/
+      PAY_PUBLISH_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      PAY_PUBLISH_SOURCE_SHA: ${{ inputs.source_sha }}
     steps:
-      - name: Checkout the requested source commit
+      # Candidate input never selects the executable checker. Both gates read
+      # the checker from the executing workflow commit, not the working tree.
+      - name: Checkout the executing workflow source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.workflow_sha }}
 
       - name: Verify immutable default-branch source
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
+        shell: bash
         run: |
           set -euo pipefail
-          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "source_sha must be a full lowercase Git commit SHA." >&2
-            exit 1
-          fi
-          requested_sha="$(git rev-parse "${SOURCE_SHA}^{commit}")"
-          checked_out_sha="$(git rev-parse HEAD)"
-          if [ "$checked_out_sha" != "$requested_sha" ]; then
-            echo "Checkout did not resolve to source_sha." >&2
-            exit 1
-          fi
-          git fetch --no-tags origin "$DEFAULT_BRANCH"
-          default_head="$(git rev-parse "origin/$DEFAULT_BRANCH")"
-          if [ "$requested_sha" != "$default_head" ]; then
-            echo "source_sha is not the current default-branch HEAD." >&2
-            exit 1
-          fi
+          [[ "${GITHUB_WORKFLOW_SHA:-}" =~ ^[0-9a-f]{40}$ ]]
+          git --no-replace-objects show "$GITHUB_WORKFLOW_SHA:.github/scripts/check-pay-publish-source.sh" | bash --noprofile --norc
 
       - name: Set up Node and pnpm
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
@@ -167,23 +155,9 @@ jobs:
 
       - name: Reconfirm source, package metadata, and npm state before mutation
         env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           EXPECTED_VERSION: ${{ inputs.expected_version }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin "$DEFAULT_BRANCH"
-          current_default_head="$(git rev-parse "origin/$DEFAULT_BRANCH")"
-          if [ "$SOURCE_SHA" != "$current_default_head" ]; then
-            echo "source_sha is no longer the current default-branch HEAD." >&2
-            exit 1
-          fi
-          git diff --quiet
-          git diff --cached --quiet
-          if [ -n "$(git status --porcelain=v1 --untracked-files=all)" ]; then
-            echo "The source tree has unexpected untracked files after Pay gates." >&2
-            exit 1
-          fi
           effective_registry="$(npm config get registry)"
           if [ "$effective_registry" != "$PUBLIC_NPM_REGISTRY" ]; then
             echo "npm registry must be $PUBLIC_NPM_REGISTRY; found $effective_registry." >&2
@@ -230,6 +204,13 @@ jobs:
             exit 1
           fi
           rm -f "$stderr_file"
+
+      - name: Reconfirm immutable default-branch source
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_WORKFLOW_SHA:-}" =~ ^[0-9a-f]{40}$ ]]
+          git --no-replace-objects show "$GITHUB_WORKFLOW_SHA:.github/scripts/check-pay-publish-source.sh" | bash --noprofile --norc
 
       - name: Publish only @0xkey-io/pay to npm next
         run: >-
