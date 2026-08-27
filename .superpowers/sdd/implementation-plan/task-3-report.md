@@ -791,7 +791,7 @@ full package gate failed on test fixtures. This closure fixes those test types
 without widening or weakening any production contract, and makes both
 authoritative Pay workflows run both typecheck surfaces.
 
-### Historical attempted RED/GREEN evidence — withdrawn
+### RED/GREEN evidence
 
 - Full package typecheck:
   - RED: `pnpm --filter @0xkey-io/pay typecheck`
@@ -812,7 +812,7 @@ authoritative Pay workflows run both typecheck surfaces.
   - GREEN: the same focused command passed 1/1 after both workflows ran the
     full package `typecheck` before `typecheck:pay-v1`.
 
-### Attempted design decisions — withdrawn and superseded by Round 6
+### Design decisions and self-review
 
 1. `allowImportingTsExtensions` is enabled only in
    `tsconfig.typecheck.json`, whose `noEmit: true` makes source-extension
@@ -868,7 +868,7 @@ Round-6 review demonstrated fail-open cases and rejected the abstraction. The
 implementation, fixtures, and active claims are deleted in round 6; this
 historical section is not release evidence.
 
-### RED/GREEN evidence
+### Historical attempted RED/GREEN evidence — withdrawn
 
 - Command segmentation and direct publishers:
   - RED:
@@ -917,7 +917,7 @@ historical section is not release evidence.
   - `node --test --test-name-pattern='workflow audit models|Markdown audit inspects|publish audit segments' packages/pay/scripts/check-packed-artifact.test.mjs`
   - PASS: 3/3.
 
-### Design decisions and self-review
+### Attempted design decisions — withdrawn and superseded by Round 6
 
 1. Shell source is segmented outside quotes and GitHub expressions at newline,
    `;`, `&&`, `||`, pipelines, background separators, and subshell boundaries.
@@ -1156,8 +1156,9 @@ reconciles the operator documentation and historical evidence narrative.
   runs in other round sections remain separate evidence.
 - Marked the earlier Round-3/Round-4 references to the universal Round-5
   execution model as attempted, withdrawn, and superseded at their points of
-  occurrence. The Round-5 evidence and design headings now carry the same
-  withdrawn status as the section introduction.
+  occurrence. Only the Round-5 universal shell/Actions release-auditor section,
+  its evidence heading, and its design heading carry the withdrawn status; the
+  separate Controller full-typecheck closure remains valid evidence.
 - `RELEASING.md` now distinguishes 22 generic source-public packages from the
   dedicated public Pay artifact, matching the artifact-aware contract guard's
   total of 23 externally public artifacts.
@@ -1184,3 +1185,20 @@ reconciles the operator documentation and historical evidence narrative.
 
 No npm publish, push, deploy, network mutation, dist-tag mutation, or registry
 write was performed.
+
+## Round-8 report-scope correction (2026-08-27)
+
+Round 8 changes documentation only. It restores the valid Controller
+full-typecheck closure's neutral `RED/GREEN evidence` and `Design decisions and
+self-review` headings. Withdrawn markers now apply only to the Round-5
+universal shell/Actions release-auditor attempt and the earlier references to
+that attempted model. The Round-7 cleanup summary now states that boundary
+explicitly.
+
+### Verification
+
+- `pnpm exec prettier --check .superpowers/sdd/implementation-plan/task-3-report.md`
+  — PASS.
+- `git diff --check` — PASS.
+- The pre-commit diff contained only `task-3-report.md`. No product source,
+  release tool, workflow, package manifest, or runtime test changed.
