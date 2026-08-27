@@ -577,12 +577,12 @@ claim that those later service gates have run.
 
 ## Round-3 release-path closure (2026-08-27)
 
-Round-3 changed no protocol or runtime contract. It closes the remaining
-repository release-path gap: every workflow source is now audited against the
-Node 22.12 baseline, and the generic Changesets workflow is structurally unable
-to version or publish `@0xkey-io/pay`. The dedicated `pay-publish.yml` checked
-tarball path remains the only mutable Pay npm publish and still uses `next`; no
-GA or `latest` success is claimed.
+Round-3 changed no protocol or runtime contract. It introduced the Node 22.12
+baseline and the generic Changesets exclusion/wrapper. Independent round-5
+review later proved that its first workflow and publisher scanner did not yet
+model every executable command or Actions execution context; the round-5
+closure below replaces those incomplete claims. No GA or `latest` success was
+claimed.
 
 ### Round-3 RED/GREEN evidence
 
@@ -615,13 +615,10 @@ publish`, and the safe publisher module was absent.
 
 ### Release design decisions and self-review
 
-1. Root `.nvmrc` is exactly `v22.12.0`. The audit reads every YAML workflow,
-   rejects every explicit version below 22.12, discovers Pay-affecting sources
-   from direct Pay references plus workspace-wide build/test/version/publish
-   commands, and verifies each discovered workflow uses the root setup or a
-   supported explicit override. `js-build.yml` and
-   `version-and-publish.yml` are explicit discovery sentinels, not a manually
-   maintained workflow allowlist.
+1. Root `.nvmrc` is exactly `v22.12.0`. The initial scanner discovered direct
+   Pay references and common workspace-wide aliases, but did not yet cover
+   working-directory, composite/reusable actions, setup conditions, or every
+   unfiltered workspace form. Round-5 adds that missing execution model.
 2. Pinned `@changesets/cli@2.29.7` uses `config.ignore` for release planning,
    but its `publish()` path enumerates all public packages. Therefore ignore
    alone is not a truthful publish boundary. The config ignores Pay plus its
@@ -636,10 +633,10 @@ publish`, and the safe publisher module was absent.
    than silently consuming it. The pre-publish assertion runs again on the
    release branch. The generic recursive `pnpm publish` remains dry-run-only and
    is filtered with `!@0xkey-io/pay`.
-4. Static tests scan all workflow sources and prove the only command beginning
-   a mutable `npm publish` is the checked-tarball command in
-   `pay-publish.yml`, with `--tag next`; no mutable recursive `pnpm publish` or
-   raw workflow `changeset publish` remains.
+4. The round-3 static test checked line prefixes and known command spellings;
+   it found the then-current checked-tarball command but did not prove the sole
+   mutation boundary. Round-5 replaces it with per-command parsing and exact
+   tarball binding.
 
 ### Round-3 files
 
@@ -716,14 +713,14 @@ gated operation, not a result claimed by Task 3.
   - GREEN: the same command passed 1/1 after every manual recursive dry-run and
     publish excluded Pay and the generic workflow narrative described the
     guarded wrapper rather than raw recursive publish.
-- Equivalent recursive-command ordering:
+- Equivalent recursive-command ordering (initial, incomplete boundary):
   - RED: the repository audit fixture initially failed to reject
     `pnpm -r publish`.
-  - GREEN: the same focused test passed after normalizing shell continuations
-    and requiring the Pay exclusion whenever `pnpm`, recursive mode, and
-    `publish` occur in any order. Per-command segmentation keeps an excluded
-    generic publish from hiding a later workspace-wide Pay command in the same
-    step.
+  - GREEN at round-4: the same focused test passed after normalizing shell
+    continuations and recognizing reordered recursive flags. Round-5 later
+    demonstrated that this whole-line check still allowed a safe command to
+    mask an unsafe command after `;`; the final per-command model is recorded
+    below.
 
 ### Round-4 design decisions and self-review
 
@@ -733,18 +730,16 @@ gated operation, not a result claimed by Task 3.
    `.changeset/*.md`; any reader/parser exception is wrapped as a stable
    fail-closed release error. The existing temporary-private publish wrapper is
    unchanged.
-2. Workflow files are parsed as YAML with exact `yaml@2.8.1`. The audit walks
-   every workflow and every job, expands root package-script aliases to a fixed
-   point, and detects direct Pay paths, workspace-wide recursive/glob commands,
-   Changesets release commands, and the guarded generic publisher. Each actual
-   Pay step must have an earlier setup in the same job, and every setup in that
-   Pay job must resolve to Node 22.12 or newer. A later downgrade therefore
-   cannot be hidden by an earlier valid setup.
-3. The same repository audit scans all workflow YAML and repository Markdown
-   outside generated/cache/internal-evidence directories for mutable generic
-   publish bypasses. Recursive pnpm commands, including dry-runs, must carry
-   `!@0xkey-io/pay`; raw workflow Changesets publish is forbidden; the sole
-   command-level npm publish remains the checked Pay tarball with `--tag next`.
+2. Workflow files are parsed as YAML with exact `yaml@2.8.1`. The round-4
+   implementation established job-local setup ordering and fixed-point root
+   aliases, but did not yet model Actions working directories, conditions,
+   composite/reusable actions, or all unfiltered workspace commands. Round-5
+   closes those specific gaps.
+3. The round-4 repository audit scanned workflow and Markdown text broadly.
+   That caught the canonical unsafe commands but also treated prose/comments
+   as executable and recognized only partial publisher spellings. Round-5
+   restricts Markdown to executable shell fences and applies one command model
+   to the full direct-publisher boundary.
 4. Canonical operator docs explicitly state why Changesets `ignore` does not
    protect direct pnpm recursive publish, describe the generic wrapper's
    temporary-private behavior, and prohibit both the generic/manual paths from
@@ -790,7 +785,9 @@ gated operation, not a result claimed by Task 3.
 - `git diff --check` — PASS.
 
 No publish, push, tag, deploy, registry mutation, or network access occurred.
-No round-4 concern remains.
+The independent round-5 review subsequently identified the release-auditor
+execution-model gaps corrected below; the Changesets parser and canonical
+documentation closures themselves remained valid.
 
 ## Controller full-typecheck closure (2026-08-27)
 
@@ -869,3 +866,128 @@ authoritative Pay workflows run both typecheck surfaces.
 
 No publish, push, tag, deploy, registry mutation, or network access occurred.
 No controller full-typecheck concern remains.
+
+## Round-5 release-auditor closure (2026-08-27)
+
+Round-5 changes only repository release-safety tooling, its fixtures, and this
+evidence report. It replaces the earlier line/text heuristics with one literal
+shell command model shared by Pay execution discovery and direct-publisher
+classification. The public Pay protocol/runtime and the official Changesets
+reader/wrapper are unchanged.
+
+### RED/GREEN evidence
+
+- Command segmentation and direct publishers:
+  - RED:
+    `node --test --test-name-pattern='publish audit segments' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 0/1; an excluded recursive publisher before `;` masked the unsafe
+    second publisher.
+  - GREEN: 1/1 after parsing each executable command independently. The table
+    rejects the masking example, the near-name `!@0xkey-io/payment`, direct Pay
+    pnpm publish, `pnpm changeset publish`, Pay-cwd npm publish, and npm
+    `--prefix packages/pay` publish.
+- Actions execution context:
+  - RED:
+    `node --test --test-name-pattern='workflow audit models' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 0/1; a job defaulting to `packages/pay` was not discovered.
+  - GREEN: 1/1 after expanding job/step working directories, exact root-script
+    aliases, unfiltered Turbo/workspace execution, local composite actions, and
+    local reusable workflows. Literal-false setup steps are inactive;
+    dynamic/fallible setup cannot prove the Node selection; every potentially
+    active selection in a Pay job must be at least 22.12.
+- Executable Markdown boundary:
+  - RED:
+    `node --test --test-name-pattern='Markdown audit inspects' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - result: 0/1 because an executable `sh -c '...npm publish...'` fence was
+    not descended into.
+  - GREEN: 1/1 after bounded nested-shell expansion. Prose, inline code,
+    non-shell fences, comments, `echo`, and `printf` examples are ignored;
+    executable `bash`/`sh`/`shell`/`zsh`/`console` fences are audited.
+- Checked-tarball binding:
+  - RED: the publish-focused command above returned 0/1 after the fixture made
+    the `pack` step merely echo the expected artifact command.
+  - GREEN: 1/1 after requiring a preceding same-job `id: pack` command whose
+    executable is pnpm, whose filter selects exactly `@0xkey-io/pay`, and which
+    runs `artifact:check --pack-destination`. The only non-dry-run publisher
+    must consume exactly `${{ steps.pack.outputs.tarball }}` with `--tag next`.
+- Root alias flag ordering:
+  - RED: the workflow-focused command returned 0/1 for
+    `pnpm run -w pay-alias`.
+  - GREEN: 1/1 after the shared token model skipped workspace-root flags when
+    resolving root scripts.
+- Dynamic working directory:
+  - RED: the workflow-focused command returned 0/1 because a dynamic cwd plus
+    `pnpm test` was treated as repository root and skipped.
+  - GREEN: 1/1 after unknown cwd became an explicit fail-closed state for
+    package runners.
+- Final focused replay:
+  - `node --test --test-name-pattern='workflow audit models|Markdown audit inspects|publish audit segments' packages/pay/scripts/check-packed-artifact.test.mjs`
+  - PASS: 3/3.
+
+### Design decisions and self-review
+
+1. Shell source is segmented outside quotes and GitHub expressions at newline,
+   `;`, `&&`, `||`, pipelines, background separators, and subshell boundaries.
+   Comments and heredoc bodies are not executed by the scanner. Tokenization,
+   cwd propagation, nested `sh -c`, exact filters, alias discovery, Pay
+   execution, and publisher classification all consume the same command model.
+2. The exact Pay selector accepts only `@0xkey-io/pay` and its Turbo dependency
+   suffixes; `@0xkey-io/payment` cannot count as an exclusion. Recursive pnpm
+   publishers require an exact negative Pay filter. Raw Changesets publishing
+   is always rejected outside the guarded wrapper.
+3. Workflow analysis parses YAML per job, applies job/step cwd, expands every
+   repository-local composite action from its actual `action.yml`, and audits
+   local reusable workflow jobs recursively. A missing local definition or a
+   visibly Pay-bearing remote action/reusable is rejected as unmodelled.
+   Composite input defaults/overrides select the effective js-setup branch;
+   false branches do not count and later/dynamic/unsupported setups cannot hide
+   behind a prior valid setup.
+4. Markdown repository scanning is restricted to executable shell fences.
+   This keeps canonical `RELEASING.md` command blocks authoritative without
+   converting warnings, comments, or quoted examples elsewhere into mutable
+   release instructions.
+5. Historical round-3/round-4 report language was corrected above: those
+   rounds established the baseline, parser pins, wrapper, and canonical docs,
+   but did not yet prove the complete command/Actions model now covered here.
+
+### Files
+
+- `packages/pay/scripts/audit-pay-release-safety.mjs`
+- `packages/pay/scripts/check-packed-artifact.test.mjs`
+- `.superpowers/sdd/implementation-plan/task-3-report.md`
+
+### Final verification
+
+- `node packages/pay/scripts/audit-pay-release-safety.mjs` — PASS across all
+  workflow jobs, the effective local js-setup composite, and executable
+  Markdown release commands.
+- `node packages/pay/scripts/check-generic-release-exclusion.mjs` — PASS.
+- `pnpm exec changeset status --verbose` — PASS; Pay and its ignored private
+  consumers are absent (the CLI emitted only its non-interactive `/dev/tty`
+  warning).
+- `pnpm --filter @0xkey-io/pay artifact:test` — PASS: 15/15.
+- `pnpm --filter @0xkey-io/pay typecheck` — PASS.
+- `pnpm --filter @0xkey-io/pay typecheck:pay-v1` — PASS.
+- `pnpm --filter @0xkey-io/pay test:pay-v1` — PASS: 7 Jest suites / 126 tests;
+  Node tests 20/20.
+- `pnpm --filter @0xkey-io/pay test` — PASS: 10 Jest suites / 182 tests.
+- `pnpm --filter @0xkey-io/pay build` — PASS, ESM and CJS.
+- `pnpm --filter @0xkey-io/pay pins:check` — PASS.
+- `pnpm --filter @0xkey-io/pay docs:check` — PASS.
+- `pnpm --filter @0xkey-io/pay test:interop` — PASS, official x402/native MPP
+  and pinned mppx validation.
+- `npm_config_offline=true pnpm --filter @0xkey-io/pay artifact:check` — PASS:
+  packed, verified, cache-only installed, ESM/CJS imported, exact class owners,
+  direct Viem, official x402, and raw MPP UNKNOWN behavior.
+- `pnpm --filter pay-v1-uat typecheck` — PASS.
+- `pnpm --filter pay-v1-uat smoke` — PASS (`pay_v1_uat_smoke_passed`). The
+  first parallel attempt raced `test:interop`'s intentional `dist` cleanup;
+  both UAT commands passed when rerun sequentially after the build completed.
+- Contract guard `audit:exports`, `audit:declarations`, and `audit:surfaces` —
+  PASS; surfaces covered 23 packages and the two existing guards reported only
+  their established unrelated unbuilt-package skips.
+- `pnpm exec prettier --check packages/pay/scripts/audit-pay-release-safety.mjs packages/pay/scripts/check-packed-artifact.test.mjs` — PASS.
+- `git diff --check` — PASS.
+
+No publish, push, tag, deploy, registry mutation, or network access occurred.
+No round-5 release-auditor concern remains.

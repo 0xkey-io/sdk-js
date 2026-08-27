@@ -129,6 +129,224 @@ test("workflow audit is job-local, resolves aliases, and rejects later Node down
   );
 });
 
+test("workflow audit models working directories, actions, conditions, and unfiltered workspaces", async () => {
+  const { auditWorkflowSource } = await import(releaseAuditor);
+  const options = {
+    rootScripts: {},
+    rootNodeVersion: "v22.12.0",
+  };
+  for (const [name, source] of [
+    [
+      "job-cwd.yml",
+      `jobs:
+  pay:
+    defaults:
+      run:
+        working-directory: packages/pay
+    steps:
+      - run: pnpm test
+`,
+    ],
+    [
+      "step-cwd.yml",
+      `jobs:
+  pay:
+    steps:
+      - working-directory: ./packages/pay
+        run: npm test
+`,
+    ],
+    [
+      "dynamic-cwd.yml",
+      `jobs:
+  pay:
+    steps:
+      - working-directory: \${{ matrix.directory }}
+        run: pnpm test
+`,
+    ],
+    [
+      "unfiltered-turbo.yml",
+      `jobs:
+  pay:
+    steps:
+      - run: turbo build
+`,
+    ],
+    [
+      "workspace-alias.yml",
+      `jobs:
+  pay:
+    steps:
+      - run: pnpm run -w pay-alias
+`,
+    ],
+    [
+      "false-setup.yml",
+      `jobs:
+  pay:
+    steps:
+      - if: false
+        uses: actions/setup-node@pinned
+        with:
+          node-version: "22.12.0"
+      - run: pnpm --filter @0xkey-io/pay test
+`,
+    ],
+    [
+      "fallible-setup.yml",
+      `jobs:
+  pay:
+    steps:
+      - continue-on-error: true
+        uses: actions/setup-node@pinned
+        with:
+          node-version: "22.12.0"
+      - run: pnpm --filter @0xkey-io/pay test
+`,
+    ],
+  ]) {
+    assert.throws(
+      () =>
+        auditWorkflowSource({
+          name,
+          source,
+          ...options,
+          rootScripts: { "pay-alias": "pnpm -r test" },
+        }),
+      /Pay executes before|cannot prove/i,
+      name,
+    );
+  }
+
+  const payComposite = `name: Pay tests
+runs:
+  using: composite
+  steps:
+    - run: pnpm --filter @0xkey-io/pay test
+      shell: bash
+`;
+  assert.throws(
+    () =>
+      auditWorkflowSource({
+        name: "composite.yml",
+        source: `jobs:
+  pay:
+    steps:
+      - uses: ./.github/actions/pay-tests
+`,
+        ...options,
+        localActions: new Map([["./.github/actions/pay-tests", payComposite]]),
+      }),
+    /Pay executes before/i,
+  );
+  assert.throws(
+    () =>
+      auditWorkflowSource({
+        name: "unmodelled-composite.yml",
+        source: `jobs:
+  pay:
+    steps:
+      - uses: ./.github/actions/pay-tests
+`,
+        ...options,
+      }),
+    /unmodelled.*Pay/i,
+  );
+
+  const supportedSetup = `name: Setup
+runs:
+  using: composite
+  steps:
+    - if: \${{ inputs.node-version == '' }}
+      uses: actions/setup-node@pinned
+      with:
+        node-version-file: .nvmrc
+    - if: \${{ inputs.node-version != '' }}
+      uses: actions/setup-node@pinned
+      with:
+        node-version: \${{ inputs.node-version }}
+`;
+  const unsafeSetup = `${supportedSetup}    - uses: actions/setup-node@pinned
+      with:
+        node-version: "20"
+`;
+  const safeConditionalDowngrade = `${supportedSetup}    - if: false
+      uses: actions/setup-node@pinned
+      with:
+        node-version: "20"
+`;
+  const workflowUsingSetup = `jobs:
+  pay:
+    steps:
+      - uses: ./.github/actions/js-setup
+      - run: pnpm --filter @0xkey-io/pay test
+`;
+  assert.doesNotThrow(() =>
+    auditWorkflowSource({
+      name: "composite-setup.yml",
+      source: workflowUsingSetup,
+      ...options,
+      localActions: new Map([["./.github/actions/js-setup", supportedSetup]]),
+    }),
+  );
+  assert.throws(
+    () =>
+      auditWorkflowSource({
+        name: "composite-downgrade.yml",
+        source: workflowUsingSetup,
+        ...options,
+        localActions: new Map([["./.github/actions/js-setup", unsafeSetup]]),
+      }),
+    /unsupported Node 20/i,
+  );
+  assert.doesNotThrow(() =>
+    auditWorkflowSource({
+      name: "composite-false-downgrade.yml",
+      source: workflowUsingSetup,
+      ...options,
+      localActions: new Map([
+        ["./.github/actions/js-setup", safeConditionalDowngrade],
+      ]),
+    }),
+  );
+
+  const reusable = `jobs:
+  pay:
+    steps:
+      - run: pnpm --filter @0xkey-io/pay test
+`;
+  assert.throws(
+    () =>
+      auditWorkflowSource({
+        name: "caller.yml",
+        source: `jobs:
+  called:
+    uses: ./.github/workflows/pay-tests.yml
+`,
+        ...options,
+        localWorkflows: new Map([
+          ["./.github/workflows/pay-tests.yml", reusable],
+        ]),
+      }),
+    /pay-tests\.yml.*Pay executes before/i,
+  );
+
+  assert.doesNotThrow(() =>
+    auditWorkflowSource({
+      name: "false-positive.yml",
+      source: `jobs:
+  docs:
+    steps:
+      - uses: actions/checkout@pinned
+      - run: echo packages/pay
+      - run: '# pnpm --filter @0xkey-io/pay test'
+`,
+      ...options,
+    }),
+  );
+});
+
 test("repository audit parses every workflow job and authoritative release document", async () => {
   const { auditRepositoryReleaseSafety, auditPublishText } = await import(
     releaseAuditor
@@ -179,6 +397,34 @@ test("repository audit parses every workflow job and authoritative release docum
       source:
         "```bash\npnpm --filter '!@0xkey-io/pay' publish -r --no-git-checks\n```",
     }),
+  );
+});
+
+test("Markdown audit inspects executable shell fences without scanning prose", async () => {
+  const { auditPublishText } = await import(releaseAuditor);
+  for (const source of [
+    "Never run `pnpm publish -r`; it is unsafe.",
+    "```text\npnpm publish -r\n```",
+    "```bash\n# pnpm publish -r\necho 'pnpm publish -r'\nprintf '%s' packages/pay\n```",
+  ]) {
+    assert.doesNotThrow(() => auditPublishText({ name: "advice.md", source }));
+  }
+  assert.throws(
+    () =>
+      auditPublishText({
+        name: "nested-shell.md",
+        source:
+          "```bash\nsh -c 'cd packages/pay && npm publish --tag latest'\n```",
+      }),
+    /nested-shell\.md.*Pay/i,
+  );
+  assert.throws(
+    () =>
+      auditPublishText({
+        name: "command-block.md",
+        source: "Release command:\n\n```console\n$ pnpm publish -r\n```",
+      }),
+    /command-block\.md.*exclude @0xkey-io\/pay/i,
   );
 });
 
@@ -241,6 +487,94 @@ test("only the dedicated next workflow can mutably publish Pay", async () => {
     await readFile(new URL(".changeset/config.json", repositoryRoot), "utf8"),
   );
   assert.ok(changesetConfig.ignore.includes("@0xkey-io/pay"));
+});
+
+test("publish audit segments commands and permits only one checked Pay tarball mutation", async () => {
+  const { auditPublishText } = await import(releaseAuditor);
+  for (const [name, source] of [
+    [
+      "masked.md",
+      "```bash\npnpm --filter '!@0xkey-io/pay' publish -r; pnpm publish -r\n```",
+    ],
+    [
+      "wrong-boundary.md",
+      "```bash\npnpm --filter '!@0xkey-io/payment' publish -r\n```",
+    ],
+    [
+      "filtered-pay.md",
+      "```bash\npnpm --filter @0xkey-io/pay publish --tag latest\n```",
+    ],
+    ["changesets.md", "```bash\npnpm changeset publish\n```"],
+    ["pay-cwd.md", "```bash\ncd packages/pay && npm publish --tag latest\n```"],
+    [
+      "pay-prefix.md",
+      "```bash\nnpm --prefix packages/pay publish --tag latest\n```",
+    ],
+  ]) {
+    assert.throws(
+      () => auditPublishText({ name, source }),
+      new RegExp(
+        `${name.replace(".", "\\.")}.*Pay|${name.replace(".", "\\.")}.*@0xkey-io/pay`,
+        "i",
+      ),
+      name,
+    );
+  }
+
+  const dedicated = (publishSteps) => `jobs:
+  publish:
+    steps:
+      - id: pack
+        run: pnpm --filter @0xkey-io/pay artifact:check --pack-destination "$RUNNER_TEMP/pay"
+${publishSteps}`;
+  assert.doesNotThrow(() =>
+    auditPublishText({
+      name: ".github/workflows/pay-publish.yml",
+      source:
+        dedicated(`      - run: npm publish "\${{ steps.pack.outputs.tarball }}" --tag next
+`),
+    }),
+  );
+  for (const [label, source] of [
+    [
+      "unbound tarball",
+      dedicated("      - run: npm publish packages/pay --tag next\n"),
+    ],
+    [
+      "wrong tag",
+      dedicated(
+        `      - run: npm publish "\${{ steps.pack.outputs.tarball }}" --tag latest\n`,
+      ),
+    ],
+    [
+      "second mutation",
+      dedicated(
+        `      - run: npm publish "\${{ steps.pack.outputs.tarball }}" --tag next
+      - run: npm --prefix packages/pay publish --tag next
+`,
+      ),
+    ],
+    [
+      "missing checked pack",
+      `jobs:
+  publish:
+    steps:
+      - id: pack
+        run: echo pnpm --filter @0xkey-io/pay artifact:check --pack-destination /tmp/pay
+      - run: npm publish "\${{ steps.pack.outputs.tarball }}" --tag next
+`,
+    ],
+  ]) {
+    assert.throws(
+      () =>
+        auditPublishText({
+          name: ".github/workflows/pay-publish.yml",
+          source,
+        }),
+      /pay-publish|checked tarball|single/i,
+      label,
+    );
+  }
 });
 
 test("authoritative Pay workflows run full and public-surface typechecks", async () => {
