@@ -1,0 +1,214 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://0xkey.io/schemas/pay-conformance-result-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "requirement",
+    "status",
+    "expectedVersions",
+    "observedVersions",
+    "sourceSnapshots",
+    "command",
+    "exitCode",
+    "startedAt",
+    "durationMs",
+    "network",
+    "externalMutations",
+    "artifactSha256",
+    "stdoutSha256",
+    "stderrSha256",
+    "evidence",
+    "blocker",
+    "lifecycle"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9./_-]{0,255}$"
+    },
+    "requirement": {
+      "enum": [
+        "mandatory_local",
+        "mandatory_provisioned",
+        "external",
+        "not_applicable"
+      ]
+    },
+    "status": {
+      "enum": ["PASSED", "FAILED", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE"]
+    },
+    "expectedVersions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[a-z0-9.-]+)?$"
+      },
+      "propertyNames": {
+        "pattern": "^(?:@[a-z0-9-]+/)?[a-z0-9][a-z0-9._-]*$"
+      }
+    },
+    "observedVersions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[a-z0-9.-]+)?$"
+      },
+      "propertyNames": {
+        "pattern": "^(?:@[a-z0-9-]+/)?[a-z0-9][a-z0-9._-]*$"
+      }
+    },
+    "sourceSnapshots": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9/-]+$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{40}$"
+      }
+    },
+    "command": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "exitCode": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "startedAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "network": {
+      "const": "loopback_no_chain"
+    },
+    "externalMutations": {
+      "const": false
+    },
+    "artifactSha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?!0{64}$)[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stdoutSha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?!0{64}$)[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stderrSha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?!0{64}$)[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "evidence": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*\\.\\.)[a-zA-Z0-9_./-]+$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^(?!0{64}$)[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "blocker": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["probe", "expected", "observed", "owner", "remediation"],
+          "properties": {
+            "probe": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9./_-]{0,255}$"
+            },
+            "expected": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9./_-]{0,255}$"
+            },
+            "observed": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9./_-]{0,255}$"
+            },
+            "owner": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9./_-]{0,255}$"
+            },
+            "remediation": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9./_-]{0,255}$"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lifecycle": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "spawned",
+          "identified",
+          "ready",
+          "observed",
+          "completed",
+          "closed"
+        ]
+      }
+    }
+  }
+}

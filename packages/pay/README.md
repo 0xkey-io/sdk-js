@@ -305,6 +305,17 @@ release verifier applies approved trust inputs and signature policy.
 
 ## Keeping docs current
 
+The private repository harness at `internal/pay-conformance` is currently at
+checkpoint 7A: frozen fixture inputs, process/report safety, and an explicit
+145-row inventory. It does not yet execute protocol conformance. Run
+`pnpm --filter @0xkey-io/pay test:conformance --output /absolute/new-report.json`
+with a new output path outside the checkout. It writes an immutable
+`not_approved` report and exits nonzero: 142 rows are `BLOCKED`, with three
+source-backed `NOT_APPLICABLE` capability boundaries. Foundation unit tests,
+dependency installation, and previous readiness probes are not matrix passes.
+The harness is private and excluded from the Pay package; this command is for
+repository maintainers, not installed-package consumers.
+
 Changes to a protocol, public option, entry point, network, asset, receipt, or
 recovery rule must update the matching document in the same pull request.
 

@@ -1,0 +1,20 @@
+{
+  "name": "pay-ga-node-mppx-0-8-19-validator-only-fixture",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.6.3",
+  "payGaFixture": {
+    "kind": "validator-only",
+    "accommodation": "mppx@0.8.19 publishes mppx/validation with an undeclared incur runtime import",
+    "frozenSourceCommit": "c23eaf05a107be0906dae30a3fd53f8396ff3d78",
+    "incurIntegrity": "sha512-gEwPg0Rwf+Oi8pwySLumYgWk//Xiv2wRJhwsOwVskt7ZHrfwFTR7oQmANnyDqudRYhqK3I5/dp489kPehPjIww==",
+    "doesNotProvePublishedPackageCompleteness": true
+  },
+  "dependencies": {
+    "incur": "0.5.1",
+    "mppx": "0.8.19",
+    "typescript": "5.4.3",
+    "viem": "2.54.0",
+    "zod": "4.4.3"
+  }
+}

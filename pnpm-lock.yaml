@@ -51,6 +51,12 @@ overrides:
 
 importers:
 
+  internal/pay-conformance:
+    dependencies:
+      ajv:
+        specifier: 8.12.0
+        version: 8.12.0
+
   .:
     devDependencies:
       '@0xkey-io/jest-config':

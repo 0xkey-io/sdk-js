@@ -1,0 +1,12 @@
+{
+  "name": "pay-ga-node-mppx-0-8-17-fixture",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.6.3",
+  "dependencies": {
+    "mppx": "0.8.17",
+    "typescript": "5.4.3",
+    "viem": "2.54.0",
+    "zod": "4.4.3"
+  }
+}

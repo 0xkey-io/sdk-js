@@ -1,0 +1,475 @@
+{
+  "schemaVersion": "0xkey.pay.conformance-inputs/v1",
+  "toolchains": {
+    "node": "24.3.0",
+    "pnpm": "10.6.3",
+    "go": "1.24.5",
+    "python": "3.13.7",
+    "ruby": "4.0.1",
+    "bundler": "4.0.3",
+    "uv": "0.11.0"
+  },
+  "upstreams": [
+    {
+      "id": "x402",
+      "origin": "https://github.com/x402-foundation/x402.git",
+      "commit": "acaa904585644649eac52cb49147882e22789e5e",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        {
+          "path": "licenses/x402-LICENSE",
+          "sha256": "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a"
+        },
+        {
+          "path": "licenses/x402-NOTICE",
+          "sha256": "0b8a03260dc87d976ea6f24d7ff1fb3f8f361cff317f9dd0da0b8d96936eabf6"
+        }
+      ]
+    },
+    {
+      "id": "mppx",
+      "origin": "https://github.com/wevm/mppx.git",
+      "commit": "c23eaf05a107be0906dae30a3fd53f8396ff3d78",
+      "license": "MIT",
+      "licenseFiles": [
+        {
+          "path": "licenses/mppx-LICENSE",
+          "sha256": "e32b666174e4d420a9d129ab0d0e23dfd6e2765ecf299ba7a7c70bbb8fb26c1a"
+        }
+      ]
+    },
+    {
+      "id": "mpp-rb",
+      "origin": "https://github.com/stripe/mpp-rb.git",
+      "commit": "24b5dacb86c0e81e93562a6f23752bfe2cb78d4f",
+      "license": "MIT",
+      "licenseFiles": [
+        {
+          "path": "licenses/mpp-rb-LICENSE",
+          "sha256": "2a961afed23e7b11ee7505b86e60162448f4264e98559eb5071f285e78441ac7"
+        }
+      ]
+    },
+    {
+      "id": "mpp-tools",
+      "origin": "https://github.com/tempoxyz/mpp-tools.git",
+      "commit": "c5dde8faa684b79e2df665143cf7cd731608c079",
+      "license": "MIT",
+      "licenseFiles": [
+        {
+          "path": "licenses/mpp-tools-LICENSE",
+          "sha256": "c4306abc77ade5deef7c034245f21255a148a7556bbca92d74a236dec945e7f4"
+        }
+      ]
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "x402-2.22",
+      "manager": "pnpm",
+      "inputs": [
+        {
+          "path": "fixtures/x402-2.22/package.json",
+          "sha256": "6122c26efce2d23c710d3fa28ad5f61df38f67e6ab1b0dec73da320b67a5d39e"
+        },
+        {
+          "path": "fixtures/x402-2.22/pnpm-lock.yaml",
+          "sha256": "0fa753a1a6aa7a631ce6adfd59402af5f75c56ac8b6ee95217492aadfe5edd85"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "package.json",
+          "sha256": "f360b68ec1e045427b84d134b70b624717c1972b3e7cf003ae07d2e39081fafc"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "sha256": "0fa753a1a6aa7a631ce6adfd59402af5f75c56ac8b6ee95217492aadfe5edd85"
+        }
+      ],
+      "metadataChanges": "Removed readiness-only smoke script; bound packageManager to repository pnpm10.6.3; dependency selection and lock unchanged.",
+      "upstream": "x402",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Exact published npm artifacts; source snapshot is capability provenance, not registry/source byte equivalence."
+    },
+    {
+      "id": "x402-2.23",
+      "manager": "pnpm",
+      "inputs": [
+        {
+          "path": "fixtures/x402-2.23/package.json",
+          "sha256": "3a51cd9bde143d6e880f5687ffcf7ace730db29d2456102f3ef376bb291598d3"
+        },
+        {
+          "path": "fixtures/x402-2.23/pnpm-lock.yaml",
+          "sha256": "b81d903b9ef43367464eefc5f50b7d0195b31f6e03630b52eadce6c0310923d0"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "package.json",
+          "sha256": "12cd68e24afc26e8ecfb873a508f965dea1d75776ce4e12fb32d319fce5695f0"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "sha256": "b81d903b9ef43367464eefc5f50b7d0195b31f6e03630b52eadce6c0310923d0"
+        }
+      ],
+      "metadataChanges": "Removed readiness-only smoke script; bound packageManager to repository pnpm10.6.3; dependency selection and lock unchanged.",
+      "upstream": "x402",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Exact published npm artifacts; source snapshot is capability provenance, not registry/source byte equivalence."
+    },
+    {
+      "id": "mppx-0.8.17",
+      "manager": "pnpm",
+      "inputs": [
+        {
+          "path": "fixtures/mppx-0.8.17/package.json",
+          "sha256": "41b8e19f74ec7ff6095caf0adfb12e45a48cc97c3253714da46aa27f99230162"
+        },
+        {
+          "path": "fixtures/mppx-0.8.17/pnpm-lock.yaml",
+          "sha256": "d05c2e526fb35797128855be5673cd2c07871cce65c5a45754c35373db6e0118"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "package.json",
+          "sha256": "b0bb6e655b77aadb3317abb44b142b5e7cd8d5699f0436007cd5824697e930df"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "sha256": "d05c2e526fb35797128855be5673cd2c07871cce65c5a45754c35373db6e0118"
+        }
+      ],
+      "metadataChanges": "Removed readiness-only smoke script; bound packageManager to repository pnpm10.6.3; dependency selection and lock unchanged.",
+      "upstream": "mppx",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Exact published npm artifacts; source snapshot is capability provenance, not registry/source byte equivalence."
+    },
+    {
+      "id": "mppx-0.8.19",
+      "manager": "pnpm",
+      "inputs": [
+        {
+          "path": "fixtures/mppx-0.8.19/package.json",
+          "sha256": "9161519bf0ad3cd0ac80eb9b43ac8b00933fb19ad8c2f3e42cb30a02459ca7c9"
+        },
+        {
+          "path": "fixtures/mppx-0.8.19/pnpm-lock.yaml",
+          "sha256": "0cd75022ee1036c11cf5f3b946c4d3bcc1e0ff644474d04f8bba1919a1804e76"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "package.json",
+          "sha256": "265fa42113a6955ee028db3569299e21fe29d80c33f34c8e94976558ff8b699b"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "sha256": "0cd75022ee1036c11cf5f3b946c4d3bcc1e0ff644474d04f8bba1919a1804e76"
+        }
+      ],
+      "metadataChanges": "Removed readiness-only smoke script; bound packageManager to repository pnpm10.6.3; dependency selection and lock unchanged.",
+      "upstream": "mppx",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Exact published npm artifacts; source snapshot is capability provenance, not registry/source byte equivalence."
+    },
+    {
+      "id": "mppx-0.8.19-validator-only",
+      "manager": "pnpm",
+      "inputs": [
+        {
+          "path": "fixtures/mppx-0.8.19-validator-only/package.json",
+          "sha256": "d4d2a2c0678f3dc168eaa673d3505506316b6eea01c7f5990d72b3b462efd6be"
+        },
+        {
+          "path": "fixtures/mppx-0.8.19-validator-only/pnpm-lock.yaml",
+          "sha256": "7ba391288c965d6eca064e57f7e4d0b95aee4c69ec73cbae26a0afba74b1f5d1"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "package.json",
+          "sha256": "6609690bef42614097dcdb7ac65b3b815701225069fd01bb0951901ad4e8db07"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "sha256": "7ba391288c965d6eca064e57f7e4d0b95aee4c69ec73cbae26a0afba74b1f5d1"
+        }
+      ],
+      "metadataChanges": "Removed readiness-only smoke script; bound packageManager to repository pnpm10.6.3; dependency selection and lock unchanged.",
+      "upstream": "mppx",
+      "expectedVersions": {
+        "incur": "0.5.1",
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Exact published npm artifacts; source snapshot is capability provenance, not registry/source byte equivalence."
+    },
+    {
+      "id": "x402-framework-2.22",
+      "manager": "pnpm",
+      "inputs": [
+        {
+          "path": "fixtures/x402-framework-2.22/package.json",
+          "sha256": "ee91ad16a298e6c6b9ecd78ad36dd33c6a73994df291f94738b061017bb4ce7a"
+        },
+        {
+          "path": "fixtures/x402-framework-2.22/pnpm-lock.yaml",
+          "sha256": "adff46f1ae9547b9dc793661a39ff6e3d67a66fb758990a3438064a0d37e6ff3"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "package.json",
+          "sha256": "fb6742b6396357bf92910aefd18c3d5c23839c984a55cfd8a8a7be49e8de9c72"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "sha256": "adff46f1ae9547b9dc793661a39ff6e3d67a66fb758990a3438064a0d37e6ff3"
+        }
+      ],
+      "metadataChanges": "Removed readiness-only smoke script; bound packageManager to repository pnpm10.6.3; dependency selection and lock unchanged.",
+      "upstream": "x402",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Exact published npm artifacts; source snapshot is capability provenance, not registry/source byte equivalence."
+    },
+    {
+      "id": "x402-framework-2.23",
+      "manager": "pnpm",
+      "inputs": [
+        {
+          "path": "fixtures/x402-framework-2.23/package.json",
+          "sha256": "e7d82af990286bbe304a7f9f57c4cd229fd94420ab316fbc16a9c27aafce79d8"
+        },
+        {
+          "path": "fixtures/x402-framework-2.23/pnpm-lock.yaml",
+          "sha256": "4d14c76fcb895685034fdd60843a4f84ab3843214fcb111445331901efe30ba8"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "package.json",
+          "sha256": "1be20d065ecdece419df43f2762acc018a7f4f51734a6e3c37a2555738b07125"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "sha256": "4d14c76fcb895685034fdd60843a4f84ab3843214fcb111445331901efe30ba8"
+        }
+      ],
+      "metadataChanges": "Removed readiness-only smoke script; bound packageManager to repository pnpm10.6.3; dependency selection and lock unchanged.",
+      "upstream": "x402",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Exact published npm artifacts; source snapshot is capability provenance, not registry/source byte equivalence."
+    },
+    {
+      "id": "go-x402",
+      "manager": "go",
+      "inputs": [
+        {
+          "path": "fixtures/go-x402/go.mod",
+          "sha256": "d8d1b58b543cd167f920e6f690a9b946d008ebcf3a0f79d4b61b798544ab70a8"
+        },
+        {
+          "path": "fixtures/go-x402/go.sum",
+          "sha256": "9eebe65694b14230b2aade8244ff08c4671dd851ee08090f98c5b79e18895bfa"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "go.mod",
+          "sha256": "d8d1b58b543cd167f920e6f690a9b946d008ebcf3a0f79d4b61b798544ab70a8"
+        },
+        {
+          "path": "go.sum",
+          "sha256": "9eebe65694b14230b2aade8244ff08c4671dd851ee08090f98c5b79e18895bfa"
+        }
+      ],
+      "metadataChanges": "None",
+      "upstream": "x402",
+      "expectedVersions": {
+        "x402": "2.23.1-0.20260826184309-acaa90458564"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Frozen commit pseudo-version, not public v2.23.0 tag."
+    },
+    {
+      "id": "python-x402",
+      "manager": "uv",
+      "inputs": [
+        {
+          "path": "fixtures/python-x402/pyproject.toml",
+          "sha256": "33f951d17a209b59c1c3290fc8970bff89d31caed0d63472b38b26fa13bba35d"
+        },
+        {
+          "path": "fixtures/python-x402/uv.lock",
+          "sha256": "e786df23d9d4114ddc6d0f20a824162cabf7b7159990e51abecc880a472d6efa"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "pyproject.toml",
+          "sha256": "33f951d17a209b59c1c3290fc8970bff89d31caed0d63472b38b26fa13bba35d"
+        },
+        {
+          "path": "uv.lock",
+          "sha256": "e786df23d9d4114ddc6d0f20a824162cabf7b7159990e51abecc880a472d6efa"
+        }
+      ],
+      "metadataChanges": "None",
+      "upstream": "x402",
+      "expectedVersions": {
+        "x402": "2.20.0"
+      },
+      "stagedInputs": [
+        {
+          "path": "fixtures/python-x402/artifacts/x402-2.20.0-py3-none-any.whl",
+          "sha256": "de49c945451fa46a451e44d061c06d83d3da18b135c8205039d97d9430ab274a",
+          "owner": "task-7c"
+        }
+      ],
+      "sourceRelationship": "Source-verified wheel, not same-version registry wheel; staging is owned by task-7c."
+    },
+    {
+      "id": "ruby-mpp",
+      "manager": "bundler",
+      "inputs": [
+        {
+          "path": "fixtures/ruby-mpp/Gemfile",
+          "sha256": "1c786e1128e48dd66f2540520823040f7748772cb740f0eea1dabf2860a40ff9"
+        },
+        {
+          "path": "fixtures/ruby-mpp/Gemfile.lock",
+          "sha256": "b6052ef885cf2a6e97fc13ccc6c3de1450f1d376be8054ea4fb9f88547d9fefc"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "Gemfile",
+          "sha256": "1c786e1128e48dd66f2540520823040f7748772cb740f0eea1dabf2860a40ff9"
+        },
+        {
+          "path": "Gemfile.lock",
+          "sha256": "b6052ef885cf2a6e97fc13ccc6c3de1450f1d376be8054ea4fb9f88547d9fefc"
+        }
+      ],
+      "metadataChanges": "None",
+      "upstream": "mpp-rb",
+      "expectedVersions": {
+        "mpp-rb": "0.1.5"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Frozen Git revision, not different public same-version gem."
+    },
+    {
+      "id": "mpp-tools-generic",
+      "manager": "npm-and-uv",
+      "inputs": [
+        {
+          "path": "fixtures/mpp-tools-generic/package.json",
+          "sha256": "a1f5a3dd00beb2bdad896eec88eca778eecde182b8f6b40c52638682f3a8a4ec"
+        },
+        {
+          "path": "fixtures/mpp-tools-generic/package-lock.json",
+          "sha256": "706f50d9937b74b0998d5d3b2f8fad264349161220377df43a373037d9f5f995"
+        },
+        {
+          "path": "fixtures/mpp-tools-generic/pyproject.toml",
+          "sha256": "138e244edce7603797c886e7e7e41ab4f19af88ae4234c2357e234b3ebdbcfc6"
+        },
+        {
+          "path": "fixtures/mpp-tools-generic/uv.lock",
+          "sha256": "12e6eb3212e3e335705ed8d4d2787ed3dc29eb8e3d27e757782d4690574eb0e2"
+        }
+      ],
+      "originalInputs": [
+        {
+          "path": "package.json",
+          "sha256": "414766b0c56db173bfa75f531ddccd479b99c0a13410799732a57fa034e769ee"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "706f50d9937b74b0998d5d3b2f8fad264349161220377df43a373037d9f5f995"
+        },
+        {
+          "path": "pyproject.toml",
+          "sha256": "138e244edce7603797c886e7e7e41ab4f19af88ae4234c2357e234b3ebdbcfc6"
+        },
+        {
+          "path": "uv.lock",
+          "sha256": "12e6eb3212e3e335705ed8d4d2787ed3dc29eb8e3d27e757782d4690574eb0e2"
+        }
+      ],
+      "metadataChanges": "Removed upstream executable scripts; package selection and locks unchanged.",
+      "upstream": "mpp-tools",
+      "expectedVersions": {
+        "mppx": "0.8.18"
+      },
+      "stagedInputs": [],
+      "sourceRelationship": "Unmodified upstream locks; generic wire only, never native EVM certification."
+    }
+  ]
+}

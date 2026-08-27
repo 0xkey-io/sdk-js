@@ -2,6 +2,12 @@
 
 ## 1.0.0-rc.1
 
+- Add the private conformance 7A foundation: exact portable fixture manifests,
+  locks and source/license provenance, bounded isolated process controls, and
+  fail-closed immutable reports for the complete planned matrix. Protocol
+  drivers remain implementation prerequisites; no interoperability or release
+  approval is claimed. Public runtime, exports and peer contracts are unchanged.
+
 - Preserve native mppx 402 challenges and malformed-credential Problem Details
   for a single selected malformed MPP credential. Keep all five raw-wire
   guards before lossy parsing, ambiguity/disabled-protocol 400, non-402

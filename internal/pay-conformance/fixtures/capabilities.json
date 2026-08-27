@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "0xkey.pay.capabilities/v1",
+  "facts": [
+    {
+      "id": "ruby-mpp-evm-buyer",
+      "upstream": "https://github.com/stripe/mpp-rb/blob/24b5dacb86c0e81e93562a6f23752bfe2cb78d4f/README.md",
+      "lines": [
+        213,
+        221
+      ],
+      "finding": "Support table: EVM charge Client No, Server Yes. Ruby HTTP client does not sign EVM or x402 credentials."
+    },
+    {
+      "id": "cdp-high-level-server-injection",
+      "upstream": "https://github.com/coinbase/cdp-sdk/blob/1216e96f250d634d34887177bf12f66f021acbcb/typescript/packages/cdp-sdk/src/x402/server.ts",
+      "lines": [
+        976,
+        981
+      ],
+      "finding": "createX402Server builds createCdpFacilitatorClient from CDP credentials and passes it to x402ResourceServer; its config has no facilitator-client injection. Official low-level x402 APIs are separate mandatory rows."
+    },
+    {
+      "id": "official-mpp-tools-native-evm-charge",
+      "upstream": "https://github.com/tempoxyz/mpp-tools/tree/c5dde8faa684b79e2df665143cf7cd731608c079/conformance",
+      "finding": "Frozen operation/profile/vector source has no evm profile; HTTP compliance server is fixed to tempo/charge. Unchanged generic-wire vectors are separate narrow rows with mppx0.8.18, not native EVM certification."
+    }
+  ]
+}
