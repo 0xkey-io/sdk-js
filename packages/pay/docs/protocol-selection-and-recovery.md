@@ -258,6 +258,17 @@ produce typed errors at their source. Signer and receipt-verifier exceptions
 are explicitly wrapped even if they are already typed; verifier exceptions are
 the direct `cause` of `PAYMENT_RECEIPT_UNVERIFIED`.
 
+Native x402 replaces signing exceptions with ordinary errors. The buyer keeps
+its own signer failure only for that in-flight native operation, restores the
+exact owned wrapper on rejection, and discards the provenance on every exit.
+This gives `PAYMENT_SIGNING_FAILED`, phase `signing`, not retryable, fixed safe
+text, no `paymentId`, and the original signer-thrown value directly as `cause`.
+Caller `PayError`s are still wrapped, not accepted as signer policy verdicts.
+No message or lookalike fields establish provenance. Later operations and
+concurrent single-flight rejections remain independent; MPP behavior and the
+unknown non-signer contextual fallback are unchanged. A throwing signer has
+not produced a credential to save or send, and this adds no automatic retry.
+
 Classification does not change recovery state. A failed `saveIfAbsent` stops
 before send and keeps the in-process pending request. A thrown or false `clear`
 does not clear pending. After a verified receipt and successful clear, pending

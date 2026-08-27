@@ -513,7 +513,7 @@ for (const operation of ["fetch", "resume"])
       );
     });
   }
-await scenario("x402-upstream-rewrapped-signer", async () => {
+await scenario("x402-owned-signer-provenance", async () => {
   const cause = new PayError("PAY_HOST_DENIED", "signer cause", {
     phase: "policy",
   });
@@ -554,16 +554,15 @@ await scenario("x402-upstream-rewrapped-signer", async () => {
   const error = await caught(() =>
     client.fetch("https://merchant.example/paid"),
   );
-  // @x402/fetch 2.23 replaces the typed signer error with an ordinary Error.
-  // Its text cannot reestablish ownership, nor does upstream retain a cause.
-  fields(error, "PAYMENT_SERVICE_UNAVAILABLE", "request", true);
+  // R102 replaces R99's documented bad-baseline row with the signing contract.
+  // The SDK retains operation-owned provenance, never inferring it from text.
+  fields(error, "PAYMENT_SIGNING_FAILED", "signing");
   assert.equal(
     error.message,
-    "PAYMENT_SERVICE_UNAVAILABLE: Payment service unavailable",
+    "PAYMENT_SIGNING_FAILED: Payment credential signing failed",
   );
-  assert.equal(error.cause instanceof Error, true);
-  assert.equal(error.cause instanceof PayError, false);
-  assert.equal(error.cause.cause, undefined);
+  assert.equal(error.cause, cause);
+  assert.notEqual(error, cause);
   assert.deepEqual(
     [signs, sends, saves, await client.pending()],
     [1, 1, 0, undefined],
@@ -571,7 +570,7 @@ await scenario("x402-upstream-rewrapped-signer", async () => {
   return {
     error: { code: error.code, phase: error.phase, retryable: error.retryable },
     counters: { signs, sends, saves },
-    causeType: "upstream-ordinary-error-without-cause",
+    causeType: "direct-original-signer-cause",
   };
 });
 const failed = rows.filter((row) => !row.passed).length;

@@ -321,6 +321,7 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
   let resumingPending = false;
   let storeLoaded = false;
   let storeLoad: Promise<void> | undefined;
+  let x402SigningOperation: { failure?: PayError } | undefined;
   const guardedFetch: typeof globalThis.fetch = async (input, init) => {
     const request = new Request(input, { ...init, redirect: "manual" });
     const url = request.url;
@@ -412,14 +413,18 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
   const safeAccount: PayEvmAccount = {
     address: options.account.address,
     async signTypedData(...parameters) {
+      // Capture the owning invocation before awaiting the caller's signer.
+      const operation = x402SigningOperation;
       try {
         return await signTypedData(...parameters);
       } catch (error) {
-        throw new PayError(
+        const failure = new PayError(
           "PAYMENT_SIGNING_FAILED",
           "Payment credential signing failed",
           { phase: "signing", cause: error },
         );
+        if (operation) operation.failure = failure;
+        throw failure;
       }
     },
   };
@@ -468,8 +473,23 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
           BigInt(requirement.amount) <= displayUsdcToAtomic(maxAmount),
       ),
     );
-  const officialX402Fetch = (fetch: typeof globalThis.fetch) =>
-    wrapFetchWithPayment(fetch, officialX402Client);
+  const officialX402Fetch = async (
+    fetch: typeof globalThis.fetch,
+    request: Request,
+  ) => {
+    const operation: { failure?: PayError } = {};
+    x402SigningOperation = operation;
+    try {
+      return await wrapFetchWithPayment(fetch, officialX402Client)(request);
+    } catch (error) {
+      // Native x402 replaces signer errors. Only this invocation's owned
+      // signer failure can restore provenance; never inspect upstream text.
+      throw operation.failure ?? error;
+    } finally {
+      x402SigningOperation = undefined;
+      delete operation.failure;
+    }
+  };
 
   const executeFetch = async function executeFetch(
     input: RequestInfo | URL,
@@ -515,7 +535,7 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
       const replayFetch = replayInitialResponse(guardedFetch, initialResponse);
       const response =
         selectedProtocol === "x402"
-          ? await officialX402Fetch(replayFetch)(initialRequest.clone())
+          ? await officialX402Fetch(replayFetch, initialRequest.clone())
           : await mppFetch(replayFetch)(initialRequest.clone());
       return await finishPaymentResponse(response, url);
     } finally {

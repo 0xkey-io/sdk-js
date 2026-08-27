@@ -2,6 +2,12 @@
 
 ## 1.0.0-rc.1
 
+- Preserve the owned signing failure across native x402's error replacement,
+  scoped to one in-flight operation and cleared on every exit. The public
+  error is `PAYMENT_SIGNING_FAILED` / `signing`, not retryable, with the
+  original thrown value directly as cause, including caller `PayError`s.
+  No message inference, automatic retry, storage/recovery or MPP change.
+
 - Classify buyer failures by typed ownership and explicit operation context,
   not free-text error markers. Preserve local `PayError` identity, safe unknown
   fallback messages and original unknown causes. Keep owned policy, recovery

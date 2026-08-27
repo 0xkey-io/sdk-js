@@ -53,9 +53,13 @@ The signer and receipt-verifier boundaries still wrap any exception as
 `PAYMENT_SIGNING_FAILED` and `PAYMENT_RECEIPT_UNVERIFIED`, respectively. The
 verifier's original exception is now the direct typed error's `cause`, without
 the former intermediate marker error.
-If an upstream protocol replaces that typed error with an ordinary error
-(as the pinned x402 fetch client does for signing failures), the public result
-uses the operation fallback and retains the upstream error as its cause.
+The native x402 path now preserves the owned signing failure across upstream
+error replacement. A signer rejection is `PAYMENT_SIGNING_FAILED`, phase
+`signing`, not retryable, with fixed safe text, no `paymentId`, and the original
+thrown value directly as `cause`. Even a local `PayError` thrown by the signer
+is wrapped. Provenance belongs only to that operation and is cleared on exit;
+later or concurrent failures cannot inherit it. Unknown non-signer errors
+still use the contextual fallback. This does not retry or re-sign a payment.
 
 ## Seller migration
 

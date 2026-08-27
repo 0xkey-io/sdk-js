@@ -166,8 +166,11 @@ message text. A local `PayError` keeps its identity; other thrown values from
 fetch or recovery callbacks use the operation's safe fallback and are retained
 as `cause`. A foreign package copy or a lookalike error is not a local typed
 owner. Signer and receipt-verifier exceptions remain explicitly wrapped.
-If an upstream protocol replaces a typed error with an ordinary error, the
-public boundary uses the fallback; text cannot restore the lost ownership.
+Native x402 signer failures retain their per-operation owned error even when
+upstream replaces it: `PAYMENT_SIGNING_FAILED`, phase `signing`, not retryable,
+with the original thrown value directly as `cause` and no `paymentId`.
+This provenance is discarded on exit; unrelated errors still use the fallback.
+No classification is inferred from upstream text, and no retry is introduced.
 HTTPS is required. For local development only, `allowInsecureLocalhost: true`
 allows HTTP to `localhost`, `127.0.0.1`, and `[::1]`.
 
