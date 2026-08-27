@@ -22,6 +22,20 @@ if (scenario === "timeout-tree") {
   );
   child.stdout.pipe(process.stdout);
   setInterval(() => {}, 1000);
+} else if (scenario.startsWith("coercible-")) {
+  const kind = scenario.slice("coercible-".length);
+  const field = {
+    versions: "versions",
+    ready: "port",
+    observation: "counters",
+    result: "assertions",
+  }[kind];
+  emit({ type: "ready", port: 0 });
+  emit({
+    type: [kind],
+    [field]: { credential: "synthetic-discriminator-secret-7a" },
+  });
+  setInterval(() => {}, 1000);
 } else {
   emit({ type: "ready", port: 0 });
   if (scenario === "raw-output")

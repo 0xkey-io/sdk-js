@@ -102,6 +102,25 @@ test("stderr is hash-only evidence and never a silently clean pass", async () =>
   assert.equal(result.stderr.bytes, 27);
 });
 
+for (const kind of ["versions", "ready", "observation", "result"]) {
+  test(`rejected coercible ${kind} control cannot leak through process diagnostics`, async () => {
+    const result = await runProcess(options(`coercible-${kind}`));
+    assert.equal(result.status, "UNKNOWN");
+    assert.equal(
+      JSON.stringify(result).includes("synthetic-discriminator-secret-7a"),
+      false,
+    );
+    assert.equal(result.reason, "CONTROL_CORRUPT");
+    assert.equal(result.stdout.discardedLines, 1);
+    assert.deepEqual(
+      result.stdout.events.map((event) => event.type),
+      ["versions", "ready"],
+    );
+    assert.equal(result.cleanup.groupAbsent, true);
+    assert.equal(result.cleanup.forced, true);
+  });
+}
+
 test("deadline kills the entire child group and its actual listening grandchild", async () => {
   const result = await runProcess(options("timeout-tree"));
   assert.equal(result.status, "UNKNOWN");

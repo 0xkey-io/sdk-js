@@ -114,6 +114,9 @@ completed → closed`; timeout/corrupt controls cannot pass. Cleanup covers
   This is not an OS network sandbox or containment after killing the parent.
 - `src/redact.mjs` accepts only closed JSONL event schemas: exact version
   metadata, numeric ports/counters and permitted SHA-256 digests. It retains
+  only primitive string event kinds from its own closed table; arrays,
+  coercible objects and prototype names are rejected before payload dispatch.
+  It retains
   no raw unrecognized output or stderr. Process hashes/byte counts cover the
   bounded captured stream, not bytes discarded after an output limit. Raw
   credentials, receipts and secrets must never be control fields or command

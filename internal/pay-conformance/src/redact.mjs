@@ -33,15 +33,16 @@ export function validateEvent(event) {
   const reject = () => {
     throw new Error("CONTROL_EVENT_REJECTED");
   };
-  if (!object(event)) reject();
-  const fields = {
+  if (!object(event) || typeof event.type !== "string") reject();
+  const fieldsByType = {
     versions: ["type", "versions"],
     ready: ["type", "port"],
     observation: ["type", "counters", "digests"],
     result: ["type", "assertions"],
-  }[event.type];
-  if (!fields || Object.keys(event).some((key) => !fields.includes(key)))
-    reject();
+  };
+  if (!Object.hasOwn(fieldsByType, event.type)) reject();
+  const fields = fieldsByType[event.type];
+  if (Object.keys(event).some((key) => !fields.includes(key))) reject();
   if (
     event.type === "versions" &&
     (!object(event.versions) ||
