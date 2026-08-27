@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -304,6 +311,118 @@ test("source status never invokes configured clean filters, fsmonitor or externa
   f.git(f.checkout, "config", "include.path", includedConfig);
   for (const script of [initialScript, finalScript]) rejected(f.run(script));
   await assert.rejects(readFile(marker), { code: "ENOENT" });
+});
+
+test("both source gates isolate inherited command-scope Git filters", async (t) => {
+  const f = await fixture(t);
+  const marker = join(f.checkout, "..", "command-filter-executed");
+  const filter = join(f.checkout, "..", "command-filter.cjs");
+  await writeFile(
+    filter,
+    `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "executed"); process.stdin.pipe(process.stdout);\n`,
+  );
+  const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
+  const filterCommand = `${quote(process.execPath)} ${quote(filter)}`;
+  // Synthetic checkout-local auth remains available; no real credential is read.
+  f.git(
+    f.checkout,
+    "config",
+    "http.https://github.com/.extraheader",
+    "x-fixture: present",
+  );
+  for (const [phase, script] of [
+    ["initial", initialScript],
+    ["final", finalScript],
+  ]) {
+    await t.test(`${phase}: normal source remains accepted`, () =>
+      accepted(f.run(script)),
+    );
+    await t.test(
+      `${phase}: no inherited command configuration remains accepted`,
+      () => {
+        const absent = Object.fromEntries(
+          Object.keys(f.context)
+            .filter((key) => /^GIT_CONFIG_(COUNT|KEY_|VALUE_)/.test(key))
+            .map((key) => [key, undefined]),
+        );
+        accepted(f.run(script, absent));
+      },
+    );
+    for (const key of ["filter.synthetic.clean", "FILTER.synthetic.CLEAN"]) {
+      for (const scope of ["COUNT", "PARAMETERS"]) {
+        await t.test(`${phase}: ${scope} ${key}`, async () => {
+          await rm(marker, { force: true });
+          const changedTime = new Date(Date.now() + 2_000);
+          await utimes(join(f.checkout, "tracked"), changedTime, changedTime);
+          const inherited =
+            scope === "COUNT"
+              ? {
+                  GIT_CONFIG_COUNT: "2",
+                  GIT_CONFIG_KEY_0: key,
+                  GIT_CONFIG_VALUE_0: filterCommand,
+                  GIT_CONFIG_KEY_1: "filter.synthetic.required",
+                  GIT_CONFIG_VALUE_1: "true",
+                }
+              : {
+                  GIT_CONFIG_PARAMETERS: `${quote(`${key}=${filterCommand}`)} ${quote("filter.synthetic.required=true")}`,
+                };
+          accepted(f.run(script, inherited));
+          await assert.rejects(readFile(marker), { code: "ENOENT" });
+          assert.equal(
+            f.git(
+              f.checkout,
+              "config",
+              "--local",
+              "--get",
+              "http.https://github.com/.extraheader",
+            ),
+            "x-fixture: present",
+          );
+        });
+      }
+    }
+  }
+});
+
+test("both source gate contracts reject folded and continued executable no-ops", async (t) => {
+  assert.doesNotThrow(() => checkPayPublishWorkflow(workflowSource));
+  for (const name of [initialName, finalName]) {
+    for (const [label, mutate] of [
+      ["folded newlines", (run) => run.trim().split("\n").join(" ")],
+      ["continued newlines", (run) => run.trim().split("\n").join(" \\\n")],
+      ["non-shell leading whitespace", (run) => `\u00a0${run}`],
+    ]) {
+      await t.test(`${name}: ${label}`, () => {
+        const candidate = parse(workflowSource);
+        const gate = candidate.jobs.publish.steps.find(
+          (step) => step.name === name,
+        );
+        gate.run = mutate(gate.run);
+        // Execute this mutated production gate only. A folded/continued `set`
+        // swallows the check as arguments. A non-shell whitespace prefix
+        // disables `set`; a failed git show then becomes an empty Bash success.
+        const result = spawnSync(
+          "bash",
+          ["--noprofile", "--norc", "-c", gate.run],
+          {
+            cwd: tmpdir(),
+            env: {
+              PATH: process.env.PATH,
+              GITHUB_WORKFLOW_SHA: "a".repeat(40),
+              GITHUB_SHA: "invalid",
+              PAY_PUBLISH_SOURCE_SHA: "invalid",
+            },
+            encoding: "utf8",
+          },
+        );
+        accepted(result);
+        assert.equal(result.stdout, "");
+        if (label !== "non-shell leading whitespace")
+          assert.equal(result.stderr, "");
+        assert.throws(() => checkPayPublishWorkflow(stringify(candidate)));
+      });
+    }
+  }
 });
 
 test("bounded workflow enforces both executable source gates and their order", async (t) => {

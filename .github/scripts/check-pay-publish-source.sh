@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Direct, same-repository workflow_dispatch only. Never rewrite GitHub identity.
 set -euo pipefail
+# Do not let inherited command-scope configuration introduce content filters.
+# Keep checkout-local config (including its authentication) and GitHub identity.
+unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS
+for config_variable in "${!GIT_CONFIG_KEY_@}" "${!GIT_CONFIG_VALUE_@}"; do
+  unset "$config_variable"
+done
 export LC_ALL=C GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_ATTR_NOSYSTEM=1
 
 fail() {

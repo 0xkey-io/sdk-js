@@ -52,12 +52,18 @@ function stepNamed(steps, name) {
 
 function checkSourceBindingStep(step) {
   // This is an exact bounded workflow contract, not a shell-code substring
-  // audit. Comments, conditionals and failure suppression cannot satisfy it.
+  // audit. Preserve shell statement boundaries: folding or continuing a newline
+  // can make `set` consume the guard as arguments without ever executing it.
   assert.deepEqual(Object.keys(step).sort(), ["name", "run", "shell"]);
   assert.equal(step.shell, "bash");
   assert.equal(
-    command(step.run),
-    'set -euo pipefail [[ "${GITHUB_WORKFLOW_SHA:-}" =~ ^[0-9a-f]{40}$ ]] git --no-replace-objects show "$GITHUB_WORKFLOW_SHA:.github/scripts/check-pay-publish-source.sh" | bash --noprofile --norc',
+    step.run,
+    [
+      "set -euo pipefail",
+      '[[ "${GITHUB_WORKFLOW_SHA:-}" =~ ^[0-9a-f]{40}$ ]]',
+      'git --no-replace-objects show "$GITHUB_WORKFLOW_SHA:.github/scripts/check-pay-publish-source.sh" | bash --noprofile --norc',
+      "",
+    ].join("\n"),
     "source binding must execute the trusted workflow blob with pipefail and no replacement objects",
   );
 }

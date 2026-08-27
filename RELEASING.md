@@ -142,8 +142,9 @@ untracked files stop publication. The final check rereads HEAD, not just diff.
 The checkout is selected by the executing workflow SHA, never by candidate
 input. Both gates load the same source checker from that workflow's immutable
 Git blob with replacement objects disabled, so a changed checkout cannot
-substitute the checker. Source-status checks disable global/system Git config,
-fsmonitor, hooks, external diff/textconv, and reject local clean/process filters.
+substitute the checker. Source-status checks isolate inherited command-scope
+and global/system Git config, disable fsmonitor, hooks and external diff/textconv,
+and reject local clean/process filters. Checkout-local authentication is retained.
 This is a direct, same-repository workflow contract, not reusable-workflow
 support; adding `workflow_call` requires a separately reviewed caller/called
 identity model.
