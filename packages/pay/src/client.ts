@@ -1,5 +1,5 @@
-import { Challenge, Credential, Receipt, x402 } from "mppx";
-import { Mppx } from "mppx/client";
+import { Challenge, Constants, Credential, Receipt, x402 } from "mppx";
+import { Mppx, Transport } from "mppx/client";
 import { assets, Types as EvmTypes } from "mppx/evm";
 import { charge } from "mppx/evm/client";
 import { x402Client } from "@x402/core/client";
@@ -446,17 +446,7 @@ function createPayExecutor(options: CreatePayExecutorOptions): PayExecutor {
       ],
       fetch,
       maxPaymentRetries: 1,
-      orderChallenges(candidates) {
-        return candidates
-          .filter((candidate) =>
-            preference.includes(protocolOf(candidate.challenge)),
-          )
-          .sort(
-            (left, right) =>
-              preference.indexOf(protocolOf(left.challenge)) -
-              preference.indexOf(protocolOf(right.challenge)),
-          );
-      },
+      transport: nativeMppTransport(),
       polyfill: false,
     }).fetch;
   const officialSigner = toClientEvmSigner({
@@ -1000,12 +990,6 @@ function supportedX402Requirement(network: string, asset: string): boolean {
   return canonical !== undefined && asset.toLowerCase() === canonical;
 }
 
-function protocolOf(challenge: { id: string; realm: string }): PayProtocol {
-  return challenge.realm === "x402" || challenge.id.startsWith("x402:")
-    ? "x402"
-    : "mpp";
-}
-
 function classifyPaymentChallenge(
   response: Response,
   preference: PayProtocol[],
@@ -1066,7 +1050,6 @@ function classifyPaymentChallenge(
     }
     for (const challenge of challenges) {
       if (
-        protocolOf(challenge) !== "mpp" ||
         challenge.method !== EvmTypes.paymentMethod ||
         challenge.intent !== EvmTypes.chargeIntent
       ) {
@@ -1109,6 +1092,37 @@ function classifyPaymentChallenge(
 
 function hasNativeMppChallenge(value: string): boolean {
   return /(?:^|,)\s*Payment(?:\s|$)/i.test(value);
+}
+
+// Native decoding supplies provenance; realm and id remain opaque wire data.
+// Never collect the default transport's x402/MCP bridge offers on the MPP path.
+function nativeMppTransport() {
+  return Transport.from<RequestInit, Response>({
+    name: "pay-native-mpp-http",
+    isPaymentRequired: (response) => response.status === 402,
+    getChallenges(response) {
+      const authenticate = response.headers.get(
+        Constants.Headers.wwwAuthenticate,
+      );
+      return response.status === 402 &&
+        authenticate !== null &&
+        hasNativeMppChallenge(authenticate)
+        ? Challenge.fromResponseList(response)
+        : [];
+    },
+    setCredential(request, credential) {
+      const headers = new Headers(request.headers);
+      for (const name of [
+        Constants.Headers.authorization,
+        x402.paymentRequiredHeader,
+        x402.paymentResponseHeader,
+        x402.paymentSignatureHeader,
+      ])
+        headers.delete(name);
+      headers.set(Constants.Headers.authorization, credential);
+      return { ...request, headers };
+    },
+  });
 }
 
 function invalidPaymentChallenge(cause: unknown): PayError {
@@ -1234,15 +1248,6 @@ function inspectPendingPayment(
     }
     if (BigInt(chargeRequest.amount) > maxAmountAtomic) {
       throw new Error("MPP amount exceeds maxAmount");
-    }
-    const realm = credential.challenge.realm.toLowerCase();
-    const requestUrl = new URL(request.url);
-    if (
-      realm !== requestUrl.host.toLowerCase() &&
-      realm !== requestUrl.hostname.toLowerCase() &&
-      realm !== requestUrl.origin.toLowerCase()
-    ) {
-      throw new Error("MPP realm does not match request host");
     }
     return {
       effect: createEip3009EconomicEffect({

@@ -161,6 +161,11 @@ by x402 and MPP; Pay does not copy a second wallet adapter. See the tested
 [`with-x402` example](../../examples/with-x402/README.md#2-company-wallet-signing).
 
 The buyer does not replace global `fetch`. It never falls back after signing.
+Protocol selection follows independently decoded wire offers. The MPP path
+accepts only native Payment HTTP challenges, not mppx's x402/MCP bridge.
+MPP realms are protection-space labels: `x402`, `billing`, and other valid
+labels are preserved exactly, not interpreted as protocols or URL hosts.
+HTTPS and the actual request host allowlist still apply.
 Buyer failures use `PayError` code, phase and retryability, never dependency
 message text. A local `PayError` keeps its identity; other thrown values from
 fetch or recovery callbacks use the operation's safe fallback and are retained

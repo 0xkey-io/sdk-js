@@ -32,6 +32,13 @@ Provide a durable authenticated store in every environment. Use `pending()`
 for a redacted status summary and `resume()` to replay the authenticated saved
 request.
 
+MPP protocol selection no longer guesses from realm or challenge-id spelling.
+The native-only buyer transport accepts valid non-host realms (including
+`x402` and `billing`) and preserves the original challenge. Host allowlists
+still apply to the actual request URL. This repair changes no public option,
+v3 pending format, adapter revision, nonce binding or same-credential recovery
+rule; no pending-record migration is needed.
+
 Pre-1.0 rc.6 records used version 3 without protocol, adapter, or Economic
 Effect bindings. They are intentionally rejected with
 `PENDING_PAYMENT_VERSION_UNSUPPORTED`. Resolve or discard them through an

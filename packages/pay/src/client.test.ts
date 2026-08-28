@@ -65,6 +65,13 @@ function createTestClient(options: TestClientOptions): PayClient {
 }
 
 jest.mock("mppx", () => ({
+  Constants: {
+    Headers: {
+      authorization: "Authorization",
+      wwwAuthenticate: "WWW-Authenticate",
+    },
+  },
+  Challenge: { fromResponseList: jest.fn() },
   Credential: {
     deserialize: jest.fn(),
     extractPaymentScheme: jest.fn((header: string) =>
@@ -73,6 +80,8 @@ jest.mock("mppx", () => ({
   },
   Receipt: { deserialize: jest.fn() },
   x402: {
+    paymentRequiredHeader: "PAYMENT-REQUIRED",
+    paymentSignatureHeader: "PAYMENT-SIGNATURE",
     paymentResponseHeader: "PAYMENT-RESPONSE",
     Header: {
       decodePaymentResponse: jest.fn(),
@@ -84,6 +93,7 @@ jest.mock("mppx", () => ({
   },
 }));
 jest.mock("mppx/client", () => ({
+  Transport: { from: (transport: unknown) => transport },
   Mppx: {
     create: jest.fn((config) => ({
       fetch: (input: RequestInfo | URL, init?: RequestInit) =>
@@ -152,6 +162,92 @@ const account = privateKeyToAccount(
   "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 );
 const payTo = "0x1111111111111111111111111111111111111111";
+test("MPP execution uses native-only wire decoding and preserves transport parameters", async () => {
+  const { Challenge } = jest.requireMock("mppx");
+  const { Mppx } = jest.requireMock("mppx/client");
+  const challenge = {
+    id: "native-id",
+    realm: "merchant.example",
+    method: "evm",
+    intent: "charge",
+    request: {
+      amount: "10000",
+      currency: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      recipient: payTo,
+      methodDetails: { chainId: 84532 },
+    },
+  };
+  Challenge.fromResponseList.mockReturnValue([challenge]);
+  const response = new Response(null, {
+    status: 402,
+    headers: { "WWW-Authenticate": "Payment native" },
+  });
+  let calls = 0;
+  const client = createTestClient({
+    account,
+    allowHosts: ["merchant.example"],
+    maxAmount: "$0.01",
+    protocolPreference: ["mpp"],
+    fetch: async () =>
+      ++calls === 1 ? response.clone() : new Response(null, { status: 204 }),
+  });
+  // The upstream factory double does not sign; inspect the real transport
+  // supplied by Pay after its native-offer selection has run.
+  await expect(
+    client.fetch("https://merchant.example/paid"),
+  ).rejects.toMatchObject({ code: "PAYMENT_OFFER_UNSUPPORTED" });
+  const transport = Mppx.create.mock.calls.at(-1)[0].transport;
+  expect(transport).toBeDefined();
+  expect(transport.getChallenges(response)).toEqual([challenge]);
+  expect(
+    transport.getChallenges(
+      new Response(null, {
+        status: 402,
+        headers: { "PAYMENT-REQUIRED": "x402-only" },
+      }),
+    ),
+  ).toEqual([]);
+  expect(
+    transport.getChallenges(
+      new Response(null, {
+        status: 200,
+        headers: { "WWW-Authenticate": "Payment native" },
+      }),
+    ),
+  ).toEqual([]);
+  const controller = new AbortController();
+  const init = {
+    method: "POST",
+    body: "original-body",
+    signal: controller.signal,
+    credentials: "omit",
+    cache: "no-store",
+    redirect: "manual",
+    headers: new Headers({
+      Authorization: "stale-auth",
+      "PAYMENT-REQUIRED": "stale-required",
+      "PAYMENT-RESPONSE": "stale-response",
+      "PAYMENT-SIGNATURE": "stale-signature",
+      "X-Request-Id": "original-id",
+    }),
+  };
+  const attached = transport.setCredential(init, "Payment native-credential");
+  expect(attached).toEqual({
+    ...init,
+    headers: new Headers({
+      Authorization: "Payment native-credential",
+      "X-Request-Id": "original-id",
+    }),
+  });
+  expect(attached.signal).toBe(controller.signal);
+  expect(init.headers.get("Authorization")).toBe("stale-auth");
+  for (const header of [
+    "PAYMENT-REQUIRED",
+    "PAYMENT-RESPONSE",
+    "PAYMENT-SIGNATURE",
+  ])
+    expect(attached.headers.has(header)).toBe(false);
+});
 const baseSepoliaUsdc = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const transaction = `0x${"ab".repeat(32)}`;
 const authorizationNonce = `0x${"11".repeat(32)}`;

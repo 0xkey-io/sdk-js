@@ -163,7 +163,25 @@ third-party URLs remain available, but they still represent exactly the
 configured network.
 
 Protocol choice is made only from the independently validated challenges and
-configured preference. The seller dispatches only from `PAYMENT-SIGNATURE` or
+configured preference. Native Payment challenges are decoded independently of
+x402's `PAYMENT-REQUIRED` offer. Neither realm nor challenge-id spelling is a
+protocol discriminator. The MPP executor uses one private native-only HTTP
+transport and retains mppx parsing, signing, encoding and its single payment
+retry; it never collects the default mixed x402/MCP bridge. Credential attachment
+preserves request parameters, body, signal and unrelated headers, replacing
+Authorization and the three x402 payment headers with the native credential.
+
+An MPP realm is an opaque protection-space label, not an origin or hostname.
+Valid labels such as `x402` and `billing` are echoed unchanged and remain bound
+by the native challenge nonce and server HMAC. Actual HTTPS/host policy and
+redirect refusal are separate checks. The buyer cannot verify the server's
+secret HMAC, and that HMAC does not establish arbitrary HTTP URL binding.
+The durable store's AEAD/MAC authenticates the exact saved URL, method, headers
+and body; the request digest alone is only a checksum. All existing v3
+protocol/network/adapter/economic bindings remain mandatory, with no format
+migration or re-signing.
+
+The seller dispatches only from `PAYMENT-SIGNATURE` or
 the RFC-compatible, case-insensitive `Payment` authorization scheme, including
 comma-separated Authorization fields. It never uses nonce shape, provider
 identity, or dependency error text as a protocol signal.

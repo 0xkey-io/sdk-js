@@ -2,6 +2,13 @@
 
 ## 1.0.0-rc.1
 
+- Select protocols by independent wire decoders and restrict MPP execution to
+  native Payment HTTP challenges. Preserve opaque realm/id values, including
+  realm `x402`, without protocol guessing or realm-to-host equality. Keep the
+  official x402 path, actual-host policy, original nonce/economic bindings,
+  authenticated v3 storage, same-credential recovery and proof-before-clear.
+  No public transport option, pending-format migration or signing fallback.
+
 - Preserve the owned signing failure across native x402's error replacement,
   scoped to one in-flight operation and cleared on every exit. The public
   error is `PAYMENT_SIGNING_FAILED` / `signing`, not retryable, with the
