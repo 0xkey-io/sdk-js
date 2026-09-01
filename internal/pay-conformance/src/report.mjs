@@ -104,7 +104,7 @@ export function validateReport(report, matrix) {
     Object.keys(report).sort().join() !==
       "matrixSha256,phase,releaseDecision,rows,schemaVersion" ||
     report.schemaVersion !== "0xkey.pay.conformance/v1" ||
-    report.phase !== "7A" ||
+    !["7A", "7B"].includes(report.phase) ||
     report.releaseDecision !== "not_approved" ||
     report.matrixSha256 !== sha256(JSON.stringify(matrix)) ||
     !Array.isArray(report.rows)
@@ -125,8 +125,11 @@ export function validateReport(report, matrix) {
       !isDeepStrictEqual(row.sourceSnapshots, contract.sourceSnapshots)
     )
       reject();
-    // This checkpoint has no protocol executors. A caller cannot promote an
-    // invented observation or an old readiness result into matrix evidence.
+    if (report.phase === "7B" && contract.owner === "task-7b") {
+      if (row.status !== "PASSED") reject();
+      continue;
+    }
+    // 7A has no executors; 7B cannot promote deferred 7C/external rows.
     if (!["BLOCKED", "NOT_APPLICABLE"].includes(row.status)) reject();
     if (contract.capabilityEvidence) {
       if (
@@ -136,16 +139,13 @@ export function validateReport(report, matrix) {
         reject();
     } else {
       const external = contract.requirement === "external";
+      const finalDeferred = report.phase === "7B" && contract.owner === "task-7c";
       const blocker = {
-        probe: external
-          ? "authorized-environment-absent"
-          : "driver-not-implemented",
+        probe: external ? "authorized-environment-absent" : finalDeferred ? "final-7c-not-executed" : "driver-not-implemented",
         expected: contract.driver,
-        observed: external ? "not-executed" : "not-implemented",
+        observed: external || finalDeferred ? "not-executed" : "not-implemented",
         owner: contract.owner,
-        remediation: external
-          ? "authorized-operator-required"
-          : "implement-and-review-driver",
+        remediation: external ? "authorized-operator-required" : finalDeferred ? "execute-applicable-final-7c" : "implement-and-review-driver",
       };
       if (
         row.status !== "BLOCKED" ||

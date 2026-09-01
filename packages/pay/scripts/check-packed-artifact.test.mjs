@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, chmod, cp, mkdtemp, mkdir, readFile, readdir, rm, writeFile, realpath } from "node:fs/promises";
+import { constants } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import test from "node:test";
 
@@ -432,4 +434,104 @@ test("rejects a packed manifest without the Node 22.12 baseline", async () => {
   } finally {
     await rm(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+// A disposable real CLI copy has no build inputs. Reaching its build is a
+// regression: invalid prerequisites must fail before build/public mutation.
+async function preflightFixture() {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "pay-artifact-preflight-")));
+  const sdk = join(root, "sdk");
+  const scripts = join(sdk, "packages/pay/scripts");
+  await cp(fileURLToPath(new URL("./", checker)), scripts, { recursive: true });
+  await cp(fileURLToPath(new URL("../../../internal/pay-conformance/fixtures", checker)), join(sdk, "internal/pay-conformance/fixtures"), { recursive: true });
+  await cp(fileURLToPath(new URL("../../../package.json", checker)), join(sdk, "package.json"));
+  const source = await readFile(new URL("../package.json", checker));
+  await writeFile(join(sdk, "packages/pay/package.json"), source);
+  for (const name of ["api-key-stamper", "crypto", "http", "viem"]) {
+    await mkdir(join(sdk, "packages", name), { recursive: true });
+    await cp(fileURLToPath(new URL(`../../${name}/package.json`, checker)), join(sdk, "packages", name, "package.json"));
+  }
+  const output = join(root, "github-output");
+  await writeFile(output, "prior=value\n");
+  return { root, sdk, source, output, checker: join(scripts, "check-packed-artifact.mjs") };
+}
+
+for (const [label, setup, expected] of [
+  ["missing explicit cache", async (f, env) => { delete env.PAY_ARTIFACT_NPM_CACHE; }, /PAY_ARTIFACT_CACHE_REQUIRED/],
+  ["empty cache", async (f, env) => { env.PAY_ARTIFACT_NPM_CACHE = join(f.root, "empty-cache"); await mkdir(env.PAY_ARTIFACT_NPM_CACHE); }, /PAY_ARTIFACT_CACHE_MISSING/],
+  ["nonempty explicit npm config", async (f, env) => { const path = join(f.root, "injected.npmrc"); await writeFile(path, "legacy-peer-deps=true\n"); env.NPM_CONFIG_USERCONFIG = path; env.npm_config_userconfig = path; }, /PAY_ARTIFACT_CONFIG_REJECTED/],
+  ["output file is a directory", async (f, env) => { env.GITHUB_OUTPUT = f.root; }, /PAY_ARTIFACT_OUTPUT_REJECTED/],
+  ["source dependency graph drift", async (f) => { const path = join(f.sdk, "packages/pay/package.json"); const value = JSON.parse(f.source); value.peerDependencies.mppx = "0.8.17"; f.source = Buffer.from(JSON.stringify(value)); await writeFile(path, f.source); }, /CONSUMER_MANIFEST_MISMATCH/],
+  ["output path control injection", async (f, env) => { f.destination = join(f.root, "pack\nforged=value"); }, /PAY_ARTIFACT_PATH_REJECTED/],
+]) test(`artifact CLI rejects ${label} before build, preserves source and output`, { timeout: 30_000 }, async () => {
+  const f = await preflightFixture();
+  const env = { ...process.env, GITHUB_OUTPUT: f.output };
+  await setup(f, env);
+  try {
+    await assert.rejects(execFileAsync(process.execPath, [f.checker, "--pack-destination", f.destination ?? join(f.root, "pack")], { cwd: f.root, env, timeout: 20_000 }), error => {
+      assert.match(error.stderr, expected);
+      assert.doesNotMatch(error.stdout, /rollup|> .*build/);
+      return true;
+    });
+    assert.deepEqual(await readFile(join(f.sdk, "packages/pay/package.json")), f.source);
+    assert.equal(await readFile(f.output, "utf8"), "prior=value\n");
+  } finally { await rm(f.root, { recursive: true, force: true }); }
+});
+
+test("preflight binds tool lookup to SDK context across a different caller cwd", { timeout: 30_000 }, async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["--input-type=module", "--eval", `const { prepareOfflineConsumer } = await import(${JSON.stringify(new URL("./offline-consumer.mjs", checker).href)}); console.log(JSON.stringify((await prepareOfflineConsumer()).identity));`], { cwd: tmpdir(), env: process.env });
+  const identity = JSON.parse(stdout);
+  assert.equal(identity.pnpm, "10.6.3");
+  assert.equal(identity.platform, process.platform);
+  assert.ok(identity.cacheContent.length > 250);
+});
+
+test("valid preflight inputs reach the actual build on an owned writable pack directory", { timeout: 30_000 }, async () => {
+  const f = await preflightFixture();
+  const destination = join(f.root, "pack");
+  await mkdir(destination);
+  await chmod(destination, 0o755);
+  try {
+    await access(destination, constants.W_OK | constants.X_OK);
+    await assert.rejects(execFileAsync(process.execPath, [f.checker, "--pack-destination", destination], { cwd: f.root, env: { ...process.env, GITHUB_OUTPUT: f.output }, timeout: 20_000 }), error => {
+      assert.match(error.stdout, /> .*build|rollup -c/);
+      assert.match(error.stderr, /Cannot find module .*rollup.config/);
+      return true;
+    });
+    assert.deepEqual(await readFile(join(f.sdk, "packages/pay/package.json")), f.source);
+    assert.equal(await readFile(f.output, "utf8"), "prior=value\n");
+  } finally {
+    await chmod(destination, 0o700);
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("readable searchable but nonwritable pack directory is rejected before build", { timeout: 30_000 }, async () => {
+  const f = await preflightFixture();
+  const destination = join(f.root, "pack");
+  await mkdir(destination);
+  await chmod(destination, 0o555);
+  try {
+    // Exercise actual OS access, not a mode-bit simulation or mocked write.
+    await access(destination, constants.R_OK | constants.X_OK);
+    await assert.rejects(access(destination, constants.W_OK), { code: "EACCES" });
+    await assert.rejects(execFileAsync(process.execPath, [f.checker, "--pack-destination", destination], { cwd: f.root, env: { ...process.env, GITHUB_OUTPUT: f.output }, timeout: 20_000 }), error => {
+      assert.match(error.stderr, /PAY_ARTIFACT_DESTINATION_REJECTED/);
+      assert.doesNotMatch(error.stdout, /rollup|> .*build/);
+      return true;
+    });
+  } finally {
+    await chmod(destination, 0o700);
+    try {
+      assert.deepEqual(await readFile(join(f.sdk, "packages/pay/package.json")), f.source);
+      assert.equal(await readFile(f.output, "utf8"), "prior=value\n");
+    } finally { await rm(f.root, { recursive: true, force: true }); }
+  }
+});
+
+test("isolated npm disables auxiliary update discovery", async () => {
+  const { prepareOfflineConsumer } = await import("./offline-consumer.mjs");
+  const preparation = await prepareOfflineConsumer();
+  const result = await execFileAsync(process.execPath, [preparation.npm, "config", "get", "update-notifier"], { env: preparation.env });
+  assert.equal(result.stdout.trim(), "false");
 });

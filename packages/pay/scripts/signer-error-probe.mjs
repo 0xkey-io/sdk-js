@@ -122,6 +122,7 @@ function challenge(protocol = "x402") {
                   methodDetails: {
                     chainId: 84532,
                     credentialTypes: ["authorization"],
+                    decimals: 6,
                   },
                 },
               }),

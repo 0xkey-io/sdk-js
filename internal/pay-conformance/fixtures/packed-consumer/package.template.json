@@ -1,0 +1,27 @@
+{
+  "name": "pay-conformance-packed-consumer",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@0xkey-io/pay": "file:__PAY_ARTIFACT__",
+    "@types/node": "24.7.1",
+    "@types/react": "19.1.17",
+    "@x402/core": "2.23.0",
+    "@x402/evm": "2.23.0",
+    "@x402/express": "2.23.0",
+    "@x402/fetch": "2.23.0",
+    "@x402/hono": "2.23.0",
+    "@x402/next": "2.23.0",
+    "express": "5.2.1",
+    "hono": "4.12.25",
+    "mppx": "0.8.19",
+    "native-mppx-17": "npm:mppx@0.8.17",
+    "native-mppx-19": "npm:mppx@0.8.19",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "typescript": "5.4.3",
+    "viem": "2.54.0",
+    "zod": "3.25.76"
+  }
+}

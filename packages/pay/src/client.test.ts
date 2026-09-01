@@ -174,7 +174,7 @@ test("MPP execution uses native-only wire decoding and preserves transport param
       amount: "10000",
       currency: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       recipient: payTo,
-      methodDetails: { chainId: 84532 },
+      methodDetails: { chainId: 84532, decimals: 6 },
     },
   };
   Challenge.fromResponseList.mockReturnValue([challenge]);
@@ -247,6 +247,68 @@ test("MPP execution uses native-only wire decoding and preserves transport param
     "PAYMENT-SIGNATURE",
   ])
     expect(attached.headers.has(header)).toBe(false);
+});
+
+test("MPP offer selection rejects non-USDC decimals before protocol execution", async () => {
+  const { Challenge } = jest.requireMock("mppx");
+  Challenge.fromResponseList.mockReturnValue([{
+    id: "wrong-decimals",
+    realm: "merchant.example",
+    method: "evm",
+    intent: "charge",
+    request: {
+      amount: "10000",
+      currency: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      recipient: payTo,
+      methodDetails: { chainId: 84532, decimals: 18 },
+    },
+  }]);
+  let calls = 0;
+  const client = createTestClient({
+    account,
+    allowHosts: ["merchant.example"],
+    maxAmount: "$0.01",
+    protocolPreference: ["mpp"],
+    fetch: async () => ++calls === 1
+      ? new Response(null, { status: 402, headers: { "WWW-Authenticate": "Payment native" } })
+      : new Response(null, { status: 204 }),
+  });
+  await expect(client.fetch("https://merchant.example/paid")).rejects.toMatchObject({
+    code: "PAYMENT_POLICY_DENIED",
+    phase: "policy",
+    retryable: false,
+  });
+  expect(calls).toBe(1);
+});
+
+test("MPP offer selection accepts the frozen Ruby canonical-USDC profile without a decimals extension", async () => {
+  const { Challenge } = jest.requireMock("mppx");
+  Challenge.fromResponseList.mockReturnValue([{
+    id: "ruby-canonical-usdc",
+    realm: "merchant.example",
+    method: "evm",
+    intent: "charge",
+    request: {
+      amount: "10000",
+      currency: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      recipient: payTo,
+      methodDetails: { chainId: 84532, credentialTypes: ["authorization"] },
+    },
+  }]);
+  let calls = 0;
+  const client = createTestClient({
+    account,
+    allowHosts: ["merchant.example"],
+    maxAmount: "$0.01",
+    protocolPreference: ["mpp"],
+    fetch: async () => ++calls === 1
+      ? new Response(null, { status: 402, headers: { "WWW-Authenticate": "Payment native" } })
+      : new Response(null, { status: 204 }),
+  });
+  await expect(client.fetch("https://merchant.example/paid")).rejects.toMatchObject({
+    code: "PAYMENT_OFFER_UNSUPPORTED",
+  });
+  expect(calls).toBe(1);
 });
 const baseSepoliaUsdc = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const transaction = `0x${"ab".repeat(32)}`;
@@ -1444,7 +1506,7 @@ describe("createPayClient", () => {
           amount: "10000",
           currency: baseSepoliaUsdc,
           recipient: payTo,
-          methodDetails: { chainId: 84532 },
+          methodDetails: { chainId: 84532, decimals: 6 },
         },
       },
       payload: {
@@ -1515,7 +1577,7 @@ describe("createPayClient", () => {
           amount: "10000",
           currency: baseSepoliaUsdc,
           recipient: payTo,
-          methodDetails: { chainId: 84532 },
+          methodDetails: { chainId: 84532, decimals: 6 },
         },
       },
       payload: {

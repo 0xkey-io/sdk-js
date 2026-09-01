@@ -5,6 +5,7 @@ import {
   type HTTPAdapter,
   type HTTPProcessResult,
 } from "@x402/core/server";
+import { decodePaymentSignatureHeader } from "@x402/core/http";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import type {
   PaymentPayload,
@@ -345,7 +346,7 @@ export function createPayServer(options: CreatePayServerOptions): PayServer {
           | undefined,
         getRequestFailure: () => RequestFailure | undefined,
       ): Promise<Response> {
-        const result = await server.processHTTPRequest(x402Context(request));
+        const result = await server.processHTTPRequest(x402PaymentContext(request));
         const requestFailure = getRequestFailure();
         if (requestFailure && requestFailure.status !== 402) {
           return errorResponse(
@@ -610,10 +611,23 @@ function canonicalMppRequest(request: Request): Request {
   return new Request(request, { headers });
 }
 
-function x402Context(request: Request) {
+function x402PaymentContext(request: Request) {
+  const paymentSignature = request.headers.get("PAYMENT-SIGNATURE") ?? "";
+  try {
+    decodePaymentSignatureHeader(paymentSignature);
+    return x402Context(request);
+  } catch {
+    return x402Context(request, true);
+  }
+}
+
+function x402Context(request: Request, suppressPaymentSignature = false) {
   const url = new URL(request.url);
   const adapter: HTTPAdapter = {
-    getHeader: (name) => request.headers.get(name) ?? undefined,
+    getHeader: (name) =>
+      suppressPaymentSignature && name.toLowerCase() === "payment-signature"
+        ? undefined
+        : request.headers.get(name) ?? undefined,
     getMethod: () => request.method,
     getPath: () => url.pathname,
     getUrl: () => request.url,
@@ -624,7 +638,7 @@ function x402Context(request: Request) {
     adapter,
     path: url.pathname,
     method: request.method,
-    ...(request.headers.get("PAYMENT-SIGNATURE")
+    ...(!suppressPaymentSignature && request.headers.get("PAYMENT-SIGNATURE")
       ? { paymentHeader: request.headers.get("PAYMENT-SIGNATURE")! }
       : {}),
   };

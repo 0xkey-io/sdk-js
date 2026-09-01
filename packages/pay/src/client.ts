@@ -1064,6 +1064,8 @@ function classifyPaymentChallenge(
       const requestNetwork = EvmTypes.networkOf(request.methodDetails.chainId);
       if (
         requestNetwork === network &&
+        (request.methodDetails.decimals === undefined ||
+          request.methodDetails.decimals === 6) &&
         supportedX402Requirement(requestNetwork, request.currency) &&
         BigInt(request.amount) <= maxAmountAtomic
       ) {
@@ -1227,6 +1229,12 @@ function inspectPendingPayment(
     const network = EvmTypes.networkOf(chargeRequest.methodDetails.chainId);
     if (network !== paymentNetwork) {
       throw new Error("MPP network does not match configured network");
+    }
+    if (
+      chargeRequest.methodDetails.decimals !== undefined &&
+      chargeRequest.methodDetails.decimals !== 6
+    ) {
+      throw new Error("MPP asset decimals are not canonical USDC");
     }
     const asset = baseUsdc(network);
     if (

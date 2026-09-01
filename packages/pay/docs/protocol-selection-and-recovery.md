@@ -146,6 +146,13 @@ The default order is x402, then MPP. `policy.preference` may change that order.
 The buyer accepts only enabled hosts, Base, canonical USDC, and an amount at or
 below `maxAmount`.
 
+For MPP `evm/charge`, canonical USDC also requires the explicit numeric field
+`request.methodDetails.decimals` to equal `6`. Missing and non-6 values are
+rejected before signing or protocol execution. The same invariant is checked
+when inspecting/restoring a saved MPP payment and when the MPP adapter validates
+a credential, so an invalid saved request is never resent or settled. This is
+an MPP wire requirement only; Pay does not invent an x402 decimals field.
+
 `network` is required and cannot be inferred. `policy` explicitly binds the
 host allowlist, amount ceiling, and optional preference. `recovery` is always a
 durable authenticated store. `verification` contains either one explicit RPC
@@ -307,7 +314,9 @@ It must not make a new signature. A normal `client.fetch(...)` call is blocked
 while a saved payment exists.
 
 On restart, `resume()` checks the saved payer, protocol, Base network, canonical
-USDC, amount, recipient, host, URL, method, headers, and body before sending.
+USDC, MPP `request.methodDetails.decimals === 6` where applicable, amount,
+recipient, host, URL, method, headers, and body before sending. A missing or
+non-6 MPP value fails closed before credential reuse or settlement.
 A v3 pending snapshot stores the selected network inside its authenticated
 record. It also stores the stable protocol id, literal adapter revision
 `pay-client-v1`, and a digest of the normalized EIP-3009 Economic Effect. The

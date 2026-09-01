@@ -40,29 +40,39 @@ export const transaction = "0x" + "ab".repeat(32);
 export const block = "0x" + "cd".repeat(32);
 export const requirements = { scheme: "exact", network, amount: "10000", asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", payTo: "0x1111111111111111111111111111111111111111", maxTimeoutSeconds: 300, extra: { name: "USDC", version: "2", assetTransferMethod: "eip3009", paymentFlow: "upfront" } };
 export const payload = { x402Version: 2, accepted: requirements, payload: { signature: "0x" + "11".repeat(65), authorization: { from: "0x2222222222222222222222222222222222222222", to: requirements.payTo, value: "10000", validAfter: "0", validBefore: "9999999999", nonce: "0x" + "22".repeat(32) } } };
-export function makeServer(core, evm, client, path = "/paid") {
+export function makeServer(core, evm, client, path = "/paid", method = "GET", priceProfile = "standard") {
+  check(["GET", "POST"].includes(method), "request-method-rejected");
+  check(["standard", "duplicate-second"].includes(priceProfile), "price-profile-rejected");
   const exact = new evm.ExactEvmScheme();
   const scheme = { scheme: exact.scheme, defaultAssetTransferMethod: exact.defaultAssetTransferMethod, paymentFlows: { eip3009: { supported: ["upfront"], default: "upfront" } }, parsePrice: exact.parsePrice.bind(exact), enhancePaymentRequirements: exact.enhancePaymentRequirements.bind(exact), getAssetDecimals: exact.getAssetDecimals.bind(exact) };
-  const routes = { [`GET ${path}`]: { accepts: { scheme: "exact", network, payTo: requirements.payTo, price: "$0.01", extra: { assetTransferMethod: "eip3009", paymentFlow: "upfront" } } } };
+  const routes = { [`${method} ${path}`]: { accepts: { scheme: "exact", network, payTo: requirements.payTo, price: priceProfile === "duplicate-second" ? "$0.005" : "$0.01", extra: { assetTransferMethod: "eip3009", paymentFlow: "upfront" } } } };
   assert.throws(() => new core.x402HTTPResourceServer(new core.x402ResourceServer(client).register(network, exact), routes), e => e.errors[0].reason === "unsupported_payment_flow");
   return new core.x402HTTPResourceServer(new core.x402ResourceServer(client).register(network, scheme), routes);
 }
-export function tlsFetch(ca, allowed) {
+export function tlsFetch(ca, allowed, redirectMode = "reject", timeoutProfile = "standard") {
+  check(["reject", "manual-response"].includes(redirectMode), "redirect-mode-rejected");
+  check(["standard", "seller-fulfillment-observer", "support-discovery-observer"].includes(timeoutProfile), "timeout-profile-rejected");
+  const timeoutMs = timeoutProfile === "standard" ? 5000 : 10000;
   return async (input, init) => {
+    const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
+    // Check caller-supplied strings before Request normalizes numeric/shortened
+    // IPv4 or percent-encoded hosts into an otherwise allowed loopback origin.
+    check(typeof raw === "string" && /^https:\/\/127\.0\.0\.1:[1-9][0-9]{0,4}(?:\/|$)/.test(raw) && !/[\s\\#]/.test(raw), "loopback-only-dispatch");
     const request = new Request(input, init), url = new URL(request.url);
     check(url.protocol === "https:" && url.hostname === "127.0.0.1" && allowed.has(url.origin) && !url.username && !url.password, "loopback-only-dispatch");
+    if (redirectMode === "manual-response") check(request.redirect === "manual", "manual-redirect-required");
     const body = Buffer.from(await request.arrayBuffer()); check(body.length <= 65536, "request-size-bound");
     return new Promise((accept, reject) => {
-      const req = https.request(url, { ca, rejectUnauthorized: true, agent: false, method: request.method, headers: Object.fromEntries(request.headers), signal: AbortSignal.any([request.signal, AbortSignal.timeout(5000)]) }, res => {
+      const req = https.request(url, { ca, rejectUnauthorized: true, agent: false, method: request.method, headers: Object.fromEntries(request.headers), signal: AbortSignal.any([request.signal, AbortSignal.timeout(timeoutMs)]) }, res => {
         const chunks = []; let length = 0;
         res.on("data", chunk => { length += chunk.length; if (length > 262144) req.destroy(new Error("response-size-bound")); else chunks.push(chunk); });
         res.on("error", reject); res.on("end", () => {
-          if (res.statusCode >= 300 && res.statusCode < 400) return reject(new Error("redirect-forbidden"));
+          if (res.statusCode >= 300 && res.statusCode < 400 && redirectMode === "reject") return reject(new Error("redirect-forbidden"));
           const response = new Response([204, 205, 304].includes(res.statusCode) ? null : Buffer.concat(chunks), { status: res.statusCode, headers: res.headers });
           Object.defineProperty(response, "url", { value: url.href }); accept(response);
         });
       });
-      req.setTimeout(5000, () => req.destroy(new Error("socket-timeout"))); req.on("error", reject); req.end(body);
+      req.setTimeout(timeoutMs, () => req.destroy(new Error("socket-timeout"))); req.on("error", reject); req.end(body);
     });
   };
 }

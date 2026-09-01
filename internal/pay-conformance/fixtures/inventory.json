@@ -1,5 +1,24 @@
 {
   "schemaVersion": "0xkey.pay.conformance-inputs/v1",
+  "consumerTemplate": {
+    "manager": "npm",
+    "inputs": [
+      { "path": "fixtures/packed-consumer/package.template.json", "sha256": "1f3543f2a003fc27902a0af42d9b36cee315f6d0d92a110f2f60a20d74595cac" },
+      { "path": "fixtures/packed-consumer/package-lock.template.json", "sha256": "2e0e1a8025e0168efd5c48b86f316ba59edc61dc7bb3a11572355638b057eb65" }
+    ],
+    "originalInputs": [
+      { "path": "package.json", "sha256": "83c60678de8efa3f96515abb1cd9406c35553d5703528e6fcb9f8e367d949703" },
+      { "path": "package-lock.json", "sha256": "bafb9796e818bc9e474d4a129abb2a3f9fb5184f605a5f6390c2681b046082c0" }
+    ],
+    "sourceArtifactSha256": "c66c2c0b3176f3629040d50c0e310051e22765df84b85391a468aba022550f80",
+    "metadataChanges": "Accepted prerequisite consumer graph, 358 package records. Renamed consumer root only; replaced the Pay dependency reference in manifest/root lock, Pay resolved and Pay integrity with explicit placeholders. All other dependency edges and package metadata preserved. Template is not a materialized install lock.",
+    "slots": [
+      ["package.template.json", "dependencies", "@0xkey-io/pay"],
+      ["package-lock.template.json", "packages", "", "dependencies", "@0xkey-io/pay"],
+      ["package-lock.template.json", "packages", "node_modules/@0xkey-io/pay", "resolved"],
+      ["package-lock.template.json", "packages", "node_modules/@0xkey-io/pay", "integrity"]
+    ]
+  },
   "toolchains": {
     "node": "24.3.0",
     "pnpm": "10.6.3",

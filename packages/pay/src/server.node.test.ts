@@ -230,6 +230,48 @@ test("protect emits independent standard offers and rejects ambiguous credential
   assert.equal(handlerCalls, 0);
 });
 
+for (const [label, paymentSignature] of [
+  ["invalid encoding", "%"],
+  ["invalid JSON", Buffer.from("{").toString("base64")],
+] as const) {
+  test(`malformed x402 ${label} returns the official unpaid challenge without invoking the handler`, async () => {
+    const calls: string[] = [];
+    let handlerCalls = 0;
+    const route = createPayServer({
+      network: "eip155:84532",
+      organizationId: ORG,
+      payTo: PAY_TO,
+      apiKey,
+      protocols: ["x402"],
+      async fetch(url) {
+        calls.push(String(url));
+        return Response.json({
+          kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+          extensions: [],
+          signers: {},
+        });
+      },
+    }).protect({ price: "$0.01" }, () => {
+      handlerCalls += 1;
+      return new Response("must not run");
+    });
+
+    const response = await route(new Request("https://merchant.example/weather", {
+      headers: { "PAYMENT-SIGNATURE": paymentSignature },
+    }));
+
+    assert.equal(response.status, 402);
+    assert.equal(response.headers.has("PAYMENT-REQUIRED"), true);
+    assert.equal(response.headers.has("PAYMENT-RESPONSE"), false);
+    assert.equal(
+      decodePaymentRequiredHeader(response.headers.get("PAYMENT-REQUIRED")!).error,
+      "Payment required",
+    );
+    assert.equal(handlerCalls, 0);
+    assert.deepEqual(calls, ["https://api-pay.0xkey.io/base-sepolia/supported"]);
+  });
+}
+
 test("route capability discovery clears rejected initialization and recovers on the next request", async () => {
   let supportedCalls = 0;
   const server = createPayServer({
@@ -856,6 +898,19 @@ test("MPP real credential is validated before command settlement and returns a s
           methodDetails: {
             ...(submitted.challenge.request.methodDetails as object),
             chainId: 8453,
+          },
+        },
+      },
+    }),
+    Credential.serialize({
+      ...submitted,
+      challenge: {
+        ...submitted.challenge,
+        request: {
+          ...submitted.challenge.request,
+          methodDetails: {
+            ...(submitted.challenge.request.methodDetails as object),
+            decimals: 18,
           },
         },
       },

@@ -5,6 +5,65 @@ and unverified registry observations, not an accepted PAY-TIP or a GA claim.
 Local tests use synthetic data only. Actual publication, collection, upload,
 export and cryptographic acceptance require separately authorized operations.
 
+## Offline checked-artifact prerequisites
+
+`node packages/pay/scripts/check-packed-artifact.mjs --pack-destination PATH`
+retains its build, temporary public-manifest pack, exact source restoration,
+all tar checks, both default-owner `npm ls` checks, ESM/CJS imports, both native
+runtime smokes, both public TypeScript fixtures and compiler invocation, and
+success-only `GITHUB_OUTPUT`. `--verify-only TARBALL` still checks only the tar;
+it is not installation or original CLI evidence.
+
+Before building, supply `PAY_ARTIFACT_NPM_CACHE` naming an existing separately
+provisioned cache, plus explicit empty regular-file `NPM_CONFIG_USERCONFIG`
+and `NPM_CONFIG_GLOBALCONFIG` paths. Lowercase npm spellings are supported;
+if both cases are present they must agree. No tool install, resolver, online
+fallback, `npm cache add`, account npmrc discovery, or credential input is
+provided. Install subprocesses use a clean allowlist environment, offline
+mode, disabled lifecycle scripts/audit/funding/update discovery, and strict
+peers. Build preserves PATH/Corepack context. HOME/home/CODEX_HOME are not
+reassigned. A trusted fresh Node invocation remains required: a child-env
+allowlist cannot undo hostile code already executed by a parent Node preload.
+
+The release-owned `scripts/fixed-consumer.mjs` independently pins the raw
+manifest SHA256 `1f3543f2a003fc27902a0af42d9b36cee315f6d0d92a110f2f60a20d74595cac`
+and lock SHA256 `2e0e1a8025e0168efd5c48b86f316ba59edc61dc7bb3a11572355638b057eb65`.
+The existing templates stay in `internal/pay-conformance/fixtures/packed-consumer/`;
+the private conformance adapter retains its stricter canonical ASCII bindings.
+No harness/matrix code runs in the release checker. The 358-record graph has
+only four mutable Pay slots: manifest file reference, root lock file reference,
+installed Pay resolved reference and SHA512 SRI derived from actual tar bytes.
+Source workspace versions and packed metadata must match that graph.
+
+`offline-consumer.mjs` reads required cache content through the selected npm's
+bundled `cacache.get.stream.byDigest`, the same verified-integrity lookup used
+by pacote for resolved+integrity lock entries. Cache directory/index presence
+is insufficient; content-only cache acceptance is covered by actual offline
+`npm ci`. Only explicitly host-incompatible optional platform records can lack
+cache content. Installed owners also permit the one pinned orphan
+`@emnapi/runtime` only when its sole parent `@img/sharp-wasm32` is absent and
+host-incompatible; emnapi cache bytes remain mandatory. All other installed
+owners, lock-owned dependency metadata and exact Pay payload are verified.
+
+After pack/restoration, a canonical owned temporary parent receives a new
+consumer child. The exact manifest/lock hashes must survive
+`npm ci --offline --ignore-scripts --no-audit --no-fund --strict-peer-deps`.
+Tar/templates/graph are checked again before output. Spaces, Unicode, relative
+and absolute destinations and different caller working directories remain
+admitted; macOS temporary aliases are canonicalized for consumer bindings.
+Control characters in artifact/output paths are rejected. No caller directory
+is removed to satisfy the new-consumer rule.
+
+Known tool contexts are local npm **11.4.2** and the existing publisher's npm
+**11.5.1**, with SDK pnpm **10.6.3** and the public Node >=22.12 baseline retained.
+Local verification records actual Node/npm/pnpm and platform identities; it
+does not prove Linux/npm11.5.1 or Windows runtime support. Publisher workflows
+are unchanged by this local tooling change. Their existing pnpm installation
+does not provision the separate npm graph cache: future reviewed explicit
+Linux/npm11.5.1 cache/config provisioning and the complete original CLI on that
+context remain required before publisher readiness. Missing cache fails closed
+before build; local success cannot waive that gate.
+
 ## Before publication: preserve the original
 
 The dedicated publisher first runs the existing checked pack/install/import

@@ -1,15 +1,22 @@
+import { createHash } from "node:crypto";
+import { materializeConsumer, verifyConsumer, verifySourceGraph } from "./fixed-consumer.mjs";
+import { prepareOfflineConsumer, safeArtifactPath } from "./offline-consumer.mjs";
 import { execFile, spawn } from "node:child_process";
 import {
   appendFile,
+  access,
+  lstat,
   mkdtemp,
   mkdir,
   readFile,
+  realpath,
   readdir,
   rm,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { constants } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual, promisify } from "node:util";
 
@@ -227,44 +234,25 @@ async function verifyTarball(tarball, sourceManifest) {
   return manifest;
 }
 
-async function externalInstallSmoke(tarball) {
-  const externalRoot = await mkdtemp(join(tmpdir(), "oxkey-pay-external-"));
+async function externalInstallSmoke(tarball, preparation) {
+  const parent = await realpath(await mkdtemp(join(tmpdir(), "oxkey-pay-external-")));
+  const externalRoot = join(parent, "consumer");
+  const binding = { directory: externalRoot, artifact: await realpath(tarball), artifactSha256: createHash("sha256").update(await readFile(tarball)).digest("hex") };
+  const env = preparation.env;
   try {
-    const [major, minor] = process.versions.node.split(".").map(Number);
-    if (major < 22 || (major === 22 && minor < 12)) {
-      throw new Error(
-        "CJS smoke requires the declared Node >=22.12.0 baseline",
-      );
-    }
-    await writeFile(
-      join(externalRoot, "package.json"),
-      `${JSON.stringify({ name: "pay-artifact-smoke", private: true, type: "module" })}\n`,
-    );
-    await run(
-      process.platform === "win32" ? "npm.cmd" : "npm",
-      [
-        "install",
-        "--ignore-scripts",
-        "--no-audit",
-        "--no-fund",
-        "--no-package-lock",
-        "--strict-peer-deps",
-        `--registry=${publicRegistry}`,
-        tarball,
-        "@x402/express@2.23.0",
-        "express@5.2.1",
-      ],
-      { cwd: externalRoot },
-    );
+    const before = await materializeConsumer(binding);
+    await run(process.execPath, [preparation.npm, "ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--strict-peer-deps"], { cwd: externalRoot, env });
+    const after = await verifyConsumer(binding, true);
+    if (before.manifestSha256 !== after.manifestSha256 || before.lockSha256 !== after.lockSha256) throw new Error("CONSUMER_GRAPH_MISMATCH");
     await run(
       process.platform === "win32" ? "npm.cmd" : "npm",
       ["ls", "mppx", "--all"],
-      { cwd: externalRoot },
+      { cwd: externalRoot, env },
     );
     const { stdout: mppxPaths } = await execFileAsync(
       process.platform === "win32" ? "npm.cmd" : "npm",
       ["ls", "mppx", "--all", "--parseable"],
-      { cwd: externalRoot },
+      { cwd: externalRoot, env },
     );
     const installedMppx = mppxPaths.trim().split("\n").filter(Boolean);
     if (installedMppx.length !== 1) {
@@ -275,12 +263,12 @@ async function externalInstallSmoke(tarball) {
     await run(
       process.platform === "win32" ? "npm.cmd" : "npm",
       ["ls", "@x402/core", "--all"],
-      { cwd: externalRoot },
+      { cwd: externalRoot, env },
     );
     const { stdout: x402CorePaths } = await execFileAsync(
       process.platform === "win32" ? "npm.cmd" : "npm",
       ["ls", "@x402/core", "--all", "--parseable"],
-      { cwd: externalRoot },
+      { cwd: externalRoot, env },
     );
     const installedX402Core = x402CorePaths.trim().split("\n").filter(Boolean);
     if (installedX402Core.length !== 1) {
@@ -291,7 +279,7 @@ async function externalInstallSmoke(tarball) {
     await run(
       process.platform === "win32" ? "npm.cmd" : "npm",
       ["ls", "viem", "--all"],
-      { cwd: externalRoot },
+      { cwd: externalRoot, env },
     );
     await run(
       process.execPath,
@@ -316,7 +304,7 @@ async function externalInstallSmoke(tarball) {
           'if ("createPayFetch" in client || "createPayFetch" in root) throw new Error("legacy createPayFetch is exported");',
         ].join("\n"),
       ],
-      { cwd: externalRoot },
+      { cwd: externalRoot, env },
     );
     await writeFile(
       join(externalRoot, "mpp-runtime-smoke.mjs"),
@@ -327,10 +315,10 @@ async function externalInstallSmoke(tarball) {
       mppRuntimeSmoke("cjs"),
     );
     await run(process.execPath, ["mpp-runtime-smoke.mjs"], {
-      cwd: externalRoot,
+      cwd: externalRoot, env,
     });
     await run(process.execPath, ["mpp-runtime-smoke.cjs"], {
-      cwd: externalRoot,
+      cwd: externalRoot, env,
     });
     await run(
       process.execPath,
@@ -342,7 +330,7 @@ async function externalInstallSmoke(tarball) {
           "for (const entry of entries) require(entry);",
         ].join("\n"),
       ],
-      { cwd: externalRoot },
+      { cwd: externalRoot, env },
     );
     await writeFile(
       join(externalRoot, "public-contract.ts"),
@@ -388,10 +376,13 @@ async function externalInstallSmoke(tarball) {
         ? join(packageRoot, "node_modules", ".bin", "tsc.cmd")
         : join(packageRoot, "node_modules", ".bin", "tsc"),
       ["-p", "tsconfig.json", "--pretty", "false"],
-      { cwd: externalRoot },
+      { cwd: externalRoot, env },
     );
+    const final = await verifyConsumer(binding, true);
+    if (before.manifestSha256 !== final.manifestSha256 || before.lockSha256 !== final.lockSha256) throw new Error("CONSUMER_GRAPH_MISMATCH");
+    return final;
   } finally {
-    await rm(externalRoot, { recursive: true, force: true });
+    await rm(parent, { recursive: true, force: true });
   }
 }
 
@@ -543,12 +534,12 @@ function mppRuntimeSmoke(moduleKind) {
 
 function parseArguments(args) {
   if (args[0] === "--verify-only" && args.length === 2) {
-    return { verifyOnly: resolve(args[1]) };
+    return { verifyOnly: safeArtifactPath(args[1]) };
   }
 
   if (args.length === 0) return {};
   if (args[0] === "--pack-destination" && args.length === 2) {
-    return { packDestination: resolve(args[1]) };
+    return { packDestination: safeArtifactPath(args[1]) };
   }
 
   throw new Error(
@@ -566,9 +557,19 @@ async function main(args) {
     return;
   }
 
+  if (process.env.GITHUB_OUTPUT) {
+    const output = safeArtifactPath(process.env.GITHUB_OUTPUT);
+    try {
+      await access(dirname(output), constants.W_OK);
+      try { if (!(await lstat(output)).isFile()) throw new Error("invalid output"); await access(output, constants.W_OK); }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
+    } catch { throw new Error("PAY_ARTIFACT_OUTPUT_REJECTED"); }
+  }
+  const preparation = await prepareOfflineConsumer();
   const manifestPath = join(packageRoot, "package.json");
   const sourceManifest = JSON.parse(await readFile(manifestPath, "utf8"));
   assertSourceManifest(sourceManifest);
+  await verifySourceGraph(sourceManifest, packageRoot);
   const ownsPackDirectory = !options.packDestination;
   const packDirectory =
     options.packDestination ??
@@ -576,6 +577,9 @@ async function main(args) {
 
   try {
     await mkdir(packDirectory, { recursive: true });
+    try {
+      await access(packDirectory, constants.W_OK | constants.X_OK);
+    } catch { throw new Error("PAY_ARTIFACT_DESTINATION_REJECTED"); }
     const existingTarballs = (await readdir(packDirectory)).filter((entry) =>
       entry.endsWith(".tgz"),
     );
@@ -588,13 +592,13 @@ async function main(args) {
     await run(
       process.platform === "win32" ? "pnpm.cmd" : "pnpm",
       ["run", "build"],
-      { cwd: packageRoot },
+      { cwd: packageRoot, env: preparation.env },
     );
     await withPublicPayManifest(manifestPath, async () =>
       run(
         process.platform === "win32" ? "pnpm.cmd" : "pnpm",
         ["pack", "--pack-destination", packDirectory],
-        { cwd: packageRoot },
+        { cwd: packageRoot, env: preparation.env },
       ),
     );
 
@@ -609,12 +613,17 @@ async function main(args) {
 
     const tarball = resolve(packDirectory, tarballs[0]);
     await verifyTarball(tarball, sourceManifest);
-    await externalInstallSmoke(tarball);
+    const consumer = await externalInstallSmoke(tarball, preparation);
+    await verifyTarball(tarball, sourceManifest);
+    if (createHash("sha256").update(await readFile(tarball)).digest("hex") !== consumer.artifactSha256) throw new Error("CONSUMER_ARTIFACT_MISMATCH");
+    const finalPreparation = await prepareOfflineConsumer();
+    if (!isDeepStrictEqual(finalPreparation.identity, preparation.identity)) throw new Error("PAY_ARTIFACT_INPUT_CHANGED");
 
     if (options.packDestination && process.env.GITHUB_OUTPUT) {
       await appendFile(process.env.GITHUB_OUTPUT, `tarball=${tarball}\n`);
     }
 
+    process.stdout.write(`Pay exact-graph evidence ${JSON.stringify({ toolchain: preparation.identity, consumer })}\n`);
     process.stdout.write(
       `Packed, verified, installed, and imported ${basename(tarball)}\n`,
     );

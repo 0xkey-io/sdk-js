@@ -46,6 +46,12 @@ export class MppEvmChargeAdapter {
     if (request.methodDetails.chainId !== expectedChainId) {
       throw new Error("PAYMENT_CHALLENGE_INVALID: MPP network mismatch");
     }
+    if (
+      request.methodDetails.decimals !== undefined &&
+      request.methodDetails.decimals !== 6
+    ) {
+      throw new Error("PAYMENT_CHALLENGE_INVALID: MPP asset decimals mismatch");
+    }
     return {
       protocolId: "mpp-evm-charge-v0",
       adapterRevision: "mpp-evm-charge-v0",
@@ -130,6 +136,12 @@ export function assertMppCredentialHasNoUnknownExtensions(header: string): void 
   const methodDetails = normalized.challenge.request.methodDetails;
   if (!methodDetails || typeof methodDetails !== "object" || Array.isArray(methodDetails)) {
     throw new Error("PAYMENT_CHALLENGE_INVALID: invalid MPP method details");
+  }
+  if (
+    (methodDetails as Record<string, unknown>).decimals !== undefined &&
+    (methodDetails as Record<string, unknown>).decimals !== 6
+  ) {
+    throw new Error("PAYMENT_CHALLENGE_INVALID: MPP asset decimals mismatch");
   }
 }
 

@@ -1,8 +1,15 @@
 import { createHash } from "node:crypto";
+import { lstat,unlink } from "node:fs/promises";
 
 export const sha256 = (bytes) =>
   createHash("sha256").update(bytes).digest("hex");
 export const digestPattern = /^(?!0{64}$)[a-f0-9]{64}$/;
+
+export async function deleteRawOutput(path){
+  try{await unlink(path);}catch{throw new Error("RAW_OUTPUT_DELETE_FAILED");}
+  try{await lstat(path);}catch(error){if(error?.code==="ENOENT")return true;throw new Error("RAW_OUTPUT_DELETE_FAILED");}
+  throw new Error("RAW_OUTPUT_DELETE_FAILED");
+}
 const counters = new Set([
   "sign",
   "save",

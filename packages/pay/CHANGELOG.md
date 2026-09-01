@@ -2,6 +2,19 @@
 
 ## 1.0.0-rc.1
 
+- Require MPP `evm/charge` `request.methodDetails.decimals` to be the numeric
+  value `6` at initial offer selection, saved-payment inspection/resume, adapter
+  conversion, and credential validation. Missing or non-6 values fail closed
+  before signing, resending, or settlement. This is MPP-only and does not add
+  an x402 decimals field.
+
+- Quietly precheck protected x402 credentials with the official header decoder.
+  If it throws for invalid encoding or JSON, keep the original request but omit
+  the credential from the official resource server's HTTP context so that it
+  returns its ordinary unpaid `402` `Payment required` challenge, without a
+  receipt or handler call. Decodable JSON, MPP, dual-credential and disabled-
+  protocol handling are unchanged; no dependency or public option is added.
+
 - Select protocols by independent wire decoders and restrict MPP execution to
   native Payment HTTP challenges. Preserve opaque realm/id values, including
   realm `x402`, without protocol guessing or realm-to-host equality. Keep the

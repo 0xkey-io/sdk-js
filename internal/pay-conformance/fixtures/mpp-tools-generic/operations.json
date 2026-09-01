@@ -1,0 +1,126 @@
+{
+  "$schema": "./schemas/operation-registry.schema.json",
+  "schema": 1,
+  "operations": {
+    "challenge.parse": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/HeaderInput",
+      "successRef": "protocol.schema.json#/$defs/Challenge",
+      "errorTypes": ["parse_error"],
+      "comparison": "semantic",
+      "description": "Parse a WWW-Authenticate Payment challenge header into a canonical challenge object."
+    },
+    "challenge.format": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/Challenge",
+      "successRef": "protocol.schema.json#/$defs/HeaderOutput",
+      "errorTypes": ["format_error"],
+      "comparison": "semantic",
+      "description": "Format a canonical challenge object as a WWW-Authenticate Payment header."
+    },
+    "credential.parse": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/HeaderInput",
+      "successRef": "protocol.schema.json#/$defs/Credential",
+      "errorTypes": ["parse_error"],
+      "comparison": "semantic",
+      "description": "Parse an Authorization Payment credential header into a canonical credential object."
+    },
+    "credential.format": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/Credential",
+      "successRef": "protocol.schema.json#/$defs/HeaderOutput",
+      "errorTypes": ["format_error"],
+      "comparison": "semantic",
+      "description": "Format a canonical credential object as an Authorization Payment header."
+    },
+    "receipt.parse": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/HeaderInput",
+      "successRef": "protocol.schema.json#/$defs/Receipt",
+      "errorTypes": ["parse_error"],
+      "comparison": "semantic",
+      "description": "Parse a Payment-Receipt header into a canonical receipt object."
+    },
+    "receipt.format": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/Receipt",
+      "successRef": "protocol.schema.json#/$defs/HeaderOutput",
+      "errorTypes": ["format_error"],
+      "comparison": "semantic",
+      "description": "Format a canonical receipt object as a Payment-Receipt header value."
+    },
+    "base64url.encode": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/TextValue",
+      "successRef": "protocol.schema.json#/$defs/TextValue",
+      "errorTypes": ["encoding_error"],
+      "comparison": "exact",
+      "description": "Encode UTF-8 text as unpadded RFC4648 base64url text."
+    },
+    "base64url.decode": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/TextValue",
+      "successRef": "protocol.schema.json#/$defs/TextValue",
+      "errorTypes": ["encoding_error"],
+      "comparison": "exact",
+      "description": "Decode unpadded RFC4648 base64url text into UTF-8 text."
+    },
+    "challenge.id": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/ChallengeIdInput",
+      "successRef": "protocol.schema.json#/$defs/ChallengeIdOutput",
+      "errorTypes": ["generation_error"],
+      "comparison": "exact",
+      "description": "Generate a deterministic challenge id from canonical challenge id parameters."
+    },
+    "stripe.external_id_binding": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/StripeExternalIdBindingInput",
+      "successRef": "protocol.schema.json#/$defs/StripeExternalIdBindingResult",
+      "errorTypes": ["verification_error"],
+      "comparison": "exact",
+      "description": "Verify Stripe charge receipt attribution uses only the server-bound request externalId and cannot be forged from credential payload."
+    },
+    "tempo.proof.typed_data": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/TempoProofInput",
+      "successRef": "protocol.schema.json#/$defs/TempoProofTypedData",
+      "errorTypes": ["generation_error"],
+      "comparison": "exact",
+      "description": "Generate the EIP-712 typed-data shape for a zero-amount Tempo proof credential."
+    },
+    "http.payment_request": {
+      "category": "flow",
+      "inputRef": "protocol.schema.json#/$defs/HttpPaymentRequest",
+      "successRef": "protocol.schema.json#/$defs/HttpResponse",
+      "errorTypes": ["http_error"],
+      "comparison": "http",
+      "description": "Send one normalized HTTP request through the SDK payment-aware transport."
+    },
+    "server.verify": {
+      "category": "server",
+      "inputRef": "protocol.schema.json#/$defs/ServerVerifyRequest",
+      "successRef": "protocol.schema.json#/$defs/ServerVerifyResult",
+      "errorTypes": ["verification_error"],
+      "comparison": "exact",
+      "description": "Verify one normalized server credential against route parameters and return the normalized verification outcome."
+    },
+    "tempo.fee_payer.cosign": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/TempoFeePayerCosignInput",
+      "successRef": "protocol.schema.json#/$defs/TempoFeePayerCosignOutput",
+      "errorTypes": ["verification_error"],
+      "comparison": "exact",
+      "description": "Co-sign a Tempo fee-payer envelope with a sponsor and enforce sponsor policy."
+    },
+    "tempo.receipt.verify": {
+      "category": "vector",
+      "inputRef": "protocol.schema.json#/$defs/TempoReceiptVerificationInput",
+      "successRef": "protocol.schema.json#/$defs/TempoReceiptVerificationOutput",
+      "errorTypes": ["verification_error"],
+      "comparison": "exact",
+      "description": "Verify a Tempo credential against a supplied receipt fixture. This is an optional staged capability until full signed transaction verification vectors are available."
+    }
+  }
+}

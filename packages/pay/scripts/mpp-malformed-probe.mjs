@@ -265,14 +265,15 @@ async function malformed(route, credential, label, profile) {
   const body = JSON.parse(observed.body);
   // Empty typed payload reaches native method validation (not raw decoding).
   // Preserve mppx's InvalidPayloadError instead of duplicating its schema.
-  // Empty methodDetails alters the echoed challenge and fails its HMAC check;
-  // this is not evidence of rejection by the methodDetails schema itself.
+  // Current packed Pay and direct native adapter boundaries both classify an
+  // empty methodDetails credential as malformed-credential. This remains a
+  // wire classification, not proof of a standalone methodDetails schema.
   const problemType =
     label === "payload-missing-fields"
       ? "invalid-payload"
       : label === "methodDetails-missing-fields"
         ? "invalid-challenge"
-        : "malformed-credential";
+      : "malformed-credential";
   assert.equal(
     body.type,
     `https://paymentauth.org/problems/${problemType}`,

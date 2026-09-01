@@ -43,22 +43,10 @@ export async function isolatedEnvironment(
   });
 }
 
-const groupPresent = (pid) => {
-  try {
-    process.kill(-pid, 0);
-    return true;
-  } catch (error) {
-    if (error.code === "ESRCH") return false;
-    throw error;
-  }
-};
-const killGroup = (pid) => {
-  try {
-    process.kill(-pid, "SIGKILL");
-  } catch (error) {
-    if (error.code !== "ESRCH") throw error;
-  }
-};
+// Error messages and arbitrary error codes may contain fixture output. Keep only
+// the errno vocabulary needed to distinguish absence from denied/unknown state.
+const errno = (error) =>
+  ["ESRCH", "EPERM", "EACCES"].includes(error?.code) ? error.code : "UNKNOWN";
 
 // Trusted, repository-owned fixture processes only; this is not an OS sandbox.
 // The child must announce versions and wait for the start message before I/O.
@@ -126,20 +114,77 @@ export async function runProcess({
   });
   const lifecycle = [],
     chunks = [],
-    errorChunks = [];
+    errorChunks = [],
+    timeline = [],
+    cleanupErrors = [];
   let reason = null,
     length = 0,
     buffer = "",
     forced = false,
-    observedVersions = {};
-  const stop = (code) => {
-    reason ??= code;
-    if (child.pid) {
-      forced = true;
-      killGroup(child.pid);
+    observedVersions = {},
+    exitObserved = false,
+    closeObserved = false,
+    stdioAbandoned = false,
+    cleanupDeadline = null,
+    cleanupTimer,
+    settleClose,
+    droppedEvents = 0;
+  const record = (type, fields = {}) => {
+    if (timeline.length < 128)
+      timeline.push({ atMs: Math.round(performance.now() - start), type, ...fields });
+    else droppedEvents++;
+  };
+  const cleanupError = (operation, code) => {
+    if (!cleanupErrors.some((value) => value.operation === operation && value.code === code))
+      cleanupErrors.push({ operation, code });
+  };
+  const probe = () => {
+    if (!child.pid) return "absent";
+    try {
+      process.kill(-child.pid, 0);
+      record("probe", { state: "present", code: null });
+      return "present";
+    } catch (error) {
+      const code = errno(error), state = code === "ESRCH" ? "absent" : "unknown";
+      record("probe", { state, code });
+      if (state === "unknown") cleanupError("probe", code);
+      return state;
     }
   };
-  child.on("spawn", () => lifecycle.push("spawned"));
+  const stop = (code) => {
+    reason ??= code;
+    if (cleanupDeadline === null) {
+      record("stop", { code });
+      cleanupDeadline = performance.now() + 1000;
+      cleanupTimer = setTimeout(() => {
+        if (!closeObserved) {
+          stdioAbandoned = true;
+          record("close-unobserved");
+          // A denied signal must return bounded UNKNOWN evidence, not hang.
+          // Releasing local handles does not establish process/group cleanup.
+          child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy();
+          child.unref();
+          settleClose({ exitCode: child.exitCode, signal: child.signalCode });
+        }
+      }, 1000);
+    }
+    // This is a conservative Node child-lifecycle guard, not an atomic OS start
+    // identity guarantee. Never resignal or signal an exited/closed PID group.
+    if (child.pid && !forced && !exitObserved && !closeObserved &&
+        child.exitCode === null && child.signalCode === null) {
+      forced = true;
+      try {
+        process.kill(-child.pid, "SIGKILL");
+        record("signal", { code: null });
+      } catch (error) {
+        const code = errno(error);
+        record("signal", { code });
+        if (code !== "ESRCH") cleanupError("signal", code);
+      }
+    }
+  };
+  child.on("spawn", () => { lifecycle.push("spawned"); record("spawn"); });
+  child.on("exit", () => { exitObserved = true; record("exit"); });
   child.stdin.on("error", () => {});
   child.stdout.on("data", (chunk) => {
     length += chunk.length;
@@ -189,30 +234,40 @@ export async function runProcess({
   });
   const timer = setTimeout(() => stop("TIMEOUT"), timeoutMs);
   const { exitCode, signal } = await new Promise((resolve) => {
+    settleClose = resolve;
     child.on("error", () => {
       reason ??= "SPAWN_FAILED";
+      record("spawn-error");
     });
-    child.on("close", (exitCode, signal) => resolve({ exitCode, signal }));
+    child.on("close", (exitCode, signal) => {
+      closeObserved = true;
+      record("close");
+      resolve({ exitCode, signal });
+    });
   });
   clearTimeout(timer);
-  if (child.pid && groupPresent(child.pid)) {
-    stop("PROCESS_LEAK");
-  }
-  for (
-    let attempt = 0;
-    child.pid && groupPresent(child.pid) && attempt < 50;
-    attempt++
-  )
-    await delay(20);
-  const groupAbsent = !child.pid || !groupPresent(child.pid);
-  if (groupAbsent && lifecycle.length) lifecycle.push("closed");
-  if (!groupAbsent) reason ??= "CLEANUP_FAILED";
-  if (buffer) reason ??= "CONTROL_TRUNCATED";
+  clearTimeout(cleanupTimer);
   const stderrBytes = Buffer.concat(errorChunks);
+  if (buffer) reason ??= "CONTROL_TRUNCATED";
   if (!reason && exitCode !== 0) reason = "EXIT_NONZERO";
   if (!reason && stderrBytes.length) reason = "STDERR_PRESENT";
   if (!reason && !lifecycle.includes("completed"))
     reason = "CONTROL_INCOMPLETE";
+  let cleanupState = probe();
+  if (cleanupState === "present") reason ??= "PROCESS_LEAK";
+  // Observations only after child exit/close: a numeric PGID is not renewed
+  // authority to signal. EPERM may be transient but never proves absence.
+  const observeUntil = cleanupDeadline ?? performance.now() + 1000;
+  for (let attempt = 0;
+    closeObserved && cleanupState !== "absent" && attempt < 50 && performance.now() < observeUntil;
+    attempt++) {
+    await delay(Math.min(20, Math.max(0, observeUntil - performance.now())));
+    cleanupState = probe();
+  }
+  if (stdioAbandoned) cleanupState = "unknown";
+  const groupAbsent = cleanupState === "absent";
+  if (groupAbsent && lifecycle.length) lifecycle.push("closed");
+  if (!groupAbsent || cleanupErrors.length) reason ??= "CLEANUP_FAILED";
   const status = !reason
     ? "PASSED"
     : reason === "SPAWN_FAILED"
@@ -228,6 +283,7 @@ export async function runProcess({
   return {
     status,
     reason,
+    command: [...command],
     exitCode,
     signal,
     startedAt,
@@ -238,5 +294,15 @@ export async function runProcess({
     stdout: redactOutput(Buffer.concat(chunks)),
     stderr: { bytes: stderrBytes.length, sha256: sha256(stderrBytes) },
     cleanup: { groupAbsent, forced },
+    diagnostics: {
+      cleanupState, cleanupErrors, closeObserved, stdioAbandoned,
+      ownership: {
+        pid: child.pid ?? null,
+        expectedPgid: child.pid ?? null,
+        basis: "node-child-lifecycle-guard",
+        exitObserved,
+      },
+      timeline: timeline.map((event) => ({ ...event })), droppedEvents,
+    },
   };
 }

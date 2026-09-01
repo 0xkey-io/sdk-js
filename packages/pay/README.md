@@ -83,6 +83,14 @@ for a disabled protocol remain `400`; settlement dependency/UNKNOWN responses
 remain non-402 without a fresh challenge. A buyer with a saved credential must
 not sign a replacement even when it receives a fresh challenge.
 
+For `protect()`, an x402 `PAYMENT-SIGNATURE` whose official header decoder
+throws (including invalid encoding or invalid JSON) is absent only from the
+official resource server's HTTP context. The original request remains the Pay
+request, while the resource server returns its ordinary unpaid `402` with
+`Payment required`, no receipt, and no handler call. Decodable JSON, including
+`payload: null`, continues to official matching and adapter validation. The
+dual-credential and disabled-protocol `400` guards run first; MPP is unchanged.
+
 For direct x402 integration, pass `facilitatorResponseError:
 FacilitatorResponseError`, imported from the same public `@x402/core/server`
 module that owns the consumer's resource/HTTP server and framework catch.
@@ -163,6 +171,11 @@ by x402 and MPP; Pay does not copy a second wallet adapter. See the tested
 The buyer does not replace global `fetch`. It never falls back after signing.
 Protocol selection follows independently decoded wire offers. The MPP path
 accepts only native Payment HTTP challenges, not mppx's x402/MCP bridge.
+An MPP `evm/charge` request must contain numeric
+`request.methodDetails.decimals` equal to `6`, in addition to the canonical
+Base USDC address. A missing or non-6 value is rejected before signing or
+protocol execution. This field rule is MPP-specific; x402 has no corresponding
+Pay decimals field.
 MPP realms are protection-space labels: `x402`, `billing`, and other valid
 labels are preserved exactly, not interpreted as protocols or URL hosts.
 HTTPS and the actual request host allowlist still apply.
@@ -263,7 +276,10 @@ credential, receipt, or the complete Economic Effect. The encrypted store owns
 the full version-3 record; do not log or manually move its plaintext.
 
 On restore, the SDK uses mppx schemas to check the payer, Base network,
-canonical USDC, amount limit, recipient, and challenge. The authenticated
+canonical USDC, exact MPP `request.methodDetails.decimals === 6`, amount limit,
+recipient, and challenge. A saved MPP request with a missing or non-6 decimals
+value fails closed before its credential is resent. Seller-side MPP adapter and
+credential validation enforce the same rule before settlement. The authenticated
 stored snapshot binds the original URL, method, headers, and body.
 Pending-payment format v3 binds the selected network, stable protocol id,
 literal adapter revision `pay-client-v1`, Economic Effect digest, URL, method,
@@ -322,8 +338,38 @@ builds and immediately before publishing. Only a direct same-repository
 default-branch dispatch is accepted; stale reruns must use a fresh dispatch.
 The source stays private and only the checked tarball may be published to
 `next`. See [release guidance](../../RELEASING.md#pay-release-candidates).
+The checked artifact CLI requires an explicitly provisioned fixed-graph npm
+cache via `PAY_ARTIFACT_NPM_CACHE` and explicit empty regular-file
+`NPM_CONFIG_USERCONFIG` / `NPM_CONFIG_GLOBALCONFIG` inputs. It never acquires
+cache contents. It uses offline `npm ci`, then verifies the fixed graph and
+installed Pay bytes before running every existing import/runtime/type smoke.
+See the [offline artifact prerequisites](./docs/npm-publication-evidence.md#offline-checked-artifact-prerequisites)
+for tool contexts, path handling, and the remaining publisher provisioning gate.
+
 Local guard tests are not publication or signed-provenance evidence; actual
 npm evidence and verifier compatibility remain external release gates.
+
+The private `final-7b` harness has a bounded local executable for the four
+`receipt-absent-malformed` rows owned by x402 2.23/2.22 and MPP 0.8.19/0.8.17.
+Each row runs the closed absent, invalid-base64, invalid-JSON,
+wrong-protocol-header and malformed-required-field catalog under import and
+require. A failed first receipt retains the durable pending payment; a fresh
+buyer process then reuses the same credential and clears only after the full
+four-call local proof. This local evidence does not admit a matrix row,
+authorize publication, or change either production admission switch.
+
+The same private stage has a separate bounded executable for the four
+`unverified-receipt` rows. It distinguishes RPC unavailable/invalid responses
+from audited verifier false/throw decisions, keeps the original payment
+pending on every negative, and uses a fresh buyer with the same credential for
+the matching four-read proof before clear. This remains local conformance
+evidence and grants no publication, admission, payment or production authority.
+
+Its separate `receipt-mismatch` executable uses the complete x402 catalog and
+the protocol-applicable MPP catalog, which excludes the x402-only receipt
+network field. Every mismatch preserves pending state; a fresh buyer reuses the
+same credential and clears only after an unchanged four-read proof. This is
+local conformance evidence only.
 
 Before publishing, the workflow preserves the original checked tarball and
 source/run context. After publication and tag checks it captures a six-file

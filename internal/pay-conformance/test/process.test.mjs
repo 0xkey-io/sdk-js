@@ -4,6 +4,8 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import net from "node:net";
+import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
 import { once } from "node:events";
 import { isolatedEnvironment, runProcess } from "../src/process.mjs";
 
@@ -66,6 +68,7 @@ test("output limits terminate the actual process and never accept a partial cont
 test("valid JSONL lifecycle completes and nonzero failures do not pass", async () => {
   const success = await runProcess(options("success"));
   assert.equal(success.status, "PASSED");
+  assert.deepEqual(success.command, options("success").command);
   assert.deepEqual(success.lifecycle, [
     "spawned",
     "identified",
@@ -134,4 +137,125 @@ test("deadline kills the entire child group and its actual listening grandchild"
   probe.listen(port, "127.0.0.1");
   await once(probe, "listening");
   await new Promise((done) => probe.close(done));
+});
+
+// Injection exercises supervisor error accounting; it does not reproduce an OS
+// denial's cause. The child executes its real control stream and exits normally.
+test("injected denied post-close probe preserves real child evidence without a false pass", async (t) => {
+  const kill = process.kill.bind(process);
+  t.mock.method(process, "kill", (pid, signal) => {
+    if (pid < 0 && signal === 0)
+      throw Object.assign(new Error("SYNTHETIC_PROBE_SECRET"), { code: "EPERM" });
+    return kill(pid, signal);
+  });
+  const result = await runProcess(options("success"));
+  assert.equal(result.status, "UNKNOWN");
+  assert.equal(result.reason, "CLEANUP_FAILED");
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.cleanup.groupAbsent, false);
+  assert.equal(result.cleanup.forced, false);
+  assert.equal(result.diagnostics.cleanupState, "unknown");
+  assert.deepEqual(result.diagnostics.cleanupErrors, [{ operation: "probe", code: "EPERM" }]);
+  assert.equal(result.lifecycle.includes("completed"), true);
+  assert.equal(result.lifecycle.includes("closed"), false);
+  assert.equal(result.stdout.events.at(-1).type, "result");
+  assert.equal(JSON.stringify(result).includes("SYNTHETIC_PROBE_SECRET"), false);
+  // Observe the actual fixture group independently after restoring real syscall.
+  t.mock.restoreAll();
+  assert.throws(() => kill(-result.pid, 0), { code: "ESRCH" });
+});
+
+test("injected transient probe denial stays visible after real absence is observed", async (t) => {
+  const kill = process.kill.bind(process);
+  for (const [scenario, status, reason, exitCode] of [
+    ["success", "UNKNOWN", "CLEANUP_FAILED", 0],
+    ["failure", "FAILED", "EXIT_NONZERO", 3],
+  ]) {
+    let denied = false;
+    t.mock.method(process, "kill", (pid, signal) => {
+      if (pid < 0 && signal === 0 && !denied) {
+        denied = true;
+        throw Object.assign(new Error("SYNTHETIC_PROBE_SECRET"), { code: "EPERM" });
+      }
+      return kill(pid, signal);
+    });
+    const result = await runProcess(options(scenario));
+    assert.equal(result.status, status);
+    assert.equal(result.reason, reason);
+    assert.equal(result.exitCode, exitCode);
+    assert.equal(result.cleanup.groupAbsent, true);
+    assert.equal(result.diagnostics.cleanupState, "absent");
+    assert.deepEqual(result.diagnostics.cleanupErrors, [{ operation: "probe", code: "EPERM" }]);
+    assert.equal(JSON.stringify(result).includes("SYNTHETIC_PROBE_SECRET"), false);
+    t.mock.restoreAll();
+  }
+});
+
+// Only SIGKILL is fault-injected. The real owned child/listening descendant live
+// until test teardown; this does not claim to reproduce Darwin permission state.
+test("injected denied SIGKILL returns bounded evidence without a supervisor resignal", async (t) => {
+  const spawn = childProcess.spawn, kill = process.kill.bind(process);
+  let child, signals = 0, teardownTimer, port;
+  t.mock.method(childProcess, "spawn", (...args) => {
+    child = spawn(...args);
+    return child;
+  });
+  syncBuiltinESMExports();
+  const teardown = () => {
+    if (child?.pid && child.exitCode === null && child.signalCode === null)
+      kill(-child.pid, "SIGKILL");
+  };
+  t.mock.method(process, "kill", (pid, signal) => {
+    if (pid === -child?.pid && signal === "SIGKILL") {
+      signals++;
+      teardownTimer ??= setTimeout(teardown, 1500);
+      throw Object.assign(new Error("SYNTHETIC_SIGNAL_SECRET"), { code: "EPERM" });
+    }
+    return kill(pid, signal);
+  });
+  try {
+    const result = await runProcess(options("timeout-tree"));
+    assert.equal(result.status, "UNKNOWN");
+    assert.equal(result.reason, "TIMEOUT");
+    assert.equal(result.cleanup.groupAbsent, false);
+    assert.equal(result.cleanup.forced, true);
+    assert.equal(result.diagnostics.closeObserved, false);
+    assert.equal(result.diagnostics.stdioAbandoned, true);
+    assert.deepEqual(result.diagnostics.cleanupErrors, [{ operation: "signal", code: "EPERM" }]);
+    assert.equal(result.stdout.events.some(event => event.type === "ready"), true);
+    assert.equal(result.lifecycle.includes("closed"), false);
+    assert.equal(signals, 1, "supervisor must not retry a denied signal");
+    assert.equal(JSON.stringify(result).includes("SYNTHETIC_SIGNAL_SECRET"), false);
+    port = result.stdout.events.find(event => event.type === "ready").port;
+    const probe = net.createServer();
+    probe.listen(port, "127.0.0.1");
+    await assert.rejects(once(probe, "listening"), { code: "EADDRINUSE" });
+  } finally {
+    clearTimeout(teardownTimer);
+    t.mock.restoreAll(); syncBuiltinESMExports();
+    const closed = child && child.exitCode === null && child.signalCode === null ? once(child, "close") : null;
+    teardown();
+    if (closed) await closed;
+  }
+  const rebound = net.createServer(); rebound.listen(port, "127.0.0.1");
+  await once(rebound, "listening"); await new Promise(done => rebound.close(done));
+});
+
+test("an observed group after child close is not authority to signal the numeric PGID", async (t) => {
+  const kill = process.kill.bind(process);
+  let present = false, signals = 0;
+  t.mock.method(process, "kill", (pid, signal) => {
+    if (pid < 0 && signal === 0 && !present) {
+      present = true;
+      return true; // Injection: the already closed fixture's numeric group is present.
+    }
+    if (pid < 0 && signal !== 0) signals++;
+    return kill(pid, signal);
+  });
+  const result = await runProcess(options("success"));
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.reason, "PROCESS_LEAK");
+  assert.equal(result.cleanup.groupAbsent, true);
+  assert.equal(result.cleanup.forced, false);
+  assert.equal(signals, 0);
 });

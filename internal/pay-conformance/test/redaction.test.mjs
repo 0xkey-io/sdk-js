@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { redactOutput, validateEvent } from "../src/redact.mjs";
+import { redactOutput, validateEvent, deleteRawOutput } from "../src/redact.mjs";
+import { mkdtemp,writeFile,lstat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const validEvents = [
   { type: "versions", versions: { node: "24.3.0" } },
@@ -8,6 +11,10 @@ const validEvents = [
   { type: "observation", counters: { sign: 1 } },
   { type: "result", assertions: 1 },
 ];
+
+test("raw probe deletion is verified and fails closed when no output existed",async()=>{
+  const directory=await mkdtemp(join(tmpdir(),"pay-redaction-delete-")),file=join(directory,"probe.json");await writeFile(file,"private");assert.equal(await deleteRawOutput(file),true);await assert.rejects(lstat(file),{code:"ENOENT"});await assert.rejects(deleteRawOutput(file),{message:"RAW_OUTPUT_DELETE_FAILED"});
+});
 
 for (const event of validEvents) {
   test(`${event.type} accepts its primitive kind but rejects coercible discriminators before dispatch`, () => {
