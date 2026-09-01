@@ -1,0 +1,561 @@
+{
+  "schemaVersion": "sdk-js.prettier-debt/v1",
+  "files": [
+    {
+      "path": "examples/pay-v1-uat/src/smoke.ts",
+      "sha256": "ec489551ae8b1892dc5569322b1b426153c0b7a21a143260ab418c9c7576c7ee"
+    },
+    {
+      "path": "internal/contract-guard/baselines/package-surfaces.json",
+      "sha256": "9452b80352c46087a2c8372b03a07e83cbe451d92ca564629d78a77258b2b352"
+    },
+    {
+      "path": "internal/pay-conformance/fault-coverage.md",
+      "sha256": "b1fa88fe09d3551a7ad6f7b1d831fe658f26708adfec1f65a0898c6695d3afc7"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/capabilities.json",
+      "sha256": "91aa313a15defbc9c197d4bd2b992b5d6c9c8c88781538c795b7a6a06da09bfd"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/cross-language-x402-driver.mjs",
+      "sha256": "76e33f0a8541ae896b4ea131e605bae1d46557f491d0efe6e8412dafb6456e50"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/inventory.json",
+      "sha256": "3fd4520d6ea2ed101f6c2345960ce86e4c629afe2254e5a0f219562ac7383b4a"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/adapters/python/adapter.json",
+      "sha256": "77ceab79115c2000e5c4dbdde278b6e67cedf36dc1fef4918b25d670dd1c8054"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/adapters/typescript/adapter.json",
+      "sha256": "c9344135a372d9d0384503b894f91038efcf2e13ccae87a8518ef2a061a7a5d8"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/driver.mjs",
+      "sha256": "1960d7a9a35fe3800d04650914ee5c867b88753dc280e835aeb005dc6f65afff"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/golden/adapter.ts",
+      "sha256": "67c0eac53e5b2e7ccfbebb380e08de36fbc5348b6a571a31039b69496332327f"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/schemas/adapter-request.schema.json",
+      "sha256": "660bbc4e77be8ca4d9ea82eb6909798a1dd9e25df7f91f7de0830ee41ddccb58"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/schemas/flow-cases.schema.json",
+      "sha256": "be02f8fa54eb49eb2166f55f996e5d24e084e41baddef6bbb294e42bf8869cde"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/schemas/operation-registry.schema.json",
+      "sha256": "a1ba113edf9ba4f2c170a8c12d5ac2c6b8aa297039a6d0aad48a89e99b075446"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/schemas/protocol.schema.json",
+      "sha256": "212267e0e394647b2fe1f84b36470b7e6b438f3ce04f1232b7a42e73a9c22c8e"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/schemas/vector.schema.json",
+      "sha256": "9405aae0b46bacacc81a5aad24aa077dff4e67375cea4b5f296da3c3bbd4e7cd"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/vectors/challenge-id.json",
+      "sha256": "4a520efa3b6f72c6b45d74d6057c5267b7bacd9602ce007cbc1f07c35b1b0694"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mpp-tools-generic/vectors/www-authenticate.json",
+      "sha256": "ba9972c1ef45a2d72481a5f3891146263e19787b64d9eaf4b1af54c818ca8bfc"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/mppx-0.8.19-validator-only/driver.mjs",
+      "sha256": "33c810d970aac2e5e7b63a8418db2d78623b6f5b66f8223efae353a5e4aef6ce"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/packed-consumer/package-lock.template.json",
+      "sha256": "2e0e1a8025e0168efd5c48b86f316ba59edc61dc7bb3a11572355638b057eb65"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/ruby-mpp/client.mjs",
+      "sha256": "8c7129730f4387837792a62abf5b045dd1a7adacc227503f410074ee21f9dc20"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/ruby-mpp/driver.mjs",
+      "sha256": "13dd633bbcde4862d3f81dd7bb1a550a801c87ed8a1354d5668c065ae8487fa4"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/buyer.mjs",
+      "sha256": "37e720bf53f2cbcfe9efa0a87c5639ca8df0d48d403589b8442603bbd9d55d2d"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/common.mjs",
+      "sha256": "46c11bdff919ff2fbc34e51bbca2bd5080105da837e08ae93697feba4f1ff5d3"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/driver.mjs",
+      "sha256": "e81d5313e306de4d87cce6bd3e979d196e8a88e1c843011a47585e693ded437b"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/durable-store.mjs",
+      "sha256": "a776b1ffd0b02462c2e46c2a4ce0d88be0e941e2799d872ad74ceda0063060fa"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/faults.mjs",
+      "sha256": "9a85d9ddcadf9eb851a7a53aed63a051a51c1f6896dbe1d86853a5c507c02219"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/framework-driver.mjs",
+      "sha256": "83869d5d75d5a9113562b595522b42223e05c7ca14e65c86cf4ac055d18bfbcb"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/merchant.mjs",
+      "sha256": "16fe3ee57804b83738761b45de99c78d0c61a9d40751a581d11fed5fc029d468"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/mpp-authorization-selection.mjs",
+      "sha256": "07eb1054a69adfb3dcefb0d14867f234dcbacfd7b8eb852f6579d02eeb1c1db6"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/realm-derived.mjs",
+      "sha256": "27b82342c0a91a55b514ec2864836fb8cbe6a0a771a9ada908fddd86289d7215"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/realm-selection.mjs",
+      "sha256": "46b7cfa32c9feac67b8065f0451ddafd73551021b0fe7a83e6d8a1f288699cee"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/scenario.mjs",
+      "sha256": "56da863c62abfc1fa8b472c6b5f3ed267e5d4c7cbcb83c257dc1decac1ca7c94"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/scripted-facilitator.mjs",
+      "sha256": "f538cf671d67b0910d692213b4f1e50032a609bea73b721eea28ab335b85afc1"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/supported-caller.mjs",
+      "sha256": "3920662b6b5d5b9a42429d29dba762b48f6bd75f5bb5db1efcee4fc4f904fd8b"
+    },
+    {
+      "path": "internal/pay-conformance/fixtures/runtime/wire-decoder.mjs",
+      "sha256": "d4bb1572ed9b7f06f3c63934d83eeb437659ac3e52f368e145cec82147f51831"
+    },
+    {
+      "path": "internal/pay-conformance/package.json",
+      "sha256": "1649ab35380f26af6d580be1ef1fbab9495b104bc8d1ff8ee465f77d42498393"
+    },
+    {
+      "path": "internal/pay-conformance/src/consumer.mjs",
+      "sha256": "6aa8c1097df9448b634ea803fe2617bd511ffd410d7f1b8fac214c33b3f0a935"
+    },
+    {
+      "path": "internal/pay-conformance/src/execution-input.mjs",
+      "sha256": "a5162c00281df05a4373cc78082dba63ea5ef173dcca6875fe1995b69ee7aae8"
+    },
+    {
+      "path": "internal/pay-conformance/src/final-execution-binding.mjs",
+      "sha256": "72d2e0f4237e020525e606b3ba4c21f00048301e4b63b3c67fa001332a173963"
+    },
+    {
+      "path": "internal/pay-conformance/src/final-runner.mjs",
+      "sha256": "e0f087ce6aa46be991b2228d0dc5895ab3e1ae182da66ba9461b3ea2559a10ab"
+    },
+    {
+      "path": "internal/pay-conformance/src/ipc.mjs",
+      "sha256": "142ea8d979d04a8cea07d96b261333d588f7c1f38d569cef4eb20e2d902391e3"
+    },
+    {
+      "path": "internal/pay-conformance/src/process.mjs",
+      "sha256": "26750c73b8d79ba0a70dbfe91a04673346a5eabcba853aa430144a8fadd6d083"
+    },
+    {
+      "path": "internal/pay-conformance/src/redact.mjs",
+      "sha256": "c3890ad69b0ada9ddfd1452e8d3c550cb5508328ad63b11b38c8f9cd03f8e92d"
+    },
+    {
+      "path": "internal/pay-conformance/src/report.mjs",
+      "sha256": "e189a9c2d43a70f322cd3b99a21c9c20ead60a37df8479829c025adab3997e0b"
+    },
+    {
+      "path": "internal/pay-conformance/src/role.mjs",
+      "sha256": "9d114e2c305c6349fde93f89beca115a85b475f6a0bf79ed5b80d50e938ade47"
+    },
+    {
+      "path": "internal/pay-conformance/src/run.mjs",
+      "sha256": "9a307d5d04702cbd99f84ec9b626a77e44947de2f54bf561f0a79c546e642dda"
+    },
+    {
+      "path": "internal/pay-conformance/test/consumer.test.mjs",
+      "sha256": "3d9f9893849efbd52dd8aee46b312ebbd627ad1d118f59cc527de8473bf6c348"
+    },
+    {
+      "path": "internal/pay-conformance/test/execution-input.test.mjs",
+      "sha256": "8e5a73318ac432c63e1d40d6e21655aa6f01a5d0dd0359f91a8d2c5124621238"
+    },
+    {
+      "path": "internal/pay-conformance/test/final-runner.test.mjs",
+      "sha256": "141d1792a184477a9a061a998aac3b1c998c107d99a9fd841108662e5457c7fb"
+    },
+    {
+      "path": "internal/pay-conformance/test/framework-driver.test.mjs",
+      "sha256": "a0df1d202c6a966696baa310ad64ee1e0512446353a4cb659420facb360df111"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/capture-lifetime-host.mjs",
+      "sha256": "edab49167c7d03ec9f2e9ae9d99c66391cb43650e12561f0acfe505b6f70c0e4"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-amount-mismatch.mjs",
+      "sha256": "33a3dfd1c26825a5d46fd3f59e6209861b708715d20b02d9d8183504b67f4d7d"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-asset-mismatch.mjs",
+      "sha256": "0bff5980163601f945b545819d6d2b46db95ca7886b64abcf320e9e66b578af4"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-capture-lifetime.mjs",
+      "sha256": "f0962371dfcfbcd7a6b001095dd0e881487db5bd7651b7a88addf9fa263d41b8"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-claims.mjs",
+      "sha256": "f7830b435079066c3663bccb409aa7ec26de496550b05a732e71cffe9e126a2d"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-directions.mjs",
+      "sha256": "3eb9c290d6a41d4a9a15e5bd6364a5130603ffd4bbf593bcaf737f439352627e"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-dual.mjs",
+      "sha256": "1dbfd9fe83a5b4102745f6cee8c48897bcfcedf0d2d805b913e2bb121d31026d"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-framework-final.mjs",
+      "sha256": "272bd5de00ff382b75171220028cc814566cd9757ff11698fd45106a6298e860"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-freeze.mjs",
+      "sha256": "91543e126392efef5ff5553ab07d0473d8e95458eb54e7b1f0caf596de0fd4a4"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-fulfillment-failure-final.mjs",
+      "sha256": "e804b3365b0ae6470feb31c3d676bec21ea9407ab79fee10f21cd382b8697c86"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-handler-failure-final.mjs",
+      "sha256": "2ca8c619588cfcdd304cb7a868f15b7db86290545b12062c63b3db290333bbf0"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-malformed-ambiguous-offer-final.mjs",
+      "sha256": "5877d662a835da43120c566713322bbdbdffec47e3330dcfc5c70c23b929721e"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-mpp-amount-mismatch.mjs",
+      "sha256": "469d099ba1c459845150e861434eab6fa0b95e5737d06e9decfb48645f0ec067"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-mpp-asset-mismatch.mjs",
+      "sha256": "30dee9d2ae316a4143325a8cc6e702174f1ed8e30f17a03f83c3ca7121443d07"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-mpp-malformed-corpus-final.mjs",
+      "sha256": "e8ef87f2d0bd5001456a4b3816d2caed26c1da813687aaa85642b04b8183d32b"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-mpp-payee-mismatch.mjs",
+      "sha256": "8bb2efb8f8bdad09853c6a02c8f667f25d1ba11c87ad598c84be6a4eefa0b13f"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-mpp-unsupported-authorization.mjs",
+      "sha256": "00e987e5fcb4f1c6b68c229841622740e00b93a8a43a1ff85f68fcb52b3cb5bc"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-network-mismatch.mjs",
+      "sha256": "401133a40eac89965b247bfcabc8300521b8c1f1b80352b4633fc3b1135c2de6"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-offers.mjs",
+      "sha256": "ff27e3950597fb55a84992194a10815b8c1c89affb11959f6182ff73b397ab9c"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-payee-mismatch.mjs",
+      "sha256": "aeb6eed17cdd705d5e74768930a2a1670e3e4e5f0f2f93e979ed230cd6f30b36"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-preflight.mjs",
+      "sha256": "19956ff17c26652ced82aa1fcf5afa94b10716d69a72433429983f59a8adacc8"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-protocol-freeze-final.mjs",
+      "sha256": "c9bd086611136a8d531996fb4ecf8cd6a9eadf019f6eaff7980c6e6ba08040f5"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-realm-derived.mjs",
+      "sha256": "0e145f84898d89eec25fd301229966e6752ee66da6c396afe40cf9643df519a7"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-realm-selection.mjs",
+      "sha256": "ad33e2d06d6105dfc323ffa833fcfce07f3820df1b7456196014a9a29b4f63bd"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-receipt-absent-malformed-final.mjs",
+      "sha256": "d433c3b494b384724ed16ceba954b59c86def95e7a35d417f00eb72f91458ad4"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-receipt-mismatch-final.mjs",
+      "sha256": "995a43ef8fc6972d844bf79722fa3f281537c27888b91f24569a010e16af62ec"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-receipts.mjs",
+      "sha256": "89dcaf5aae96c3025eca20a52d993d761ae8d903ccd5ce0d628df127cfc3c189"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-recovery-contract.mjs",
+      "sha256": "fbf67926d81c872ced24f2e196fb9177fc4b325d23f94f7c93a9703055965b31"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-redaction-final.mjs",
+      "sha256": "b25b53c3c9ac456856c202568fb2287669b4728fa0cc0b77add188326870ae7f"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-replay-final.mjs",
+      "sha256": "17cb6f28ea9e8f4c3bfa65652c6d6546ce2d61263e9bcaae142fff2a23ee05ee"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-seller-lifecycle.mjs",
+      "sha256": "6b3cccaaa3825ae66ca97e0621d96409122ee22b996a8826e1c2967832757517"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-settle-unknown-final.mjs",
+      "sha256": "1eb255fa8da4d68561b18f11c4ad4f23a21dc25838d0e5485c5327c447ea3c3a"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-standard-wire-receipt-final.mjs",
+      "sha256": "5a46097a76f9ca03669b92522d183933515105bf3d607da6a2a9b87bcda23b34"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-supported-final.mjs",
+      "sha256": "8adbd3d43b9ee7ad1dc2a3d8f7995aef5aa1fb0cc595869a07439cb2468d3c42"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-supported.mjs",
+      "sha256": "0197863974e793154c221ff159913b822689e09b6297e5a12b3bd2068bbad20b"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-temporal-validity-final.mjs",
+      "sha256": "7464868d04d660fdf74b44e1cf9fcda4509484f6e5e60d6cc3f2ef8d01657c50"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-unsupported-authorization.mjs",
+      "sha256": "c14de82443f605f3c9d1297c1b5a058adbcd30530369debf799ef33701a8fc79"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-unverified-receipt-final.mjs",
+      "sha256": "ce71d43a2b7b706bd376d8f1f21e4cacdf4beb8b439c8e6bddb205d02c847e36"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-verify-settle-rejection-final.mjs",
+      "sha256": "a47d90de09e7fcbda137762d6efdbd88e94d583b4f2ffe98b5bb2797d2d6f55b"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-wire-decoder.mjs",
+      "sha256": "9c05c3acb27a8b54ada0b59aa845cb9d4d53ea6dd3159c3a66c7924884526772"
+    },
+    {
+      "path": "internal/pay-conformance/test/integration/native-wire.mjs",
+      "sha256": "9b41e4e47ff3e8a8d59604ab6540027908c313fc57632cd11591303ac7715ee1"
+    },
+    {
+      "path": "internal/pay-conformance/test/ipc.test.mjs",
+      "sha256": "7715a9da45b872f49ea58e26b12c76e1fd50dcd9c1c9557faebb7bc2882aba97"
+    },
+    {
+      "path": "internal/pay-conformance/test/process.test.mjs",
+      "sha256": "a04434f21b23f61d2224da9049326506719d631e4dc93c24890e82e38f95a3b6"
+    },
+    {
+      "path": "internal/pay-conformance/test/recovery-entrypoint.test.mjs",
+      "sha256": "2f0d64570dd3199fad5bdd91de232442e62066cef522815ae4b9671311b3b869"
+    },
+    {
+      "path": "internal/pay-conformance/test/redaction.test.mjs",
+      "sha256": "d1d97253d4f75259dddae8ef411083d4162003b6a6040486465a2b4d649d3af1"
+    },
+    {
+      "path": "internal/pay-conformance/test/role-child.mjs",
+      "sha256": "533990b907fd630ff0971ec5a28853716197d619fd64a1ffe4b7148c8f949e9f"
+    },
+    {
+      "path": "internal/pay-conformance/test/role-host.mjs",
+      "sha256": "8db93ce8221d42e0257a9d1a4591e83a3551ace12e69769aee34c43ced43c051"
+    },
+    {
+      "path": "internal/pay-conformance/test/role.test.mjs",
+      "sha256": "0805375714173d191c7434ca1348095b55b005ddd8aec17227d596cbc47cb81b"
+    },
+    {
+      "path": "internal/pay-conformance/test/transport.test.mjs",
+      "sha256": "03b4927d659a38ccd9c4dd25151a6597edc9ec328c4fbd5771b6927bd21baf7d"
+    },
+    {
+      "path": "packages/pay/CHANGELOG.md",
+      "sha256": "6bb171a07d9347879495149b9f13ed60b8c6ffa8c81b81ad87d3d9bf806b6ce0"
+    },
+    {
+      "path": "packages/pay/docs/direct-x402.md",
+      "sha256": "6ab7fd5cfb8d93a3f57c45edc4f14d9f9eda92f1130a15202891ca850068f159"
+    },
+    {
+      "path": "packages/pay/docs/examples/x402-frameworks.ts",
+      "sha256": "736de75362846f33c14140e13640ba90c9d29c00c2a9a00d4e724a2d4854985c"
+    },
+    {
+      "path": "packages/pay/docs/examples/x402-upfront.ts",
+      "sha256": "ab6c20d429d52b8aa3ed1b581886f15deba6dba54726291252c30ecd1b3ee3e0"
+    },
+    {
+      "path": "packages/pay/scripts/check-exact-pins.mjs",
+      "sha256": "e7f61b3b2b8c9aebbe9c58e1ef5efb6d61ef4248c5fa45286f21a4d490f6a044"
+    },
+    {
+      "path": "packages/pay/scripts/check-packed-artifact.mjs",
+      "sha256": "51f7fc63f3829412f68e72cfedbe8b5654e14b7574eebf31c7888d93c7562c5e"
+    },
+    {
+      "path": "packages/pay/scripts/check-packed-artifact.test.mjs",
+      "sha256": "79930281d7cc90fce4e380a814ef9f12dea48345c5b8e7f7d9d56e174e039eb4"
+    },
+    {
+      "path": "packages/pay/scripts/fixed-consumer.mjs",
+      "sha256": "46ca2a1ebc9f06e82290c274cc087de1811991d1293da69946319947d81533fc"
+    },
+    {
+      "path": "packages/pay/scripts/fixtures/x402-next/route-require.js",
+      "sha256": "19c63cc2b7d221c5f89538d6e64fb1f07f41cade34fbc52d01968b1cb7c4ac39"
+    },
+    {
+      "path": "packages/pay/scripts/fixtures/x402-next/route.ts",
+      "sha256": "9774b0839f9d58497c6cbf01361a5925df26456d5b9120abef165ac065b75fae"
+    },
+    {
+      "path": "packages/pay/scripts/fixtures/x402-next/x402-upfront-require.js",
+      "sha256": "f86b9f513fe7d4a31ed1821628ea20d27fc699f8d76328f91b43405992a6a4ee"
+    },
+    {
+      "path": "packages/pay/scripts/generate-doc-facts.mjs",
+      "sha256": "0e356ac8e6568b48457902dc259aaa10c381817112b39bc6503d03ecbf2366cd"
+    },
+    {
+      "path": "packages/pay/scripts/interop-smoke.mjs",
+      "sha256": "36006da63c78dde109fd5dc828c9a0c2d9d2a5ba90b4137d6c811b486d7affd5"
+    },
+    {
+      "path": "packages/pay/scripts/mpp-boundary-probe.mjs",
+      "sha256": "3196b4eef8f78b0de088d697fe5b764e1540ddd0bfa25d940ed2db875cac715d"
+    },
+    {
+      "path": "packages/pay/scripts/mpp-malformed-probe.mjs",
+      "sha256": "e5446ebb8efca58ab735beb6d9229f92945b7c6a7931e64badd5e9787d2d64f4"
+    },
+    {
+      "path": "packages/pay/scripts/offline-consumer.mjs",
+      "sha256": "8566a0d2ee1cedb64d7db2a7b925048bcd2551f0f72e237bf717731a8a09d42a"
+    },
+    {
+      "path": "packages/pay/scripts/x402-boundary-runtime.mjs",
+      "sha256": "1da151a31ac102f531df18c82f7fd6f6c970918255bad81ad560116952d78ce6"
+    },
+    {
+      "path": "packages/pay/scripts/x402-framework-probe.mjs",
+      "sha256": "8d31d9c39d873e395106786b4fa5a168499ceec000a9c3c6f6015fb3b4a50e45"
+    },
+    {
+      "path": "packages/pay/scripts/x402-next-preflight.mjs",
+      "sha256": "f7b7a9b546f4d014a323e0dbe7a03b4e09fa35dffb6782808d838cb2b1d84438"
+    },
+    {
+      "path": "packages/pay/scripts/x402-next-probe.mjs",
+      "sha256": "900bda63f87cb9afb5ba870d68d7a1ac641cd55339b071d931aa567eeb33e046"
+    },
+    {
+      "path": "packages/pay/scripts/x402-owner-probe.mjs",
+      "sha256": "311691ad21fe225a4512622600050fc726faa6647a5657204f0aeae8efa15280"
+    },
+    {
+      "path": "packages/pay/scripts/x402-recovery-buyer.mjs",
+      "sha256": "92b3429f727e202acda3b5e1c7fd914524de15bbe2b8b750dc3b1c0bd315679c"
+    },
+    {
+      "path": "packages/pay/scripts/x402-recovery-probe.mjs",
+      "sha256": "13c75a4dd42b6f8d948b0f29059e7dd5c2928fc7471f4b9401b8665d42fe1d1d"
+    },
+    {
+      "path": "packages/pay/src/client.test.ts",
+      "sha256": "37dace54532c0ba2ecfd201d6f25067afe9d2904fa64fb6136b2e17519b5795e"
+    },
+    {
+      "path": "packages/pay/src/express/index.ts",
+      "sha256": "c3fad2adf14c6fc6b6fe4f71ddd87f37ece237f0552adf53791b34adc5ba6a00"
+    },
+    {
+      "path": "packages/pay/src/frameworks.test.ts",
+      "sha256": "da84b723651d4eda36908a852e978a508bc5c195fbcb18a32b368abb4b83a81f"
+    },
+    {
+      "path": "packages/pay/src/hono/index.ts",
+      "sha256": "bd014c078c6798be54a4df0ee0ba3bcf5f495c1828b8a6464886cec59af7f1c6"
+    },
+    {
+      "path": "packages/pay/src/internal/create-mpp-evm-charge-method.ts",
+      "sha256": "6f04b8d01c99cde2bb6dec7d2f1ffb579d5e540e3ecb6d40c3bed4d8dafcafd2"
+    },
+    {
+      "path": "packages/pay/src/internal/mpp-evm-charge-adapter.ts",
+      "sha256": "04589920ec85d356c00737e4e00dd9d227476c81e6a6a5f0bb5572da5fd536aa"
+    },
+    {
+      "path": "packages/pay/src/internal/private-settlement-response.ts",
+      "sha256": "0d128f60a772ae082506d9ae32b51fa314208d15d59bf298ade5e9b50ec48665"
+    },
+    {
+      "path": "packages/pay/src/internal/x402-exact-v2-adapter.test.ts",
+      "sha256": "f7e901f42211725f8478bdb04bf0c12c0e537bb26815ae274aa1bd52f6f183ba"
+    },
+    {
+      "path": "packages/pay/src/internal/x402-exact-v2-adapter.ts",
+      "sha256": "c0d5bca71f7a39fd74597a66cdf2479ef8c82e4cd00092e78854bdf2a6f2fa64"
+    },
+    {
+      "path": "packages/pay/src/internal/x402-facilitator.ts",
+      "sha256": "f777b11d3d57753f9359b2b248876b6059fbfffaedc8080ddac9ab19e946324e"
+    },
+    {
+      "path": "packages/pay/src/internal/zeroxkey-settlement-adapter.test.ts",
+      "sha256": "ba3a1fb237454d42907ef61985105659543f75bb6a70ec1cee787a145e18c2c7"
+    },
+    {
+      "path": "packages/pay/src/internal/zeroxkey-settlement-adapter.ts",
+      "sha256": "97ea91680a2b615a7370bc14eac051a6d72a698d77a388051867bbc52d38a295"
+    },
+    {
+      "path": "packages/pay/src/mpp/index.node.test.ts",
+      "sha256": "455e46f1b7371665eb505877e8866c4e05ee5ed445b73b78191b6311ded657cf"
+    },
+    {
+      "path": "packages/pay/src/server.node.test.ts",
+      "sha256": "b0f694371e395f4b96bf52937af9505696f8c78e8ce7801a4f610a3abdf83ebd"
+    },
+    {
+      "path": "packages/pay/src/server.ts",
+      "sha256": "362c5c4528ab41e3c6a08dfc5488565a44ca931b7861eb20519c8f2ac369a0c4"
+    },
+    {
+      "path": "packages/pay/src/x402/index.test.ts",
+      "sha256": "b4714bb935b6e4c9e22c24f0de27e2f1fdc28f6adbbac63413a0d3b42c6d2592"
+    },
+    {
+      "path": "packages/pay/src/xstamp.test.ts",
+      "sha256": "81bc1cb8f11f66aecd5a234a7a31e2390b5062af90a919e2981c69b3c6899040"
+    }
+  ]
+}
