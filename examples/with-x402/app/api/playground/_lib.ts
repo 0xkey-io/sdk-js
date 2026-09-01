@@ -10,7 +10,7 @@ import type {
   PaymentRequirements,
   SettleResponse,
   VerifyResponse,
-} from "@0xkey-io/pay";
+} from "@x402/core/types";
 
 const zeroXKeyEnv =
   process.env.ZEROXKEY_ENV ?? process.env.NEXT_PUBLIC_ZEROXKEY_ENV ?? "local";

@@ -11,6 +11,7 @@ export const BASELINES_DIR = path.join(
   "internal/contract-guard/baselines",
 );
 
+/** @param {Record<string, any>} pkg */
 function isPublicArtifactPackage(pkg) {
   if (!pkg.private) return true;
   return (
