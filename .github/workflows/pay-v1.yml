@@ -39,6 +39,26 @@ jobs:
         with:
           node-version: "22.12.0"
 
+      - name: Provision checked-artifact offline inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache="$RUNNER_TEMP/pay-artifact-npm-cache"
+          user_config="$RUNNER_TEMP/pay-artifact-user.npmrc"
+          global_config="$RUNNER_TEMP/pay-artifact-global.npmrc"
+          install -d -m 700 "$cache"
+          : >"$user_config"
+          : >"$global_config"
+          {
+            echo "PAY_ARTIFACT_NPM_CACHE=$cache"
+            echo "NPM_CONFIG_USERCONFIG=$user_config"
+            echo "NPM_CONFIG_GLOBALCONFIG=$global_config"
+          } >>"$GITHUB_ENV"
+          export PAY_ARTIFACT_NPM_CACHE="$cache"
+          export NPM_CONFIG_USERCONFIG="$user_config"
+          export NPM_CONFIG_GLOBALCONFIG="$global_config"
+          node .github/scripts/provision-pay-artifact-cache.mjs
+
       - name: Build Pay dependency graph
         run: >-
           pnpm turbo run build

@@ -69,6 +69,21 @@ jobs:
           npm install --global npm@11.5.1 corepack@0.34.1 --registry="$PUBLIC_NPM_REGISTRY"
           corepack enable
           pnpm install -r --frozen-lockfile --registry "$PUBLIC_NPM_REGISTRY"
+          cache="$RUNNER_TEMP/pay-artifact-npm-cache"
+          user_config="$RUNNER_TEMP/pay-artifact-user.npmrc"
+          global_config="$RUNNER_TEMP/pay-artifact-global.npmrc"
+          install -d -m 700 "$cache"
+          : >"$user_config"
+          : >"$global_config"
+          {
+            echo "PAY_ARTIFACT_NPM_CACHE=$cache"
+            echo "NPM_CONFIG_USERCONFIG=$user_config"
+            echo "NPM_CONFIG_GLOBALCONFIG=$global_config"
+          } >>"$GITHUB_ENV"
+          export PAY_ARTIFACT_NPM_CACHE="$cache"
+          export NPM_CONFIG_USERCONFIG="$user_config"
+          export NPM_CONFIG_GLOBALCONFIG="$global_config"
+          node .github/scripts/provision-pay-artifact-cache.mjs
 
       - name: Build Pay dependency graph
         run: pnpm turbo run build --filter='@0xkey-io/pay^...'

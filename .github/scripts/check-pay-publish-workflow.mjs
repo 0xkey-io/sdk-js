@@ -418,7 +418,7 @@ function checkPublicationEvidence(steps, pack, reconfirm, publishStep) {
     "Verify public npm registry configuration":
       "f1356ec6c34ad24c807b84add4999dceba0862c2b97449f1d349d6097591d151",
     "Install dependencies":
-      "dc62465b03be017d30bf0ebc6c8f49b6c96dd279649c6ba1fe86d3ad5faba75f",
+      "2d85b69b0e598e7253e6dd4e5a9c6a2dd3e16e979dc8a4c0047567b5bc366373",
     "Build Pay dependency graph":
       "0e284371f4a819b45285f595276ba462b09b1a6b7ff6fb2dba6fcd416fb31ae6",
     "Verify Pay package metadata":
