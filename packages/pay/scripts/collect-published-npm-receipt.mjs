@@ -306,7 +306,7 @@ function profile(statement, context) {
   equal(statement.predicateType, SLSA);
   equal(statement.subject, [
     {
-      name: `pkg:npm/%40xkey-io/pay@${context.version}`,
+      name: `pkg:npm/%400xkey-io/pay@${context.version}`,
       digest: { sha512: context.checkedTar.sha512 },
     },
   ]);
@@ -360,7 +360,9 @@ function selectBundle(bytes, context) {
   const candidates = [];
   for (let position = 0; position < entries.length; position++) {
     const entry = entries[position];
-    keys(entry, ["predicateType", "bundle"]);
+    keys(entry, ["predicateType", "bundle"], ["signedAccessSignatureUrl"]);
+    if (Object.hasOwn(entry, "signedAccessSignatureUrl"))
+      equal(entry.signedAccessSignatureUrl, "");
     if (
       typeof entry.predicateType !== "string" ||
       entry.predicateType.length > 256 ||
@@ -371,7 +373,7 @@ function selectBundle(bytes, context) {
     keys(bundle, ["mediaType", "verificationMaterial", "dsseEnvelope"]);
     if (
       typeof bundle.mediaType !== "string" ||
-      !/^application\/vnd\.dev\.sigstore\.bundle\.v0\.[123]\+json$/.test(
+      !/^application\/vnd\.dev\.sigstore\.bundle(?:\.v0\.[123]\+json|\+json;version=0\.[123])$/.test(
         bundle.mediaType,
       )
     )
@@ -410,7 +412,7 @@ function selectBundle(bytes, context) {
       fail("SUBJECT");
     equal(statement.subject, [
       {
-        name: `pkg:npm/%40xkey-io/pay@${context.version}`,
+        name: `pkg:npm/%400xkey-io/pay@${context.version}`,
         digest: { sha512: context.checkedTar.sha512 },
       },
     ]);

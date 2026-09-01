@@ -122,7 +122,7 @@ async function fixture() {
     _type: "https://in-toto.io/Statement/v1",
     subject: [
       {
-        name: `pkg:npm/%40xkey-io/pay@${version}`,
+        name: `pkg:npm/%400xkey-io/pay@${version}`,
         digest: { sha512: hash(tar, "sha512") },
       },
     ],
@@ -431,6 +431,46 @@ test("raw bundle ranges preserve multibyte prefix, escaped keys and braces witho
   });
   assert.equal(receipt.attestations.length, 2);
   assert.equal(receipt.provenance.profile.sourceSha, f.sha);
+});
+
+test("npm publish attestation media type is accepted beside SLSA provenance", async () => {
+  const f = await fixture();
+  const publishStatement = {
+    ...f.statement,
+    predicateType:
+      "https://github.com/npm/attestation/tree/main/specs/publish/v0.1",
+  };
+  const publishBundle = {
+    ...f.bundle,
+    mediaType: "application/vnd.dev.sigstore.bundle+json;version=0.2",
+    dsseEnvelope: {
+      ...f.bundle.dsseEnvelope,
+      payload: json(publishStatement).toString("base64"),
+    },
+  };
+  const attestations = {
+    attestations: [
+      {
+        predicateType: publishStatement.predicateType,
+        bundle: publishBundle,
+        signedAccessSignatureUrl: "",
+      },
+      {
+        predicateType: slsa,
+        bundle: f.bundle,
+        signedAccessSignatureUrl: "",
+      },
+    ],
+  };
+  await collectReceipt(
+    f.capture,
+    f.transport([json(f.metadata), tar, json(attestations)]),
+  );
+  const receipt = JSON.parse(
+    await readFile(join(f.capture.output, "receipt.json")),
+  );
+  assert.equal(receipt.attestations.length, 2);
+  assert.equal(receipt.provenance.index, 1);
 });
 
 test("read-only recapture does not depend on current checkout or advanced main", async () => {
