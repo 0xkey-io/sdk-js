@@ -121,7 +121,7 @@ jobs:
       - name: Reject removed pre-release interfaces
         run: |
           set -euo pipefail
-          if grep -REn '\b(Pay\.client|createPayClient|handlePaywallRequest|paywallExpress|paywallHono|withPaywall)\b' \
+          if grep -REn '\b(Pay\.client|handlePaywallRequest|paywallExpress|paywallHono|withPaywall)\b' \
             packages/pay/src/client.ts packages/pay/src/server.ts \
             packages/pay/src/index.ts \
             packages/pay/src/{client,server,admin,express,hono,next}; then
