@@ -19,27 +19,32 @@ const [publicKey, privateKey] = await Promise.all([
 ]);
 const paymentServer = createPayServer({
   network: "eip155:84532",
-  organizationId: "11111111-1111-1111-1111-111111111111",
+  organizationId: "11111111-1111-4111-8111-111111111111",
   payTo: "0x1111111111111111111111111111111111111111",
   apiKey: { publicKey, privateKey },
+  protocols: ["mpp"],
   mppSecretKey: "01234567890123456789012345678901",
   async fetch(url, init) {
     const body = JSON.parse(String(init?.body));
-    if (String(url).endsWith("/verify")) {
+    if (String(url).endsWith("/v1/settlements/charge")) {
       return Response.json({
-        isValid: true,
-        payer: body.paymentPayload.payload.authorization.from,
+        settlement: {
+          success: true,
+          transaction: `0x${"ef".repeat(32)}`,
+          network: "eip155:84532",
+          payer: body.command.payer,
+        },
+        paymentId: "22222222-2222-4222-8222-222222222222",
       });
     }
-    return Response.json({
-      success: true,
-      transaction: `0x${"ef".repeat(32)}`,
-      network: body.paymentRequirements.network,
-      payer: body.paymentPayload.payload.authorization.from,
-      paymentId: "22222222-2222-2222-2222-222222222222",
-    });
+    assert.equal(body.state, "FULFILLED");
+    return new Response(null, { status: 200 });
   },
 });
+const protectedWeather = paymentServer.protect(
+  { price: "$0.01", description: "Weather" },
+  () => Response.json({ weather: "sunny" }),
+);
 
 const httpServer = http.createServer(async (incoming, outgoing) => {
   try {
@@ -86,14 +91,7 @@ const httpServer = http.createServer(async (incoming, outgoing) => {
           : {}),
       },
     );
-    const payment = await paymentServer.handle(request, {
-      price: "$0.01",
-      protocols: ["x402", "mpp"],
-    });
-    const response =
-      payment.status === 200
-        ? payment.withReceipt(Response.json({ weather: "sunny" }))
-        : payment.response;
+    const response = await protectedWeather(request);
     outgoing.writeHead(response.status, Object.fromEntries(response.headers));
     outgoing.end(Buffer.from(await response.arrayBuffer()));
   } catch (error) {
@@ -138,5 +136,5 @@ const result = await new Promise((resolve) => {
 httpServer.close();
 assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`);
 console.log(
-  `mppx ${compatibilityVersion ?? "0.8.17"} validate: 0xkey MPP server passed`,
+  `mppx ${compatibilityVersion ?? "0.8.19"} validate: 0xkey MPP server passed`,
 );

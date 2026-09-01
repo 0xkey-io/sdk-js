@@ -1,11 +1,3 @@
-export type {
-  PaymentPayload,
-  PaymentRequired,
-  PaymentRequirements,
-  SettleResponse,
-  VerifyResponse,
-} from "mppx/x402";
-
 export type PaymentStatus =
   | "PREPARED"
   | "SUBMITTING"

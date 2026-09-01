@@ -1,15 +1,28 @@
 name: "Setup JS"
 description: "Install JS toolchain and dependencies (node_modules)"
 
+inputs:
+  node-version:
+    description: "Optional explicit Node.js version override"
+    required: false
+    default: ""
+
 runs:
   using: "composite"
 
   steps:
     # https://github.com/actions/setup-node
-    - name: Install Node.js
+    - name: Install repository Node.js
+      if: ${{ inputs.node-version == '' }}
       uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
       with:
         node-version-file: ".nvmrc"
+
+    - name: Install overridden Node.js
+      if: ${{ inputs.node-version != '' }}
+      uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
 
     - name: Use recent version of npm
       run: npm install -g npm@11.5.1
@@ -45,7 +58,7 @@ runs:
       shell: bash
 
     - name: Install Foundry
-      uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d # v1.8.0
+      uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
       with:
         cache: true
         version: "stable"

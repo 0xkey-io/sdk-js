@@ -1,135 +1,323 @@
-import type { PayServer } from "./server";
+import { EventEmitter } from "node:events";
+import type { PaidHandlerContext, PayRoute, PayServer } from "./server";
 import { paymentMiddleware as expressPayment } from "./express";
 import { paymentMiddleware as honoPayment } from "./hono";
 import { withPayment } from "./next";
 
-function paidServer(events: string[]): PayServer {
+function delegatingServer(events: string[]): PayServer {
   return {
-    async handle() {
-      events.push("settled");
-      return {
-        status: 200,
-        paymentId: "pay-1",
-        reference: "0xtx",
-        withReceipt(response) {
-          const headers = new Headers(response.headers);
-          headers.set("PAYMENT-RESPONSE", "receipt");
-          return new Response(response.body, {
-            status: response.status,
-            headers,
-          });
-        },
+    protect(
+      route: PayRoute,
+      handler: (context: PaidHandlerContext) => Response | Promise<Response>,
+    ) {
+      events.push(`protect:${route.price}`);
+      return async (request) => {
+        events.push("settled");
+        const response = await handler({
+          request,
+          paymentId: "pay-1",
+          reference: "0xtx",
+          protocol: "x402",
+        });
+        const headers = new Headers(response.headers);
+        headers.set("PAYMENT-RESPONSE", "receipt");
+        return new Response(response.body, { status: response.status, headers });
       };
-    },
-    async fulfillmentFailed() {
-      events.push("fulfillment_failed");
     },
   };
 }
 
-test("Express settles before the merchant handler", async () => {
+test("Express translates HTTP objects and delegates all payment behavior to protect", async () => {
   const events: string[] = [];
   const headers = new Map<string, string>();
-  const response: any = {
-    locals: {},
-    statusCode: 200,
-    setHeader: (name: string, value: string) => headers.set(name, value),
-    on: jest.fn(),
-  };
-  const middleware = expressPayment(paidServer(events), {
-    "GET /weather": { price: "$0.01" },
+  const middleware = expressPayment(
+    delegatingServer(events),
+    { price: "$0.01" },
+    async (_request, context) => {
+      events.push(`handler:${context.paymentId}`);
+      return Response.json({ weather: "sunny" });
+    },
+  );
+  const response: any = Object.assign(new EventEmitter(), {
+    status: jest.fn(function (this: any, status: number) {
+      this.statusCode = status;
+      return this;
+    }),
+    setHeader: (name: string, value: string) => headers.set(name.toLowerCase(), value),
+    write: jest.fn(() => true),
+    end: jest.fn(),
   });
+
   await middleware(
     {
       method: "GET",
-      path: "/weather",
       originalUrl: "/weather",
       protocol: "https",
       headers: { host: "api.example.com" },
       get: () => "api.example.com",
     },
     response,
-    () => events.push("handler"),
+    jest.fn(),
   );
-  expect(events).toEqual(["settled", "handler"]);
-  expect(response.locals.paymentId).toBe("pay-1");
+
+  expect(events).toEqual(["protect:$0.01", "settled", "handler:pay-1"]);
   expect(headers.get("payment-response")).toBe("receipt");
+  expect(Buffer.concat(response.write.mock.calls.map(([chunk]: [Uint8Array]) => Buffer.from(chunk))).toString()).toBe('{"weather":"sunny"}');
+  expect(response.end).toHaveBeenCalledTimes(1);
 });
 
-test("Hono settles before next and reports fulfillment failure", async () => {
+test("Express caches protect and streams binary multi-chunk bodies without text decoding", async () => {
+  let protectCalls = 0;
+  const server = delegatingServer([]);
+  const originalProtect = server.protect;
+  server.protect = (...args) => {
+    protectCalls += 1;
+    return originalProtect(...args);
+  };
+  const middleware = expressPayment(server, { price: "$0.01" }, async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(Uint8Array.of(0xff));
+        controller.enqueue(Uint8Array.of(0x00));
+        controller.close();
+      },
+    });
+    return new Response(stream);
+  });
+  const chunks: Buffer[] = [];
+  const response: any = Object.assign(new EventEmitter(), {
+    status() { return this; },
+    setHeader() {},
+    write(chunk: Uint8Array) { chunks.push(Buffer.from(chunk)); return true; },
+    end: jest.fn(),
+  });
+  const request = {
+    method: "GET", originalUrl: "/binary", protocol: "https",
+    headers: { host: "api.example.com" }, get: () => "api.example.com",
+  };
+
+  await middleware(request, response, jest.fn());
+  await middleware(request, response, jest.fn());
+
+  expect(protectCalls).toBe(1);
+  expect(Buffer.concat(chunks)).toEqual(Buffer.from([0xff, 0x00, 0xff, 0x00]));
+  expect(response.end).toHaveBeenCalledTimes(2);
+});
+
+test("Express cancels the upstream reader and cleans drain listeners when downstream closes", async () => {
+  let cancelCalls = 0;
+  const middleware = expressPayment(
+    delegatingServer([]),
+    { price: "$0.01" },
+    async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(Uint8Array.of(0xff, 0x00));
+      },
+      cancel() {
+        cancelCalls += 1;
+      },
+    })),
+  );
+  const response: any = Object.assign(new EventEmitter(), {
+    status() { return this; },
+    setHeader() {},
+    write() {
+      queueMicrotask(() => response.emit("close"));
+      return false;
+    },
+    end: jest.fn(),
+  });
+  const next = jest.fn();
+
+  await middleware({
+    method: "GET", originalUrl: "/binary", protocol: "https",
+    headers: { host: "api.example.com" }, get: () => "api.example.com",
+  }, response, next);
+
+  expect(cancelCalls).toBe(1);
+  expect(response.end).not.toHaveBeenCalled();
+  expect(next).not.toHaveBeenCalled();
+  expect(response.listenerCount("drain")).toBe(0);
+  expect(response.listenerCount("close")).toBe(0);
+  expect(response.listenerCount("error")).toBe(0);
+});
+
+test("Express cancels upstream and forwards a downstream error without leaking listeners", async () => {
+  let cancelCalls = 0;
+  const middleware = expressPayment(
+    delegatingServer([]),
+    { price: "$0.01" },
+    async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(Uint8Array.of(1)); },
+      cancel() { cancelCalls += 1; },
+    })),
+  );
+  const downstream = new Error("socket failed");
+  const response: any = Object.assign(new EventEmitter(), {
+    status() { return this; }, setHeader() {},
+    write() { queueMicrotask(() => response.emit("error", downstream)); return false; },
+    end: jest.fn(),
+  });
+  const next = jest.fn();
+
+  await middleware({
+    method: "GET", originalUrl: "/binary", protocol: "https",
+    headers: { host: "api.example.com" }, get: () => "api.example.com",
+  }, response, next);
+
+  expect(cancelCalls).toBe(1);
+  expect(next).toHaveBeenCalledWith(downstream);
+  expect(response.end).not.toHaveBeenCalled();
+  expect(response.eventNames()).toEqual([]);
+});
+
+test.each(["before-first-chunk", "between-chunks"] as const)(
+  "Express cancels a pending reader when downstream closes %s",
+  async (timing) => {
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    let cancelCalls = 0;
+    let firstWrite!: () => void;
+    const firstWritten = new Promise<void>((resolve) => { firstWrite = resolve; });
+    const middleware = expressPayment(
+      delegatingServer([]),
+      { price: "$0.01" },
+      async () => new Response(new ReadableStream<Uint8Array>({
+        start(value) {
+          controller = value;
+          if (timing === "between-chunks") value.enqueue(Uint8Array.of(1));
+        },
+        cancel() { cancelCalls += 1; },
+      })),
+    );
+    const response: any = Object.assign(new EventEmitter(), {
+      status() { return this; }, setHeader() {},
+      write() { firstWrite(); return true; },
+      end: jest.fn(),
+    });
+    const next = jest.fn();
+    const running = middleware({
+      method: "GET", originalUrl: "/binary", protocol: "https",
+      headers: { host: "api.example.com" }, get: () => "api.example.com",
+    }, response, next);
+    if (timing === "between-chunks") await firstWritten;
+    else await new Promise((resolve) => setImmediate(resolve));
+    response.emit("close");
+    const outcome = await Promise.race([
+      running.then(() => "completed"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 20)),
+    ]);
+    if (outcome === "blocked") controller.close();
+    await running;
+    expect(outcome).toBe("completed");
+    expect(cancelCalls).toBe(1);
+    expect(response.end).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+    expect(response.listenerCount("close")).toBe(0);
+    expect(response.listenerCount("error")).toBe(0);
+  },
+);
+
+test("Express cancels a pending first read and forwards downstream error", async () => {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let cancelCalls = 0;
+  const middleware = expressPayment(
+    delegatingServer([]),
+    { price: "$0.01" },
+    async () => new Response(new ReadableStream<Uint8Array>({
+      start(value) { controller = value; },
+      cancel() { cancelCalls += 1; },
+    })),
+  );
+  const response: any = Object.assign(new EventEmitter(), {
+    status() { return this; }, setHeader() {}, write() { return true; }, end: jest.fn(),
+  });
+  const externalErrorListener = () => undefined;
+  response.on("error", externalErrorListener);
+  const next = jest.fn();
+  const running = middleware({
+    method: "GET", originalUrl: "/binary", protocol: "https",
+    headers: { host: "api.example.com" }, get: () => "api.example.com",
+  }, response, next);
+  await new Promise((resolve) => setImmediate(resolve));
+  const downstream = new Error("socket failed before first chunk");
+  response.emit("error", downstream);
+  const outcome = await Promise.race([
+    running.then(() => "completed"),
+    new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 20)),
+  ]);
+  if (outcome === "blocked") controller.close();
+  await running;
+  expect(outcome).toBe("completed");
+  expect(cancelCalls).toBe(1);
+  expect(next).toHaveBeenCalledWith(downstream);
+  expect(response.listeners("error")).toEqual([externalErrorListener]);
+  expect(response.listenerCount("close")).toBe(0);
+});
+
+test("Hono delegates to protect and returns its Fetch response", async () => {
   const events: string[] = [];
   const context: any = {
-    req: {
-      raw: new Request("https://api.example.com/weather"),
-      method: "GET",
-      path: "/weather",
-    },
-    res: new Response(null, { status: 200 }),
+    req: { raw: new Request("https://api.example.com/weather") },
+    res: new Response("weather", { status: 200 }),
     set: jest.fn(),
-    header: jest.fn(),
   };
-  const middleware = honoPayment(paidServer(events), { price: "$0.01" });
-  await middleware(context, async () => {
+  const middleware = honoPayment(delegatingServer(events), { price: "$0.01" });
+  const response = await middleware(context, async () => {
     events.push("handler");
-    context.res = new Response("failed", { status: 500 });
   });
-  expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
+
+  expect(events).toEqual(["protect:$0.01", "settled", "handler"]);
   expect(context.set).toHaveBeenCalledWith("paymentId", "pay-1");
+  expect(response.headers.get("PAYMENT-RESPONSE")).toBe("receipt");
 });
 
-test("Next settles before the route handler and keeps the receipt on 5xx", async () => {
+test("Hono caches protect across requests", async () => {
   const events: string[] = [];
+  const middleware = honoPayment(delegatingServer(events), { price: "$0.01" });
+  for (let index = 0; index < 2; index += 1) {
+    const context: any = {
+      req: { raw: new Request(`https://api.example.com/weather?i=${index}`) },
+      res: new Response("weather"),
+      set: jest.fn(),
+    };
+    await middleware(context, async () => undefined);
+  }
+  expect(events.filter((event) => event.startsWith("protect:"))).toHaveLength(1);
+});
+
+test("Next delegates the route handler to protect without payment parsing", async () => {
+  const events: string[] = [];
+  const nextContext = { params: { locale: "en" } };
   const handler = withPayment(
-    paidServer(events),
+    delegatingServer(events),
     { price: "$0.01" },
-    async (request) => {
-      events.push("handler");
-      expect(request.headers.get("x-0xkey-payment-id")).toBe("pay-1");
-      return new Response("failed", { status: 500 });
+    async (_request, context, frameworkContext) => {
+      events.push(`handler:${context.paymentId}`);
+      expect(frameworkContext).toBe(nextContext);
+      return new Response("weather");
     },
   );
   const response = await handler(
     new Request("https://api.example.com/weather"),
+    nextContext,
   );
-  expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
-  expect(response.status).toBe(500);
+
+  expect(events).toEqual(["protect:$0.01", "settled", "handler:pay-1"]);
   expect(response.headers.get("PAYMENT-RESPONSE")).toBe("receipt");
 });
 
-test("Hono records a thrown merchant handler after payment", async () => {
-  const events: string[] = [];
-  const context: any = {
-    req: {
-      raw: new Request("https://api.example.com/weather"),
-      method: "GET",
-      path: "/weather",
-    },
-    res: new Response(null, { status: 200 }),
-    set: jest.fn(),
-    header: jest.fn(),
-  };
-  const middleware = honoPayment(paidServer(events), { price: "$0.01" });
-  await expect(
-    middleware(context, async () => {
-      events.push("handler");
-      throw new Error("merchant failed");
-    }),
-  ).rejects.toThrow("merchant failed");
-  expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
-});
-
-test("Next records a thrown merchant handler after payment", async () => {
+test("Next caches protect while preserving concurrent request contexts", async () => {
   const events: string[] = [];
   const handler = withPayment(
-    paidServer(events),
+    delegatingServer(events),
     { price: "$0.01" },
-    async () => {
-      events.push("handler");
-      throw new Error("merchant failed");
-    },
+    async (_request, _payment, context) => Response.json(context),
   );
-  await expect(
-    handler(new Request("https://api.example.com/weather")),
-  ).rejects.toThrow("merchant failed");
-  expect(events).toEqual(["settled", "handler", "fulfillment_failed"]);
+  const [first, second] = await Promise.all([
+    handler(new Request("https://api.example.com/one"), { id: 1 }),
+    handler(new Request("https://api.example.com/two"), { id: 2 }),
+  ]);
+  expect(await first.json()).toEqual({ id: 1 });
+  expect(await second.json()).toEqual({ id: 2 });
+  expect(events.filter((event) => event.startsWith("protect:"))).toHaveLength(1);
 });

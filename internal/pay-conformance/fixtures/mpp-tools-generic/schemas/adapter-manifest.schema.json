@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tempo.xyz/mpp-tools/conformance/schemas/adapter-manifest.schema.json",
+  "title": "MPP Conformance Adapter Manifest",
+  "type": "object",
+  "required": ["schema", "name", "language", "command", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": 1 },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "language": {
+      "type": "string",
+      "minLength": 1
+    },
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "build": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "cwd": {
+      "type": "string",
+      "default": "."
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "protocol.schema.json#/$defs/Operation"
+      }
+    }
+  }
+}

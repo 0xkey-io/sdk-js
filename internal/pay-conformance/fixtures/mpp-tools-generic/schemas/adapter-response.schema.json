@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tempo.xyz/mpp-tools/conformance/schemas/adapter-response.schema.json",
+  "title": "MPP Conformance Adapter Response",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["ok", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "ok": { "const": true },
+        "value": true
+      }
+    },
+    {
+      "type": "object",
+      "required": ["ok", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "ok": { "const": false },
+        "error": {
+          "type": "object",
+          "required": ["type", "message"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "$ref": "protocol.schema.json#/$defs/ErrorType" },
+            "message": { "type": "string" }
+          }
+        }
+      }
+    }
+  ]
+}

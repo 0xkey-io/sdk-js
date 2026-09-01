@@ -1,31 +1,24 @@
 import type { PayRoute, PayServer } from "../server";
 
 export function paymentMiddleware(server: PayServer, route: PayRoute) {
+  const requests = new WeakMap<Request, { context: any; next: () => Promise<void> }>();
+  const protectedHandler = server.protect(route, async (payment) => {
+    const current = requests.get(payment.request);
+    if (!current) throw new Error("missing Hono request context");
+    current.context.set?.("paymentId", payment.paymentId);
+    current.context.set?.("paymentProtocol", payment.protocol);
+    await current.next();
+    return current.context.res;
+  });
   return async (context: any, next: () => Promise<void>) => {
-    const payment = await server.handle(context.req.raw, route);
-    if (payment.status !== 200) return payment.response;
-    context.set?.("paymentId", payment.paymentId);
-    const receipt = payment.withReceipt(new Response());
-    for (const [name, value] of receipt.headers) context.header(name, value);
+    const request = context.req.raw as Request;
+    requests.set(request, { context, next });
     try {
-      await next();
-    } catch (error) {
-      await server.fulfillmentFailed({
-        paymentId: payment.paymentId,
-        reference: payment.reference,
-        route: `${context.req.method} ${context.req.path}`,
-        status: 500,
-      });
-      throw error;
+      const response = await protectedHandler(request);
+      context.res = response;
+      return response;
+    } finally {
+      requests.delete(request);
     }
-    if (context.res.status >= 500) {
-      await server.fulfillmentFailed({
-        paymentId: payment.paymentId,
-        reference: payment.reference,
-        route: `${context.req.method} ${context.req.path}`,
-        status: context.res.status,
-      });
-    }
-    return context.res;
   };
 }

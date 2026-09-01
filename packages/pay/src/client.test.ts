@@ -1,25 +1,77 @@
 import { privateKeyToAccount } from "viem/accounts";
-import { encodeFunctionData, keccak256, stringToHex, type Hex } from "viem";
 import {
-  createPayFetch as createPayFetchBase,
+  encodeFunctionData,
+  getAddress,
+  keccak256,
+  sha256,
+  stringToBytes,
+  stringToHex,
+  type Hex,
+} from "viem";
+import {
+  createPayClient,
   type BasePaymentNetwork,
-  type CreatePayFetchOptions,
+  type CreatePayClientOptions,
+  PayError,
+  type PayClient,
+  type PayEvmAccount,
+  type PayProtocol,
+  type PaymentReceiptVerifier,
   type PaymentReceiptVerificationInput,
   type PendingPaymentRecord,
+  type PendingPaymentStore,
 } from "./client";
 
-function createPayFetch(
-  options: Omit<CreatePayFetchOptions, "network"> & {
-    network?: BasePaymentNetwork;
-  },
-) {
-  return createPayFetchBase({
-    ...options,
-    network: options.network ?? "eip155:84532",
+interface TestClientOptions {
+  account: PayEvmAccount;
+  allowHosts: string[];
+  maxAmount: string;
+  network?: BasePaymentNetwork;
+  protocolPreference?: PayProtocol[];
+  allowInsecureLocalhost?: boolean;
+  fetch?: typeof globalThis.fetch;
+  receiptVerifier?: PaymentReceiptVerifier;
+  rpcUrls?: Partial<Record<BasePaymentNetwork, string>>;
+  pendingPaymentStore?: PendingPaymentStore;
+  onReceipt?: CreatePayClientOptions["onReceipt"];
+}
+
+function createTestClient(options: TestClientOptions): PayClient {
+  const network = options.network ?? "eip155:84532";
+  return createPayClient({
+    account: options.account,
+    network,
+    policy: {
+      allowHosts: options.allowHosts,
+      maxAmount: options.maxAmount,
+      ...(options.protocolPreference
+        ? { preference: options.protocolPreference }
+        : {}),
+    },
+    recovery: options.pendingPaymentStore ?? createRecovery(),
+    verification: options.receiptVerifier
+      ? { verifier: options.receiptVerifier }
+      : {
+          rpcUrl:
+            options.rpcUrls?.[network] ??
+            (network === "eip155:8453"
+              ? "https://rpc.example"
+              : "https://sepolia.base.org"),
+        },
+    ...(options.fetch ? { fetch: options.fetch } : {}),
+    ...(options.allowInsecureLocalhost ? { allowInsecureLocalhost: true } : {}),
+    ...(options.onReceipt ? { onReceipt: options.onReceipt } : {}),
   });
 }
 
 jest.mock("mppx", () => ({
+  Constants: {
+    Headers: {
+      authorization: "Authorization",
+      wwwAuthenticate: "WWW-Authenticate",
+    },
+  },
+  Challenge: { fromResponseList: jest.fn() },
   Credential: {
     deserialize: jest.fn(),
     extractPaymentScheme: jest.fn((header: string) =>
@@ -28,6 +80,8 @@ jest.mock("mppx", () => ({
   },
   Receipt: { deserialize: jest.fn() },
   x402: {
+    paymentRequiredHeader: "PAYMENT-REQUIRED",
+    paymentSignatureHeader: "PAYMENT-SIGNATURE",
     paymentResponseHeader: "PAYMENT-RESPONSE",
     Header: {
       decodePaymentResponse: jest.fn(),
@@ -39,6 +93,7 @@ jest.mock("mppx", () => ({
   },
 }));
 jest.mock("mppx/client", () => ({
+  Transport: { from: (transport: unknown) => transport },
   Mppx: {
     create: jest.fn((config) => ({
       fetch: (input: RequestInfo | URL, init?: RequestInit) =>
@@ -107,35 +162,518 @@ const account = privateKeyToAccount(
   "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 );
 const payTo = "0x1111111111111111111111111111111111111111";
+test("MPP execution uses native-only wire decoding and preserves transport parameters", async () => {
+  const { Challenge } = jest.requireMock("mppx");
+  const { Mppx } = jest.requireMock("mppx/client");
+  const challenge = {
+    id: "native-id",
+    realm: "merchant.example",
+    method: "evm",
+    intent: "charge",
+    request: {
+      amount: "10000",
+      currency: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      recipient: payTo,
+      methodDetails: { chainId: 84532, decimals: 6 },
+    },
+  };
+  Challenge.fromResponseList.mockReturnValue([challenge]);
+  const response = new Response(null, {
+    status: 402,
+    headers: { "WWW-Authenticate": "Payment native" },
+  });
+  let calls = 0;
+  const client = createTestClient({
+    account,
+    allowHosts: ["merchant.example"],
+    maxAmount: "$0.01",
+    protocolPreference: ["mpp"],
+    fetch: async () =>
+      ++calls === 1 ? response.clone() : new Response(null, { status: 204 }),
+  });
+  // The upstream factory double does not sign; inspect the real transport
+  // supplied by Pay after its native-offer selection has run.
+  await expect(
+    client.fetch("https://merchant.example/paid"),
+  ).rejects.toMatchObject({ code: "PAYMENT_OFFER_UNSUPPORTED" });
+  const transport = Mppx.create.mock.calls.at(-1)[0].transport;
+  expect(transport).toBeDefined();
+  expect(transport.getChallenges(response)).toEqual([challenge]);
+  expect(
+    transport.getChallenges(
+      new Response(null, {
+        status: 402,
+        headers: { "PAYMENT-REQUIRED": "x402-only" },
+      }),
+    ),
+  ).toEqual([]);
+  expect(
+    transport.getChallenges(
+      new Response(null, {
+        status: 200,
+        headers: { "WWW-Authenticate": "Payment native" },
+      }),
+    ),
+  ).toEqual([]);
+  const controller = new AbortController();
+  const init = {
+    method: "POST",
+    body: "original-body",
+    signal: controller.signal,
+    credentials: "omit",
+    cache: "no-store",
+    redirect: "manual",
+    headers: new Headers({
+      Authorization: "stale-auth",
+      "PAYMENT-REQUIRED": "stale-required",
+      "PAYMENT-RESPONSE": "stale-response",
+      "PAYMENT-SIGNATURE": "stale-signature",
+      "X-Request-Id": "original-id",
+    }),
+  };
+  const attached = transport.setCredential(init, "Payment native-credential");
+  expect(attached).toEqual({
+    ...init,
+    headers: new Headers({
+      Authorization: "Payment native-credential",
+      "X-Request-Id": "original-id",
+    }),
+  });
+  expect(attached.signal).toBe(controller.signal);
+  expect(init.headers.get("Authorization")).toBe("stale-auth");
+  for (const header of [
+    "PAYMENT-REQUIRED",
+    "PAYMENT-RESPONSE",
+    "PAYMENT-SIGNATURE",
+  ])
+    expect(attached.headers.has(header)).toBe(false);
+});
+
+test("MPP offer selection rejects non-USDC decimals before protocol execution", async () => {
+  const { Challenge } = jest.requireMock("mppx");
+  Challenge.fromResponseList.mockReturnValue([{
+    id: "wrong-decimals",
+    realm: "merchant.example",
+    method: "evm",
+    intent: "charge",
+    request: {
+      amount: "10000",
+      currency: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      recipient: payTo,
+      methodDetails: { chainId: 84532, decimals: 18 },
+    },
+  }]);
+  let calls = 0;
+  const client = createTestClient({
+    account,
+    allowHosts: ["merchant.example"],
+    maxAmount: "$0.01",
+    protocolPreference: ["mpp"],
+    fetch: async () => ++calls === 1
+      ? new Response(null, { status: 402, headers: { "WWW-Authenticate": "Payment native" } })
+      : new Response(null, { status: 204 }),
+  });
+  await expect(client.fetch("https://merchant.example/paid")).rejects.toMatchObject({
+    code: "PAYMENT_POLICY_DENIED",
+    phase: "policy",
+    retryable: false,
+  });
+  expect(calls).toBe(1);
+});
+
+test("MPP offer selection accepts the frozen Ruby canonical-USDC profile without a decimals extension", async () => {
+  const { Challenge } = jest.requireMock("mppx");
+  Challenge.fromResponseList.mockReturnValue([{
+    id: "ruby-canonical-usdc",
+    realm: "merchant.example",
+    method: "evm",
+    intent: "charge",
+    request: {
+      amount: "10000",
+      currency: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      recipient: payTo,
+      methodDetails: { chainId: 84532, credentialTypes: ["authorization"] },
+    },
+  }]);
+  let calls = 0;
+  const client = createTestClient({
+    account,
+    allowHosts: ["merchant.example"],
+    maxAmount: "$0.01",
+    protocolPreference: ["mpp"],
+    fetch: async () => ++calls === 1
+      ? new Response(null, { status: 402, headers: { "WWW-Authenticate": "Payment native" } })
+      : new Response(null, { status: 204 }),
+  });
+  await expect(client.fetch("https://merchant.example/paid")).rejects.toMatchObject({
+    code: "PAYMENT_OFFER_UNSUPPORTED",
+  });
+  expect(calls).toBe(1);
+});
 const baseSepoliaUsdc = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const transaction = `0x${"ab".repeat(32)}`;
-const economicEffectId =
-  "eip3009:7297f6a4b95314051ed7022053212e243f42dab0269b3ed6ebad7dd0ae6942d6";
+const authorizationNonce = `0x${"11".repeat(32)}`;
+const economicEffectId = `eip3009:${sha256(
+  stringToBytes(
+    JSON.stringify({
+      from: account.address.toLowerCase(),
+      kind: "eip3009/transferWithAuthorization",
+      name: "USDC",
+      network: "eip155:84532",
+      nonce: authorizationNonce,
+      to: payTo.toLowerCase(),
+      validAfter: "0",
+      validBefore: "9999999999",
+      value: "10000",
+      verifyingContract: baseSepoliaUsdc.toLowerCase(),
+      version: "2",
+    }),
+  ),
+).slice(2)}`;
+
+function expectedEconomicEffectDigest(): `0x${string}` {
+  return sha256(
+    stringToBytes(
+      JSON.stringify({
+        network: "eip155:84532",
+        asset: getAddress(baseSepoliaUsdc),
+        authorizationDomain: { name: "USDC", version: "2" },
+        authorization: {
+          from: getAddress(account.address),
+          to: getAddress(payTo),
+          value: "10000",
+          validAfter: "0",
+          validBefore: "9999999999",
+          nonce: authorizationNonce,
+        },
+        economicEffectId,
+      }),
+    ),
+  );
+}
+
+function expectedRequestDigest(
+  payment: Omit<PendingPaymentRecord["payment"], "requestDigest">,
+): `0x${string}` {
+  return sha256(stringToBytes(JSON.stringify(payment)));
+}
+
+function createRecovery(): PendingPaymentStore {
+  let record: PendingPaymentRecord | undefined;
+  return {
+    protection: "aead",
+    async load() {
+      return record;
+    },
+    async saveIfAbsent(next) {
+      if (record) return false;
+      record = next;
+      return true;
+    },
+    async clear(expectedDigest) {
+      if (record?.digest !== expectedDigest) return false;
+      record = undefined;
+      return true;
+    },
+  };
+}
+
+function createClientOptions(
+  overrides: Partial<CreatePayClientOptions> = {},
+): CreatePayClientOptions {
+  return {
+    account,
+    network: "eip155:84532",
+    policy: {
+      allowHosts: ["merchant.example"],
+      maxAmount: "$0.10",
+    },
+    recovery: createRecovery(),
+    verification: { verifier: async () => true },
+    fetch: async () => Response.json({ ok: true }),
+    ...overrides,
+  };
+}
+
+describe("Pay client 1.0 public contract", () => {
+  it("returns an explicit client object instead of a callable fetch wrapper", async () => {
+    const client = createPayClient(createClientOptions());
+
+    expect(typeof client).toBe("object");
+    expect(Object.keys(client).sort()).toEqual(["fetch", "pending", "resume"]);
+    await expect(
+      client.fetch("https://merchant.example/weather"),
+    ).resolves.toMatchObject({ status: 200 });
+    await expect(client.pending()).resolves.toBeUndefined();
+  });
+
+  it("fails missing durable recovery with stable structured fields", () => {
+    let caught: unknown;
+    try {
+      createPayClient(
+        createClientOptions({
+          recovery: undefined as unknown as PendingPaymentStore,
+        }),
+      );
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(PayError);
+    expect(caught).toMatchObject({
+      name: "PayError",
+      code: "PENDING_PAYMENT_STORE_REQUIRED",
+      phase: "configuration",
+      retryable: false,
+    });
+  });
+});
+
+describe("buyer error provenance", () => {
+  // Each former marker must be inert at unowned callback boundaries, even
+  // when the text is an exact match rather than incidental diagnostic prose.
+  const markers = [
+    "PAY_HOST_DENIED",
+    "PAY_INSECURE_TRANSPORT",
+    "PAY_REDIRECT_DENIED",
+    "PAYMENT_IN_PROGRESS",
+    "PAYMENT_RESUME_REQUIRED",
+    "PAYMENT_RESUME_UNAVAILABLE",
+    "PENDING_PAYMENT_CLAIMED",
+    "PENDING_PAYMENT_CLEAR_CONFLICT",
+    "PENDING_PAYMENT_CONFLICT",
+    "PENDING_PAYMENT_POLICY_DENIED",
+    "PENDING_PAYMENT_INVALID",
+    "PAYMENT_RECEIPT_MISSING",
+    "PAYMENT_RECEIPT_MISMATCH",
+    "PAYMENT_RECEIPT_UNVERIFIED",
+    "PAY_RECEIPT_RPC",
+    "PAY_SIGNER_UNSUPPORTED",
+  ];
+  const cases: Array<[string, unknown]> = markers.flatMap((marker) => [
+    [`${marker}-exact`, new Error(marker)],
+    [`${marker}-prefix`, new Error(`${marker}: diagnostic`)],
+    [`${marker}-embedded`, new Error(`diagnostic ${marker} detail`)],
+  ]);
+  cases.push(
+    ["multiple-markers", new Error(markers.join(" "))],
+    ["string", "PAY_HOST_DENIED"],
+    ["null", null],
+    ["undefined", undefined],
+    ["number", 7],
+    [
+      "forged-object",
+      {
+        name: "PayError",
+        message: "PAY_HOST_DENIED",
+        code: "PAY_HOST_DENIED",
+        phase: "policy",
+        retryable: false,
+      },
+    ],
+    [
+      "forged-error",
+      Object.assign(new Error("PAY_HOST_DENIED"), {
+        name: "PayError",
+        code: "PAY_HOST_DENIED",
+        phase: "policy",
+        retryable: false,
+      }),
+    ],
+    [
+      "throwing-message",
+      Object.defineProperty(new Error(), "message", {
+        get() {
+          throw new Error("message must not be inspected");
+        },
+      }),
+    ],
+  );
+  describe.each(["fetch", "pending", "resume"] as const)("%s", (operation) => {
+    it.each(cases)("uses operation context for %s", async (_label, cause) => {
+      const recovery = createRecovery();
+      const client = createPayClient(
+        createClientOptions({
+          recovery:
+            operation === "fetch"
+              ? recovery
+              : {
+                  ...recovery,
+                  async load() {
+                    throw cause;
+                  },
+                },
+          fetch: async () => {
+            throw cause;
+          },
+        }),
+      );
+      const result =
+        operation === "fetch"
+          ? client.fetch("https://merchant.example/weather")
+          : client[operation]();
+      let caught: unknown;
+      try {
+        await result;
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(PayError);
+      expect(caught).toMatchObject({
+        code: "PAYMENT_SERVICE_UNAVAILABLE",
+        phase: operation === "fetch" ? "request" : "recovery",
+        retryable: true,
+      });
+      expect((caught as PayError).message).toBe(
+        "PAYMENT_SERVICE_UNAVAILABLE: Payment service unavailable",
+      );
+      expect((caught as PayError).cause).toBe(cause);
+      expect((caught as PayError).paymentId).toBeUndefined();
+    });
+
+    it("preserves a local typed error and its identity", async () => {
+      const cause = new PayError("PAYMENT_AUTH_FORBIDDEN", "owned failure", {
+        phase: "policy",
+        retryable: false,
+      });
+      const recovery = createRecovery();
+      const client = createPayClient(
+        createClientOptions({
+          recovery: {
+            ...recovery,
+            async load() {
+              throw cause;
+            },
+          },
+        }),
+      );
+      const result =
+        operation === "fetch"
+          ? client.fetch("https://merchant.example/weather")
+          : client[operation]();
+      await expect(result).rejects.toBe(cause);
+    });
+  });
+
+  it("uses configuration context for an unowned policy getter failure", () => {
+    const cause = new Error("PAYMENT_IN_PROGRESS");
+    const options = createClientOptions();
+    Object.defineProperty(options.policy, "allowHosts", {
+      get() {
+        throw cause;
+      },
+    });
+    expect(() => createPayClient(options)).toThrow(
+      expect.objectContaining({
+        code: "PAY_PROFILE_INVALID",
+        phase: "configuration",
+        retryable: false,
+        cause,
+      }),
+    );
+  });
+
+  it("wraps even a local typed signer exception before handing it to the protocol", async () => {
+    const cause = new PayError("PAY_HOST_DENIED", "signer rejected", {
+      phase: "policy",
+    });
+    createPayClient(
+      createClientOptions({
+        account: {
+          address: account.address,
+          async signTypedData() {
+            throw cause;
+          },
+        },
+      }),
+    );
+    // Capture only the protocol dependency seam; the SDK's signer wrapper is real.
+    const dependency = jest.requireMock("@x402/evm") as {
+      toClientEvmSigner: jest.Mock;
+    };
+    const signer = dependency.toClientEvmSigner.mock.calls.at(-1)![0];
+    let caught: unknown;
+    try {
+      await signer.signTypedData({});
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(PayError);
+    expect(caught).toMatchObject({
+      code: "PAYMENT_SIGNING_FAILED",
+      phase: "signing",
+      retryable: false,
+    });
+    expect((caught as PayError).cause).toBe(cause);
+    expect(caught).not.toBe(cause);
+  });
+});
 
 describe("network selection", () => {
   it("requires an explicit supported Base network at runtime", () => {
     expect(() =>
-      createPayFetchBase({
-        account,
-        allowHosts: ["merchant.example"],
-        maxAmount: "$0.10",
-        allowInMemoryPendingPayment: true,
-        receiptVerifier: async () => true,
-      } as unknown as CreatePayFetchOptions),
-    ).toThrow("PAY_NETWORK_REQUIRED");
+      createPayClient(
+        createClientOptions({
+          network: undefined as unknown as BasePaymentNetwork,
+        }),
+      ),
+    ).toThrow("PAY_NETWORK_UNSUPPORTED");
   });
 
   it("rejects networks outside the two supported Base channels", () => {
     expect(() =>
-      createPayFetchBase({
-        account,
-        allowHosts: ["merchant.example"],
-        maxAmount: "$0.10",
-        network: "eip155:1" as BasePaymentNetwork,
-        allowInMemoryPendingPayment: true,
-        receiptVerifier: async () => true,
-      }),
+      createPayClient(
+        createClientOptions({ network: "eip155:1" as BasePaymentNetwork }),
+      ),
     ).toThrow("PAY_NETWORK_UNSUPPORTED");
+  });
+});
+
+describe("receipt verification profile", () => {
+  it.each([
+    ["missing", undefined],
+    ["empty", { rpcUrl: "" }],
+    ["whitespace", { rpcUrl: "   " }],
+    ["malformed", { rpcUrl: "not-a-url" }],
+    ["non-HTTPS", { rpcUrl: "http://rpc.example" }],
+    ["missing both choices", {}],
+    ["non-function verifier", { verifier: "yes" }],
+    [
+      "both choices",
+      { rpcUrl: "https://rpc.example", verifier: async () => true },
+    ],
+  ])("rejects a %s verification configuration", (_name, verification) => {
+    expect(() =>
+      createPayClient(
+        createClientOptions({
+          verification:
+            verification as unknown as CreatePayClientOptions["verification"],
+        }),
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        code: "PAY_PROFILE_INVALID",
+        phase: "configuration",
+        retryable: false,
+      }),
+    );
+  });
+
+  it("accepts exactly one HTTPS RPC URL or verifier function", () => {
+    expect(() =>
+      createPayClient(
+        createClientOptions({
+          verification: { rpcUrl: "https://rpc.example" },
+        }),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      createPayClient(
+        createClientOptions({
+          verification: { verifier: async () => true },
+        }),
+      ),
+    ).not.toThrow();
   });
 });
 
@@ -372,7 +910,7 @@ function deferred<T>() {
   return { promise, reject, resolve };
 }
 
-describe("createPayFetch", () => {
+describe("createPayClient", () => {
   beforeEach(() => {
     const mppx = jest.requireMock("mppx") as {
       Credential: { deserialize: jest.Mock };
@@ -411,42 +949,58 @@ describe("createPayFetch", () => {
     });
   });
 
-  it("requires a production receipt RPC before any signature can be made", () => {
-    const store = {
-      protection: "aead" as const,
-      load: async () => undefined,
-      saveIfAbsent: async () => true,
-      clear: async () => true,
-    };
+  it("validates an explicit production receipt RPC before signing", () => {
     expect(() =>
-      createPayFetchBase({
-        account,
-        allowHosts: ["merchant.example"],
-        maxAmount: "$0.10",
-        network: "eip155:8453",
-        pendingPaymentStore: store,
+      createPayClient(
+        createClientOptions({
+          network: "eip155:8453",
+          verification: { rpcUrl: "https://mainnet.base.org" },
+        }),
+      ),
+    ).toThrow("PAY_PROFILE_INVALID");
+  });
+
+  it("wraps a credential decoder exception as owned policy denial with direct cause", async () => {
+    const cause = new Error("decoder diagnostic PAY_HOST_DENIED");
+    const native = jest.requireMock("mppx");
+    native.x402.Header.decodePaymentSignature.mockImplementation(() => {
+      throw cause;
+    });
+    let sends = 0;
+    const client = createPayClient(
+      createClientOptions({
+        fetch: async () => {
+          sends++;
+          return new Response(null);
+        },
       }),
-    ).toThrow("PAY_RECEIPT_RPC_REQUIRED");
-    expect(() =>
-      createPayFetchBase({
-        account,
-        allowHosts: ["merchant.example"],
-        maxAmount: "$0.10",
-        network: "eip155:8453",
-        pendingPaymentStore: store,
-        rpcUrls: { "eip155:8453": "https://mainnet.base.org" },
-      }),
-    ).toThrow("Base public RPC is not for production use");
+    );
+    let caught: unknown;
+    try {
+      await client.fetch("https://merchant.example/weather", {
+        headers: { "PAYMENT-SIGNATURE": "signed-payment" },
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(PayError);
+    expect(caught).toMatchObject({
+      code: "PAYMENT_POLICY_DENIED",
+      phase: "policy",
+      retryable: false,
+    });
+    expect((caught as PayError).cause).toBe(cause);
+    expect(sends).toBe(0);
+    await expect(client.pending()).resolves.toBeUndefined();
   });
 
   it("requires durable pending-payment storage by default", () => {
     expect(() =>
-      createPayFetch({
-        account,
-        allowHosts: ["merchant.example"],
-        maxAmount: "$0.10",
-        fetch: async () => Response.json({ ok: true }),
-      }),
+      createPayClient(
+        createClientOptions({
+          recovery: undefined as unknown as PendingPaymentStore,
+        }),
+      ),
     ).toThrow("PENDING_PAYMENT_STORE_REQUIRED");
   });
 
@@ -458,17 +1012,16 @@ describe("createPayFetch", () => {
       await release.promise;
       return Response.json({ ok: true });
     }) as typeof globalThis.fetch;
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
       fetch: rawFetch,
-      allowInMemoryPendingPayment: true,
     });
 
-    const first = payFetch("https://merchant.example/weather");
+    const first = payFetch.fetch("https://merchant.example/weather");
     await entered.promise;
-    const second = payFetch("https://merchant.example/weather");
+    const second = payFetch.fetch("https://merchant.example/weather");
     release.resolve();
 
     await expect(second).rejects.toThrow("PAYMENT_IN_PROGRESS");
@@ -486,17 +1039,16 @@ describe("createPayFetch", () => {
         entered.resolve();
         await release.promise;
       }
-      return new Response(null, { status: 503 });
+      return new Response(null, { status: 401 });
     }) as typeof globalThis.fetch;
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
       fetch: rawFetch,
-      allowInMemoryPendingPayment: true,
     });
 
-    await payFetch("https://merchant.example/weather", {
+    await payFetch.fetch("https://merchant.example/weather", {
       headers: { "PAYMENT-SIGNATURE": "signed-payment" },
     });
     const first = payFetch.resume();
@@ -505,7 +1057,7 @@ describe("createPayFetch", () => {
     release.resolve();
 
     await expect(second).rejects.toThrow("PAYMENT_IN_PROGRESS");
-    await expect(first).resolves.toMatchObject({ status: 503 });
+    await expect(first).resolves.toMatchObject({ status: 401 });
     expect(rawFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -523,9 +1075,9 @@ describe("createPayFetch", () => {
       clear: jest.fn(async () => true),
     };
     const rawFetch = jest.fn(
-      async () => new Response(null, { status: 503 }),
+      async () => new Response(null, { status: 401 }),
     ) as typeof fetch;
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
@@ -533,7 +1085,7 @@ describe("createPayFetch", () => {
       pendingPaymentStore: store,
     });
 
-    const result = payFetch("https://merchant.example/weather", {
+    const result = payFetch.fetch("https://merchant.example/weather", {
       headers: { "PAYMENT-SIGNATURE": "signed-payment" },
     });
     await saveEntered.promise;
@@ -543,10 +1095,10 @@ describe("createPayFetch", () => {
     expect(rawFetch).not.toHaveBeenCalled();
 
     releaseSave.resolve();
-    await expect(result).resolves.toMatchObject({ status: 503 });
+    await expect(result).resolves.toMatchObject({ status: 401 });
     expect(rawFetch).toHaveBeenCalledTimes(1);
 
-    await expect(payFetch.resume()).resolves.toMatchObject({ status: 503 });
+    await expect(payFetch.resume()).resolves.toMatchObject({ status: 401 });
     expect(store.saveIfAbsent).toHaveBeenCalledTimes(1);
     expect(rawFetch).toHaveBeenCalledTimes(2);
   });
@@ -567,9 +1119,9 @@ describe("createPayFetch", () => {
       clear: jest.fn(async () => true),
     };
     const rawFetch = jest.fn(
-      async () => new Response(null, { status: 503 }),
+      async () => new Response(null, { status: 401 }),
     ) as typeof fetch;
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
@@ -578,7 +1130,7 @@ describe("createPayFetch", () => {
     });
 
     await expect(
-      payFetch("https://merchant.example/weather", {
+      payFetch.fetch("https://merchant.example/weather", {
         headers: { "PAYMENT-SIGNATURE": "signed-payment" },
       }),
     ).rejects.toThrow("PENDING_PAYMENT_CLAIMED");
@@ -595,9 +1147,9 @@ describe("createPayFetch", () => {
       clear: jest.fn(async () => true),
     };
     const rawFetch = jest.fn(
-      async () => new Response(null, { status: 503 }),
+      async () => new Response(null, { status: 401 }),
     ) as typeof fetch;
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
@@ -606,13 +1158,100 @@ describe("createPayFetch", () => {
     });
 
     await expect(
-      payFetch("https://merchant.example/weather", {
+      payFetch.fetch("https://merchant.example/weather", {
         headers: { "PAYMENT-SIGNATURE": "signed-payment" },
       }),
-    ).rejects.toThrow("store unavailable");
+    ).rejects.toMatchObject({
+      code: "PAYMENT_SERVICE_UNAVAILABLE",
+      retryable: true,
+      cause: expect.objectContaining({ message: "store unavailable" }),
+    });
     expect(rawFetch).not.toHaveBeenCalled();
-    expect(payFetch.hasPendingPayment()).toBe(true);
+    expect(await payFetch.pending()).toBeDefined();
   });
+
+  it.each(["save", "clear", "onReceipt"] as const)(
+    "preserves lifecycle when %s throws marker-bearing prose",
+    async (boundary) => {
+      const cause = new Error("diagnostic PAY_HOST_DENIED PAYMENT_IN_PROGRESS");
+      const events: string[] = [];
+      let stored: PendingPaymentRecord | undefined;
+      const native = jest.requireMock("mppx");
+      native.x402.Header.decodePaymentResponse.mockReturnValue(x402Receipt());
+      const client = createPayClient(
+        createClientOptions({
+          recovery: {
+            protection: "aead",
+            async load() {
+              events.push("load");
+              return stored;
+            },
+            async saveIfAbsent(record) {
+              events.push("save");
+              if (boundary === "save") throw cause;
+              stored = record;
+              return true;
+            },
+            async clear(digest) {
+              events.push("clear");
+              expect(digest).toBe(stored?.digest);
+              if (boundary === "clear") throw cause;
+              stored = undefined;
+              return true;
+            },
+          },
+          fetch: async () => {
+            events.push("send");
+            return new Response(null, {
+              headers: { "PAYMENT-RESPONSE": "receipt" },
+            });
+          },
+          verification: {
+            verifier: async () => {
+              events.push("verify");
+              return true;
+            },
+          },
+          onReceipt() {
+            events.push("callback");
+            throw cause;
+          },
+        }),
+      );
+      let caught: unknown;
+      try {
+        await client.fetch("https://merchant.example/weather", {
+          headers: { "PAYMENT-SIGNATURE": "signed-payment" },
+        });
+      } catch (error) {
+        caught = error;
+      }
+      expect(events).toEqual(
+        boundary === "save"
+          ? ["load", "save"]
+          : boundary === "clear"
+            ? ["load", "save", "send", "verify", "clear"]
+            : ["load", "save", "send", "verify", "clear", "callback"],
+      );
+      expect(Boolean(stored)).toBe(boundary === "clear");
+      expect(Boolean(await client.pending())).toBe(boundary !== "onReceipt");
+      if (boundary !== "onReceipt") {
+        await expect(
+          client.fetch("https://merchant.example/weather"),
+        ).rejects.toMatchObject({
+          code: "PAYMENT_RESUME_REQUIRED",
+          phase: "recovery",
+          retryable: false,
+        });
+      }
+      expect(caught).toMatchObject({
+        code: "PAYMENT_SERVICE_UNAVAILABLE",
+        phase: "request",
+        retryable: true,
+      });
+      expect((caught as PayError).cause).toBe(cause);
+    },
+  );
 
   it("keeps the signed request after any response without a receipt", async () => {
     const store = {
@@ -621,7 +1260,7 @@ describe("createPayFetch", () => {
       saveIfAbsent: jest.fn(async () => true),
       clear: jest.fn(async () => true),
     };
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
@@ -629,16 +1268,16 @@ describe("createPayFetch", () => {
       pendingPaymentStore: store,
     });
 
-    const response = await payFetch("https://merchant.example/weather", {
+    const response = await payFetch.fetch("https://merchant.example/weather", {
       headers: { "PAYMENT-SIGNATURE": "signed-payment" },
     });
 
     expect(response.status).toBe(401);
-    expect(payFetch.hasPendingPayment()).toBe(true);
+    expect(await payFetch.pending()).toBeDefined();
     expect(store.clear).not.toHaveBeenCalled();
-    await expect(payFetch("https://merchant.example/weather")).rejects.toThrow(
-      "PAYMENT_RESUME_REQUIRED",
-    );
+    await expect(
+      payFetch.fetch("https://merchant.example/weather"),
+    ).rejects.toThrow("PAYMENT_RESUME_REQUIRED");
   });
 
   it("keeps the durable slot when the receipt has no matching on-chain proof", async () => {
@@ -657,7 +1296,7 @@ describe("createPayFetch", () => {
       saveIfAbsent: jest.fn(async () => true),
       clear: jest.fn(async () => true),
     };
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
@@ -671,15 +1310,15 @@ describe("createPayFetch", () => {
     });
 
     await expect(
-      payFetch("https://merchant.example/weather", {
+      payFetch.fetch("https://merchant.example/weather", {
         headers: { "PAYMENT-SIGNATURE": "signed-payment" },
       }),
     ).rejects.toThrow("PAYMENT_RECEIPT_MISMATCH");
     expect(store.clear).not.toHaveBeenCalled();
-    expect(payFetch.hasPendingPayment()).toBe(true);
-    await expect(payFetch("https://merchant.example/weather")).rejects.toThrow(
-      "PAYMENT_RESUME_REQUIRED",
-    );
+    expect(await payFetch.pending()).toBeDefined();
+    await expect(
+      payFetch.fetch("https://merchant.example/weather"),
+    ).rejects.toThrow("PAYMENT_RESUME_REQUIRED");
   });
 
   it("clears the durable record by its digest after a matching receipt", async () => {
@@ -698,7 +1337,7 @@ describe("createPayFetch", () => {
       clear: jest.fn(async () => true),
     };
     const receiptVerifier = jest.fn(async () => true);
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
@@ -709,16 +1348,15 @@ describe("createPayFetch", () => {
           status: 200,
           headers: { "PAYMENT-RESPONSE": "receipt" },
         }),
-      allowInMemoryPendingPayment: true,
     });
 
-    await payFetch("https://merchant.example/weather", {
+    await payFetch.fetch("https://merchant.example/weather", {
       headers: { "PAYMENT-SIGNATURE": "signed-payment" },
     });
 
     expect(savedRecord).toBeDefined();
     expect(store.clear).toHaveBeenCalledWith(savedRecord!.digest);
-    expect(payFetch.hasPendingPayment()).toBe(false);
+    expect(await payFetch.pending()).toBeUndefined();
     expect(receiptVerifier).toHaveBeenCalledWith({
       protocol: "x402",
       network: "eip155:84532",
@@ -751,7 +1389,7 @@ describe("createPayFetch", () => {
       clear: jest.fn(async () => true),
     };
     try {
-      const payFetch = createPayFetch({
+      const payFetch = createTestClient({
         account,
         allowHosts: ["merchant.example"],
         maxAmount: "$0.10",
@@ -763,12 +1401,12 @@ describe("createPayFetch", () => {
           }),
       });
 
-      await payFetch("https://merchant.example/weather", {
+      await payFetch.fetch("https://merchant.example/weather", {
         headers: { "PAYMENT-SIGNATURE": "signed-payment" },
       });
 
       expect(store.clear).toHaveBeenCalledTimes(1);
-      expect(payFetch.hasPendingPayment()).toBe(false);
+      expect(await payFetch.pending()).toBeUndefined();
       expect(rpcFetch).toHaveBeenCalledTimes(4);
     } finally {
       rpcSpy.mockRestore();
@@ -788,7 +1426,7 @@ describe("createPayFetch", () => {
         .spyOn(globalThis, "fetch")
         .mockImplementation(createRpcFetch(fixture));
       try {
-        const payFetch = createPayFetch({
+        const payFetch = createTestClient({
           account,
           allowHosts: ["merchant.example"],
           maxAmount: "$0.10",
@@ -797,15 +1435,14 @@ describe("createPayFetch", () => {
               status: 200,
               headers: { "PAYMENT-RESPONSE": "receipt" },
             }),
-          allowInMemoryPendingPayment: true,
         });
 
         await expect(
-          payFetch("https://merchant.example/weather", {
+          payFetch.fetch("https://merchant.example/weather", {
             headers: { "PAYMENT-SIGNATURE": "signed-payment" },
           }),
         ).rejects.toThrow("PAYMENT_RECEIPT_MISMATCH");
-        expect(payFetch.hasPendingPayment()).toBe(true);
+        expect(await payFetch.pending()).toBeDefined();
       } finally {
         rpcSpy.mockRestore();
       }
@@ -827,7 +1464,7 @@ describe("createPayFetch", () => {
       clear: jest.fn(async () => true),
     };
     try {
-      const payFetch = createPayFetch({
+      const payFetch = createTestClient({
         account,
         allowHosts: ["merchant.example"],
         maxAmount: "$0.10",
@@ -840,14 +1477,14 @@ describe("createPayFetch", () => {
       });
 
       await expect(
-        payFetch("https://merchant.example/weather", {
+        payFetch.fetch("https://merchant.example/weather", {
           headers: { "PAYMENT-SIGNATURE": "signed-payment" },
         }),
       ).rejects.toThrow("PAYMENT_RECEIPT_UNVERIFIED");
       expect(store.clear).not.toHaveBeenCalled();
-      expect(payFetch.hasPendingPayment()).toBe(true);
+      expect(await payFetch.pending()).toBeDefined();
       await expect(
-        payFetch("https://merchant.example/weather"),
+        payFetch.fetch("https://merchant.example/weather"),
       ).rejects.toThrow("PAYMENT_RESUME_REQUIRED");
     } finally {
       rpcSpy.mockRestore();
@@ -869,7 +1506,7 @@ describe("createPayFetch", () => {
           amount: "10000",
           currency: baseSepoliaUsdc,
           recipient: payTo,
-          methodDetails: { chainId: 84532 },
+          methodDetails: { chainId: 84532, decimals: 6 },
         },
       },
       payload: {
@@ -902,7 +1539,7 @@ describe("createPayFetch", () => {
       .spyOn(globalThis, "fetch")
       .mockImplementation(createRpcFetch(matchingRpcFixture()));
     try {
-      const payFetch = createPayFetch({
+      const payFetch = createTestClient({
         account,
         allowHosts: ["merchant.example"],
         maxAmount: "$0.10",
@@ -914,12 +1551,12 @@ describe("createPayFetch", () => {
           }),
       });
 
-      await payFetch("https://merchant.example/weather", {
+      await payFetch.fetch("https://merchant.example/weather", {
         headers: { Authorization: "Payment signed-payment" },
       });
 
       expect(store.clear).toHaveBeenCalledWith(savedRecord!.digest);
-      expect(payFetch.hasPendingPayment()).toBe(false);
+      expect(await payFetch.pending()).toBeUndefined();
     } finally {
       rpcSpy.mockRestore();
     }
@@ -940,7 +1577,7 @@ describe("createPayFetch", () => {
           amount: "10000",
           currency: baseSepoliaUsdc,
           recipient: payTo,
-          methodDetails: { chainId: 84532 },
+          methodDetails: { chainId: 84532, decimals: 6 },
         },
       },
       payload: {
@@ -965,7 +1602,7 @@ describe("createPayFetch", () => {
       saveIfAbsent: jest.fn(async () => true),
       clear: jest.fn(async () => true),
     };
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
@@ -979,14 +1616,14 @@ describe("createPayFetch", () => {
     });
 
     await expect(
-      payFetch("https://merchant.example/weather", {
+      payFetch.fetch("https://merchant.example/weather", {
         headers: { Authorization: "Payment signed-payment" },
       }),
     ).rejects.toThrow("PAYMENT_RECEIPT_MISMATCH");
     expect(store.clear).not.toHaveBeenCalled();
-    await expect(payFetch("https://merchant.example/weather")).rejects.toThrow(
-      "PAYMENT_RESUME_REQUIRED",
-    );
+    await expect(
+      payFetch.fetch("https://merchant.example/weather"),
+    ).rejects.toThrow("PAYMENT_RESUME_REQUIRED");
   });
 
   it("keeps the pending request when the receipt belongs to another payer", async () => {
@@ -997,7 +1634,7 @@ describe("createPayFetch", () => {
       ...x402Receipt(),
       payer: "0x2222222222222222222222222222222222222222",
     });
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
@@ -1006,26 +1643,34 @@ describe("createPayFetch", () => {
           status: 200,
           headers: { "PAYMENT-RESPONSE": "receipt" },
         }),
-      allowInMemoryPendingPayment: true,
     });
 
     await expect(
-      payFetch("https://merchant.example/weather", {
+      payFetch.fetch("https://merchant.example/weather", {
         headers: { "PAYMENT-SIGNATURE": "signed-payment" },
       }),
     ).rejects.toThrow("PAYMENT_RECEIPT_MISMATCH");
-    expect(payFetch.hasPendingPayment()).toBe(true);
+    expect(await payFetch.pending()).toBeDefined();
   });
 
   it("rejects a restored request whose body was changed", async () => {
-    const first = createPayFetch({
+    let saved: PendingPaymentRecord | undefined;
+    const first = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
-      fetch: async () => new Response(null, { status: 503 }),
-      allowInMemoryPendingPayment: true,
+      fetch: async () => new Response(null, { status: 401 }),
+      pendingPaymentStore: {
+        protection: "aead",
+        load: async () => undefined,
+        saveIfAbsent: async (record) => {
+          saved = record;
+          return true;
+        },
+        clear: async () => true,
+      },
     });
-    await first("https://merchant.example/weather", {
+    await first.fetch("https://merchant.example/weather", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1033,98 +1678,513 @@ describe("createPayFetch", () => {
       },
       body: JSON.stringify({ city: "Shanghai" }),
     });
-    const pending = await first.exportPendingPayment();
-    expect(pending).toBeDefined();
     const rawFetch = jest.fn(
-      async () => new Response(null, { status: 503 }),
+      async () => new Response(null, { status: 401 }),
     ) as typeof fetch;
-    expect(() =>
-      createPayFetch({
-        account,
-        allowHosts: ["merchant.example"],
-        maxAmount: "$0.10",
+    const restored = createPayClient(
+      createClientOptions({
         fetch: rawFetch,
-        pendingPayment: {
-          ...pending!,
-          bodyBase64: "dGFtcGVyZWQ=",
+        recovery: {
+          protection: "aead",
+          load: async () => ({
+            ...saved!,
+            payment: { ...saved!.payment, bodyBase64: "dGFtcGVyZWQ=" },
+          }),
+          saveIfAbsent: async () => false,
+          clear: async () => false,
         },
-        allowInMemoryPendingPayment: true,
       }),
-    ).toThrow("PENDING_PAYMENT_CHECKSUM_MISMATCH");
+    );
+    await expect(restored.resume()).rejects.toMatchObject({
+      code: "PENDING_PAYMENT_CORRUPT",
+    });
     expect(rawFetch).not.toHaveBeenCalled();
   });
 
   it("revalidates maxAmount before resuming a restored credential", async () => {
-    const first = createPayFetch({
+    let saved: PendingPaymentRecord | undefined;
+    const first = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
-      fetch: async () => new Response(null, { status: 503 }),
-      allowInMemoryPendingPayment: true,
+      fetch: async () => new Response(null, { status: 401 }),
+      pendingPaymentStore: {
+        protection: "aead",
+        load: async () => undefined,
+        saveIfAbsent: async (record) => {
+          saved = record;
+          return true;
+        },
+        clear: async () => true,
+      },
     });
-    await first("https://merchant.example/weather", {
+    await first.fetch("https://merchant.example/weather", {
       headers: { "PAYMENT-SIGNATURE": "signed-payment" },
     });
-    const pending = await first.exportPendingPayment();
     const rawFetch = jest.fn(
-      async () => new Response(null, { status: 503 }),
+      async () => new Response(null, { status: 401 }),
     ) as typeof fetch;
-    const restored = createPayFetch({
-      account,
-      allowHosts: ["merchant.example"],
-      maxAmount: "$0.001",
-      fetch: rawFetch,
-      pendingPayment: pending!,
-      allowInMemoryPendingPayment: true,
-    });
-
-    await expect(restored.resume()).rejects.toThrow(
-      "PENDING_PAYMENT_POLICY_DENIED",
+    const restored = createPayClient(
+      createClientOptions({
+        policy: {
+          allowHosts: ["merchant.example"],
+          maxAmount: "$0.001",
+        },
+        recovery: {
+          protection: "aead",
+          load: async () => saved,
+          saveIfAbsent: async () => false,
+          clear: async () => false,
+        },
+        fetch: rawFetch,
+      }),
     );
+
+    await expect(restored.resume()).rejects.toThrow("PAYMENT_POLICY_DENIED");
     expect(rawFetch).not.toHaveBeenCalled();
   });
 
   it("rejects a restored credential from another configured network", async () => {
-    const first = createPayFetch({
+    let saved: PendingPaymentRecord | undefined;
+    const first = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
-      fetch: async () => new Response(null, { status: 503 }),
-      allowInMemoryPendingPayment: true,
+      fetch: async () => new Response(null, { status: 401 }),
+      pendingPaymentStore: {
+        protection: "aead",
+        load: async () => undefined,
+        saveIfAbsent: async (record) => {
+          saved = record;
+          return true;
+        },
+        clear: async () => true,
+      },
     });
-    await first("https://merchant.example/weather", {
+    await first.fetch("https://merchant.example/weather", {
       headers: { "PAYMENT-SIGNATURE": "signed-payment" },
     });
-    const pending = await first.exportPendingPayment();
-
-    expect(() =>
-      createPayFetchBase({
-        account,
-        allowHosts: ["merchant.example"],
-        maxAmount: "$0.10",
+    const restored = createPayClient(
+      createClientOptions({
         network: "eip155:8453",
-        pendingPayment: pending!,
-        receiptVerifier: async () => true,
-        allowInMemoryPendingPayment: true,
+        recovery: {
+          protection: "aead",
+          load: async () => saved,
+          saveIfAbsent: async () => false,
+          clear: async () => false,
+        },
       }),
-    ).toThrow("PENDING_PAYMENT_NETWORK_MISMATCH");
+    );
+
+    await expect(restored.resume()).rejects.toMatchObject({
+      code: "PENDING_PAYMENT_CONFLICT",
+    });
+  });
+
+  it("stores bound v3 fields and returns only a redacted pending summary", async () => {
+    let saved: PendingPaymentRecord | undefined;
+    const recovery = {
+      protection: "aead" as const,
+      load: async () => undefined,
+      saveIfAbsent: async (record: PendingPaymentRecord) => {
+        saved = record;
+        return true;
+      },
+      clear: async () => true,
+    };
+    const client = createPayClient(
+      createClientOptions({
+        recovery,
+        fetch: async () => new Response(null, { status: 401 }),
+      }),
+    );
+
+    await client.fetch("https://merchant.example/weather", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "PAYMENT-SIGNATURE": "credential-must-stay-secret",
+      },
+      body: JSON.stringify({ city: "Shanghai" }),
+    });
+
+    const expectedUnsigned = {
+      version: 3,
+      network: "eip155:84532" as const,
+      protocolId: "x402-exact-v2-eip3009",
+      adapterRevision: "pay-client-v1",
+      economicEffectDigest: expectedEconomicEffectDigest(),
+      url: "https://merchant.example/weather",
+      method: "POST",
+      headers: [
+        ["accept-payment", "evm/charge"],
+        ["content-type", "application/json"],
+        ["payment-signature", "credential-must-stay-secret"],
+      ] as Array<[string, string]>,
+      bodyBase64: "eyJjaXR5IjoiU2hhbmdoYWkifQ==",
+    } as const;
+    const requestDigest = expectedRequestDigest(expectedUnsigned);
+    expect(saved).toEqual({
+      digest: requestDigest,
+      payment: { ...expectedUnsigned, requestDigest },
+    });
+    const summary = await client.pending();
+    expect(summary).toEqual({
+      requestDigest: saved!.payment.requestDigest,
+      protocol: "x402",
+      protocolId: "x402-exact-v2-eip3009",
+      network: "eip155:84532",
+      url: "https://merchant.example/weather",
+      method: "POST",
+    });
+    expect(JSON.stringify(summary)).not.toContain(
+      "credential-must-stay-secret",
+    );
+    expect(Object.keys(summary!).sort()).toEqual([
+      "method",
+      "network",
+      "protocol",
+      "protocolId",
+      "requestDigest",
+      "url",
+    ]);
+  });
+
+  it("binds every serialized field into requestDigest and rejects each mutation", async () => {
+    let saved: PendingPaymentRecord | undefined;
+    const first = createPayClient(
+      createClientOptions({
+        recovery: {
+          protection: "aead",
+          load: async () => undefined,
+          saveIfAbsent: async (record) => {
+            saved = record;
+            return true;
+          },
+          clear: async () => false,
+        },
+        fetch: async () => new Response(null, { status: 401 }),
+      }),
+    );
+    await first.fetch("https://merchant.example/weather", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "PAYMENT-SIGNATURE": "signed-payment",
+      },
+      body: '{"city":"Shanghai"}',
+    });
+
+    const mutations: Array<
+      [string, (payment: PendingPaymentRecord["payment"]) => void]
+    > = [
+      ["version", (payment) => Object.assign(payment, { version: 2 })],
+      [
+        "network",
+        (payment) => Object.assign(payment, { network: "eip155:8453" }),
+      ],
+      [
+        "protocolId",
+        (payment) =>
+          Object.assign(payment, { protocolId: "mpp-evm-charge-v0" }),
+      ],
+      [
+        "adapterRevision",
+        (payment) =>
+          Object.assign(payment, { adapterRevision: "pay-client-v2" }),
+      ],
+      [
+        "economicEffectDigest",
+        (payment) =>
+          Object.assign(payment, {
+            economicEffectDigest: `0x${"ff".repeat(32)}`,
+          }),
+      ],
+      [
+        "url",
+        (payment) =>
+          Object.assign(payment, { url: "https://merchant.example/other" }),
+      ],
+      ["method", (payment) => Object.assign(payment, { method: "PUT" })],
+      [
+        "headers",
+        (payment) =>
+          Object.assign(payment, {
+            headers: [...payment.headers, ["x-mutated", "true"]],
+          }),
+      ],
+      [
+        "bodyBase64",
+        (payment) => Object.assign(payment, { bodyBase64: "e30=" }),
+      ],
+    ];
+
+    for (const [field, mutate] of mutations) {
+      const payment = structuredClone(saved!.payment);
+      mutate(payment);
+      const { requestDigest: _requestDigest, ...unsigned } = payment;
+      if (expectedRequestDigest(unsigned) === saved!.payment.requestDigest) {
+        throw new Error(`${field} is not bound by requestDigest`);
+      }
+      const rawFetch = jest.fn(async () => new Response(null, { status: 401 }));
+      const restored = createPayClient(
+        createClientOptions({
+          recovery: {
+            protection: "aead",
+            load: async () => ({ ...saved!, payment }),
+            saveIfAbsent: async () => false,
+            clear: async () => false,
+          },
+          fetch: rawFetch,
+        }),
+      );
+      let caught: unknown;
+      try {
+        await restored.resume();
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(PayError);
+      if (rawFetch.mock.calls.length !== 0) {
+        throw new Error(`${field} mutation reached the transport`);
+      }
+    }
+  });
+
+  it("loads into a fresh client and resumes the exact authenticated request bytes", async () => {
+    let saved: PendingPaymentRecord | undefined;
+    const firstSent: Array<{
+      body: Uint8Array;
+      headers: Array<[string, string]>;
+      method: string;
+      url: string;
+    }> = [];
+    const first = createPayClient(
+      createClientOptions({
+        recovery: {
+          protection: "aead",
+          load: async () => undefined,
+          saveIfAbsent: async (record) => {
+            saved = record;
+            return true;
+          },
+          clear: async () => false,
+        },
+        fetch: async (input, init) => {
+          const request = new Request(input, init);
+          firstSent.push({
+            body: new Uint8Array(await request.clone().arrayBuffer()),
+            headers: Array.from(request.headers.entries()),
+            method: request.method,
+            url: request.url,
+          });
+          return new Response(null, { status: 401 });
+        },
+      }),
+    );
+
+    await first.fetch("https://merchant.example/weather", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "PAYMENT-SIGNATURE": "signed-payment",
+        "X-Request-Id": "request-123",
+      },
+      body: '{"city":"Shanghai"}',
+    });
+    const secondSent: typeof firstSent = [];
+    const forbiddenSigner = jest.fn(async () => {
+      throw new Error("resume must never sign");
+    });
+    const second = createPayClient(
+      createClientOptions({
+        account: { address: account.address, signTypedData: forbiddenSigner },
+        recovery: {
+          protection: "aead",
+          load: async () => saved,
+          saveIfAbsent: async () => false,
+          clear: async () => false,
+        },
+        fetch: async (input, init) => {
+          const request = new Request(input, init);
+          secondSent.push({
+            body: new Uint8Array(await request.clone().arrayBuffer()),
+            headers: Array.from(request.headers.entries()),
+            method: request.method,
+            url: request.url,
+          });
+          return new Response(null, { status: 401 });
+        },
+      }),
+    );
+    await second.resume();
+
+    expect(firstSent).toHaveLength(1);
+    expect(secondSent).toHaveLength(1);
+    expect(secondSent[0]).toEqual(firstSent[0]);
+    expect(forbiddenSigner).not.toHaveBeenCalled();
+  });
+
+  it("reports a signed 5xx as retryable unknown while keeping recovery state", async () => {
+    const client = createPayClient(
+      createClientOptions({
+        fetch: async () =>
+          Response.json(
+            { errorCode: "PAYMENT_STATUS_UNKNOWN", paymentId: "pay_123" },
+            { status: 503 },
+          ),
+      }),
+    );
+
+    await expect(
+      client.fetch("https://merchant.example/weather", {
+        headers: { "PAYMENT-SIGNATURE": "signed-payment" },
+      }),
+    ).rejects.toMatchObject({
+      code: "PAYMENT_STATUS_UNKNOWN",
+      phase: "request",
+      retryable: true,
+      paymentId: "pay_123",
+    });
+    await expect(client.pending()).resolves.toBeDefined();
+  });
+
+  it("preserves an external failure only as cause and redacts its message", async () => {
+    const credential = "credential-super-secret";
+    const cause = new Error(`network failed with ${credential}`);
+    const client = createPayClient(
+      createClientOptions({
+        fetch: async () => {
+          throw cause;
+        },
+      }),
+    );
+
+    let caught: unknown;
+    try {
+      await client.fetch("https://merchant.example/weather");
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toMatchObject({
+      code: "PAYMENT_SERVICE_UNAVAILABLE",
+      phase: "request",
+      retryable: true,
+      cause,
+    });
+    expect((caught as Error).message).not.toContain(credential);
+  });
+
+  it("classifies bare offers without treating transport prose as a challenge", async () => {
+    const unsupported = createPayClient(
+      createClientOptions({
+        fetch: async () => new Response(null, { status: 402 }),
+      }),
+    );
+    await expect(
+      unsupported.fetch("https://merchant.example/weather"),
+    ).rejects.toMatchObject({
+      code: "PAYMENT_OFFER_UNSUPPORTED",
+      phase: "challenge",
+      retryable: false,
+    });
+
+    const malformed = createPayClient(
+      createClientOptions({
+        fetch: async () => {
+          throw new Error("invalid payment challenge encoding");
+        },
+      }),
+    );
+    await expect(
+      malformed.fetch("https://merchant.example/weather"),
+    ).rejects.toMatchObject({
+      code: "PAYMENT_SERVICE_UNAVAILABLE",
+      phase: "request",
+      retryable: true,
+    });
+  });
+
+  it("rejects an rc.6-shaped v3 record before sending or signing", async () => {
+    let saved: PendingPaymentRecord | undefined;
+    const firstRecovery = {
+      protection: "aead" as const,
+      load: async () => undefined,
+      saveIfAbsent: async (record: PendingPaymentRecord) => {
+        saved = record;
+        return true;
+      },
+      clear: async () => true,
+    };
+    const first = createPayClient(
+      createClientOptions({
+        recovery: firstRecovery,
+        fetch: async () => new Response(null, { status: 401 }),
+      }),
+    );
+    await first.fetch("https://merchant.example/weather", {
+      headers: { "PAYMENT-SIGNATURE": "signed-payment" },
+    });
+
+    const {
+      protocolId: _protocolId,
+      adapterRevision: _adapterRevision,
+      economicEffectDigest: _economicEffectDigest,
+      requestDigest: _requestDigest,
+      ...rc6Unsigned
+    } = saved!.payment;
+    const rc6Payment = {
+      ...rc6Unsigned,
+      requestDigest: sha256(stringToBytes(JSON.stringify(rc6Unsigned))),
+    };
+    const rc6Record = {
+      digest: rc6Payment.requestDigest,
+      payment: rc6Payment,
+    } as unknown as PendingPaymentRecord;
+    const rawFetch = jest.fn(
+      async () => new Response(null, { status: 401 }),
+    ) as typeof globalThis.fetch;
+    const signTypedData = jest.fn(account.signTypedData.bind(account));
+    const restored = createPayClient(
+      createClientOptions({
+        account: { address: account.address, signTypedData },
+        recovery: {
+          protection: "aead",
+          load: async () => rc6Record,
+          saveIfAbsent: async () => false,
+          clear: async () => false,
+        },
+        fetch: rawFetch,
+      }),
+    );
+
+    await expect(restored.resume()).rejects.toMatchObject({
+      code: "PENDING_PAYMENT_VERSION_UNSUPPORTED",
+      phase: "recovery",
+      retryable: false,
+    });
+    expect(rawFetch).not.toHaveBeenCalled();
+    expect(signTypedData).not.toHaveBeenCalled();
   });
 
   it("rejects plain HTTP before any request is sent", async () => {
     const rawFetch = jest.fn(async () =>
       Response.json({ ok: true }),
     ) as typeof fetch;
-    const payFetch = createPayFetch({
+    const payFetch = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
       fetch: rawFetch,
-      allowInMemoryPendingPayment: true,
     });
 
-    await expect(payFetch("http://merchant.example/weather")).rejects.toThrow(
-      "PAY_INSECURE_TRANSPORT",
-    );
+    await expect(
+      payFetch.fetch("http://merchant.example/weather"),
+    ).rejects.toMatchObject({
+      code: "PAY_INSECURE_TRANSPORT",
+      phase: "request",
+      retryable: false,
+    });
     expect(rawFetch).not.toHaveBeenCalled();
   });
 
@@ -1132,31 +2192,29 @@ describe("createPayFetch", () => {
     const rawFetch = jest.fn(async () =>
       Response.json({ ok: true }),
     ) as typeof fetch;
-    const local = createPayFetch({
+    const local = createTestClient({
       account,
       allowHosts: ["127.0.0.1:3000"],
       maxAmount: "$0.10",
       fetch: rawFetch,
-      allowInMemoryPendingPayment: true,
       allowInsecureLocalhost: true,
     });
-    await expect(local("http://127.0.0.1:3000/weather")).resolves.toMatchObject(
-      {
-        status: 200,
-      },
-    );
+    await expect(
+      local.fetch("http://127.0.0.1:3000/weather"),
+    ).resolves.toMatchObject({
+      status: 200,
+    });
 
-    const remote = createPayFetch({
+    const remote = createTestClient({
       account,
       allowHosts: ["merchant.example"],
       maxAmount: "$0.10",
       fetch: rawFetch,
-      allowInMemoryPendingPayment: true,
       allowInsecureLocalhost: true,
     });
-    await expect(remote("http://merchant.example/weather")).rejects.toThrow(
-      "PAY_INSECURE_TRANSPORT",
-    );
+    await expect(
+      remote.fetch("http://merchant.example/weather"),
+    ).rejects.toThrow("PAY_INSECURE_TRANSPORT");
     expect(rawFetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,5 +1,123 @@
 # @0xkey-io/pay
 
+## 1.0.0-rc.1
+
+- Require MPP `evm/charge` `request.methodDetails.decimals` to be the numeric
+  value `6` at initial offer selection, saved-payment inspection/resume, adapter
+  conversion, and credential validation. Missing or non-6 values fail closed
+  before signing, resending, or settlement. This is MPP-only and does not add
+  an x402 decimals field.
+
+- Quietly precheck protected x402 credentials with the official header decoder.
+  If it throws for invalid encoding or JSON, keep the original request but omit
+  the credential from the official resource server's HTTP context so that it
+  returns its ordinary unpaid `402` `Payment required` challenge, without a
+  receipt or handler call. Decodable JSON, MPP, dual-credential and disabled-
+  protocol handling are unchanged; no dependency or public option is added.
+
+- Select protocols by independent wire decoders and restrict MPP execution to
+  native Payment HTTP challenges. Preserve opaque realm/id values, including
+  realm `x402`, without protocol guessing or realm-to-host equality. Keep the
+  official x402 path, actual-host policy, original nonce/economic bindings,
+  authenticated v3 storage, same-credential recovery and proof-before-clear.
+  No public transport option, pending-format migration or signing fallback.
+
+- Preserve the owned signing failure across native x402's error replacement,
+  scoped to one in-flight operation and cleared on every exit. The public
+  error is `PAYMENT_SIGNING_FAILED` / `signing`, not retryable, with the
+  original thrown value directly as cause, including caller `PayError`s.
+  No message inference, automatic retry, storage/recovery or MPP change.
+
+- Classify buyer failures by typed ownership and explicit operation context,
+  not free-text error markers. Preserve local `PayError` identity, safe unknown
+  fallback messages and original unknown causes. Keep owned policy, recovery
+  and receipt failures distinct; signing, storage, receipt verification and
+  synchronous `onReceipt` propagation/order are unchanged.
+
+- Add optional direct MPP `paymentError` ownership configuration, captured and
+  safely validated before I/O. Pinned native 0.8.19/0.8.17 constructors preserve
+  settlement 503/403 across physical module owners; exact peers stay unchanged.
+  Public Problem Details retain only `errorCode`/`retryable` extensions, not
+  private payment identities or causes. A valid wrong owner remains a caller
+  integration-profile error, not something structural validation can prove.
+- Emit MPP receipts only on 2xx in both direct and protected paths, removing
+  handler-injected receipts on non-2xx while preserving response/cache behavior.
+  Keep throw/5xx `FAILED` and other returned statuses `FULFILLED`; this state
+  does not prove an application side effect, and 3xx/4xx cannot clear pending.
+  Local synthetic packed tests are not durable-buyer, chain, DB or GA evidence.
+
+- Add the private conformance 7A foundation: exact portable fixture manifests,
+  locks and source/license provenance, bounded isolated process controls, and
+  fail-closed immutable reports for the complete planned matrix. Protocol
+  drivers remain implementation prerequisites; no interoperability or release
+  approval is claimed. Public runtime, exports and peer contracts are unchanged.
+
+- Preserve native mppx 402 challenges and malformed-credential Problem Details
+  for a single selected malformed MPP credential. Keep all five raw-wire
+  guards before lossy parsing, ambiguity/disabled-protocol 400, non-402
+  dependency/UNKNOWN responses, and same-credential zero-resign recovery.
+
+- Add optional `facilitatorResponseError` to the direct x402 factory so callers
+  can supply their official public `core/server` constructor. Capture and
+  structurally validate it synchronously with redacted configuration failures;
+  keep the default 2.23 owner, safe messages, nonenumerable PayError cause,
+  exact peers, transport behavior, and public three-method client unchanged.
+  Document single-owner and natural upfront composition with strict 2.22/2.23
+  examples and native/framework/loopback fresh-process recovery tests. These
+  bounded synthetic tests are not production settlement or release approval.
+- Preserve the original checked npm tarball and closed source/run context before
+  publication. Collect public registry metadata, matching opaque tar bytes and
+  the exact raw provenance-bundle slice into an immutable six-file observation
+  receipt after successful publication/tag checks. Read-only recapture requires
+  the retained originals and current reviewed collector; it never republishes.
+  Neither local tests nor the receipt establish cryptographic acceptance or GA.
+- Bind the RC publisher's requested, checked-out, current-default-branch, GitHub
+  run, and executing-workflow source before builds and immediately before
+  publication. Reject mismatched dispatch identity, stale source and dirty
+  checkouts; load both guards from the executing workflow's immutable Git blob.
+  No publication is claimed by this release-engineering change; actual npm
+  provenance verification remains a separate external artifact gate.
+- Validate key-backed Pay configuration synchronously before offers or API
+  requests: require complete compressed P-256 public-key/private-scalar hex,
+  a valid scalar, and a matching pair. Reject invalid material with redacted
+  `PAY_PROFILE_INVALID` configuration errors (not retryable, no `paymentId`
+  or retained crypto cause). Snapshot validated key values for future stamps
+  without freezing caller objects; preserve custom stamper injection.
+- Replace the pre-GA callable buyer with `createPayClient()` and explicit
+  network, policy, durable recovery, and receipt-verification configuration.
+- Add stable structured `PayError` fields and redacted pending summaries.
+- Bind pending-payment v3 records to the stable protocol id,
+  `pay-client-v1` adapter revision, normalized EIP-3009 Economic Effect, and
+  exact authenticated request. Older rc.6-shaped v3 records fail closed and
+  are never upgraded or re-signed.
+- Remove root upstream x402/MPP wire-type exports and the pre-GA in-memory,
+  manual pending export, and callable fetch surfaces.
+- Replace the pre-GA seller route table with upfront `createPayServer().protect()`
+  and thin Express, Hono, and Next adapters.
+- Add dedicated `@0xkey-io/pay/x402` and `@0xkey-io/pay/mpp` entry points using
+  official `FacilitatorClient` and native-only mppx EVM charge contracts.
+- Pin `@x402/*@2.23.0` and `mppx@0.8.19`; separate their wire adapters behind a
+  dependency-free 0xkey settlement command.
+- Persist private fulfillment success/failure synchronously. Keep `paymentId`
+  request-local and out of all standard protocol objects and receipts.
+- Require Node.js 22.12+, fail closed on indeterminate protocol settlement,
+  cache route capability discovery, and preserve binary streaming in adapters.
+- Keep official x402 `/settle` on its standard private envelope; send validated
+  seller x402/MPP commands only to `/v1/settlements/charge` with protocol-derived
+  X-Stamp facts and strict nested settlement responses.
+- Surface direct official x402 boundary failures as non-402 errors, and preserve
+  raw `Mppx.create()` indeterminate settlement as an actual challenge-free HTTP
+  503. Retain the exact mppx peer and explicitly configure native error ownership
+  when the consumer uses a separate physical module.
+- Decode strict structured command errors and deterministic rejection envelopes,
+  refresh seller capabilities after bounded freshness, and cancel upstream
+  streams when Express clients disconnect.
+- Share the strict private settlement decoder across official x402 and command
+  paths; bind success to network, payer, amount, and a non-zero transaction.
+  Guard all five raw MPP credential layers without mutating upstream schemas,
+  restore the Viem peer contract, and cover disconnects across the full Express
+  response lifetime.
+
 ## 0.3.0-rc.6
 
 - Treat both `https://api-pay.0xkey.io` and

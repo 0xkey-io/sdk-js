@@ -1,41 +1,25 @@
-import type { PayRoute, PayServer } from "../server";
+import type { PaidHandlerContext, PayRoute, PayServer } from "../server";
 
 export function withPayment(
   server: PayServer,
   route: PayRoute,
   handler: (
     request: Request,
+    payment: PaidHandlerContext,
     context?: unknown,
   ) => Response | Promise<Response>,
 ) {
+  const contexts = new WeakMap<Request, unknown>();
+  const protectedHandler = server.protect(route, (payment) =>
+    handler(payment.request, payment, contexts.get(payment.request)),
+  );
   return async (request: Request, context?: unknown): Promise<Response> => {
-    const payment = await server.handle(request, route);
-    if (payment.status !== 200) return payment.response;
-    const paidRequest = new Request(request, {
-      headers: new Headers(request.headers),
-    });
-    paidRequest.headers.set("x-0xkey-payment-id", payment.paymentId);
-    let response: Response;
+    contexts.set(request, context);
     try {
-      response = await handler(paidRequest, context);
-    } catch (error) {
-      await server.fulfillmentFailed({
-        paymentId: payment.paymentId,
-        reference: payment.reference,
-        route: `${request.method} ${new URL(request.url).pathname}`,
-        status: 500,
-      });
-      throw error;
+      return await protectedHandler(request);
+    } finally {
+      contexts.delete(request);
     }
-    if (response.status >= 500) {
-      await server.fulfillmentFailed({
-        paymentId: payment.paymentId,
-        reference: payment.reference,
-        route: `${request.method} ${new URL(request.url).pathname}`,
-        status: response.status,
-      });
-    }
-    return payment.withReceipt(response);
   };
 }
 

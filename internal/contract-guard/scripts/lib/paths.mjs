@@ -11,6 +11,20 @@ export const BASELINES_DIR = path.join(
   "internal/contract-guard/baselines",
 );
 
+/** @param {Record<string, any>} pkg */
+function isPublicArtifactPackage(pkg) {
+  if (!pkg.private) return true;
+  return (
+    pkg.name === "@0xkey-io/pay" &&
+    pkg.repository?.type === "git" &&
+    pkg.repository?.url === "git+https://github.com/0xkey-io/sdk-js.git" &&
+    pkg.repository?.directory === "packages/pay" &&
+    pkg.publishConfig?.access === "public" &&
+    pkg.publishConfig?.registry === "https://registry.npmjs.org/" &&
+    pkg.publishConfig?.tag === "next"
+  );
+}
+
 /**
  * @typedef {{ dirName: string; dirPath: string; packageJsonPath: string; pkg: Record<string, any> }} PkgMeta
  */
@@ -30,7 +44,7 @@ export function listPublicPackages() {
         return null;
       }
       const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-      if (pkg.private) {
+      if (!isPublicArtifactPackage(pkg)) {
         return null;
       }
       return {

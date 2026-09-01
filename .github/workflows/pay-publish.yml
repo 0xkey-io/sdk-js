@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -26,43 +27,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    permissions:
+      contents: read
+      id-token: write
     env:
       PUBLIC_NPM_REGISTRY: https://registry.npmjs.org/
+      PAY_PUBLISH_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      PAY_PUBLISH_SOURCE_SHA: ${{ inputs.source_sha }}
     steps:
-      - name: Checkout the requested source commit
+      # Candidate input never selects the executable checker. Both gates read
+      # the checker from the executing workflow commit, not the working tree.
+      - name: Checkout the executing workflow source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.workflow_sha }}
 
       - name: Verify immutable default-branch source
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
+        shell: bash
         run: |
           set -euo pipefail
-          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "source_sha must be a full lowercase Git commit SHA." >&2
-            exit 1
-          fi
-          requested_sha="$(git rev-parse "${SOURCE_SHA}^{commit}")"
-          checked_out_sha="$(git rev-parse HEAD)"
-          if [ "$checked_out_sha" != "$requested_sha" ]; then
-            echo "Checkout did not resolve to source_sha." >&2
-            exit 1
-          fi
-          git fetch --no-tags origin "$DEFAULT_BRANCH"
-          default_head="$(git rev-parse "origin/$DEFAULT_BRANCH")"
-          if [ "$requested_sha" != "$default_head" ]; then
-            echo "source_sha is not the current default-branch HEAD." >&2
-            exit 1
-          fi
+          [[ "${GITHUB_WORKFLOW_SHA:-}" =~ ^[0-9a-f]{40}$ ]]
+          git --no-replace-objects show "$GITHUB_WORKFLOW_SHA:.github/scripts/check-pay-publish-source.sh" | bash --noprofile --norc
 
       - name: Set up Node and pnpm
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
-          node-version-file: ".nvmrc"
-          registry-url: https://registry.npmjs.org/
+          node-version: "24.3.0"
 
       - name: Verify public npm registry configuration
         run: |
@@ -75,9 +66,24 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install --global corepack@0.34.1 --registry="$PUBLIC_NPM_REGISTRY"
+          npm install --global npm@11.5.1 corepack@0.34.1 --registry="$PUBLIC_NPM_REGISTRY"
           corepack enable
           pnpm install -r --frozen-lockfile --registry "$PUBLIC_NPM_REGISTRY"
+          cache="$RUNNER_TEMP/pay-artifact-npm-cache"
+          user_config="$RUNNER_TEMP/pay-artifact-user.npmrc"
+          global_config="$RUNNER_TEMP/pay-artifact-global.npmrc"
+          install -d -m 700 "$cache"
+          : >"$user_config"
+          : >"$global_config"
+          {
+            echo "PAY_ARTIFACT_NPM_CACHE=$cache"
+            echo "NPM_CONFIG_USERCONFIG=$user_config"
+            echo "NPM_CONFIG_GLOBALCONFIG=$global_config"
+          } >>"$GITHUB_ENV"
+          export PAY_ARTIFACT_NPM_CACHE="$cache"
+          export NPM_CONFIG_USERCONFIG="$user_config"
+          export NPM_CONFIG_GLOBALCONFIG="$global_config"
+          node .github/scripts/provision-pay-artifact-cache.mjs
 
       - name: Build Pay dependency graph
         run: pnpm turbo run build --filter='@0xkey-io/pay^...'
@@ -97,6 +103,9 @@ jobs:
           if (packageJson.name !== "@0xkey-io/pay") {
             throw new Error("packages/pay must be exactly @0xkey-io/pay");
           }
+          if (packageJson.private !== true) {
+            throw new Error("packages/pay source must remain private");
+          }
           if (packageJson.version !== expectedVersion) {
             throw new Error(
               `Expected ${expectedVersion}; found ${packageJson.version}`,
@@ -107,7 +116,6 @@ jobs:
       - name: Refuse existing version and protect latest
         env:
           EXPECTED_VERSION: ${{ inputs.expected_version }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           latest="$(npm view @0xkey-io/pay dist-tags.latest --registry="$PUBLIC_NPM_REGISTRY")"
@@ -140,7 +148,9 @@ jobs:
         run: pnpm --filter @0xkey-io/pay docs:check
 
       - name: Typecheck Pay
-        run: pnpm --filter @0xkey-io/pay typecheck:pay-v1
+        run: |
+          pnpm --filter @0xkey-io/pay typecheck
+          pnpm --filter @0xkey-io/pay typecheck:pay-v1
 
       - name: Test Pay
         run: pnpm --filter @0xkey-io/pay test:pay-v1
@@ -158,26 +168,30 @@ jobs:
           pnpm --filter @0xkey-io/pay artifact:check \
             --pack-destination "$RUNNER_TEMP/oxkey-pay-publish"
 
-      - name: Reconfirm source, package metadata, and npm state before mutation
+      - name: Prepare checked npm source context
+        shell: bash
         env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           EXPECTED_VERSION: ${{ inputs.expected_version }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
+          CHECKED_TAR: ${{ steps.pack.outputs.tarball }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin "$DEFAULT_BRANCH"
-          current_default_head="$(git rev-parse "origin/$DEFAULT_BRANCH")"
-          if [ "$SOURCE_SHA" != "$current_default_head" ]; then
-            echo "source_sha is no longer the current default-branch HEAD." >&2
-            exit 1
-          fi
-          git diff --quiet
-          git diff --cached --quiet
-          if [ -n "$(git status --porcelain=v1 --untracked-files=all)" ]; then
-            echo "The source tree has unexpected untracked files after Pay gates." >&2
-            exit 1
-          fi
+          node packages/pay/scripts/prepare-npm-source-context.mjs --checked-tar "$CHECKED_TAR" --expected-version "$EXPECTED_VERSION" --output "$RUNNER_TEMP/pay-checked-package-v1"
+
+      - name: Preserve checked npm package before publication
+        id: checked_package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2, MIT
+        with:
+          name: pay-checked-package-${{ inputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pay-checked-package-v1
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: false
+
+      - name: Reconfirm source, package metadata, and npm state before mutation
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          set -euo pipefail
           effective_registry="$(npm config get registry)"
           if [ "$effective_registry" != "$PUBLIC_NPM_REGISTRY" ]; then
             echo "npm registry must be $PUBLIC_NPM_REGISTRY; found $effective_registry." >&2
@@ -192,6 +206,9 @@ jobs:
           );
           if (packageJson.name !== "@0xkey-io/pay") {
             throw new Error("packages/pay must be exactly @0xkey-io/pay");
+          }
+          if (packageJson.private !== true) {
+            throw new Error("packages/pay source must remain private");
           }
           if (packageJson.version !== expectedVersion) {
             throw new Error(
@@ -222,20 +239,25 @@ jobs:
           fi
           rm -f "$stderr_file"
 
+      - name: Reconfirm immutable default-branch source
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_WORKFLOW_SHA:-}" =~ ^[0-9a-f]{40}$ ]]
+          git --no-replace-objects show "$GITHUB_WORKFLOW_SHA:.github/scripts/check-pay-publish-source.sh" | bash --noprofile --norc
+
       - name: Publish only @0xkey-io/pay to npm next
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: >-
           npm publish "${{ steps.pack.outputs.tarball }}"
           --tag next
           --access public
-          --ignore-scripts
           --registry="$PUBLIC_NPM_REGISTRY"
+          --provenance
+          --ignore-scripts
 
       - name: Verify published version and npm tags
         env:
           EXPECTED_VERSION: ${{ inputs.expected_version }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           attempts=12
@@ -257,3 +279,24 @@ jobs:
           echo "npm did not expose the expected state after $attempts attempts." >&2
           echo "version=$published_version next=$next latest=$latest" >&2
           exit 1
+
+      - name: Collect immutable public npm publication receipt
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          EXPECTED_SOURCE: ${{ inputs.source_sha }}
+          CHECKED_TAR: ${{ steps.pack.outputs.tarball }}
+          CHECKED_ARTIFACT_ID: ${{ steps.checked_package.outputs.artifact-id }}
+          CHECKED_ARTIFACT_DIGEST: ${{ steps.checked_package.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          node packages/pay/scripts/collect-published-npm-receipt.mjs --checked-tar "$CHECKED_TAR" --source-context "$RUNNER_TEMP/pay-checked-package-v1/source-context.json" --expected-version "$EXPECTED_VERSION" --expected-source "$EXPECTED_SOURCE" --output "$RUNNER_TEMP/pay-npm-publication-receipt-v1" --artifact-id "$CHECKED_ARTIFACT_ID" --artifact-digest "$CHECKED_ARTIFACT_DIGEST"
+
+      - name: Retain immutable npm publication receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2, MIT
+        with:
+          name: pay-npm-publication-receipt-${{ inputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pay-npm-publication-receipt-v1
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: false

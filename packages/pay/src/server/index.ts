@@ -1,10 +1,9 @@
 export { createPayServer } from "../server";
 export type {
   CreatePayServerOptions,
-  PaidRequest,
-  PaymentChallenge,
+  PaidHandlerContext,
   PayRoute,
   PayServer,
-  PayServerProtocol,
+  PayProtocol,
 } from "../server";
 export type { PayApiKey } from "../xstamp";

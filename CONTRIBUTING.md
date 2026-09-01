@@ -7,6 +7,18 @@
 - [`internal/`](/internal/): Internal scripts and configs. Won't be published to npm.
 
 See [RELEASING.md](/RELEASING.md) for npm publishing instructions.
+Every recursive publish must explicitly exclude `@0xkey-io/pay`. Pay release
+candidates are published only from the checked tarball in the protected
+`pay-publish.yml` workflow with npm tag `next`; a public GA `latest` release is
+a separate future gated operation.
+
+Pay is permanently `private: true` in the source manifest. Only the artifact
+checker may create a public Pay RC manifest, and it does so only while packing,
+with exact byte restoration before the tarball is verified or emitted. The Pay
+workflow requires the separately configured npm trusted publisher for exact
+workflow `pay-publish.yml` and environment `production`; the generic
+`NPM_TOKEN` must not have Pay write access. Repository documentation does not
+claim those external settings are already configured.
 
 ## Getting started
 

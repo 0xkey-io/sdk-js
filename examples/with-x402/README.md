@@ -3,8 +3,9 @@
 This example demonstrates the 0xkey Pay x402 flow on Base Sepolia with a local
 Orchestrator and a 0xkey Company Wallet signer:
 
-- `@0xkey-io/pay` supplies upstream-owned x402 types and the org-bound Admin
-  client used to read merchant payment records.
+- `@0xkey-io/pay` supplies stable 0xkey-owned Pay types and the org-bound Admin
+  client used to read merchant payment records. Upstream x402 types stay in
+  the protocol implementation boundary.
 - `0xkey Orchestrator` verifies and settles through an `x402-rs` sidecar.
 - Base Sepolia USDC moves on-chain with the smallest smoke amount: `1` atomic USDC (`0.000001 USDC`).
 - The playground shows balances, tx hash, and merchant payment records via the Pay HTTP API.
@@ -12,7 +13,7 @@ Orchestrator and a 0xkey Company Wallet signer:
 ## Overview
 
 The home page is an internal Base Sepolia settlement playground. It is not the
-merchant quickstart. New integrations use `createPayFetch` and
+merchant quickstart. New integrations use `createPayClient` and
 `createPayServer` from `@0xkey-io/pay`.
 
 - **Company Wallet**: a server-side 0xkey API key signs EIP-3009 typed data

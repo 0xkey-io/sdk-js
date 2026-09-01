@@ -9,7 +9,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/api-key-stamper",
@@ -19,7 +23,10 @@
   {
     "dirName": "core",
     "exports": null,
-    "files": ["dist", "README.md"],
+    "files": [
+      "dist",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/core",
@@ -36,7 +43,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/cosmjs",
@@ -53,7 +64,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/crypto",
@@ -70,7 +85,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/eip-1193-provider",
@@ -87,7 +106,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/encoding",
@@ -104,7 +127,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/ethers",
@@ -120,7 +147,9 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist"],
+    "files": [
+      "dist"
+    ],
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "name": "@0xkey-io/gas-station",
@@ -137,7 +166,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/http",
@@ -154,7 +187,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/iframe-stamper",
@@ -171,7 +208,10 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/indexed-db-stamper",
@@ -211,6 +251,12 @@
         "require": "./dist/hono/index.js",
         "types": "./dist/hono/index.d.ts"
       },
+      "./mpp": {
+        "default": "./dist/mpp/index.mjs",
+        "import": "./dist/mpp/index.mjs",
+        "require": "./dist/mpp/index.js",
+        "types": "./dist/mpp/index.d.mts"
+      },
       "./next": {
         "default": "./dist/next/index.mjs",
         "import": "./dist/next/index.mjs",
@@ -222,9 +268,20 @@
         "import": "./dist/server/index.mjs",
         "require": "./dist/server/index.js",
         "types": "./dist/server/index.d.ts"
+      },
+      "./x402": {
+        "default": "./dist/x402/index.mjs",
+        "import": "./dist/x402/index.mjs",
+        "require": "./dist/x402/index.js",
+        "types": "./dist/x402/index.d.mts"
       }
     },
-    "files": ["dist/", "docs/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "docs/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/pay",
@@ -241,7 +298,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/react-native-passkey-stamper",
@@ -257,7 +318,10 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist", "README.md"],
+    "files": [
+      "dist",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/react-native-wallet-kit",
@@ -274,7 +338,10 @@
       },
       "./styles.css": "./dist/styles.css"
     },
-    "files": ["dist", "README.md"],
+    "files": [
+      "dist",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/react-wallet-kit",
@@ -291,7 +358,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/sdk-browser",
@@ -308,7 +379,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/sdk-server",
@@ -325,7 +400,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/**/*", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/**/*",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/sdk-types",
@@ -342,7 +421,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/solana",
@@ -359,7 +442,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/telegram-cloud-storage-stamper",
@@ -376,7 +463,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/viem",
@@ -393,7 +484,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/wallet-stamper",
@@ -410,7 +505,11 @@
         "types": "./dist/index.d.ts"
       }
     },
-    "files": ["dist/", "CHANGELOG.md", "README.md"],
+    "files": [
+      "dist/",
+      "CHANGELOG.md",
+      "README.md"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "name": "@0xkey-io/webauthn-stamper",

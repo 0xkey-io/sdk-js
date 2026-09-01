@@ -7,12 +7,25 @@ import { createFilePendingPaymentStore } from "./file-store.js";
 import { corruptBase64urlBytes } from "./tamper.js";
 
 const payTo = "0x00000000000000000000000000000000000000aa";
+const apiKeyFixture = new URL(
+  "../../../packages/api-key-stamper/src/__fixtures__/",
+  import.meta.url,
+);
+const [apiPublicKey, apiPrivateKey] = await Promise.all([
+  readFile(new URL("api-key.public", apiKeyFixture), "utf8").then((value) => value.trim()),
+  readFile(new URL("api-key.private", apiKeyFixture), "utf8").then((value) => value.trim()),
+]);
 const handle = createUatApp({
-  ZEROXKEY_ORGANIZATION_ID: "00000000-0000-0000-0000-000000000001",
+  ZEROXKEY_ORGANIZATION_ID: "00000000-0000-4000-8000-000000000001",
   ZEROXKEY_PAY_TO: payTo,
-  ZEROXKEY_PUBLIC_KEY: "02".padEnd(66, "1"),
-  ZEROXKEY_PRIVATE_KEY: "1".repeat(64),
+  ZEROXKEY_PUBLIC_KEY: apiPublicKey,
+  ZEROXKEY_PRIVATE_KEY: apiPrivateKey,
   MPP_SECRET_KEY: "uat-smoke-secret-is-at-least-32-bytes",
+  fetch: async () => Response.json({
+    kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+    extensions: [],
+    signers: {},
+  }),
 });
 
 const response = await handle(new Request("https://pay-uat.example/paid/ping"));
@@ -56,6 +69,9 @@ const record = {
   payment: {
     version: 3 as const,
     network: "eip155:84532" as const,
+    protocolId: "x402-exact-v2-eip3009" as const,
+    adapterRevision: "pay-client-v1" as const,
+    economicEffectDigest: `0x${"55".repeat(32)}` as const,
     requestDigest: `0x${"44".repeat(32)}` as const,
     url: "https://pay-uat.example/paid/ping",
     method: "GET",

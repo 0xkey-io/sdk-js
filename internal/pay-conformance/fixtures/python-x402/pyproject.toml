@@ -1,0 +1,8 @@
+[project]
+name = "task7-x402-evm-httpx-fixture"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = ["x402[evm,httpx]"]
+
+[tool.uv.sources]
+x402 = { path = "artifacts/x402-2.20.0-py3-none-any.whl" }

@@ -1,6 +1,12 @@
 {
   "name": "@0xkey-io/pay",
-  "version": "0.3.0-rc.6",
+  "version": "1.0.0-rc.1",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xkey-io/sdk-js.git",
+    "directory": "packages/pay"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "exports": {
@@ -21,6 +27,18 @@
       "import": "./dist/client/index.mjs",
       "require": "./dist/client/index.js",
       "default": "./dist/client/index.mjs"
+    },
+    "./x402": {
+      "types": "./dist/x402/index.d.mts",
+      "import": "./dist/x402/index.mjs",
+      "require": "./dist/x402/index.js",
+      "default": "./dist/x402/index.mjs"
+    },
+    "./mpp": {
+      "types": "./dist/mpp/index.d.mts",
+      "import": "./dist/mpp/index.mjs",
+      "require": "./dist/mpp/index.js",
+      "default": "./dist/mpp/index.mjs"
     },
     "./admin": {
       "types": "./dist/admin/index.d.ts",
@@ -64,47 +82,54 @@
     "README.md"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "tag": "next"
   },
   "scripts": {
     "prepublishOnly": "pnpm run clean && pnpm run build",
     "build": "rollup -c",
     "clean": "rimraf ./dist ./.cache",
     "artifact:check": "node scripts/check-packed-artifact.mjs",
-    "artifact:test": "node --test scripts/check-packed-artifact.test.mjs",
+    "artifact:test": "node --test scripts/check-packed-artifact.test.mjs scripts/check-publish-source.test.mjs scripts/npm-publication.test.mjs scripts/npm-publication-workflow.test.mjs scripts/npm-registry-transport.test.mjs",
     "docs:generate": "node scripts/generate-doc-facts.mjs",
     "docs:check": "pnpm run docs:generate && node scripts/check-docs.mjs && git diff --exit-code -- docs/generated-support.md",
     "pins:check": "node scripts/check-exact-pins.mjs",
     "typecheck": "tsc -p tsconfig.typecheck.json --allowJs false --checkJs false",
     "typecheck:pay-v1": "tsc -p tsconfig.pay-v1.json --allowJs false --checkJs false",
     "test": "jest --detectOpenHandles",
-    "test:pay-v1": "jest --detectOpenHandles --runInBand src/client.test.ts src/server.test.ts src/admin/index.test.ts src/xstamp.test.ts src/frameworks.test.ts",
+    "test:client-boundary": "pnpm run build && node --test scripts/client-boundary-real.test.mjs",
+    "test:conformance": "node ../../internal/pay-conformance/src/run.mjs",
+    "test:pay-v1": "jest --detectOpenHandles --runInBand src/client.test.ts src/x402/index.test.ts src/internal/x402-exact-v2-adapter.test.ts src/internal/zeroxkey-settlement-adapter.test.ts src/admin/index.test.ts src/xstamp.test.ts src/frameworks.test.ts && tsx --test src/mpp/index.node.test.ts src/server.node.test.ts",
     "test:interop": "pnpm run clean && pnpm run build && node scripts/interop-smoke.mjs && node scripts/mppx-validate-smoke.mjs",
     "test:commerce-contract": "jest --runInBand src/commerce/generated/codec.test.ts"
-  },
-  "peerDependencies": {
-    "viem": ">=2.54.0 <3"
   },
   "dependencies": {
     "@0xkey-io/crypto": "workspace:*",
     "@0xkey-io/viem": "workspace:*",
     "@0xkey-io/http": "workspace:*",
     "@0xkey-io/api-key-stamper": "workspace:*",
-    "@x402/core": "2.22.0",
-    "@x402/evm": "2.22.0",
-    "@x402/fetch": "2.22.0",
-    "ajv": "8.12.0",
-    "mppx": "0.8.17"
+    "@x402/evm": "2.23.0",
+    "@x402/fetch": "2.23.0",
+    "ajv": "8.12.0"
   },
   "devDependencies": {
+    "@x402/core": "2.23.0",
+    "@x402/express": "2.23.0",
     "@types/jest": "^29.5.3",
     "@types/express": "^4.17.21",
     "jest": "^29.3.1",
+    "mppx": "0.8.19",
     "ts-jest": "29.4.1",
     "typescript": "5.4.3",
     "viem": "2.54.0"
   },
+  "peerDependencies": {
+    "@x402/core": "2.23.0",
+    "mppx": "0.8.19",
+    "viem": ">=2.54.0 <3"
+  },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12.0"
   }
 }

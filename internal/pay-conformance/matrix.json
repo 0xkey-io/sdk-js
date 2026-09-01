@@ -1,0 +1,2994 @@
+{
+  "schemaVersion": "0xkey.pay.conformance-matrix/v1",
+  "checkpoint": "7A",
+  "expectedRowCount": 145,
+  "faultFamilies": [
+    "malformed-ambiguous-offer",
+    "temporal-validity",
+    "network-mismatch",
+    "asset-mismatch",
+    "payee-mismatch",
+    "amount-mismatch",
+    "unsupported-authorization",
+    "replay",
+    "settle-unknown",
+    "verify-settle-rejection",
+    "supported-failure",
+    "fulfillment-failure",
+    "receipt-absent-malformed",
+    "receipt-mismatch",
+    "unverified-receipt",
+    "standard-wire-receipt",
+    "handler-failure",
+    "redaction",
+    "protocol-freeze"
+  ],
+  "rows": [
+    {
+      "id": "x402-2.23-official-buyer-to-pay-seller-import",
+      "fixture": "x402-2.23",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-official-buyer-to-pay-seller-require",
+      "fixture": "x402-2.23",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-pay-buyer-to-official-seller-import",
+      "fixture": "x402-2.23",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-pay-buyer-to-official-seller-require",
+      "fixture": "x402-2.23",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-malformed-ambiguous-offer",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-temporal-validity",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-network-mismatch",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-asset-mismatch",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-payee-mismatch",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-amount-mismatch",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-unsupported-authorization",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-replay",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-settle-unknown",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-verify-settle-rejection",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-supported-failure",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-fulfillment-failure",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-receipt-absent-malformed",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-receipt-mismatch",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-unverified-receipt",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-standard-wire-receipt",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-handler-failure",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-redaction",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-protocol-freeze",
+      "fixture": "x402-2.23",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.23-durable-aead-five-process-recovery",
+      "fixture": "x402-2.23",
+      "family": "recovery",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/fetch": "2.23.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-official-buyer-to-pay-seller-import",
+      "fixture": "x402-2.22",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-official-buyer-to-pay-seller-require",
+      "fixture": "x402-2.22",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-pay-buyer-to-official-seller-import",
+      "fixture": "x402-2.22",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-pay-buyer-to-official-seller-require",
+      "fixture": "x402-2.22",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-malformed-ambiguous-offer",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-temporal-validity",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-network-mismatch",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-asset-mismatch",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-payee-mismatch",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-amount-mismatch",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-unsupported-authorization",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-replay",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-settle-unknown",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-verify-settle-rejection",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-supported-failure",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-fulfillment-failure",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-receipt-absent-malformed",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-receipt-mismatch",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-unverified-receipt",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-standard-wire-receipt",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-handler-failure",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-redaction",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-protocol-freeze",
+      "fixture": "x402-2.22",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-2.22-durable-aead-five-process-recovery",
+      "fixture": "x402-2.22",
+      "family": "recovery",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/fetch": "2.22.0",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-official-buyer-to-pay-seller-import",
+      "fixture": "mppx-0.8.19",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-official-buyer-to-pay-seller-require",
+      "fixture": "mppx-0.8.19",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-pay-buyer-to-official-seller-import",
+      "fixture": "mppx-0.8.19",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-pay-buyer-to-official-seller-require",
+      "fixture": "mppx-0.8.19",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-malformed-ambiguous-offer",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-temporal-validity",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-network-mismatch",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-asset-mismatch",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-payee-mismatch",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-amount-mismatch",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-unsupported-authorization",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-replay",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-settle-unknown",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-verify-settle-rejection",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-supported-failure",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-fulfillment-failure",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-receipt-absent-malformed",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-receipt-mismatch",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-unverified-receipt",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-standard-wire-receipt",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-handler-failure",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-redaction",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-protocol-freeze",
+      "fixture": "mppx-0.8.19",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-durable-aead-five-process-recovery",
+      "fixture": "mppx-0.8.19",
+      "family": "recovery",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-official-buyer-to-pay-seller-import",
+      "fixture": "mppx-0.8.17",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-official-buyer-to-pay-seller-require",
+      "fixture": "mppx-0.8.17",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-pay-buyer-to-official-seller-import",
+      "fixture": "mppx-0.8.17",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-pay-buyer-to-official-seller-require",
+      "fixture": "mppx-0.8.17",
+      "family": "native-direction",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-malformed-ambiguous-offer",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-temporal-validity",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-network-mismatch",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-asset-mismatch",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-payee-mismatch",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-amount-mismatch",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-unsupported-authorization",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-replay",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-settle-unknown",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-verify-settle-rejection",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-supported-failure",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-fulfillment-failure",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-receipt-absent-malformed",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-receipt-mismatch",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-unverified-receipt",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-standard-wire-receipt",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-handler-failure",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-redaction",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-protocol-freeze",
+      "fixture": "mppx-0.8.17",
+      "family": "fault",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-durable-aead-five-process-recovery",
+      "fixture": "mppx-0.8.17",
+      "family": "recovery",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-resource-import-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-resource-require-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-http-import-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-http-require-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-express-import-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-express-require-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-hono-import-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-hono-require-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-next-build-import-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-next-build-require-upfront-injection",
+      "fixture": "x402-framework-2.23",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-default-authorization-rejection",
+      "fixture": "x402-framework-2.23",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-wrong-owner-rejection",
+      "fixture": "x402-framework-2.23",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-mixed-condition-configured",
+      "fixture": "x402-framework-2.23",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-direct-verify-faults",
+      "fixture": "x402-framework-2.23",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-next-native-esm-import-rejection",
+      "fixture": "x402-framework-2.23",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.23-typed-public-recipe",
+      "fixture": "x402-framework-2.23",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.23/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.23.0",
+        "@x402/evm": "2.23.0",
+        "@x402/express": "2.23.0",
+        "@x402/hono": "2.23.0",
+        "@x402/next": "2.23.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-resource-import-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-resource-require-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-http-import-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-http-require-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-express-import-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-express-require-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-hono-import-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-hono-require-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-next-build-import-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-next-build-require-upfront-injection",
+      "fixture": "x402-framework-2.22",
+      "family": "injection",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-default-authorization-rejection",
+      "fixture": "x402-framework-2.22",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-wrong-owner-rejection",
+      "fixture": "x402-framework-2.22",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-mixed-condition-configured",
+      "fixture": "x402-framework-2.22",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-direct-verify-faults",
+      "fixture": "x402-framework-2.22",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-next-native-esm-import-rejection",
+      "fixture": "x402-framework-2.22",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "x402-framework-2.22-typed-public-recipe",
+      "fixture": "x402-framework-2.22",
+      "family": "owner-control",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/x402-framework-2.22/driver.mjs",
+      "expectedVersions": {
+        "@x402/core": "2.22.0",
+        "@x402/evm": "2.22.0",
+        "@x402/express": "2.22.0",
+        "@x402/hono": "2.22.0",
+        "@x402/next": "2.22.0",
+        "express": "5.2.1",
+        "hono": "4.12.5",
+        "next": "16.2.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "3.25.76"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-malformed-wire-import",
+      "fixture": "mppx-0.8.19",
+      "family": "native-corpus",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.19-malformed-wire-require",
+      "fixture": "mppx-0.8.19",
+      "family": "native-corpus",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.19/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-malformed-wire-import",
+      "fixture": "mppx-0.8.17",
+      "family": "native-corpus",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-0.8.17-malformed-wire-require",
+      "fixture": "mppx-0.8.17",
+      "family": "native-corpus",
+      "requirement": "mandatory_local",
+      "owner": "task-7b",
+      "driver": "fixtures/mppx-0.8.17/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.17",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "mppx-validation-discovery-challenge-error",
+      "fixture": "mppx-0.8.19-validator-only",
+      "family": "validator",
+      "requirement": "mandatory_local",
+      "owner": "task-7c",
+      "driver": "fixtures/mppx-0.8.19-validator-only/driver.mjs",
+      "expectedVersions": {
+        "incur": "0.5.1",
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "go-x402-frozen-buyer-to-pay-seller",
+      "fixture": "go-x402",
+      "family": "cross-language",
+      "requirement": "mandatory_provisioned",
+      "owner": "task-7c",
+      "driver": "fixtures/go-x402/main.go",
+      "expectedVersions": {
+        "x402": "2.23.1-0.20260826184309-acaa90458564"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "python-x402-2.20-buyer-to-pay-seller",
+      "fixture": "python-x402",
+      "family": "cross-language",
+      "requirement": "mandatory_provisioned",
+      "owner": "task-7c",
+      "driver": "fixtures/python-x402/client.py",
+      "expectedVersions": {
+        "x402": "2.20.0"
+      },
+      "sourceSnapshots": {
+        "x402-foundation/x402": "acaa904585644649eac52cb49147882e22789e5e"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "ruby-mpp-0.1.5-pay-buyer-to-evm-seller",
+      "fixture": "ruby-mpp",
+      "family": "cross-language",
+      "requirement": "mandatory_provisioned",
+      "owner": "task-7c",
+      "driver": "fixtures/ruby-mpp/server.rb",
+      "expectedVersions": {
+        "mpp-rb": "0.1.5"
+      },
+      "sourceSnapshots": {
+        "stripe/mpp-rb": "24b5dacb86c0e81e93562a6f23752bfe2cb78d4f"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "official-mpp-tools-generic-base64url",
+      "fixture": "mpp-tools-generic",
+      "family": "generic-wire",
+      "requirement": "mandatory_local",
+      "owner": "task-7c",
+      "driver": "fixtures/mpp-tools-generic/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.18"
+      },
+      "sourceSnapshots": {
+        "tempoxyz/mpp-tools": "c5dde8faa684b79e2df665143cf7cd731608c079"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "official-mpp-tools-generic-www-authenticate",
+      "fixture": "mpp-tools-generic",
+      "family": "generic-wire",
+      "requirement": "mandatory_local",
+      "owner": "task-7c",
+      "driver": "fixtures/mpp-tools-generic/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.18"
+      },
+      "sourceSnapshots": {
+        "tempoxyz/mpp-tools": "c5dde8faa684b79e2df665143cf7cd731608c079"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "official-mpp-tools-generic-authorization",
+      "fixture": "mpp-tools-generic",
+      "family": "generic-wire",
+      "requirement": "mandatory_local",
+      "owner": "task-7c",
+      "driver": "fixtures/mpp-tools-generic/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.18"
+      },
+      "sourceSnapshots": {
+        "tempoxyz/mpp-tools": "c5dde8faa684b79e2df665143cf7cd731608c079"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "official-mpp-tools-generic-receipt",
+      "fixture": "mpp-tools-generic",
+      "family": "generic-wire",
+      "requirement": "mandatory_local",
+      "owner": "task-7c",
+      "driver": "fixtures/mpp-tools-generic/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.18"
+      },
+      "sourceSnapshots": {
+        "tempoxyz/mpp-tools": "c5dde8faa684b79e2df665143cf7cd731608c079"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "official-mpp-tools-generic-challenge-id",
+      "fixture": "mpp-tools-generic",
+      "family": "generic-wire",
+      "requirement": "mandatory_local",
+      "owner": "task-7c",
+      "driver": "fixtures/mpp-tools-generic/driver.mjs",
+      "expectedVersions": {
+        "mppx": "0.8.18"
+      },
+      "sourceSnapshots": {
+        "tempoxyz/mpp-tools": "c5dde8faa684b79e2df665143cf7cd731608c079"
+      },
+      "capabilityEvidence": null
+    },
+    {
+      "id": "ruby-mpp-evm-buyer",
+      "fixture": "capabilities",
+      "family": "capability",
+      "requirement": "not_applicable",
+      "owner": "task-7c",
+      "driver": "fixtures/capabilities.json",
+      "expectedVersions": {},
+      "sourceSnapshots": {
+        "stripe/mpp-rb": "24b5dacb86c0e81e93562a6f23752bfe2cb78d4f"
+      },
+      "capabilityEvidence": {
+        "path": "fixtures/capabilities.json",
+        "sha256": "91aa313a15defbc9c197d4bd2b992b5d6c9c8c88781538c795b7a6a06da09bfd"
+      }
+    },
+    {
+      "id": "cdp-high-level-server-injection",
+      "fixture": "capabilities",
+      "family": "capability",
+      "requirement": "not_applicable",
+      "owner": "task-7c",
+      "driver": "fixtures/capabilities.json",
+      "expectedVersions": {},
+      "sourceSnapshots": {
+        "coinbase/cdp-sdk": "1216e96f250d634d34887177bf12f66f021acbcb"
+      },
+      "capabilityEvidence": {
+        "path": "fixtures/capabilities.json",
+        "sha256": "91aa313a15defbc9c197d4bd2b992b5d6c9c8c88781538c795b7a6a06da09bfd"
+      }
+    },
+    {
+      "id": "official-mpp-tools-native-evm-charge",
+      "fixture": "capabilities",
+      "family": "capability",
+      "requirement": "not_applicable",
+      "owner": "task-7c",
+      "driver": "fixtures/capabilities.json",
+      "expectedVersions": {},
+      "sourceSnapshots": {
+        "tempoxyz/mpp-tools": "c5dde8faa684b79e2df665143cf7cd731608c079"
+      },
+      "capabilityEvidence": {
+        "path": "fixtures/capabilities.json",
+        "sha256": "91aa313a15defbc9c197d4bd2b992b5d6c9c8c88781538c795b7a6a06da09bfd"
+      }
+    },
+    {
+      "id": "mppx-validate-cli-paid",
+      "fixture": "mppx-0.8.19-validator-only",
+      "family": "external-paid-cli",
+      "requirement": "external",
+      "owner": "external-operator",
+      "driver": "fixtures/mppx-0.8.19-validator-only/driver.mjs",
+      "expectedVersions": {
+        "incur": "0.5.1",
+        "mppx": "0.8.19",
+        "typescript": "5.4.3",
+        "viem": "2.54.0",
+        "zod": "4.4.3"
+      },
+      "sourceSnapshots": {
+        "wevm/mppx": "c23eaf05a107be0906dae30a3fd53f8396ff3d78"
+      },
+      "capabilityEvidence": null
+    }
+  ]
+}

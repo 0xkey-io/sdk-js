@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 const files = [
   "README.md",
   "docs/protocol-selection-and-recovery.md",
+  "docs/migrating-to-1.0.md",
   "docs/generated-support.md",
 ];
 

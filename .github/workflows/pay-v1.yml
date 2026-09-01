@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "packages/pay/**"
+      - ".github/workflows/pay-publish.yml"
+      - ".github/scripts/check-pay-publish-*.mjs"
+      - ".github/scripts/check-pay-publish-source.sh"
       - "examples/with-x402/**"
       - "examples/pay-v1-uat/**"
       - "pnpm-lock.yaml"
@@ -12,6 +15,9 @@ on:
     branches: [main]
     paths:
       - "packages/pay/**"
+      - ".github/workflows/pay-publish.yml"
+      - ".github/scripts/check-pay-publish-*.mjs"
+      - ".github/scripts/check-pay-publish-source.sh"
       - "examples/with-x402/**"
       - "examples/pay-v1-uat/**"
       - "pnpm-lock.yaml"
@@ -30,6 +36,28 @@ jobs:
 
       - name: Setup JS
         uses: ./.github/actions/js-setup
+        with:
+          node-version: "22.12.0"
+
+      - name: Provision checked-artifact offline inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache="$RUNNER_TEMP/pay-artifact-npm-cache"
+          user_config="$RUNNER_TEMP/pay-artifact-user.npmrc"
+          global_config="$RUNNER_TEMP/pay-artifact-global.npmrc"
+          install -d -m 700 "$cache"
+          : >"$user_config"
+          : >"$global_config"
+          {
+            echo "PAY_ARTIFACT_NPM_CACHE=$cache"
+            echo "NPM_CONFIG_USERCONFIG=$user_config"
+            echo "NPM_CONFIG_GLOBALCONFIG=$global_config"
+          } >>"$GITHUB_ENV"
+          export PAY_ARTIFACT_NPM_CACHE="$cache"
+          export NPM_CONFIG_USERCONFIG="$user_config"
+          export NPM_CONFIG_GLOBALCONFIG="$global_config"
+          node .github/scripts/provision-pay-artifact-cache.mjs
 
       - name: Build Pay dependency graph
         run: >-
@@ -39,7 +67,9 @@ jobs:
           --filter='@0xkey-io/viem...'
 
       - name: Typecheck
-        run: pnpm --filter @0xkey-io/pay typecheck:pay-v1
+        run: |
+          pnpm --filter @0xkey-io/pay typecheck
+          pnpm --filter @0xkey-io/pay typecheck:pay-v1
 
       - name: Typecheck the x402 example
         run: pnpm --filter with-x402 exec next typegen && pnpm --filter with-x402 typecheck
@@ -91,7 +121,7 @@ jobs:
       - name: Reject removed pre-release interfaces
         run: |
           set -euo pipefail
-          if grep -REn '\b(Pay\.client|createPayClient|handlePaywallRequest|paywallExpress|paywallHono|withPaywall)\b' \
+          if grep -REn '\b(Pay\.client|handlePaywallRequest|paywallExpress|paywallHono|withPaywall)\b' \
             packages/pay/src/client.ts packages/pay/src/server.ts \
             packages/pay/src/index.ts \
             packages/pay/src/{client,server,admin,express,hono,next}; then

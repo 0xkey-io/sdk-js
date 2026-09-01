@@ -2,6 +2,9 @@
 
 Buyer and seller SDK for x402 v2 `exact` and MPP `evm/charge`.
 
+Runtime support starts at Node.js 22.12 for both ESM imports and CommonJS
+`require()`.
+
 Pay v1 supports Base USDC only. A seller settles first. The merchant handler
 runs only after the Base transaction is confirmed.
 
@@ -28,36 +31,132 @@ const payments = createPayServer({
   mppSecretKey: process.env.MPP_SECRET_KEY!,
 });
 
-app.use(
-  paymentMiddleware(payments, {
-    "GET /weather": { price: "$0.01", protocols: ["x402", "mpp"] },
-  }),
+app.get(
+  "/weather",
+  paymentMiddleware(
+    payments,
+    { price: "$0.01", description: "Weather" },
+    (_request, payment) =>
+      Response.json({ weather: "sunny", paymentId: payment.paymentId }),
+  ),
 );
 ```
 
 The same core has `@0xkey-io/pay/hono` and `@0xkey-io/pay/next` adapters.
 The handler receives `paymentId`. Use it as the idempotency key for writes.
 
-If the handler returns 5xx, the payment receipt stays on the response. Pay v1
-calls `onFulfillmentFailed` or logs `fulfillment_failed`; 0xkey does not yet
-store that event durably, and it does not refund automatically.
+Key-backed Seller and direct x402/MPP adapters validate `apiKey`
+synchronously at construction, before any payment offer or API request. Supply
+a matching P-256 pair: `publicKey` is 33-byte compressed hex (66 characters,
+`02` or `03` prefix); `privateKey` is a 32-byte scalar encoded as 64 hex
+characters, with value greater than zero and below the P-256 group order.
+Uppercase and lowercase hex are accepted without changing the supplied object;
+`0x` prefixes and whitespace are not accepted. The validated key values are
+copied for subsequent stamps, so later caller mutations cannot change the
+signing identity. Invalid or missing material
+throws `PayError` with code `PAY_PROFILE_INVALID`, phase `configuration`,
+`retryable: false`, and no `paymentId` or key-bearing cause. This local check
+does not prove remote admission or API authorization. Direct adapters still
+accept exactly one of `apiKey` or a custom `RequestStamper`; custom stampers
+are not probed or locally credential-validated.
+
+`protect()` verifies and settles before the handler. It reports every returned
+status below 500 as `FULFILLED` through the private signed fulfillment endpoint
+and every throw or 5xx as `FAILED`. This classification does not prove an
+application side effect. MPP receipts are eligible only on 2xx responses:
+3xx/4xx remain `FULFILLED` but have no receipt and cannot clear buyer pending.
+All non-2xx responses also discard a handler-supplied MPP receipt. x402 uses
+the unchanged official upfront failure-path receipt. A persistence timeout or
+non-200 response becomes retryable `PAYMENT_STATUS_UNKNOWN`, so a retry or
+restart reuses the same credential and `paymentId`.
+
+For direct upstream integration, `@0xkey-io/pay/x402` returns an official
+`FacilitatorClient`, while `@0xkey-io/pay/mpp` returns a native-only mppx EVM
+charge method. These dedicated entries own upstream wire types; root, client,
+and server declarations do not expose them.
+
+One selected malformed MPP credential (including invalid encoding or unknown
+raw fields) returns native mppx `402`, a fresh `WWW-Authenticate: Payment`
+challenge, and `malformed-credential` Problem Details before settlement. It
+never returns a payment receipt. Dual credential ambiguity and a credential
+for a disabled protocol remain `400`; settlement dependency/UNKNOWN responses
+remain non-402 without a fresh challenge. A buyer with a saved credential must
+not sign a replacement even when it receives a fresh challenge.
+
+For `protect()`, an x402 `PAYMENT-SIGNATURE` whose official header decoder
+throws (including invalid encoding or invalid JSON) is absent only from the
+official resource server's HTTP context. The original request remains the Pay
+request, while the resource server returns its ordinary unpaid `402` with
+`Payment required`, no receipt, and no handler call. Decodable JSON, including
+`payload: null`, continues to official matching and adapter validation. The
+dual-credential and disabled-protocol `400` guards run first; MPP is unchanged.
+
+For direct x402 integration, pass `facilitatorResponseError:
+FacilitatorResponseError`, imported from the same public `@x402/core/server`
+module that owns the consumer's resource/HTTP server and framework catch.
+Dependency and indeterminate settlement failures then remain that owner's
+official error, with the original retryable `PayError` as a nonenumerable
+`cause`; the tested official middleware returns 502 without a new challenge
+or paid handler. Omission uses Pay's imported 2.23 constructor. Exact versions
+alone do not ensure one owner: unconfigured 2.22, duplicate physical packages,
+mixed CJS/ESM conditions, and the CJS `core/http` subpath can lose the exception
+and produce an incorrect 402. See the
+[public upfront recipe and tested boundaries](./docs/direct-x402.md).
+
+The package retains the peer contract `mppx@0.8.19`, `@x402/core@2.23.0`,
+and `viem>=2.54.0 <3`. The Viem peer supplies the public runtime signer/address
+dependency. For direct MPP composition, pass `paymentError: Errors.PaymentError`
+from the same physical `mppx` module used by your `Mppx.create()`; see the
+[typed public recipe](./docs/examples/mpp-upfront.ts). Omission uses Pay's
+SDK-resolved constructor. Exact versions do not guarantee physical ownership.
+The supported constructor contract is the pinned native 0.8.19/0.8.17 classes,
+not arbitrary executable configuration or cross-realm plugins; the package's
+exact 0.8.19 peer is unchanged. A separate 0.8.17 owner/wire composition is not
+a peer-clean downgrade claim. The constructor is captured and its safe Problem
+Details contract validated synchronously before payment I/O. Invalid
+configuration throws redacted `PAY_PROFILE_INVALID` (`configuration`, not
+retryable, no `paymentId` or constructor cause), with no fallback. Shape
+validation cannot prove the owner of a separately created Mppx instance: a
+valid but wrong physical constructor is an integration-profile error, not a
+promised early rejection. Only `errorCode` and `retryable` appear in settlement
+Problem Details extensions; private `paymentId` and causes stay internal.
+With raw
+`Mppx.create({ methods: [method] })`, a post-send indeterminate settlement has
+an internal mppx result discriminant of 402, but its returned HTTP `challenge`
+Response is 503 with `Retry-After: 2`, no `WWW-Authenticate`, and no receipt.
+Return that Response as normal; do not inspect only the internal discriminant.
+The official mppx client does not durably recover a 503. Capture and persist the
+original `Authorization: Payment ...` credential before its first send, then
+retry the same credential after reconciliation. Never create a new credential
+for that unresolved economic effect. `createPayClient()` already implements
+this durable same-credential recovery contract.
+
+The direct x402 client keeps the official private `/verify` and `/settle`
+envelope. Both private settle decoders require exact keys, the configured
+network, a matching verified payer and non-zero transaction on success, and
+strictly typed optional fields. The 0xkey seller facade independently validates
+that wire, derives a
+closed `ChargeSettlementCommand`, and sends seller x402 and MPP commands only
+to `/v1/settlements/charge`; `paymentId` remains outside standard receipts.
 
 ## Buyer
 
 ```ts
-import { createPayFetch } from "@0xkey-io/pay/client";
+import { createPayClient } from "@0xkey-io/pay/client";
 
-const payFetch = createPayFetch({
+const payments = createPayClient({
   account,
-  allowHosts: ["api.example.com"],
   network: "eip155:8453",
-  maxAmount: "$0.10",
-  rpcUrls: { "eip155:8453": process.env.BASE_RPC_URL! },
-  protocolPreference: ["x402", "mpp"],
-  pendingPaymentStore,
+  policy: {
+    allowHosts: ["api.example.com"],
+    maxAmount: "$0.10",
+    preference: ["x402", "mpp"],
+  },
+  recovery: pendingPaymentStore,
+  verification: { rpcUrl: process.env.BASE_RPC_URL! },
 });
 
-const response = await payFetch("https://api.example.com/weather");
+const response = await payments.fetch("https://api.example.com/weather");
 ```
 
 `account` uses Pay's narrow signer Interface: an EVM `address` plus
@@ -70,10 +169,30 @@ by x402 and MPP; Pay does not copy a second wallet adapter. See the tested
 [`with-x402` example](../../examples/with-x402/README.md#2-company-wallet-signing).
 
 The buyer does not replace global `fetch`. It never falls back after signing.
+Protocol selection follows independently decoded wire offers. The MPP path
+accepts only native Payment HTTP challenges, not mppx's x402/MCP bridge.
+An MPP `evm/charge` request must contain numeric
+`request.methodDetails.decimals` equal to `6`, in addition to the canonical
+Base USDC address. A missing or non-6 value is rejected before signing or
+protocol execution. This field rule is MPP-specific; x402 has no corresponding
+Pay decimals field.
+MPP realms are protection-space labels: `x402`, `billing`, and other valid
+labels are preserved exactly, not interpreted as protocols or URL hosts.
+HTTPS and the actual request host allowlist still apply.
+Buyer failures use `PayError` code, phase and retryability, never dependency
+message text. A local `PayError` keeps its identity; other thrown values from
+fetch or recovery callbacks use the operation's safe fallback and are retained
+as `cause`. A foreign package copy or a lookalike error is not a local typed
+owner. Signer and receipt-verifier exceptions remain explicitly wrapped.
+Native x402 signer failures retain their per-operation owned error even when
+upstream replaces it: `PAYMENT_SIGNING_FAILED`, phase `signing`, not retryable,
+with the original thrown value directly as `cause` and no `paymentId`.
+This provenance is discarded on exit; unrelated errors still use the fallback.
+No classification is inferred from upstream text, and no retry is introduced.
 HTTPS is required. For local development only, `allowInsecureLocalhost: true`
 allows HTTP to `localhost`, `127.0.0.1`, and `[::1]`.
 
-`pendingPaymentStore` is required by default. It is one durable slot for one
+`recovery` is required. It is one durable slot for one
 unresolved signed request. Its contract is:
 
 - `protection` is `"aead"` or `"encryption+hmac"`.
@@ -93,8 +212,8 @@ canonical block, full `transferWithAuthorization` input, `Transfer` event, and
 time window, nonce, and transaction. A normal official x402 seller works; it
 does not need a 0xkey receipt extension.
 
-For Base mainnet, set `rpcUrls["eip155:8453"]` to a production-grade Base RPC, or
-provide an audited `receiptVerifier` with the same checks. The public
+For Base mainnet, set `verification.rpcUrl` to a production-grade Base RPC, or
+provide an audited `verification.verifier` with the same checks. The public
 `https://mainnet.base.org` endpoint is rejected. Base Sepolia may use its
 public endpoint. This check happens when the buyer is created, before it can
 sign or send a payment.
@@ -114,77 +233,61 @@ rejected.
 `pay.0xkey.io` and `pay.staging.0xkey.io` serve the product websites. Neither is
 a facilitator base URL.
 
-For tests and local work only, storage can be disabled explicitly:
-
-```ts
-const payFetch = createPayFetch({
-  account,
-  allowHosts: ["localhost:3000"],
-  network: "eip155:84532",
-  maxAmount: "$0.10",
-  allowInMemoryPendingPayment: true,
-  allowInsecureLocalhost: true,
-});
-```
-
-This mode is process-only. A crash can lose the signed request. Do not use it
-in production.
+There is no implicit or in-memory production mode. Tests may provide a test
+store, but every client instance uses the same atomic durable-store contract.
 
 ### Resume an unknown payment
 
 If a signed request returns any 5xx, including
-`503 PAYMENT_STATUS_UNKNOWN`, do not make a new payment. Call `resume()`. It
-reuses the saved credential. A normal call is blocked while a payment is
-pending. Treat any unexpected 5xx after signing as unknown, even when it is not
-the normal structured 503 response.
+`503 PAYMENT_STATUS_UNKNOWN`, the client throws a retryable `PayError` with
+code `PAYMENT_STATUS_UNKNOWN` and keeps the saved request. Call `resume()`; it
+reuses the same credential bytes. A normal call is blocked while a payment is
+pending.
 
 ```ts
-const response = await payFetch.resume();
+const response = await payments.resume();
 ```
 
-After a restart, give the same `pendingPaymentStore` to a new buyer. Its first
+After a restart, give the same recovery store to a new buyer. Its first
 call loads the saved request. Call `resume()` to send it again. `resume()` and
 normal calls share one in-process lock.
 
 ```ts
-const payFetch = createPayFetch({
+const payments = createPayClient({
   account,
-  allowHosts: ["api.example.com"],
   network: "eip155:8453",
-  maxAmount: "$0.10",
-  pendingPaymentStore,
-  rpcUrls: { "eip155:8453": process.env.BASE_RPC_URL! },
+  policy: { allowHosts: ["api.example.com"], maxAmount: "$0.10" },
+  recovery: pendingPaymentStore,
+  verification: { rpcUrl: process.env.BASE_RPC_URL! },
 });
 
-const response = await payFetch.resume(); // reuses the original credential
+const response = await payments.resume(); // reuses the original credential
 ```
 
-`pendingPayment` remains available for manual handoff:
+Use `pending()` for safe operational inspection:
 
 ```ts
-const pendingPayment = await payFetch.exportPendingPayment();
-const restored = createPayFetch({
-  account,
-  allowHosts: ["api.example.com"],
-  network: "eip155:8453",
-  maxAmount: "$0.10",
-  pendingPayment,
-  pendingPaymentStore,
-  rpcUrls: { "eip155:8453": process.env.BASE_RPC_URL! },
-});
+const pending = await payments.pending();
 ```
 
-It contains a live credential, headers, and body. Never log it. Its
-`requestDigest` is only an unkeyed checksum for accidental damage. An attacker
-can edit the data and recompute that checksum. Security comes from the store's
-AEAD or encryption plus HMAC, with the key kept outside the record.
+The summary contains only the request digest, protocol alias and stable
+protocol id, network, URL, and method. It never returns headers, body,
+credential, receipt, or the complete Economic Effect. The encrypted store owns
+the full version-3 record; do not log or manually move its plaintext.
 
 On restore, the SDK uses mppx schemas to check the payer, Base network,
-canonical USDC, amount limit, recipient, and challenge. The authenticated
+canonical USDC, exact MPP `request.methodDetails.decimals === 6`, amount limit,
+recipient, and challenge. A saved MPP request with a missing or non-6 decimals
+value fails closed before its credential is resent. Seller-side MPP adapter and
+credential validation enforce the same rule before settlement. The authenticated
 stored snapshot binds the original URL, method, headers, and body.
-Pending-payment format v3 also binds the selected network. Restoring it through
-an SDK instance configured for the other network fails before any request is
-sent.
+Pending-payment format v3 binds the selected network, stable protocol id,
+literal adapter revision `pay-client-v1`, Economic Effect digest, URL, method,
+headers, and body. An rc.6 version-3 record lacks these new bindings and fails
+with `PENDING_PAYMENT_VERSION_UNSUPPORTED`; it is never upgraded or re-signed.
+
+See [the 1.0 migration guide](./docs/migrating-to-1.0.md) for the intentional
+pre-GA API break.
 
 ## Admin
 
@@ -213,12 +316,12 @@ token in a browser bundle.
 
 Pay v1 has one interface per job:
 
-- buyer: `createPayFetch`;
+- buyer: `createPayClient`;
 - seller: `createPayServer` plus a framework adapter;
 - server-side dashboard BFF and operations: `createPayAdminClient`.
 
 The RC has no customer compatibility layer. Old `Pay.client`,
-`createPayClient`, paywall helpers, and lowercase payment states are not
+`createPayFetch`, paywall helpers, and lowercase payment states are not
 exported. The Admin client is fixed to its configured organization. Read calls
 cannot supply a different organization ID.
 
@@ -227,7 +330,69 @@ The Admin payment record uses only the new uppercase state machine. It includes
 It does not add a fixed `direction` field. Shared-relayer balances are internal
 operations data and are not exposed by this SDK.
 
+## Release source integrity
+
+The dedicated RC publisher binds the requested source, checkout, current
+default branch, GitHub run, and executing workflow to one exact commit before
+builds and immediately before publishing. Only a direct same-repository
+default-branch dispatch is accepted; stale reruns must use a fresh dispatch.
+The source stays private and only the checked tarball may be published to
+`next`. See [release guidance](../../RELEASING.md#pay-release-candidates).
+The checked artifact CLI requires an explicitly provisioned fixed-graph npm
+cache via `PAY_ARTIFACT_NPM_CACHE` and explicit empty regular-file
+`NPM_CONFIG_USERCONFIG` / `NPM_CONFIG_GLOBALCONFIG` inputs. It never acquires
+cache contents. It uses offline `npm ci`, then verifies the fixed graph and
+installed Pay bytes before running every existing import/runtime/type smoke.
+See the [offline artifact prerequisites](./docs/npm-publication-evidence.md#offline-checked-artifact-prerequisites)
+for tool contexts, path handling, and the remaining publisher provisioning gate.
+
+Local guard tests are not publication or signed-provenance evidence; actual
+npm evidence and verifier compatibility remain external release gates.
+
+The private `final-7b` harness has a bounded local executable for the four
+`receipt-absent-malformed` rows owned by x402 2.23/2.22 and MPP 0.8.19/0.8.17.
+Each row runs the closed absent, invalid-base64, invalid-JSON,
+wrong-protocol-header and malformed-required-field catalog under import and
+require. A failed first receipt retains the durable pending payment; a fresh
+buyer process then reuses the same credential and clears only after the full
+four-call local proof. This local evidence does not admit a matrix row,
+authorize publication, or change either production admission switch.
+
+The same private stage has a separate bounded executable for the four
+`unverified-receipt` rows. It distinguishes RPC unavailable/invalid responses
+from audited verifier false/throw decisions, keeps the original payment
+pending on every negative, and uses a fresh buyer with the same credential for
+the matching four-read proof before clear. This remains local conformance
+evidence and grants no publication, admission, payment or production authority.
+
+Its separate `receipt-mismatch` executable uses the complete x402 catalog and
+the protocol-applicable MPP catalog, which excludes the x402-only receipt
+network field. Every mismatch preserves pending state; a fresh buyer reuses the
+same credential and clears only after an unchanged four-read proof. This is
+local conformance evidence only.
+
+Before publishing, the workflow preserves the original checked tarball and
+source/run context. After publication and tag checks it captures a six-file
+registry observation receipt, preserving the exact nested bundle bytes without
+reserializing them. A capture failure is recovered read-only from the original
+tar/context, never by republishing or rebuilding a substitute. Both Actions
+uploads expire after 90 days; an owner-approved durable export/access policy is
+required before GA. See the [npm evidence contract](./docs/npm-publication-evidence.md).
+All collected provenance fields remain **unverified** until the independent
+release verifier applies approved trust inputs and signature policy.
+
 ## Keeping docs current
+
+The private repository harness at `internal/pay-conformance` is currently at
+checkpoint 7A: frozen fixture inputs, process/report safety, and an explicit
+145-row inventory. It does not yet execute protocol conformance. Run
+`pnpm --filter @0xkey-io/pay test:conformance --output /absolute/new-report.json`
+with a new output path outside the checkout. It writes an immutable
+`not_approved` report and exits nonzero: 142 rows are `BLOCKED`, with three
+source-backed `NOT_APPLICABLE` capability boundaries. Foundation unit tests,
+dependency installation, and previous readiness probes are not matrix passes.
+The harness is private and excluded from the Pay package; this command is for
+repository maintainers, not installed-package consumers.
 
 Changes to a protocol, public option, entry point, network, asset, receipt, or
 recovery rule must update the matching document in the same pull request.
