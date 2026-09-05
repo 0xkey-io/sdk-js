@@ -1,6 +1,10 @@
 /** @jest-environment node */
 
-import { verify, verifyAppProofSignature } from "../proof";
+import {
+  verify,
+  verifyAppProofSignature,
+  verifyQosLiveMeasurements,
+} from "../proof";
 import { test, expect, describe } from "@jest/globals";
 import {
   preprodAnchor,
@@ -9,8 +13,151 @@ import {
   testBootProof1,
   testBootProof2,
 } from "./shared";
+import qosProofPolicy from "./fixtures/qos-proof-policy.json";
+
+const manifestHashHex = "01".repeat(32);
+const publicKeyHex = "03".repeat(130);
+const manifestPcrsHex = ["00", "11", "22", "33"].map((byte) => byte.repeat(48));
+const expectedLivePcr17Hex =
+  "99d1eab3ea476f590f2eeddc03d1accddaed7aba31ef47ea11afcb83c554ec47fc40613231317e42b45c83641d20080a";
+
+const livePolicy = {
+  allowedManifestDigestsHex: [manifestHashHex],
+};
+
+function liveMeasurements(): {
+  digest: string;
+  nonce: unknown;
+  publicKeyHex: string;
+  pcrsHex: Record<string, string>;
+} {
+  return {
+    digest: "SHA384",
+    nonce: null,
+    publicKeyHex,
+    pcrsHex: Object.fromEntries(
+      Array.from({ length: 32 }, (_, index) => [index, "00".repeat(48)]),
+    ),
+  };
+}
 
 describe("Proof verification tests", () => {
+  test("checks the QoS 0.14 live PCR17 commitment", async () => {
+    const measurements = liveMeasurements();
+    measurements.pcrsHex[0] = manifestPcrsHex[0]!;
+    measurements.pcrsHex[1] = manifestPcrsHex[1]!;
+    measurements.pcrsHex[2] = manifestPcrsHex[2]!;
+    measurements.pcrsHex[3] = manifestPcrsHex[3]!;
+    measurements.pcrsHex[17] = expectedLivePcr17Hex;
+
+    await expect(
+      verifyQosLiveMeasurements(
+        measurements,
+        manifestHashHex,
+        manifestPcrsHex,
+        livePolicy,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  test("rejects a live manifest outside the policy", async () => {
+    const measurements = liveMeasurements();
+    measurements.pcrsHex[0] = manifestPcrsHex[0]!;
+    measurements.pcrsHex[1] = manifestPcrsHex[1]!;
+    measurements.pcrsHex[2] = manifestPcrsHex[2]!;
+    measurements.pcrsHex[3] = manifestPcrsHex[3]!;
+    measurements.pcrsHex[17] = expectedLivePcr17Hex;
+
+    await expect(
+      verifyQosLiveMeasurements(
+        measurements,
+        manifestHashHex,
+        manifestPcrsHex,
+        { ...livePolicy, allowedManifestDigestsHex: ["02".repeat(32)] },
+      ),
+    ).rejects.toThrow("manifest digest is not allowed");
+  });
+
+  test.each([
+    [
+      "missing PCR",
+      (m: ReturnType<typeof liveMeasurements>) => delete m.pcrsHex[31],
+    ],
+    [
+      "PCR17 mismatch",
+      (m: ReturnType<typeof liveMeasurements>) =>
+        (m.pcrsHex[17] = "00".repeat(48)),
+    ],
+    [
+      "nonce present",
+      (m: ReturnType<typeof liveMeasurements>) => (m.nonce = "01"),
+    ],
+    [
+      "wrong digest",
+      (m: ReturnType<typeof liveMeasurements>) => (m.digest = "SHA256"),
+    ],
+    [
+      "wrong public key size",
+      (m: ReturnType<typeof liveMeasurements>) =>
+        (m.publicKeyHex = "03".repeat(65)),
+    ],
+  ])("rejects QoS 0.14 live measurements with %s", async (_name, mutate) => {
+    const measurements = liveMeasurements();
+    measurements.pcrsHex[0] = manifestPcrsHex[0]!;
+    measurements.pcrsHex[1] = manifestPcrsHex[1]!;
+    measurements.pcrsHex[2] = manifestPcrsHex[2]!;
+    measurements.pcrsHex[3] = manifestPcrsHex[3]!;
+    measurements.pcrsHex[17] = expectedLivePcr17Hex;
+    mutate(measurements);
+
+    await expect(
+      verifyQosLiveMeasurements(
+        measurements,
+        manifestHashHex,
+        manifestPcrsHex,
+        livePolicy,
+      ),
+    ).rejects.toThrow();
+  });
+
+  test("uses the frozen cross-repo PCR17 policy vector", async () => {
+    expect(qosProofPolicy.schemaVersion).toBe("turnkey-alignment/v1");
+    expect(qosProofPolicy.inputs.manifestHashHex).toBe(manifestHashHex);
+    expect(qosProofPolicy.inputs.ephemeralPublicKeyHex).toBe(publicKeyHex);
+
+    const measurements = liveMeasurements();
+    measurements.pcrsHex[0] = manifestPcrsHex[0]!;
+    measurements.pcrsHex[1] = manifestPcrsHex[1]!;
+    measurements.pcrsHex[2] = manifestPcrsHex[2]!;
+    measurements.pcrsHex[3] = manifestPcrsHex[3]!;
+    measurements.pcrsHex[17] = qosProofPolicy.proof.pcr17Hex;
+
+    await expect(
+      verifyQosLiveMeasurements(
+        measurements,
+        qosProofPolicy.inputs.manifestHashHex,
+        manifestPcrsHex,
+        {
+          allowedManifestDigestsHex:
+            qosProofPolicy.policy.allowedManifestDigestsHex,
+        },
+      ),
+    ).resolves.toBeUndefined();
+
+    measurements.pcrsHex[17] = qosProofPolicy.cases[1]!.proofOverride!.pcr17Hex;
+    await expect(
+      verifyQosLiveMeasurements(
+        measurements,
+        qosProofPolicy.inputs.manifestHashHex,
+        manifestPcrsHex,
+        {
+          allowedManifestDigestsHex:
+            qosProofPolicy.policy.allowedManifestDigestsHex,
+        },
+      ),
+    ).rejects.toThrow("PCR17 live manifest commitment does not match");
+  });
+
   test("should verify valid app proof signatures", () => {
     expect(verifyAppProofSignature(testAppProof1)).toBeUndefined();
     expect(verifyAppProofSignature(testAppProof2)).toBeUndefined();

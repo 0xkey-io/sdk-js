@@ -4,7 +4,7 @@ import {
 } from "@0xkey-io/encoding";
 import type { v1AppProof, v1BootProof } from "@0xkey-io/sdk-types";
 import { p256 } from "@noble/curves/p256";
-import { sha256 } from "@noble/hashes/sha2";
+import { sha256, sha384 } from "@noble/hashes/sha2";
 // `cbor-js` assigns `module.exports = obj` via an indirect variable
 // reference (not an inline object literal), which `cjs-module-lexer` fails
 // to statically analyze for named exports. `import * as CBOR` therefore only
@@ -113,6 +113,110 @@ export interface QuorumManifestSetAnchor {
    * threshold check.
    */
   quorumKeyHex?: string;
+  /** Explicitly selects the checks for the deployed QoS generation. */
+  qosAttestationPolicy: QosAttestationPolicy;
+}
+
+export interface QosLivePolicy {
+  /** Non-empty allowlist of approved SHA-256 manifest digests. */
+  allowedManifestDigestsHex: ReadonlyArray<string>;
+}
+
+export type QosAttestationPolicy =
+  | { mode: "legacy" }
+  | ({ mode: "qos-0.14" } & QosLivePolicy);
+
+export interface QosLiveMeasurements {
+  digest: string;
+  nonce: unknown;
+  publicKeyHex: string;
+  pcrsHex: Record<string, string>;
+}
+
+function exactHex(value: string, bytes: number, label: string): string {
+  if (!new RegExp(`^[0-9a-fA-F]{${bytes * 2}}$`).test(value)) {
+    throw new Error(`${label} must be ${bytes} bytes of hex`);
+  }
+  return value.toLowerCase();
+}
+
+/**
+ * Verify QoS 0.14 live measurements after the AWS COSE document is trusted.
+ * This mirrors QoS `verify_attestation_doc_against_manifest_live`.
+ */
+export async function verifyQosLiveMeasurements(
+  measurements: QosLiveMeasurements,
+  manifestHashHex: string,
+  manifestPcrsHex: ReadonlyArray<string>,
+  policy: QosLivePolicy,
+): Promise<void> {
+  if (measurements.digest !== "SHA384") {
+    throw new Error("QoS attestation digest must be SHA384");
+  }
+  if (measurements.nonce !== null && measurements.nonce !== undefined) {
+    throw new Error("QoS attestation nonce must be absent");
+  }
+
+  const manifestHash = exactHex(manifestHashHex, 32, "manifest digest");
+  const publicKey = exactHex(
+    measurements.publicKeyHex,
+    130,
+    "ephemeral public key",
+  );
+  if (manifestPcrsHex.length !== 4) {
+    throw new Error("manifest must contain PCR0 through PCR3");
+  }
+
+  const pcrKeys = Object.keys(measurements.pcrsHex);
+  if (
+    pcrKeys.length !== 32 ||
+    !Array.from({ length: 32 }, (_, index) => String(index)).every((key) =>
+      Object.prototype.hasOwnProperty.call(measurements.pcrsHex, key),
+    )
+  ) {
+    throw new Error("QoS attestation must contain exactly PCR0 through PCR31");
+  }
+  for (const key of pcrKeys) {
+    exactHex(measurements.pcrsHex[key]!, 48, `PCR${key}`);
+  }
+  for (let index = 0; index < 4; index++) {
+    const expected = exactHex(
+      manifestPcrsHex[index]!,
+      48,
+      `manifest PCR${index}`,
+    );
+    if (measurements.pcrsHex[index]!.toLowerCase() !== expected) {
+      throw new Error(`PCR${index} does not match the manifest`);
+    }
+  }
+
+  if (policy.allowedManifestDigestsHex.length === 0) {
+    throw new Error("manifest digest allowlist must not be empty");
+  }
+  const allowed = policy.allowedManifestDigestsHex.map((digest) =>
+    exactHex(digest, 32, "allowed manifest digest"),
+  );
+  if (!allowed.includes(manifestHash)) {
+    throw new Error("manifest digest is not allowed");
+  }
+
+  const preimage = new TextEncoder().encode(
+    JSON.stringify({
+      domain: "qos-live-manifest-pcr-commitment-v1",
+      ephemeralPublicKey: publicKey,
+      manifestHash,
+    }),
+  );
+  const commitment = sha384(preimage);
+  const extensionInput = new Uint8Array(48 + commitment.length);
+  extensionInput.set(commitment, 48);
+  const computedPcr17 = uint8ArrayToHexString(
+    sha384(extensionInput),
+  ).toLowerCase();
+  const actualPcr17 = measurements.pcrsHex[17]!.toLowerCase();
+  if (actualPcr17 !== computedPcr17) {
+    throw new Error("PCR17 live manifest commitment does not match");
+  }
 }
 
 /**
@@ -124,6 +228,9 @@ export const PRODUCTION_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
   threshold: PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD,
   members: PRODUCTION_QUORUM_MANIFEST_SET_MEMBERS,
   quorumKeyHex: PRODUCTION_QUORUM_KEY_HEX,
+  // The pinned production proofs predate QoS 0.14. Change this to qos-0.14
+  // with the new manifest digest in the same release that deploys 0.14.
+  qosAttestationPolicy: { mode: "legacy" },
 };
 
 /**
@@ -139,6 +246,8 @@ export const STAGING_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
   threshold: STAGING_QUORUM_MANIFEST_SET_THRESHOLD,
   members: STAGING_QUORUM_MANIFEST_SET_MEMBERS,
   quorumKeyHex: STAGING_QUORUM_KEY_HEX,
+  // Staging is also still pinned to a pre-0.14 deployment.
+  qosAttestationPolicy: { mode: "legacy" },
 };
 
 /**
@@ -286,6 +395,36 @@ export async function verifyBootProof(
         `pcr${pcrIndex} mismatch: attestation=${attestationPcrHex}, manifest=${manifestPcrHex}`,
       );
     }
+  }
+
+  switch (anchor.qosAttestationPolicy.mode) {
+    case "legacy":
+      break;
+    case "qos-0.14": {
+      const rawPcrs = attestationDoc.pcrs as Record<string, ArrayLike<number>>;
+      const pcrsHex = Object.fromEntries(
+        Object.entries(rawPcrs).map(([index, value]) => [
+          index,
+          uint8ArrayToHexString(new Uint8Array(value)),
+        ]),
+      );
+      await verifyQosLiveMeasurements(
+        {
+          digest: String(attestationDoc.digest),
+          nonce: attestationDoc.nonce,
+          publicKeyHex: uint8ArrayToHexString(
+            new Uint8Array(attestationDoc.public_key),
+          ),
+          pcrsHex,
+        },
+        manifestHashHex,
+        pcrPairs.map(([field]) => envelope.manifest.enclave[field]),
+        anchor.qosAttestationPolicy,
+      );
+      break;
+    }
+    default:
+      throw new Error("Unsupported QoS attestation policy mode");
   }
 
   // 5. Quorum multi-sig: verify approvals against the pinned trust anchor,

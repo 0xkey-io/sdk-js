@@ -145,7 +145,11 @@ describe("verifyLatestBootProof", () => {
     }));
     const client = createClientWithGetLatestBootProof(getLatestBootProof);
 
-    const anchor = { threshold: 1, members: [] };
+    const anchor = {
+      threshold: 1,
+      members: [],
+      qosAttestationPolicy: { mode: "legacy" as const },
+    };
     const result = await client.verifyLatestBootProof({
       appName: "signer",
       organizationId: "org-id",
