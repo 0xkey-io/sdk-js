@@ -3,10 +3,14 @@
  * Do not make direct changes to the file.
  */
 
-export type paths = {
+export interface paths {
   "/public/v1/query/get_activity": {
     /** Get details about an activity. */
     post: operations["PublicApiService_GetActivity"];
+  };
+  "/public/v1/query/get_attestation": {
+    /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
+    post: operations["PublicApiService_GetAttestationDocument"];
   };
   "/public/v1/query/get_api_key": {
     /** Get details about an API key. */
@@ -15,10 +19,6 @@ export type paths = {
   "/public/v1/query/get_api_keys": {
     /** Get details about API keys for a user. */
     post: operations["PublicApiService_GetApiKeys"];
-  };
-  "/public/v1/query/get_attestation": {
-    /** Get the attestation document corresponding to an enclave. */
-    post: operations["PublicApiService_GetAttestationDocument"];
   };
   "/public/v1/query/get_authenticator": {
     /** Get details about an authenticator. */
@@ -32,9 +32,17 @@ export type paths = {
     /** Get the boot proof for a given ephemeral key. */
     post: operations["PublicApiService_GetBootProof"];
   };
+  "/public/v1/query/get_gas_usage": {
+    /** Get gas usage and gas limits for either the parent organization or a sub-organization. */
+    post: operations["PublicApiService_GetGasUsage"];
+  };
   "/public/v1/query/get_latest_boot_proof": {
     /** Get the latest boot proof for a given enclave app name. */
     post: operations["PublicApiService_GetLatestBootProof"];
+  };
+  "/public/v1/query/get_nonces": {
+    /** Get nonce values for an address on a given network. Can fetch the standard on-chain nonce and/or the gas station nonce used for sponsored transactions. */
+    post: operations["PublicApiService_GetNonces"];
   };
   "/public/v1/query/get_oauth2_credential": {
     /** Get details about an OAuth 2.0 credential. */
@@ -47,10 +55,6 @@ export type paths = {
   "/public/v1/query/get_onramp_transaction_status": {
     /** Get the status of an on ramp transaction. */
     post: operations["PublicApiService_GetOnRampTransactionStatus"];
-  };
-  "/public/v1/query/get_organization": {
-    /** Get details about an organization. */
-    post: operations["PublicApiService_GetOrganization"];
   };
   "/public/v1/query/get_organization_configs": {
     /** Get quorum settings and features for an organization. */
@@ -155,10 +159,6 @@ export type paths = {
   "/public/v1/submit/create_api_keys": {
     /** Add API keys to an existing user. */
     post: operations["PublicApiService_CreateApiKeys"];
-  };
-  "/public/v1/submit/create_api_only_users": {
-    /** Create API-only users in an existing organization. */
-    post: operations["PublicApiService_CreateApiOnlyUsers"];
   };
   "/public/v1/submit/create_authenticators": {
     /** Create authenticators to authenticate requests to ZeroXKey. */
@@ -296,12 +296,8 @@ export type paths = {
     /** Authenticate a user via email. */
     post: operations["PublicApiService_EmailAuth"];
   };
-  "/public/v1/submit/eth_send_raw_transaction": {
-    /** Submit a raw transaction (serialized and signed) for broadcasting to the network. */
-    post: operations["PublicApiService_EthSendRawTransaction"];
-  };
   "/public/v1/submit/eth_send_transaction": {
-    /** Submit a transaction intent describing a transaction you would like to broadcast. */
+    /** Submit a transaction intent describing an EVM transaction you would like to broadcast. */
     post: operations["PublicApiService_EthSendTransaction"];
   };
   "/public/v1/submit/export_private_key": {
@@ -396,6 +392,14 @@ export type paths = {
     /** Sign a transaction. */
     post: operations["PublicApiService_SignTransaction"];
   };
+  "/public/v1/submit/tron_send_transaction": {
+    /** Submit a native TRX transfer intent describing a transaction you would like to broadcast. */
+    post: operations["PublicApiService_TronSendTransaction"];
+  };
+  "/public/v1/submit/sol_send_transaction": {
+    /** Submit a transaction intent describing an SVM transaction you would like to broadcast. */
+    post: operations["PublicApiService_SolSendTransaction"];
+  };
   "/public/v1/submit/stamp_login": {
     /** Create a session for a user through stamping client side (API key, wallet client, or passkey client). */
     post: operations["PublicApiService_StampLogin"];
@@ -407,6 +411,10 @@ export type paths = {
   "/public/v1/submit/update_oauth2_credential": {
     /** Update an OAuth 2.0 provider credential */
     post: operations["PublicApiService_UpdateOauth2Credential"];
+  };
+  "/public/v1/submit/update_organization_name": {
+    /** Update the name of an organization. */
+    post: operations["PublicApiService_UpdateOrganizationName"];
   };
   "/public/v1/submit/update_policy": {
     /** Update an existing policy. */
@@ -451,23 +459,128 @@ export type paths = {
   "/api/v1/noop-codegen-anchor": {
     post: operations["PublicApiService_NOOPCodegenAnchor"];
   };
-  "/api/v1/test_rate_limits": {
-    /** Set a rate local rate limit just on the current endpoint, for purposes of testing with Vivosuite. */
-    post: operations["PublicApiService_TestRateLimits"];
+  "/public/v1/query/get_mfa_status": {
+    /** Get the MFA status of an activity for one user or all voting users. */
+    post: operations["PublicApiService_GetMfaStatus"];
   };
-};
+  "/public/v1/query/get_mfa_policies": {
+    /** Get all MFA policies for a user. */
+    post: operations["PublicApiService_GetMfaPolicies"];
+  };
+  "/public/v1/query/get_mfa_policy": {
+    /** Get a single MFA policy for a user. */
+    post: operations["PublicApiService_GetMfaPolicy"];
+  };
+  "/public/v1/query/get_session_profile": {
+    /** Get one session profile for an organization. */
+    post: operations["PublicApiService_GetSessionProfile"];
+  };
+  "/public/v1/query/get_session_profiles": {
+    /** Get all session profiles for an organization. */
+    post: operations["PublicApiService_GetSessionProfiles"];
+  };
+  "/public/v1/submit/create_mfa_policy": {
+    /** Create a new MFA policy for a user. */
+    post: operations["PublicApiService_CreateMfaPolicy"];
+  };
+  "/public/v1/submit/update_mfa_policy": {
+    /** Update an MFA policy for a user. */
+    post: operations["PublicApiService_UpdateMfaPolicy"];
+  };
+  "/public/v1/submit/delete_mfa_policy": {
+    /** Delete an MFA policy for a user. */
+    post: operations["PublicApiService_DeleteMfaPolicy"];
+  };
+  "/public/v1/submit/create_session_profile": {
+    /** Create a new session profile for an organization. */
+    post: operations["PublicApiService_CreateSessionProfile"];
+  };
+}
 
-export type definitions = {
+export interface definitions {
+  v1TronSendTransactionIntent: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description A wallet or private key address to sign with (base58 T... form). This does not support private key IDs.
+     */
+    from: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet).
+     * @enum {string}
+     */
+    caip2: "tron:0x2b6653dc" | "tron:0xcd8690dc" | "tron:0x94a9059e";
+    /**
+     * @inject_tag: validate:"required"
+     * @description Recipient address (base58 T... form).
+     */
+    to: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contract_address is set.
+     */
+    value?: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description TRC-20 contract address (base58 T... form). When set, this is a token transfer(address,uint256) to `to` instead of a native TRX transfer, ABI-encoded server-side.
+     */
+    contractAddress?: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description TRC-20 transfer amount in the token's atomic (smallest) unit. Required when contract_address is set.
+     */
+    tokenAmount?: string;
+  };
+  v1TronSendTransactionRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_TRON_SEND_TRANSACTION";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1TronSendTransactionIntent"];
+    generateAppProofs?: boolean;
+  };
+  v1TronSendTransactionResult: {
+    /** @description The send_transaction_status ID associated with the transaction submission */
+    sendTransactionStatusId: string;
+  };
+  v1TronSendTransactionStatus: {
+    /** @description The Tron transaction id (sha256(raw_data), hex), if available. */
+    txHash?: string;
+  };
+  v1GetAttestationDocumentRequest: {
+    /** @description Unique identifier for a given organization. */
+    organizationId: string;
+    /** @description Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+    enclaveType: string;
+  };
+  v1GetAttestationDocumentResponse: {
+    /**
+     * Format: byte
+     * @description Raw (CBOR-encoded) attestation document.
+     */
+    attestationDocument: string;
+  };
   apiApiKeyParams: {
-    /** @description Human-readable name for an API Key. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for an API Key.
+     */
     apiKeyName: string;
-    /** @description The public component of a cryptographic key pair used to sign messages and transactions. */
+    /**
+     * @inject_tag: validate:"hexadecimal,len=66"
+     * @description The public component of a cryptographic key pair used to sign messages and transactions.
+     */
     publicKey: string;
     /** @description Optional window (in seconds) indicating how long the API Key should last. */
     expirationSeconds?: string;
   };
   billingActivateBillingTierIntent: {
-    /** @description The product that the customer wants to subscribe to. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The product that the customer wants to subscribe to.
+     */
     productId: string;
   };
   billingActivateBillingTierResult: {
@@ -483,25 +596,52 @@ export type definitions = {
     paymentMethodId: string;
   };
   billingSetPaymentMethodIntent: {
-    /** @description The account number of the customer's credit card. */
+    /**
+     * @inject_tag: validate:"required,max=16,numeric"
+     * @description The account number of the customer's credit card.
+     */
     number: string;
-    /** @description The verification digits of the customer's credit card. */
+    /**
+     * @inject_tag: validate:"required,max=4,numeric"
+     * @description The verification digits of the customer's credit card.
+     */
     cvv: string;
-    /** @description The month that the credit card expires. */
+    /**
+     * @inject_tag: validate:"required,numeric,len=2"
+     * @description The month that the credit card expires.
+     */
     expiryMonth: string;
-    /** @description The year that the credit card expires. */
+    /**
+     * @inject_tag: validate:"required,numeric,len=4"
+     * @description The year that the credit card expires.
+     */
     expiryYear: string;
-    /** @description The email that will receive invoices for the credit card. */
+    /**
+     * @inject_tag: validate:"required,email,tk_email"
+     * @description The email that will receive invoices for the credit card.
+     */
     cardHolderEmail: string;
-    /** @description The name associated with the credit card. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length"
+     * @description The name associated with the credit card.
+     */
     cardHolderName: string;
   };
   billingSetPaymentMethodIntentV2: {
-    /** @description The id of the payment method that was created clientside. */
+    /**
+     * @inject_tag: validate:"required,max=256"
+     * @description The id of the payment method that was created clientside.
+     */
     paymentMethodId: string;
-    /** @description The email that will receive invoices for the credit card. */
+    /**
+     * @inject_tag: validate:"required,email,tk_email"
+     * @description The email that will receive invoices for the credit card.
+     */
     cardHolderEmail: string;
-    /** @description The name associated with the credit card. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length"
+     * @description The name associated with the credit card.
+     */
     cardHolderName: string;
   };
   billingSetPaymentMethodResult: {
@@ -541,6 +681,7 @@ export type definitions = {
   externaldatav1Credential: {
     /** @description The public component of a cryptographic key pair used to sign messages and transactions. */
     publicKey: string;
+    /** To distinguish the credential type (webauthn, API key) */
     type: definitions["v1CredentialType"];
   };
   externaldatav1Quorum: {
@@ -552,8 +693,36 @@ export type definitions = {
     /** @description Unique identifiers of quorum set members. */
     userIds: string[];
   };
+  /**
+   * - SIGNATURE_SCHEME_EPHEMERAL_KEY_P256: Scheme used by our enclave applications
+   * @default SIGNATURE_SCHEME_UNSPECIFIED
+   * @enum {string}
+   */
+  externaldatav1SignatureScheme:
+    | "SIGNATURE_SCHEME_UNSPECIFIED"
+    | "SIGNATURE_SCHEME_EPHEMERAL_KEY_P256";
+  externaldatav1SmartContractInterface: {
+    /** @description The Organization the Smart Contract Interface belongs to. */
+    organizationId: string;
+    /** @description Unique identifier for a given Smart Contract Interface (ABI or IDL). */
+    smartContractInterfaceId: string;
+    /** @description The address corresponding to the Smart Contract or Program. */
+    smartContractAddress: string;
+    /** @description The JSON corresponding to the Smart Contract Interface (ABI or IDL). */
+    smartContractInterface: string;
+    /** @description The type corresponding to the Smart Contract Interface (either ETHEREUM or SOLANA). */
+    type: string;
+    /** @description The label corresponding to the Smart Contract Interface (either ETHEREUM or SOLANA). */
+    label: string;
+    /** @description The notes corresponding to the Smart Contract Interface (either ETHEREUM or SOLANA). */
+    notes: string;
+    createdAt: definitions["externaldatav1Timestamp"];
+    updatedAt: definitions["externaldatav1Timestamp"];
+  };
   externaldatav1Timestamp: {
+    /** Stringified int */
     seconds: string;
+    /** Stringified int */
     nanos: string;
   };
   immutableactivityv1Address: {
@@ -564,29 +733,187 @@ export type definitions = {
     policyId?: string;
     outcome?: definitions["v1Outcome"];
   };
+  /**
+   * @description `Any` contains an arbitrary serialized protocol buffer message along with a
+   * URL that describes the type of the serialized message.
+   *
+   * Protobuf library provides support to pack/unpack Any values in the form
+   * of utility functions or additional generated methods of the Any type.
+   *
+   * Example 1: Pack and unpack a message in C++.
+   *
+   *     Foo foo = ...;
+   *     Any any;
+   *     any.PackFrom(foo);
+   *     ...
+   *     if (any.UnpackTo(&foo)) {
+   *       ...
+   *     }
+   *
+   * Example 2: Pack and unpack a message in Java.
+   *
+   *     Foo foo = ...;
+   *     Any any = Any.pack(foo);
+   *     ...
+   *     if (any.is(Foo.class)) {
+   *       foo = any.unpack(Foo.class);
+   *     }
+   *     // or ...
+   *     if (any.isSameTypeAs(Foo.getDefaultInstance())) {
+   *       foo = any.unpack(Foo.getDefaultInstance());
+   *     }
+   *
+   *  Example 3: Pack and unpack a message in Python.
+   *
+   *     foo = Foo(...)
+   *     any = Any()
+   *     any.Pack(foo)
+   *     ...
+   *     if any.Is(Foo.DESCRIPTOR):
+   *       any.Unpack(foo)
+   *       ...
+   *
+   *  Example 4: Pack and unpack a message in Go
+   *
+   *      foo := &pb.Foo{...}
+   *      any, err := anypb.New(foo)
+   *      if err != nil {
+   *        ...
+   *      }
+   *      ...
+   *      foo := &pb.Foo{}
+   *      if err := any.UnmarshalTo(foo); err != nil {
+   *        ...
+   *      }
+   *
+   * The pack methods provided by protobuf library will by default use
+   * 'type.googleapis.com/full.type.name' as the type URL and the unpack
+   * methods only use the fully qualified type name after the last '/'
+   * in the type URL, for example "foo.bar.com/x/y.z" will yield type
+   * name "y.z".
+   *
+   * JSON
+   * ====
+   * The JSON representation of an `Any` value uses the regular
+   * representation of the deserialized, embedded message, with an
+   * additional field `@type` which contains the type URL. Example:
+   *
+   *     package google.profile;
+   *     message Person {
+   *       string first_name = 1;
+   *       string last_name = 2;
+   *     }
+   *
+   *     {
+   *       "@type": "type.googleapis.com/google.profile.Person",
+   *       "firstName": <string>,
+   *       "lastName": <string>
+   *     }
+   *
+   * If the embedded message type is well-known and has a custom JSON
+   * representation, that representation will be embedded adding a field
+   * `value` which holds the custom JSON in addition to the `@type`
+   * field. Example (for message [google.protobuf.Duration][]):
+   *
+   *     {
+   *       "@type": "type.googleapis.com/google.protobuf.Duration",
+   *       "value": "1.212s"
+   *     }
+   */
   protobufAny: {
+    /**
+     * @description A URL/resource name that uniquely identifies the type of the serialized
+     * protocol buffer message. This string must contain at least
+     * one "/" character. The last segment of the URL's path must represent
+     * the fully qualified name of the type (as in
+     * `path/google.protobuf.Duration`). The name should be in a canonical form
+     * (e.g., leading "." is not accepted).
+     *
+     * In practice, teams usually precompile into the binary all types that they
+     * expect it to use in the context of Any. However, for URLs which use the
+     * scheme `http`, `https`, or no scheme, one can optionally set up a type
+     * server that maps type URLs to message definitions as follows:
+     *
+     * * If no scheme is provided, `https` is assumed.
+     * * An HTTP GET on the URL must yield a [google.protobuf.Type][]
+     *   value in binary format, or produce an error.
+     * * Applications are allowed to cache lookup results based on the
+     *   URL, or have them precompiled into a binary to avoid any
+     *   lookup. Therefore, binary compatibility needs to be preserved
+     *   on changes to types. (Use versioned type names to manage
+     *   breaking changes.)
+     *
+     * Note: this functionality is not currently available in the official
+     * protobuf release, and it is not used for type URLs beginning with
+     * type.googleapis.com. As of May 2023, there are no widely used type server
+     * implementations and no plans to implement one.
+     *
+     * Schemes other than `http`, `https` (or the empty scheme) might be
+     * used with implementation specific semantics.
+     */
     "@type"?: string;
   } & { [key: string]: unknown };
+  /**
+   * @description The `Status` type defines a logical error model that is suitable for
+   * different programming environments, including REST APIs and RPC APIs. It is
+   * used by [gRPC](https://github.com/grpc). Each `Status` message contains
+   * three pieces of data: error code, error message, and error details.
+   *
+   * You can find out more about this error model and how to work with it in the
+   * [API Design Guide](https://cloud.google.com/apis/design/errors).
+   */
   rpcStatus: {
-    /** Format: int32 */
+    /**
+     * Format: int32
+     * @description The status code, which should be an enum value of
+     * [google.rpc.Code][google.rpc.Code].
+     */
     code?: number;
+    /**
+     * @description A developer-facing error message, which should be in English. Any
+     * user-facing error message should be localized and sent in the
+     * [google.rpc.Status.details][google.rpc.Status.details] field, or localized
+     * by the client.
+     */
     message?: string;
+    /**
+     * @description A list of messages that carry the error details.  There is a common set of
+     * message types for APIs to use.
+     */
     details?: definitions["protobufAny"][];
   };
   v1AcceptInvitationIntent: {
-    /** @description Unique identifier for a given Invitation object. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Invitation object.
+     */
     invitationId: string;
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
-    /** @description WebAuthN hardware devices that can be used to log in to the ZeroXKey web app. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description WebAuthN hardware devices that can be used to log in to the 0xkey web app.
+     */
     authenticator: definitions["v1AuthenticatorParams"];
   };
   v1AcceptInvitationIntentV2: {
-    /** @description Unique identifier for a given Invitation object. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Invitation object.
+     */
     invitationId: string;
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
-    /** @description WebAuthN hardware devices that can be used to log in to the ZeroXKey web app. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description WebAuthN hardware devices that can be used to log in to the 0xkey web app.
+     */
     authenticator: definitions["v1AuthenticatorParamsV2"];
   };
   v1AcceptInvitationResult: {
@@ -595,8 +922,16 @@ export type definitions = {
     /** @description Unique identifier for a given User. */
     userId: string;
   };
-  /** @enum {string} */
-  v1AccessType: "ACCESS_TYPE_WEB" | "ACCESS_TYPE_API" | "ACCESS_TYPE_ALL";
+  /**
+   * @default ACCESS_TYPE_UNSPECIFIED
+   * @enum {string}
+   */
+  v1AccessType:
+    | "ACCESS_TYPE_UNSPECIFIED"
+    | "ACCESS_TYPE_WEB"
+    | "ACCESS_TYPE_API"
+    | "ACCESS_TYPE_ALL";
+  /** @description An action that can that can be taken within the 0xkey infrastructure. */
   v1Activity: {
     /** @description Unique identifier for a given Activity object. */
     id: string;
@@ -606,7 +941,7 @@ export type definitions = {
     status: definitions["v1ActivityStatus"];
     /** @description Type of Activity, such as Add User, or Sign Transaction. */
     type: definitions["v1ActivityType"];
-    /** @description Intent object crafted by ZeroXKey based on the user request, used to assess the permissibility of an action. */
+    /** @description Intent object crafted by 0xkey based on the user request, used to assess the permissibility of an action. */
     intent: definitions["v1Intent"];
     /** @description Result of the intended action. */
     result: definitions["v1Result"];
@@ -618,25 +953,40 @@ export type definitions = {
     fingerprint: string;
     canApprove: boolean;
     canReject: boolean;
+    /** @description Timestamp of when the Activity was created. */
     createdAt: definitions["externaldatav1Timestamp"];
+    /** @description Timestamp of when the Activity was last updated. */
     updatedAt: definitions["externaldatav1Timestamp"];
     /** @description Failure reason of the intended action. */
     failure?: definitions["rpcStatus"];
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
   };
   v1ActivityResponse: {
-    /** @description An action that can be taken within the ZeroXKey infrastructure. */
+    /** @description An action that can be taken within the 0xkey infrastructure. */
     activity: definitions["v1Activity"];
   };
-  /** @enum {string} */
+  /**
+   * @description The current processing status of an Activity.
+   * @default ACTIVITY_STATUS_UNSPECIFIED
+   * @enum {string}
+   */
   v1ActivityStatus:
+    | "ACTIVITY_STATUS_UNSPECIFIED"
     | "ACTIVITY_STATUS_CREATED"
     | "ACTIVITY_STATUS_PENDING"
     | "ACTIVITY_STATUS_COMPLETED"
     | "ACTIVITY_STATUS_FAILED"
     | "ACTIVITY_STATUS_CONSENSUS_NEEDED"
-    | "ACTIVITY_STATUS_REJECTED";
-  /** @enum {string} */
+    | "ACTIVITY_STATUS_REJECTED"
+    | "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED";
+  /**
+   * @description Type of Activity, such as Add User, or Sign Transaction.
+   * @default ACTIVITY_TYPE_UNSPECIFIED
+   * @enum {string}
+   */
   v1ActivityType:
+    | "ACTIVITY_TYPE_UNSPECIFIED"
     | "ACTIVITY_TYPE_CREATE_API_KEYS"
     | "ACTIVITY_TYPE_CREATE_USERS"
     | "ACTIVITY_TYPE_CREATE_PRIVATE_KEYS"
@@ -748,9 +1098,45 @@ export type definitions = {
     | "ACTIVITY_TYPE_EMAIL_AUTH_V3"
     | "ACTIVITY_TYPE_INIT_USER_EMAIL_RECOVERY_V2"
     | "ACTIVITY_TYPE_INIT_OTP_AUTH_V3"
-    | "ACTIVITY_TYPE_INIT_OTP_V2";
-  /** @enum {string} */
+    | "ACTIVITY_TYPE_INIT_OTP_V2"
+    | "ACTIVITY_TYPE_UPSERT_GAS_USAGE_CONFIG"
+    | "ACTIVITY_TYPE_CREATE_TVC_APP"
+    | "ACTIVITY_TYPE_CREATE_TVC_DEPLOYMENT"
+    | "ACTIVITY_TYPE_CREATE_TVC_MANIFEST_APPROVALS"
+    | "ACTIVITY_TYPE_SOL_SEND_TRANSACTION"
+    | "ACTIVITY_TYPE_INIT_OTP_V3"
+    | "ACTIVITY_TYPE_VERIFY_OTP_V2"
+    | "ACTIVITY_TYPE_OTP_LOGIN_V2"
+    | "ACTIVITY_TYPE_UPDATE_ORGANIZATION_NAME"
+    | "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8"
+    | "ACTIVITY_TYPE_CREATE_OAUTH_PROVIDERS_V2"
+    | "ACTIVITY_TYPE_CREATE_USERS_V4"
+    | "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT"
+    | "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT"
+    | "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT"
+    | "ACTIVITY_TYPE_SOL_SEND_RAW_TRANSACTION"
+    | "ACTIVITY_TYPE_TRON_SEND_TRANSACTION"
+    | "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER"
+    | "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER"
+    | "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER"
+    | "ACTIVITY_TYPE_CREATE_MFA_POLICY"
+    | "ACTIVITY_TYPE_UPDATE_MFA_POLICY"
+    | "ACTIVITY_TYPE_DELETE_MFA_POLICY"
+    | "ACTIVITY_TYPE_CREATE_SESSION_PROFILE";
+  /**
+   * - ADDRESS_FORMAT_UNCOMPRESSED: 04<X_COORDINATE><Y_COORDINATE>
+   *  - ADDRESS_FORMAT_COMPRESSED: 02 or 03, followed by the X coordinate
+   *  - ADDRESS_FORMAT_BITCOIN_MAINNET_P2PKH: Bitcoin Mainnet address types
+   *  - ADDRESS_FORMAT_BITCOIN_TESTNET_P2PKH: Bitcoin Testnet address types
+   *  - ADDRESS_FORMAT_BITCOIN_SIGNET_P2PKH: Bitcoin Signet address types
+   *  - ADDRESS_FORMAT_BITCOIN_REGTEST_P2PKH: Bitcoin Regtest address types
+   *  - ADDRESS_FORMAT_DOGE_MAINNET: Doge Addresses
+   *  - ADDRESS_FORMAT_TON_V3R2: TON Addresses
+   * @default ADDRESS_FORMAT_UNSPECIFIED
+   * @enum {string}
+   */
   v1AddressFormat:
+    | "ADDRESS_FORMAT_UNSPECIFIED"
     | "ADDRESS_FORMAT_UNCOMPRESSED"
     | "ADDRESS_FORMAT_COMPRESSED"
     | "ADDRESS_FORMAT_ETHEREUM"
@@ -788,7 +1174,7 @@ export type definitions = {
     | "ADDRESS_FORMAT_TON_V5R1"
     | "ADDRESS_FORMAT_XRP";
   v1ApiKey: {
-    /** @description A User credential that can be used to authenticate to ZeroXKey. */
+    /** @description A User credential that can be used to authenticate to 0xkey. */
     credential: definitions["externaldatav1Credential"];
     /** @description Unique identifier for a given API Key. */
     apiKeyId: string;
@@ -802,15 +1188,26 @@ export type definitions = {
      */
     expirationSeconds?: string;
   };
-  /** @enum {string} */
+  /**
+   * Cryptographic Curve used to generate a given API key
+   * @default API_KEY_CURVE_UNSPECIFIED
+   * @enum {string}
+   */
   v1ApiKeyCurve:
+    | "API_KEY_CURVE_UNSPECIFIED"
     | "API_KEY_CURVE_P256"
     | "API_KEY_CURVE_SECP256K1"
     | "API_KEY_CURVE_ED25519";
   v1ApiKeyParamsV2: {
-    /** @description Human-readable name for an API Key. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for an API Key.
+     */
     apiKeyName: string;
-    /** @description The public component of a cryptographic key pair used to sign messages and transactions. */
+    /**
+     * @inject_tag: validate:"hexadecimal,tk_api_key"
+     * @description The public component of a cryptographic key pair used to sign messages and transactions.
+     */
     publicKey: string;
     /** @description The curve type to be used for processing API key signatures. */
     curveType: definitions["v1ApiKeyCurve"];
@@ -818,18 +1215,30 @@ export type definitions = {
     expirationSeconds?: string;
   };
   v1ApiOnlyUserParams: {
-    /** @description The name of the new API-only User. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description The name of the new API-only User.
+     */
     userName: string;
-    /** @description The email address for this API-only User (optional). */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The email address for this API-only User (optional).
+     */
     userEmail?: string;
-    /** @description A list of tags assigned to the new API-only User. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of tags assigned to the new API-only User. This field, if not needed, should be an empty array in your request body.
+     */
     userTags: string[];
-    /** @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
     apiKeys: definitions["apiApiKeyParams"][];
   };
   v1AppProof: {
     /** @description Scheme of signing key. */
-    scheme: definitions["v1SignatureScheme"];
+    scheme: definitions["externaldatav1SignatureScheme"];
     /** @description Ephemeral public key. */
     publicKey: string;
     /** @description JSON serialized AppProofPayload. */
@@ -837,8 +1246,19 @@ export type definitions = {
     /** @description Signature over hashed proof_payload. */
     signature: string;
   };
+  v1AppStatus: {
+    /** @description Unique identifier for this TVC App */
+    appId: string;
+    /** @description List of deployment statuses for this app */
+    deployments: definitions["v1DeploymentStatus"][];
+    /** @description The deployment ID currently serving traffic for this app */
+    targetedDeploymentId: string;
+  };
   v1ApproveActivityIntent: {
-    /** @description An artifact verifying a User's action. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description An artifact verifying a User's action.
+     */
     fingerprint: string;
   };
   v1ApproveActivityRequest: {
@@ -849,15 +1269,66 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1ApproveActivityIntent"];
+    generateAppProofs?: boolean;
+  };
+  v1AssetBalance: {
+    /** @description The caip-19 asset identifier */
+    caip19?: string;
+    /** @description The asset symbol */
+    symbol?: string;
+    /** @description The balance in atomic units */
+    balance?: string;
+    /**
+     * Format: int32
+     * @description The number of decimals this asset uses
+     */
+    decimals?: number;
+    /** @description Normalized balance values for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. Use the balance field instead. */
+    display?: definitions["v1AssetBalanceDisplay"];
+    /** @description The asset name */
+    name?: string;
+  };
+  v1AssetBalanceDisplay: {
+    /** @description USD value for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. */
+    usd?: string;
+    /** @description Normalized crypto value for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. */
+    crypto?: string;
+  };
+  v1AssetMetadata: {
+    /** @description The caip-19 asset identifier */
+    caip19?: string;
+    /** @description The asset symbol */
+    symbol?: string;
+    /**
+     * Format: int32
+     * @description The number of decimals this asset uses
+     */
+    decimals?: number;
+    /** @description The url of the asset logo */
+    logoUrl?: string;
+    /** @description The asset name */
+    name?: string;
   };
   v1Attestation: {
-    /** @description The cbor encoded then base64 url encoded id of the credential. */
+    /**
+     * @inject_tag: validate:"required,max=256"
+     * @description The cbor encoded then base64 url encoded id of the credential.
+     */
     credentialId: string;
-    /** @description A base64 url encoded payload containing metadata about the signing context and the challenge. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description A base64 url encoded payload containing metadata about the signing context and the challenge.
+     */
     clientDataJson: string;
-    /** @description A base64 url encoded payload containing authenticator data and any attestation the webauthn provider chooses. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description A base64 url encoded payload containing authenticator data and any attestation the webauthn provider chooses.
+     */
     attestationObject: string;
-    /** @description The type of authenticator transports. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description The type of authenticator transports.
+     */
     transports: definitions["v1AuthenticatorTransport"][];
   };
   v1Authenticator: {
@@ -870,7 +1341,7 @@ export type definitions = {
     credentialId: string;
     /** @description The type of Authenticator device. */
     model: string;
-    /** @description A User credential that can be used to authenticate to ZeroXKey. */
+    /** @description A User credential that can be used to authenticate to 0xkey. */
     credential: definitions["externaldatav1Credential"];
     /** @description Unique identifier for a given Authenticator. */
     authenticatorId: string;
@@ -880,31 +1351,52 @@ export type definitions = {
     updatedAt: definitions["externaldatav1Timestamp"];
   };
   v1AuthenticatorAttestationResponse: {
+    /** ENCODING: base64url */
     clientDataJson: string;
+    /** ENCODING: base64url */
     attestationObject: string;
     transports?: definitions["v1AuthenticatorTransport"][];
     /** @enum {string} */
-    authenticatorAttachment?: "cross-platform" | "platform" | null;
+    authenticatorAttachment?: "cross-platform" | "platform";
   };
   v1AuthenticatorParams: {
-    /** @description Human-readable name for an Authenticator. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for an Authenticator.
+     */
     authenticatorName: string;
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
     attestation: definitions["v1PublicKeyCredentialWithAttestation"];
-    /** @description Challenge presented for authentication purposes. */
+    /**
+     * @inject_tag: validate:"required,max=256"
+     * @description Challenge presented for authentication purposes.
+     */
     challenge: string;
   };
   v1AuthenticatorParamsV2: {
-    /** @description Human-readable name for an Authenticator. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for an Authenticator.
+     */
     authenticatorName: string;
-    /** @description Challenge presented for authentication purposes. */
+    /**
+     * @inject_tag: validate:"required,max=256"
+     * @description Challenge presented for authentication purposes.
+     */
     challenge: string;
     /** @description The attestation that proves custody of the authenticator and provides metadata about it. */
     attestation: definitions["v1Attestation"];
   };
-  /** @enum {string} */
+  /**
+   * @default AUTHENTICATOR_TRANSPORT_UNSPECIFIED
+   * @enum {string}
+   */
   v1AuthenticatorTransport:
+    | "AUTHENTICATOR_TRANSPORT_UNSPECIFIED"
     | "AUTHENTICATOR_TRANSPORT_BLE"
     | "AUTHENTICATOR_TRANSPORT_INTERNAL"
     | "AUTHENTICATOR_TRANSPORT_NFC"
@@ -930,20 +1422,49 @@ export type definitions = {
   v1BootProofResponse: {
     bootProof: definitions["v1BootProof"];
   };
+  v1ClientSignature: {
+    /** @description The public component of a cryptographic key pair used to create the signature. */
+    publicKey: string;
+    /** @description The signature scheme used to generate the client signature. */
+    scheme: definitions["v1ClientSignatureScheme"];
+    /** @description The message that was signed. */
+    message: string;
+    /** @description The cryptographic signature over the message. */
+    signature: string;
+  };
+  /**
+   * @default CLIENT_SIGNATURE_SCHEME_UNSPECIFIED
+   * @enum {string}
+   */
+  v1ClientSignatureScheme:
+    | "CLIENT_SIGNATURE_SCHEME_UNSPECIFIED"
+    | "CLIENT_SIGNATURE_SCHEME_API_P256";
   v1Config: {
     features?: definitions["v1Feature"][];
     quorum?: definitions["externaldatav1Quorum"];
   };
   v1CreateApiKeysIntent: {
-    /** @description A list of API Keys. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of API Keys.
+     */
     apiKeys: definitions["apiApiKeyParams"][];
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
   };
   v1CreateApiKeysIntentV2: {
-    /** @description A list of API Keys. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of API Keys.
+     */
     apiKeys: definitions["v1ApiKeyParamsV2"][];
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
   };
   v1CreateApiKeysRequest: {
@@ -954,38 +1475,34 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateApiKeysIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1CreateApiKeysResult: {
     /** @description A list of API Key IDs. */
     apiKeyIds: string[];
   };
-  v1CreateApiOnlyUsersIntent: {
-    /** @description A list of API-only Users to create. */
-    apiOnlyUsers: definitions["v1ApiOnlyUserParams"][];
-  };
-  v1CreateApiOnlyUsersRequest: {
-    /** @enum {string} */
-    type: "ACTIVITY_TYPE_CREATE_API_ONLY_USERS";
-    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
-    timestampMs: string;
-    /** @description Unique identifier for a given Organization. */
-    organizationId: string;
-    parameters: definitions["v1CreateApiOnlyUsersIntent"];
-  };
-  v1CreateApiOnlyUsersResult: {
-    /** @description A list of API-only User IDs. */
-    userIds: string[];
-  };
   v1CreateAuthenticatorsIntent: {
-    /** @description A list of Authenticators. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of Authenticators.
+     */
     authenticators: definitions["v1AuthenticatorParams"][];
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
   };
   v1CreateAuthenticatorsIntentV2: {
-    /** @description A list of Authenticators. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of Authenticators.
+     */
     authenticators: definitions["v1AuthenticatorParamsV2"][];
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
   };
   v1CreateAuthenticatorsRequest: {
@@ -996,23 +1513,42 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateAuthenticatorsIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1CreateAuthenticatorsResult: {
     /** @description A list of Authenticator IDs. */
     authenticatorIds: string[];
   };
   v1CreateFiatOnRampCredentialIntent: {
-    /** @description The fiat on-ramp provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The fiat on-ramp provider
+     */
     onrampProvider: definitions["v1FiatOnRampProvider"];
-    /** @description Project ID for the on-ramp provider. Some providers, like Coinbase, require this additional identifier */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Project ID for the on-ramp provider. Some providers, like Coinbase, require this additional identifier
+     */
     projectId?: string;
-    /** @description Publishable API key for the on-ramp provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Publishable API key for the on-ramp provider
+     */
     publishableApiKey: string;
-    /** @description Secret API key for the on-ramp provider encrypted to our on-ramp encryption public key */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Secret API key for the on-ramp provider encrypted to our on-ramp encryption public key
+     */
     encryptedSecretApiKey: string;
-    /** @description Private API key for the on-ramp provider encrypted to our on-ramp encryption public key. Some providers, like Coinbase, require this additional key. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Private API key for the on-ramp provider encrypted to our on-ramp encryption public key. Some providers, like Coinbase, require this additional key.
+     */
     encryptedPrivateApiKey?: string;
-    /** @description If the on-ramp credential is a sandbox credential */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description If the on-ramp credential is a sandbox credential
+     */
     sandboxMode?: boolean;
   };
   v1CreateFiatOnRampCredentialRequest: {
@@ -1023,13 +1559,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateFiatOnRampCredentialIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreateFiatOnRampCredentialResult: {
     /** @description Unique identifier of the Fiat On-Ramp credential that was created */
     fiatOnRampCredentialId: string;
   };
   v1CreateInvitationsIntent: {
-    /** @description A list of Invitations. */
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of Invitations.
+     */
     invitations: definitions["v1InvitationParams"][];
   };
   v1CreateInvitationsRequest: {
@@ -1040,17 +1580,27 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateInvitationsIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreateInvitationsResult: {
     /** @description A list of Invitation IDs */
     invitationIds: string[];
   };
   v1CreateOauth2CredentialIntent: {
-    /** @description The OAuth 2.0 provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The OAuth 2.0 provider
+     */
     provider: definitions["v1Oauth2Provider"];
-    /** @description The Client ID issued by the OAuth 2.0 provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The Client ID issued by the OAuth 2.0 provider
+     */
     clientId: string;
-    /** @description The client secret issued by the OAuth 2.0 provider encrypted to the TLS Fetcher quorum key */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The client secret issued by the OAuth 2.0 provider encrypted to the TLS Fetcher quorum key
+     */
     encryptedClientSecret: string;
   };
   v1CreateOauth2CredentialRequest: {
@@ -1061,56 +1611,113 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateOauth2CredentialIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreateOauth2CredentialResult: {
     /** @description Unique identifier of the OAuth 2.0 credential that was created */
     oauth2CredentialId: string;
   };
   v1CreateOauthProvidersIntent: {
-    /** @description The ID of the User to add an Oauth provider to */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description The ID of the User to add an Oauth provider to
+     */
     userId: string;
-    /** @description A list of Oauth providers. */
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of Oauth providers.
+     */
     oauthProviders: definitions["v1OauthProviderParams"][];
+  };
+  v1CreateOauthProvidersIntentV2: {
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description The ID of the User to add an Oauth provider to
+     */
+    userId: string;
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of Oauth providers.
+     */
+    oauthProviders: definitions["v1OauthProviderParamsV2"][];
   };
   v1CreateOauthProvidersRequest: {
     /** @enum {string} */
-    type: "ACTIVITY_TYPE_CREATE_OAUTH_PROVIDERS";
+    type: "ACTIVITY_TYPE_CREATE_OAUTH_PROVIDERS_V2";
     /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
     timestampMs: string;
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
-    parameters: definitions["v1CreateOauthProvidersIntent"];
+    parameters: definitions["v1CreateOauthProvidersIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1CreateOauthProvidersResult: {
     /** @description A list of unique identifiers for Oauth Providers */
     providerIds: string[];
   };
+  v1CreateOauthProvidersResultV2: {
+    /** @description A list of unique identifiers for Oauth Providers */
+    providerIds: string[];
+  };
   v1CreateOrganizationIntent: {
-    /** @description Human-readable name for an Organization. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length"
+     * @description Human-readable name for an Organization.
+     */
     organizationName: string;
-    /** @description The root user's email address. */
+    /**
+     * @inject_tag: validate:"required,email,tk_email"
+     * @description The root user's email address.
+     */
     rootEmail: string;
     /** @description The root user's Authenticator. */
     rootAuthenticator: definitions["v1AuthenticatorParams"];
-    /** @description Unique identifier for the root user object. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for the root user object.
+     */
     rootUserId?: string;
   };
   v1CreateOrganizationIntentV2: {
-    /** @description Human-readable name for an Organization. */
+    /**
+     * @inject_tag: validate:"required,tk_label,tk_label_length"
+     * @description Human-readable name for an Organization.
+     */
     organizationName: string;
-    /** @description The root user's email address. */
+    /**
+     * @inject_tag: validate:"required,email,tk_email"
+     * @description The root user's email address.
+     */
     rootEmail: string;
-    /** @description The root user's Authenticator. */
-    rootAuthenticator: definitions["v1AuthenticatorParamsV2"];
-    /** @description Unique identifier for the root user object. */
+    /** @description The root user's Authenticator (fresh WebAuthn attestation). */
+    rootAuthenticator?: definitions["v1AuthenticatorParamsV2"];
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for the root user object.
+     */
     rootUserId?: string;
+    /**
+     * @description INTERNAL ONLY: import an already-registered authenticator's public key
+     * (no attestation) as this new root organization's sole root authenticator.
+     * Used for secondary-root-organization creation, where the same physical
+     * passkey already exists under another root org of the same tenant — see
+     * docs/strategy/billing/09-multi-org-billing.md §3.3. Coordinator rejects
+     * this field unless the call carries a valid internal M2M token
+     * (`SECONDARY_ORG_IMPORT_TOKEN`); the public API Gateway has no such
+     * token, so external callers can never reach this path even though the
+     * field is visible on the wire.
+     */
+    importedRootAuthenticator?: definitions["v1ImportedRootAuthenticatorParams"];
   };
   v1CreateOrganizationResult: {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
   };
   v1CreatePoliciesIntent: {
-    /** @description An array of policy intents to be created. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description An array of policy intents to be created.
+     */
     policies: definitions["v1CreatePolicyIntentV3"][];
   };
   v1CreatePoliciesRequest: {
@@ -1121,39 +1728,59 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreatePoliciesIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreatePoliciesResult: {
     /** @description A list of unique identifiers for the created policies. */
     policyIds: string[];
   };
   v1CreatePolicyIntent: {
-    /** @description Human-readable name for a Policy. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length"
+     * @description Human-readable name for a Policy.
+     */
     policyName: string;
-    /** @description A list of simple functions each including a subject, target and boolean. See Policy Engine Language section for additional details. */
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of simple functions each including a subject, target and boolean. See Policy Engine Language section for additional details.
+     */
     selectors: definitions["v1Selector"][];
     /** @description The instruction to DENY or ALLOW a particular activity following policy selector(s). */
     effect: definitions["v1Effect"];
     notes?: string;
   };
   v1CreatePolicyIntentV2: {
-    /** @description Human-readable name for a Policy. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length"
+     * @description Human-readable name for a Policy.
+     */
     policyName: string;
-    /** @description A list of simple functions each including a subject, target and boolean. See Policy Engine Language section for additional details. */
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of simple functions each including a subject, target and boolean. See Policy Engine Language section for additional details.
+     */
     selectors: definitions["v1SelectorV2"][];
     /** @description Whether to ALLOW or DENY requests that match the condition and consensus requirements. */
     effect: definitions["v1Effect"];
     notes?: string;
   };
   v1CreatePolicyIntentV3: {
-    /** @description Human-readable name for a Policy. */
+    /**
+     * @inject_tag: validate:"required,tk_label,tk_label_length"
+     * @description Human-readable name for a Policy.
+     */
     policyName: string;
-    /** @description The instruction to DENY or ALLOW an activity. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The instruction to DENY or ALLOW an activity.
+     */
     effect: definitions["v1Effect"];
     /** @description The condition expression that triggers the Effect */
     condition?: string;
     /** @description The consensus expression that triggers the Effect */
     consensus?: string;
-    notes?: string;
+    /** @description Notes for a Policy. */
+    notes: string;
   };
   v1CreatePolicyRequest: {
     /** @enum {string} */
@@ -1163,15 +1790,22 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreatePolicyIntentV3"];
+    generateAppProofs?: boolean;
   };
   v1CreatePolicyResult: {
     /** @description Unique identifier for a given Policy. */
     policyId: string;
   };
   v1CreatePrivateKeyTagIntent: {
-    /** @description Human-readable name for a Private Key Tag. */
+    /**
+     * @inject_tag: validate:"required,tk_label,tk_label_length"
+     * @description Human-readable name for a Private Key Tag.
+     */
     privateKeyTagName: string;
-    /** @description A list of Private Key IDs. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of Private Key IDs.
+     */
     privateKeyIds: string[];
   };
   v1CreatePrivateKeyTagRequest: {
@@ -1182,6 +1816,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreatePrivateKeyTagIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreatePrivateKeyTagResult: {
     /** @description Unique identifier for a given Private Key Tag. */
@@ -1190,11 +1825,17 @@ export type definitions = {
     privateKeyIds: string[];
   };
   v1CreatePrivateKeysIntent: {
-    /** @description A list of Private Keys. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of Private Keys.
+     */
     privateKeys: definitions["v1PrivateKeyParams"][];
   };
   v1CreatePrivateKeysIntentV2: {
-    /** @description A list of Private Keys. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of Private Keys.
+     */
     privateKeys: definitions["v1PrivateKeyParams"][];
   };
   v1CreatePrivateKeysRequest: {
@@ -1205,6 +1846,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreatePrivateKeysIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1CreatePrivateKeysResult: {
     /** @description A list of Private Key IDs. */
@@ -1223,6 +1865,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateReadOnlySessionIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreateReadOnlySessionResult: {
     /** @description Unique identifier for a given Organization. If the request is being made by a user and their Sub-Organization ID is unknown, this can be the Parent Organization ID. However, using the Sub-Organization ID is preferred due to performance reasons. */
@@ -1244,9 +1887,15 @@ export type definitions = {
   v1CreateReadWriteSessionIntent: {
     /** @description Client-side public key generated by the user, to which the read write session bundle (credentials) will be encrypted. */
     targetPublicKey: string;
-    /** @description Email of the user to create a read write session for */
+    /**
+     * @inject_tag: validate:"email,tk_email"
+     * @description Email of the user to create a read write session for
+     */
     email: string;
-    /** @description Optional human-readable name for an API Key. If none provided, default to Read Write Session - <Timestamp> */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional human-readable name for an API Key. If none provided, default to Read Write Session - <Timestamp>
+     */
     apiKeyName?: string;
     /** @description Expiration window (in seconds) indicating how long the API key is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
@@ -1254,9 +1903,15 @@ export type definitions = {
   v1CreateReadWriteSessionIntentV2: {
     /** @description Client-side public key generated by the user, to which the read write session bundle (credentials) will be encrypted. */
     targetPublicKey: string;
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"omitempty,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId?: string;
-    /** @description Optional human-readable name for an API Key. If none provided, default to Read Write Session - <Timestamp> */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional human-readable name for an API Key. If none provided, default to Read Write Session - <Timestamp>
+     */
     apiKeyName?: string;
     /** @description Expiration window (in seconds) indicating how long the API key is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
@@ -1271,6 +1926,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateReadWriteSessionIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1CreateReadWriteSessionResult: {
     /** @description Unique identifier for a given Organization. If the request is being made by a user and their Sub-Organization ID is unknown, this can be the Parent Organization ID. However, using the Sub-Organization ID is preferred due to performance reasons. */
@@ -1301,12 +1957,22 @@ export type definitions = {
     credentialBundle: string;
   };
   v1CreateSmartContractInterfaceIntent: {
-    /** @description Corresponding contract address or program ID */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Corresponding contract address or program ID
+     */
     smartContractAddress: string;
-    /** @description ABI/IDL as a JSON string */
+    /**
+     * @inject_tag: validate:"required,tk_max_length=400000"
+     * @description ABI/IDL as a JSON string. Limited to 400kb
+     */
     smartContractInterface: string;
+    /** @inject_tag: validate:"required" */
     type: definitions["v1SmartContractInterfaceType"];
-    /** @description Human-readable name for a Smart Contract Interface. */
+    /**
+     * @inject_tag: validate:"required,tk_label,tk_label_length"
+     * @description Human-readable name for a Smart Contract Interface.
+     */
     label: string;
     /** @description Notes for a Smart Contract Interface. */
     notes?: string;
@@ -1319,134 +1985,279 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateSmartContractInterfaceIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreateSmartContractInterfaceResult: {
     /** @description The ID of the created Smart Contract Interface. */
     smartContractInterfaceId: string;
   };
   v1CreateSubOrganizationIntent: {
-    /** @description Name for this sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Name for this sub-organization
+     */
     name: string;
     /** @description Root User authenticator for this new sub-organization */
     rootAuthenticator: definitions["v1AuthenticatorParamsV2"];
   };
   v1CreateSubOrganizationIntentV2: {
-    /** @description Name for this sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Name for this sub-organization
+     */
     subOrganizationName: string;
-    /** @description Root users to create within this sub-organization */
+    /**
+     * @inject_tag: validate:"required,dive"
+     * @description Root users to create within this sub-organization
+     */
     rootUsers: definitions["v1RootUserParams"][];
     /**
+     * @inject_tag: validate:"required"
      * Format: int32
      * @description The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users
      */
     rootQuorumThreshold: number;
   };
   v1CreateSubOrganizationIntentV3: {
-    /** @description Name for this sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Name for this sub-organization
+     */
     subOrganizationName: string;
-    /** @description Root users to create within this sub-organization */
+    /**
+     * @inject_tag: validate:"required,dive"
+     * @description Root users to create within this sub-organization
+     */
     rootUsers: definitions["v1RootUserParams"][];
     /**
+     * @inject_tag: validate:"required"
      * Format: int32
      * @description The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users
      */
     rootQuorumThreshold: number;
-    /** @description A list of Private Keys. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of Private Keys.
+     */
     privateKeys: definitions["v1PrivateKeyParams"][];
   };
   v1CreateSubOrganizationIntentV4: {
-    /** @description Name for this sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Name for this sub-organization
+     */
     subOrganizationName: string;
-    /** @description Root users to create within this sub-organization */
+    /**
+     * @inject_tag: validate:"required,dive"
+     * @description Root users to create within this sub-organization
+     */
     rootUsers: definitions["v1RootUserParams"][];
     /**
+     * @inject_tag: validate:"required"
      * Format: int32
      * @description The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users
      */
     rootQuorumThreshold: number;
-    /** @description The wallet to create for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description The wallet to create for the sub-organization
+     */
     wallet?: definitions["v1WalletParams"];
-    /** @description Disable email recovery for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email recovery for the sub-organization
+     */
     disableEmailRecovery?: boolean;
-    /** @description Disable email auth for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email auth for the sub-organization
+     */
     disableEmailAuth?: boolean;
   };
   v1CreateSubOrganizationIntentV5: {
-    /** @description Name for this sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Name for this sub-organization
+     */
     subOrganizationName: string;
-    /** @description Root users to create within this sub-organization */
+    /**
+     * @inject_tag: validate:"required,dive"
+     * @description Root users to create within this sub-organization
+     */
     rootUsers: definitions["v1RootUserParamsV2"][];
     /**
+     * @inject_tag: validate:"required"
      * Format: int32
      * @description The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users
      */
     rootQuorumThreshold: number;
-    /** @description The wallet to create for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description The wallet to create for the sub-organization
+     */
     wallet?: definitions["v1WalletParams"];
-    /** @description Disable email recovery for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email recovery for the sub-organization
+     */
     disableEmailRecovery?: boolean;
-    /** @description Disable email auth for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email auth for the sub-organization
+     */
     disableEmailAuth?: boolean;
   };
   v1CreateSubOrganizationIntentV6: {
-    /** @description Name for this sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Name for this sub-organization
+     */
     subOrganizationName: string;
-    /** @description Root users to create within this sub-organization */
+    /**
+     * @inject_tag: validate:"required,dive"
+     * @description Root users to create within this sub-organization
+     */
     rootUsers: definitions["v1RootUserParamsV3"][];
     /**
+     * @inject_tag: validate:"required"
      * Format: int32
      * @description The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users
      */
     rootQuorumThreshold: number;
-    /** @description The wallet to create for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description The wallet to create for the sub-organization
+     */
     wallet?: definitions["v1WalletParams"];
-    /** @description Disable email recovery for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email recovery for the sub-organization
+     */
     disableEmailRecovery?: boolean;
-    /** @description Disable email auth for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email auth for the sub-organization
+     */
     disableEmailAuth?: boolean;
   };
   v1CreateSubOrganizationIntentV7: {
-    /** @description Name for this sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Name for this sub-organization
+     */
     subOrganizationName: string;
-    /** @description Root users to create within this sub-organization */
+    /**
+     * @inject_tag: validate:"required,dive"
+     * @description Root users to create within this sub-organization
+     */
     rootUsers: definitions["v1RootUserParamsV4"][];
     /**
+     * @inject_tag: validate:"required"
      * Format: int32
      * @description The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users
      */
     rootQuorumThreshold: number;
-    /** @description The wallet to create for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description The wallet to create for the sub-organization
+     */
     wallet?: definitions["v1WalletParams"];
-    /** @description Disable email recovery for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email recovery for the sub-organization
+     */
     disableEmailRecovery?: boolean;
-    /** @description Disable email auth for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email auth for the sub-organization
+     */
     disableEmailAuth?: boolean;
-    /** @description Disable OTP SMS auth for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable OTP SMS auth for the sub-organization
+     */
     disableSmsAuth?: boolean;
-    /** @description Disable OTP email auth for the sub-organization */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable OTP email auth for the sub-organization
+     */
     disableOtpEmailAuth?: boolean;
     /** @description Signed JWT containing a unique id, expiry, verification type, contact */
     verificationToken?: string;
+    /** @description Optional signature proving authorization for this sub-organization creation. The signature is over the verification token ID and the root user parameters for the root user associated with the verification token. Only required if a public key was provided during the verification step. */
+    clientSignature?: definitions["v1ClientSignature"];
+  };
+  v1CreateSubOrganizationIntentV8: {
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Name for this sub-organization
+     */
+    subOrganizationName: string;
+    /**
+     * @inject_tag: validate:"required,dive"
+     * @description Root users to create within this sub-organization
+     */
+    rootUsers: definitions["v1RootUserParamsV5"][];
+    /**
+     * @inject_tag: validate:"required"
+     * Format: int32
+     * @description The threshold of unique approvals to reach root quorum. This value must be less than or equal to the number of root users
+     */
+    rootQuorumThreshold: number;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description The wallet to create for the sub-organization
+     */
+    wallet?: definitions["v1WalletParams"];
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email recovery for the sub-organization
+     */
+    disableEmailRecovery?: boolean;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable email auth for the sub-organization
+     */
+    disableEmailAuth?: boolean;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable OTP SMS auth for the sub-organization
+     */
+    disableSmsAuth?: boolean;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Disable OTP email auth for the sub-organization
+     */
+    disableOtpEmailAuth?: boolean;
+    /** @description Signed JWT containing a unique id, expiry, verification type, contact */
+    verificationToken?: string;
+    /** @description Optional signature proving authorization for this sub-organization creation. The signature is over the verification token ID and the root user parameters for the root user associated with the verification token. Only required if a public key was provided during the verification step. */
+    clientSignature?: definitions["v1ClientSignature"];
+    /** @description Requests a Notarizer-issued immutable protection profile. Sponsor powers and exit policy are protocol-fixed and cannot be supplied by callers. */
+    organizationProtectionProfile?: definitions["v1OrganizationProtectionProfileRequest"];
   };
   v1CreateSubOrganizationRequest: {
     /** @enum {string} */
-    type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V7";
+    type: "ACTIVITY_TYPE_CREATE_SUB_ORGANIZATION_V8";
     /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
     timestampMs: string;
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
-    parameters: definitions["v1CreateSubOrganizationIntentV7"];
+    parameters: definitions["v1CreateSubOrganizationIntentV8"];
+    generateAppProofs?: boolean;
   };
   v1CreateSubOrganizationResult: {
     subOrganizationId: string;
     rootUserIds?: string[];
   };
+  /** Going directly to V3 to have it in parity with intent versioning */
   v1CreateSubOrganizationResultV3: {
     subOrganizationId: string;
     /** @description A list of Private Key IDs and addresses. */
     privateKeys: definitions["v1PrivateKeyResult"][];
     rootUserIds?: string[];
   };
+  /** Going directly to V4 to have it in parity with intent versioning */
   v1CreateSubOrganizationResultV4: {
     subOrganizationId: string;
     wallet?: definitions["v1WalletResult"];
@@ -1467,10 +2278,124 @@ export type definitions = {
     wallet?: definitions["v1WalletResult"];
     rootUserIds?: string[];
   };
+  v1CreateSubOrganizationResultV8: {
+    subOrganizationId: string;
+    wallet?: definitions["v1WalletResult"];
+    rootUserIds?: string[];
+  };
+  v1CreateTvcAppIntent: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description The name of the new TVC application
+     */
+    name: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description Quorum public key to use for this application
+     */
+    quorumPublicKey: string;
+    /** @description Unique identifier for an existing TVC operator set to use as the Manifest Set for this TVC application. If left empty, a new Manifest Set configuration is required */
+    manifestSetId?: string;
+    /** @description Configuration to create a new TVC operator set, used as the Manifest Set for this TVC application. If left empty, a Manifest Set ID is required */
+    manifestSetParams?: definitions["v1TvcOperatorSetParams"];
+    /** @description Unique identifier for an existing TVC operator set to use as the Share Set for this TVC application. If left empty, a new Share Set configuration is required */
+    shareSetId?: string;
+    /** @description Configuration to create a new TVC operator set, used as the Share Set for this TVC application. If left empty, a Share Set ID is required */
+    shareSetParams?: definitions["v1TvcOperatorSetParams"];
+    /** @description Enables external connectivity for this TVC app. Default if not provided: false. */
+    externalConnectivity?: boolean;
+  };
+  v1CreateTvcAppResult: {
+    /** @description The unique identifier for the TVC application */
+    appId: string;
+    /** @description The unique identifier for the TVC manifest set */
+    manifestSetId: string;
+    /** @description The unique identifier(s) of the manifest set operators */
+    manifestSetOperatorIds: string[];
+    /**
+     * Format: int64
+     * @description The required number of approvals for the manifest set
+     */
+    manifestSetThreshold: number;
+  };
+  v1CreateTvcDeploymentIntent: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description The unique identifier of the to-be-deployed TVC application
+     */
+    appId: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description The QuorumOS version to use to deploy this application
+     */
+    qosVersion: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description URL of the container containing the pivot binary
+     */
+    pivotContainerImageUrl: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description Location of the binary in the pivot container
+     */
+    pivotPath: string;
+    /** @description Arguments to pass to the pivot binary at startup. Encoded as a list of strings, for example ["--foo", "bar"] */
+    pivotArgs: string[];
+    /**
+     * @inject_tag: validate:"required"
+     * @description Digest of the pivot binary in the pivot container. This value will be inserted in the QOS manifest to ensure application integrity.
+     */
+    expectedPivotDigest: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description URL of the container containing the host binary
+     */
+    hostContainerImageUrl: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description Location of the binary inside the host container
+     */
+    hostPath: string;
+    /** @description Arguments to pass to the host binary at startup. Encoded as a list of strings, for example ["--foo", "bar"] */
+    hostArgs: string[];
+    /**
+     * Format: int64
+     * @description Optional nonce to ensure uniqueness of the deployment manifest. If not provided, it defaults to the current Unix timestamp in seconds.
+     */
+    nonce?: number;
+  };
+  v1CreateTvcDeploymentResult: {
+    /** @description The unique identifier for the TVC deployment */
+    deploymentId: string;
+    /** @description The unique identifier for the TVC manifest */
+    manifestId: string;
+  };
+  v1CreateTvcManifestApprovalsIntent: {
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier of the TVC deployment to approve
+     */
+    manifestId: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description List of manifest approvals
+     */
+    approvals: definitions["v1TvcManifestApproval"][];
+  };
+  v1CreateTvcManifestApprovalsResult: {
+    /** @description The unique identifier(s) for the manifest approvals */
+    approvalIds: string[];
+  };
   v1CreateUserTagIntent: {
-    /** @description Human-readable name for a User Tag. */
+    /**
+     * @inject_tag: validate:"required,tk_label,tk_label_length"
+     * @description Human-readable name for a User Tag.
+     */
     userTagName: string;
-    /** @description A list of User IDs. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of User IDs.
+     */
     userIds: string[];
   };
   v1CreateUserTagRequest: {
@@ -1481,6 +2406,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateUserTagIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreateUserTagResult: {
     /** @description Unique identifier for a given User Tag. */
@@ -1489,34 +2415,57 @@ export type definitions = {
     userIds: string[];
   };
   v1CreateUsersIntent: {
-    /** @description A list of Users. */
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of Users.
+     */
     users: definitions["v1UserParams"][];
   };
   v1CreateUsersIntentV2: {
-    /** @description A list of Users. */
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of Users.
+     */
     users: definitions["v1UserParamsV2"][];
   };
   v1CreateUsersIntentV3: {
-    /** @description A list of Users. */
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of Users.
+     */
     users: definitions["v1UserParamsV3"][];
+  };
+  v1CreateUsersIntentV4: {
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of Users.
+     */
+    users: definitions["v1UserParamsV4"][];
   };
   v1CreateUsersRequest: {
     /** @enum {string} */
-    type: "ACTIVITY_TYPE_CREATE_USERS_V3";
+    type: "ACTIVITY_TYPE_CREATE_USERS_V4";
     /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
     timestampMs: string;
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
-    parameters: definitions["v1CreateUsersIntentV3"];
+    parameters: definitions["v1CreateUsersIntentV4"];
+    generateAppProofs?: boolean;
   };
   v1CreateUsersResult: {
     /** @description A list of User IDs. */
     userIds: string[];
   };
   v1CreateWalletAccountsIntent: {
-    /** @description Unique identifier for a given Wallet. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Wallet.
+     */
     walletId: string;
-    /** @description A list of wallet Accounts. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of wallet Accounts.
+     */
     accounts: definitions["v1WalletAccountParams"][];
     /** @description Indicates if the wallet accounts should be persisted. This is helpful if you'd like to see the addresses of different derivation paths without actually creating the accounts. Defaults to true. */
     persist?: boolean;
@@ -1529,17 +2478,25 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateWalletAccountsIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreateWalletAccountsResult: {
     /** @description A list of derived addresses. */
     addresses: string[];
   };
   v1CreateWalletIntent: {
-    /** @description Human-readable name for a Wallet. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a Wallet.
+     */
     walletName: string;
-    /** @description A list of wallet Accounts. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of wallet Accounts. This field, if not needed, should be an empty array in your request body.
+     */
     accounts: definitions["v1WalletAccountParams"][];
     /**
+     * @inject_tag: validate:"omitempty"
      * Format: int32
      * @description Length of mnemonic to generate the Wallet seed. Defaults to 12. Accepted values: 12, 15, 18, 21, 24.
      */
@@ -1553,6 +2510,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1CreateWalletIntent"];
+    generateAppProofs?: boolean;
   };
   v1CreateWalletResult: {
     /** @description Unique identifier for a Wallet. */
@@ -1563,8 +2521,12 @@ export type definitions = {
   v1CredPropsAuthenticationExtensionsClientOutputs: {
     rk: boolean;
   };
-  /** @enum {string} */
+  /**
+   * @default CREDENTIAL_TYPE_UNSPECIFIED
+   * @enum {string}
+   */
   v1CredentialType:
+    | "CREDENTIAL_TYPE_UNSPECIFIED"
     | "CREDENTIAL_TYPE_WEBAUTHN_AUTHENTICATOR"
     | "CREDENTIAL_TYPE_API_KEY_P256"
     | "CREDENTIAL_TYPE_RECOVER_USER_KEY_P256"
@@ -1575,12 +2537,28 @@ export type definitions = {
     | "CREDENTIAL_TYPE_READ_WRITE_SESSION_KEY_P256"
     | "CREDENTIAL_TYPE_OAUTH_KEY_P256"
     | "CREDENTIAL_TYPE_LOGIN";
-  /** @enum {string} */
-  v1Curve: "CURVE_SECP256K1" | "CURVE_ED25519";
+  /**
+   * @description Cryptographic Curve used to generate a given Private Key.
+   * @default CURVE_UNSPECIFIED
+   * @enum {string}
+   */
+  v1Curve: "CURVE_UNSPECIFIED" | "CURVE_SECP256K1" | "CURVE_ED25519";
+  v1CustomRevertError: {
+    /** @description The name of the custom error. */
+    errorName?: string;
+    /** @description The decoded parameters as a JSON object. */
+    paramsJson?: string;
+  };
   v1DeleteApiKeysIntent: {
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
-    /** @description A list of API Key IDs. */
+    /**
+     * @inject_tag: validate:"required,dive,required,uuid"
+     * @description A list of API Key IDs.
+     */
     apiKeyIds: string[];
   };
   v1DeleteApiKeysRequest: {
@@ -1591,15 +2569,22 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteApiKeysIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteApiKeysResult: {
     /** @description A list of API Key IDs. */
     apiKeyIds: string[];
   };
   v1DeleteAuthenticatorsIntent: {
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
-    /** @description A list of Authenticator IDs. */
+    /**
+     * @inject_tag: validate:"required,dive,required,uuid"
+     * @description A list of Authenticator IDs.
+     */
     authenticatorIds: string[];
   };
   v1DeleteAuthenticatorsRequest: {
@@ -1610,13 +2595,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteAuthenticatorsIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteAuthenticatorsResult: {
     /** @description Unique identifier for a given Authenticator. */
     authenticatorIds: string[];
   };
   v1DeleteFiatOnRampCredentialIntent: {
-    /** @description The ID of the fiat on-ramp credential to delete */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The ID of the fiat on-ramp credential to delete
+     */
     fiatOnrampCredentialId: string;
   };
   v1DeleteFiatOnRampCredentialRequest: {
@@ -1627,13 +2616,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteFiatOnRampCredentialIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteFiatOnRampCredentialResult: {
     /** @description Unique identifier of the Fiat On-Ramp credential that was deleted */
     fiatOnRampCredentialId: string;
   };
   v1DeleteInvitationIntent: {
-    /** @description Unique identifier for a given Invitation object. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Invitation object.
+     */
     invitationId: string;
   };
   v1DeleteInvitationRequest: {
@@ -1644,13 +2637,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteInvitationIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteInvitationResult: {
     /** @description Unique identifier for a given Invitation. */
     invitationId: string;
   };
   v1DeleteOauth2CredentialIntent: {
-    /** @description The ID of the OAuth 2.0 credential to delete */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The ID of the OAuth 2.0 credential to delete
+     */
     oauth2CredentialId: string;
   };
   v1DeleteOauth2CredentialRequest: {
@@ -1661,15 +2658,22 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteOauth2CredentialIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteOauth2CredentialResult: {
     /** @description Unique identifier of the OAuth 2.0 credential that was deleted */
     oauth2CredentialId: string;
   };
   v1DeleteOauthProvidersIntent: {
-    /** @description The ID of the User to remove an Oauth provider from */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description The ID of the User to remove an Oauth provider from
+     */
     userId: string;
-    /** @description Unique identifier for a given Provider. */
+    /**
+     * @inject_tag: validate:"dive,required,uuid"
+     * @description Unique identifier for a given Provider.
+     */
     providerIds: string[];
   };
   v1DeleteOauthProvidersRequest: {
@@ -1680,13 +2684,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteOauthProvidersIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteOauthProvidersResult: {
     /** @description A list of unique identifiers for Oauth Providers */
     providerIds: string[];
   };
   v1DeleteOrganizationIntent: {
-    /** @description Unique identifier for a given Organization. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Organization.
+     */
     organizationId: string;
   };
   v1DeleteOrganizationResult: {
@@ -1694,7 +2702,10 @@ export type definitions = {
     organizationId: string;
   };
   v1DeletePoliciesIntent: {
-    /** @description List of unique identifiers for policies within an organization */
+    /**
+     * @inject_tag: validate:"required,dive,uuid"
+     * @description List of unique identifiers for policies within an organization
+     */
     policyIds: string[];
   };
   v1DeletePoliciesRequest: {
@@ -1705,13 +2716,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeletePoliciesIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeletePoliciesResult: {
     /** @description A list of unique identifiers for the deleted policies. */
     policyIds: string[];
   };
   v1DeletePolicyIntent: {
-    /** @description Unique identifier for a given Policy. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Policy.
+     */
     policyId: string;
   };
   v1DeletePolicyRequest: {
@@ -1722,13 +2737,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeletePolicyIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeletePolicyResult: {
     /** @description Unique identifier for a given Policy. */
     policyId: string;
   };
   v1DeletePrivateKeyTagsIntent: {
-    /** @description A list of Private Key Tag IDs. */
+    /**
+     * @inject_tag: validate:"required,dive,required,uuid"
+     * @description A list of Private Key Tag IDs.
+     */
     privateKeyTagIds: string[];
   };
   v1DeletePrivateKeyTagsRequest: {
@@ -1739,6 +2758,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeletePrivateKeyTagsIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeletePrivateKeyTagsResult: {
     /** @description A list of Private Key Tag IDs. */
@@ -1747,7 +2767,10 @@ export type definitions = {
     privateKeyIds: string[];
   };
   v1DeletePrivateKeysIntent: {
-    /** @description List of unique identifiers for private keys within an organization */
+    /**
+     * @inject_tag: validate:"required,dive,uuid"
+     * @description List of unique identifiers for private keys within an organization
+     */
     privateKeyIds: string[];
     /** @description Optional parameter for deleting the private keys, even if any have not been previously exported. If they have been exported, this field is ignored. */
     deleteWithoutExport?: boolean;
@@ -1760,13 +2783,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeletePrivateKeysIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeletePrivateKeysResult: {
     /** @description A list of private key unique identifiers that were removed */
     privateKeyIds: string[];
   };
   v1DeleteSmartContractInterfaceIntent: {
-    /** @description The ID of a Smart Contract Interface intended for deletion. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The ID of a Smart Contract Interface intended for deletion.
+     */
     smartContractInterfaceId: string;
   };
   v1DeleteSmartContractInterfaceRequest: {
@@ -1777,6 +2804,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteSmartContractInterfaceIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteSmartContractInterfaceResult: {
     /** @description The ID of the deleted Smart Contract Interface. */
@@ -1794,13 +2822,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteSubOrganizationIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteSubOrganizationResult: {
     /** @description Unique identifier of the sub organization that was removed */
     subOrganizationUuid: string;
   };
   v1DeleteUserTagsIntent: {
-    /** @description A list of User Tag IDs. */
+    /**
+     * @inject_tag: validate:"required,dive,required,uuid"
+     * @description A list of User Tag IDs.
+     */
     userTagIds: string[];
   };
   v1DeleteUserTagsRequest: {
@@ -1811,6 +2843,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteUserTagsIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteUserTagsResult: {
     /** @description A list of User Tag IDs. */
@@ -1819,7 +2852,10 @@ export type definitions = {
     userIds: string[];
   };
   v1DeleteUsersIntent: {
-    /** @description A list of User IDs. */
+    /**
+     * @inject_tag: validate:"required,dive,required,uuid"
+     * @description A list of User IDs.
+     */
     userIds: string[];
   };
   v1DeleteUsersRequest: {
@@ -1830,13 +2866,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteUsersIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteUsersResult: {
     /** @description A list of User IDs. */
     userIds: string[];
   };
   v1DeleteWalletAccountsIntent: {
-    /** @description List of unique identifiers for wallet accounts within an organization */
+    /**
+     * @inject_tag: validate:"required,dive,uuid"
+     * @description List of unique identifiers for wallet accounts within an organization
+     */
     walletAccountIds: string[];
     /** @description Optional parameter for deleting the wallet accounts, even if any have not been previously exported. If they have been exported, this field is ignored. */
     deleteWithoutExport?: boolean;
@@ -1849,13 +2889,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteWalletAccountsIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteWalletAccountsResult: {
     /** @description A list of wallet account unique identifiers that were removed */
     walletAccountIds: string[];
   };
   v1DeleteWalletsIntent: {
-    /** @description List of unique identifiers for wallets within an organization */
+    /**
+     * @inject_tag: validate:"required,dive,uuid"
+     * @description List of unique identifiers for wallets within an organization
+     */
     walletIds: string[];
     /** @description Optional parameter for deleting the wallets, even if any have not been previously exported. If they have been exported, this field is ignored. */
     deleteWithoutExport?: boolean;
@@ -1868,29 +2912,81 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1DeleteWalletsIntent"];
+    generateAppProofs?: boolean;
   };
   v1DeleteWalletsResult: {
     /** @description A list of wallet unique identifiers that were removed */
     walletIds: string[];
   };
+  v1DeploymentStatus: {
+    /** @description Unique identifier for this deployment (corresponds to k8s deployment label) */
+    deploymentId: string;
+    /**
+     * Format: int32
+     * @description Number of ready replicas
+     */
+    readyReplicas: number;
+    /**
+     * Format: int32
+     * @description Desired number of replicas
+     */
+    desiredReplicas: number;
+    /** @description Last time this deployment was updated */
+    lastUpdatedTime: definitions["externaldatav1Timestamp"];
+  };
   v1DisableAuthProxyIntent: { [key: string]: unknown };
   v1DisableAuthProxyResult: { [key: string]: unknown };
   v1DisablePrivateKeyIntent: {
-    /** @description Unique identifier for a given Private Key. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Private Key.
+     */
     privateKeyId: string;
   };
   v1DisablePrivateKeyResult: {
     /** @description Unique identifier for a given Private Key. */
     privateKeyId: string;
   };
-  /** @enum {string} */
-  v1Effect: "EFFECT_ALLOW" | "EFFECT_DENY";
+  /**
+   * @default EFFECT_UNSPECIFIED
+   * @enum {string}
+   */
+  v1Effect: "EFFECT_UNSPECIFIED" | "EFFECT_ALLOW" | "EFFECT_DENY";
+  /**
+   * @description A new proto message specifically for "legacy" endpoints: Email Auth and Email Recovery.
+   * Note that app_name is now a required parameter for newer versions of these activities.
+   * All other fields remain optional and will fall back to defaults.
+   */
+  v1EmailAuthCustomizationParams: {
+    /**
+     * @inject_tag: validate:"tk_label_length,tk_label"
+     * @description The name of the application. This field is required and will be used in email notifications if an email template is not provided.
+     */
+    appName: string;
+    /** @description A URL pointing to a logo in PNG format. Note this logo will be resized to fit into 340px x 124px. */
+    logoUrl?: string;
+    /** @description A template for the URL to be used in a magic link button, e.g. `https://dapp.xyz/%s`. The auth bundle will be interpolated into the `%s`. */
+    magicLinkTemplate?: string;
+    /** @description JSON object containing key/value pairs to be used with custom templates. */
+    templateVariables?: string;
+    /** @description Unique identifier for a given Email Template. If not specified, the default is the most recent Email Template. */
+    templateId?: string;
+  };
   v1EmailAuthIntent: {
-    /** @description Email of the authenticating user. */
+    /**
+     * @inject_tag: validate:"email,tk_email"
+     * @description Email of the authenticating user.
+     */
     email: string;
-    /** @description Client-side public key generated by the user, to which the email auth bundle (credentials) will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the email auth bundle (credentials) will be encrypted.
+     */
     targetPublicKey: string;
-    /** @description Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp> */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp>
+     */
     apiKeyName?: string;
     /** @description Expiration window (in seconds) indicating how long the API key is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
@@ -1898,19 +2994,37 @@ export type definitions = {
     emailCustomization?: definitions["v1EmailCustomizationParams"];
     /** @description Invalidate all other previously generated Email Auth API keys */
     invalidateExisting?: boolean;
-    /** @description Optional custom email address from which to send the email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the email
+     */
     sendFromEmailAddress?: string;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1EmailAuthIntentV2: {
-    /** @description Email of the authenticating user. */
+    /**
+     * @inject_tag: validate:"email,tk_email"
+     * @description Email of the authenticating user.
+     */
     email: string;
-    /** @description Client-side public key generated by the user, to which the email auth bundle (credentials) will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the email auth bundle (credentials) will be encrypted.
+     */
     targetPublicKey: string;
-    /** @description Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp> */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp>
+     */
     apiKeyName?: string;
     /** @description Expiration window (in seconds) indicating how long the API key is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
@@ -1918,33 +3032,58 @@ export type definitions = {
     emailCustomization?: definitions["v1EmailCustomizationParams"];
     /** @description Invalidate all other previously generated Email Auth API keys */
     invalidateExisting?: boolean;
-    /** @description Optional custom email address from which to send the email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the email
+     */
     sendFromEmailAddress?: string;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1EmailAuthIntentV3: {
-    /** @description Email of the authenticating user. */
+    /**
+     * @inject_tag: validate:"email,tk_email"
+     * @description Email of the authenticating user.
+     */
     email: string;
-    /** @description Client-side public key generated by the user, to which the email auth bundle (credentials) will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the email auth bundle (credentials) will be encrypted.
+     */
     targetPublicKey: string;
-    /** @description The name of the application. */
-    appName: string;
-    /** @description Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp> */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp>
+     */
     apiKeyName?: string;
     /** @description Expiration window (in seconds) indicating how long the API key is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
-    /** @description Optional parameters for customizing emails. If not provided, the default email will be used. */
-    emailCustomization?: definitions["v1EmailCustomizationParams"];
+    /** @description Parameters for customizing emails. If not provided, the default email will be used. Note that app_name is required. */
+    emailCustomization: definitions["v1EmailAuthCustomizationParams"];
     /** @description Invalidate all other previously generated Email Auth API keys */
     invalidateExisting?: boolean;
-    /** @description Optional custom email address from which to send the email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the email
+     */
     sendFromEmailAddress?: string;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1EmailAuthRequest: {
@@ -1955,16 +3094,35 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1EmailAuthIntentV3"];
+    generateAppProofs?: boolean;
   };
   v1EmailAuthResult: {
     /** @description Unique identifier for the authenticating User. */
     userId: string;
     /** @description Unique identifier for the created API key. */
     apiKeyId: string;
+    /** @description HPKE-encrypted credential bundle. Present only in dev/console mailer mode. */
+    credentialBundle?: string;
   };
+  /** @description Each of these customization parameters are optional; resort to defaults if any are not provided. */
   v1EmailCustomizationParams: {
     /** @description The name of the application. */
     appName?: string;
+    /** @description A URL pointing to a logo in PNG format. Note this logo will be resized to fit into 340px x 124px. */
+    logoUrl?: string;
+    /** @description A template for the URL to be used in a magic link button, e.g. `https://dapp.xyz/%s`. The auth bundle will be interpolated into the `%s`. */
+    magicLinkTemplate?: string;
+    /** @description JSON object containing key/value pairs to be used with custom templates. */
+    templateVariables?: string;
+    /** @description Unique identifier for a given Email Template. If not specified, the default is the most recent Email Template. */
+    templateId?: string;
+  };
+  /**
+   * @description This proto message is to be used for newer email-related activities (OTP).
+   * Note that app_name is no longer a parameter here, as it is required in the top-level intent for these activities.
+   * All other fields remain optional and will fall back to defaults.
+   */
+  v1EmailCustomizationParamsV2: {
     /** @description A URL pointing to a logo in PNG format. Note this logo will be resized to fit into 340px x 124px. */
     logoUrl?: string;
     /** @description A template for the URL to be used in a magic link button, e.g. `https://dapp.xyz/%s`. The auth bundle will be interpolated into the `%s`. */
@@ -1978,46 +3136,87 @@ export type definitions = {
   v1EnableAuthProxyResult: {
     /** @description A User ID with permission to initiate authentication. */
     userId: string;
+    /**
+     * Format: byte
+     * @description The proxy signing key generated by the Notarizer (dev: plaintext hex, prod: HPKE-encrypted).
+     */
+    encryptedApiKey: string;
+  };
+  v1EthFailureDetails: {
+    /** @description Ethereum revert chain, ordered from outermost to innermost. */
+    revertChain?: definitions["v1RevertChainEntry"][];
   };
   v1EthSendRawTransactionIntent: {
-    /** @description The raw, signed transaction to be sent. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The raw, signed transaction to be sent.
+     */
     signedTransaction: string;
     /**
+     * @inject_tag: validate:"required"
      * @description CAIP-2 chain ID (e.g., 'eip155:1' for Ethereum mainnet).
      * @enum {string}
      */
-    caip2: "eip155:1" | "eip155:11155111" | "eip155:8453" | "eip155:84532";
-  };
-  v1EthSendRawTransactionRequest: {
-    /** @enum {string} */
-    type: "ACTIVITY_TYPE_ETH_SEND_RAW_TRANSACTION";
-    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
-    timestampMs: string;
-    /** @description Unique identifier for a given Organization. */
-    organizationId: string;
-    parameters: definitions["v1EthSendRawTransactionIntent"];
+    caip2:
+      | "eip155:1"
+      | "eip155:11155111"
+      | "eip155:8453"
+      | "eip155:84532"
+      | "eip155:137"
+      | "eip155:80002"
+      | "eip155:42161"
+      | "eip155:421614"
+      | "eip155:56"
+      | "eip155:97";
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Optional reservation_id returned by prepare_eth_transaction; when set, the server promotes that exact nonce reservation instead of matching by (caip2, from, nonce).
+     */
+    reservationId?: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Optional send_transaction_status_id of an in-flight transaction this raw send replaces or cancels (same nonce, higher fee).
+     */
+    replacesStatusId?: string;
   };
   v1EthSendRawTransactionResult: {
     /** @description The transaction hash of the sent transaction */
     transactionHash: string;
   };
   v1EthSendTransactionIntent: {
-    /** @description A wallet or private key address to sign with. This does not support private key IDs. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description A wallet or private key address to sign with. This does not support private key IDs.
+     */
     from: string;
     /** @description Whether to sponsor this transaction via Gas Station. */
     sponsor?: boolean;
     /**
+     * @inject_tag: validate:"required"
      * @description CAIP-2 chain ID (e.g., 'eip155:1' for Ethereum mainnet).
      * @enum {string}
      */
-    caip2: "eip155:1" | "eip155:11155111" | "eip155:8453" | "eip155:84532";
-    /** @description Recipient address as a hex string with 0x prefix. */
+    caip2:
+      | "eip155:1"
+      | "eip155:11155111"
+      | "eip155:8453"
+      | "eip155:84532"
+      | "eip155:137"
+      | "eip155:80002"
+      | "eip155:42161"
+      | "eip155:421614"
+      | "eip155:56"
+      | "eip155:97";
+    /**
+     * @inject_tag: validate:"required"
+     * @description Recipient address as a hex string with 0x prefix.
+     */
     to: string;
     /** @description Amount of native asset to send in wei. */
     value?: string;
     /** @description Hex-encoded call data for contract interactions. */
     data?: string;
-    /** @description Transaction nonce, for EIP-1559 and ZeroXKey Gas Station authorizations. */
+    /** @description Transaction nonce, for EIP-1559 and 0xkey Gas Station authorizations. */
     nonce?: string;
     /** @description Maximum amount of gas to use for this transaction, for EIP-1559 transactions. */
     gasLimit?: string;
@@ -2025,10 +3224,12 @@ export type definitions = {
     maxFeePerGas?: string;
     /** @description Maximum priority fee (tip) per gas unit in wei. Required for non-sponsored (EIP-1559) transactions. Not used for sponsored transactions. */
     maxPriorityFeePerGas?: string;
-    /** @description Unix timestamp after which the Gas Station meta-transaction is no longer valid. Only used when sponsor=true. */
-    deadline?: string;
-    /** @description The gas station delegate contract nonce. Only used when sponsor=true. */
+    /** @description The gas station delegate contract nonce. Only used when sponsor=true. Include this if you want maximal security posture. */
     gasStationNonce?: string;
+    /** @description EIP-712 deadline (unix seconds, uint32 decimal string) the EOA signed into the sponsored Execution intent. Required when sponsor=true. */
+    deadline?: string;
+    /** @description 65-byte (r || s || v) EIP-712 signature the EOA produced over the sponsored Execution intent (Phase 1, signed client-side). Hex with 0x prefix. Required when sponsor=true. */
+    userIntentSignature?: string;
   };
   v1EthSendTransactionRequest: {
     /** @enum {string} */
@@ -2038,15 +3239,26 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1EthSendTransactionIntent"];
+    generateAppProofs?: boolean;
   };
   v1EthSendTransactionResult: {
-    /** @description The send_transaction_status ID associated with the transaction submission for sponsored transactions */
+    /** @description The send_transaction_status ID associated with the transaction submission */
     sendTransactionStatusId: string;
   };
+  v1EthSendTransactionStatus: {
+    /** @description The Ethereum transaction hash, if available. */
+    txHash?: string;
+  };
   v1ExportPrivateKeyIntent: {
-    /** @description Unique identifier for a given Private Key. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Private Key.
+     */
     privateKeyId: string;
-    /** @description Client-side public key generated by the user, to which the export bundle will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the export bundle will be encrypted.
+     */
     targetPublicKey: string;
   };
   v1ExportPrivateKeyRequest: {
@@ -2057,6 +3269,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1ExportPrivateKeyIntent"];
+    generateAppProofs?: boolean;
   };
   v1ExportPrivateKeyResult: {
     /** @description Unique identifier for a given Private Key. */
@@ -2065,9 +3278,15 @@ export type definitions = {
     exportBundle: string;
   };
   v1ExportWalletAccountIntent: {
-    /** @description Address to identify Wallet Account. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Address to identify Wallet Account.
+     */
     address: string;
-    /** @description Client-side public key generated by the user, to which the export bundle will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the export bundle will be encrypted.
+     */
     targetPublicKey: string;
   };
   v1ExportWalletAccountRequest: {
@@ -2078,6 +3297,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1ExportWalletAccountIntent"];
+    generateAppProofs?: boolean;
   };
   v1ExportWalletAccountResult: {
     /** @description Address to identify Wallet Account. */
@@ -2086,11 +3306,20 @@ export type definitions = {
     exportBundle: string;
   };
   v1ExportWalletIntent: {
-    /** @description Unique identifier for a given Wallet. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Wallet.
+     */
     walletId: string;
-    /** @description Client-side public key generated by the user, to which the export bundle will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the export bundle will be encrypted.
+     */
     targetPublicKey: string;
-    /** @description The language of the mnemonic to export. Defaults to English. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description The language of the mnemonic to export. Defaults to English.
+     */
     language?: definitions["v1MnemonicLanguage"];
   };
   v1ExportWalletRequest: {
@@ -2101,6 +3330,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1ExportWalletIntent"];
+    generateAppProofs?: boolean;
   };
   v1ExportWalletResult: {
     /** @description Unique identifier for a given Wallet. */
@@ -2112,8 +3342,13 @@ export type definitions = {
     name?: definitions["v1FeatureName"];
     value?: string;
   };
-  /** @enum {string} */
+  /**
+   * - FEATURE_NAME_ROOT_USER_EMAIL_RECOVERY: to be deprecated in favor of rename: `FEATURE_NAME_EMAIL_RECOVERY`
+   * @default FEATURE_NAME_UNSPECIFIED
+   * @enum {string}
+   */
   v1FeatureName:
+    | "FEATURE_NAME_UNSPECIFIED"
     | "FEATURE_NAME_ROOT_USER_EMAIL_RECOVERY"
     | "FEATURE_NAME_WEBAUTHN_ORIGINS"
     | "FEATURE_NAME_EMAIL_AUTH"
@@ -2122,8 +3357,17 @@ export type definitions = {
     | "FEATURE_NAME_SMS_AUTH"
     | "FEATURE_NAME_OTP_EMAIL_AUTH"
     | "FEATURE_NAME_AUTH_PROXY";
-  /** @enum {string} */
+  /**
+   * - FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_UNSPECIFIED: Unspecified
+   *  - FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_BITCOIN: bitcoin
+   *  - FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_ETHEREUM: ethereum
+   *  - FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_SOLANA: solana
+   *  - FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_BASE: base
+   * @default FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_UNSPECIFIED
+   * @enum {string}
+   */
   v1FiatOnRampBlockchainNetwork:
+    | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_UNSPECIFIED"
     | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_BITCOIN"
     | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_ETHEREUM"
     | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_SOLANA"
@@ -2148,14 +3392,62 @@ export type definitions = {
     createdAt: definitions["externaldatav1Timestamp"];
     updatedAt: definitions["externaldatav1Timestamp"];
   };
-  /** @enum {string} */
+  /**
+   * - FIAT_ON_RAMP_CRYPTO_CURRENCY_UNSPECIFIED: Unspecified
+   *  - FIAT_ON_RAMP_CRYPTO_CURRENCY_BTC: Bitcoin
+   *  - FIAT_ON_RAMP_CRYPTO_CURRENCY_ETH: Ethereum
+   *  - FIAT_ON_RAMP_CRYPTO_CURRENCY_SOL: Solana
+   *  - FIAT_ON_RAMP_CRYPTO_CURRENCY_USDC: USDC
+   * @default FIAT_ON_RAMP_CRYPTO_CURRENCY_UNSPECIFIED
+   * @enum {string}
+   */
   v1FiatOnRampCryptoCurrency:
+    | "FIAT_ON_RAMP_CRYPTO_CURRENCY_UNSPECIFIED"
     | "FIAT_ON_RAMP_CRYPTO_CURRENCY_BTC"
     | "FIAT_ON_RAMP_CRYPTO_CURRENCY_ETH"
     | "FIAT_ON_RAMP_CRYPTO_CURRENCY_SOL"
     | "FIAT_ON_RAMP_CRYPTO_CURRENCY_USDC";
-  /** @enum {string} */
+  /**
+   * - FIAT_ON_RAMP_CURRENCY_UNSPECIFIED: Unspecified
+   *  - FIAT_ON_RAMP_CURRENCY_AUD: Australian Dollar
+   *  - FIAT_ON_RAMP_CURRENCY_BGN: Bulgarian Lev
+   *  - FIAT_ON_RAMP_CURRENCY_BRL: Brazilian Real
+   *  - FIAT_ON_RAMP_CURRENCY_CAD: Canadian Dollar
+   *  - FIAT_ON_RAMP_CURRENCY_CHF: Swiss Franc
+   *  - FIAT_ON_RAMP_CURRENCY_COP: Colombian Peso
+   *  - FIAT_ON_RAMP_CURRENCY_CZK: Czech Koruna
+   *  - FIAT_ON_RAMP_CURRENCY_DKK: Danish Krone
+   *  - FIAT_ON_RAMP_CURRENCY_DOP: Dominican Peso
+   *  - FIAT_ON_RAMP_CURRENCY_EGP: Egyptian Pound
+   *  - FIAT_ON_RAMP_CURRENCY_EUR: Euro
+   *  - FIAT_ON_RAMP_CURRENCY_GBP: Pound Sterling
+   *  - FIAT_ON_RAMP_CURRENCY_HKD: Hong Kong Dollar
+   *  - FIAT_ON_RAMP_CURRENCY_IDR: Indonesian Rupiah
+   *  - FIAT_ON_RAMP_CURRENCY_ILS: Israeli New Shekel
+   *  - FIAT_ON_RAMP_CURRENCY_JOD: Jordanian Dinar
+   *  - FIAT_ON_RAMP_CURRENCY_KES: Kenyan Shilling
+   *  - FIAT_ON_RAMP_CURRENCY_KWD: Kuwaiti Dinar
+   *  - FIAT_ON_RAMP_CURRENCY_LKR: Sri Lankan Rupee
+   *  - FIAT_ON_RAMP_CURRENCY_MXN: Mexican Peso
+   *  - FIAT_ON_RAMP_CURRENCY_NGN: Nigerian Naira
+   *  - FIAT_ON_RAMP_CURRENCY_NOK: Norwegian Krone
+   *  - FIAT_ON_RAMP_CURRENCY_NZD: New Zealand Dollar
+   *  - FIAT_ON_RAMP_CURRENCY_OMR: Omani Rial
+   *  - FIAT_ON_RAMP_CURRENCY_PEN: Peruvian Sol
+   *  - FIAT_ON_RAMP_CURRENCY_PLN: Polish Złoty
+   *  - FIAT_ON_RAMP_CURRENCY_RON: Romanian Leu
+   *  - FIAT_ON_RAMP_CURRENCY_SEK: Swedish Krona
+   *  - FIAT_ON_RAMP_CURRENCY_THB: Thai Baht
+   *  - FIAT_ON_RAMP_CURRENCY_TRY: Turkish Lira
+   *  - FIAT_ON_RAMP_CURRENCY_TWD: Taiwan Dollar
+   *  - FIAT_ON_RAMP_CURRENCY_USD: US Dollar
+   *  - FIAT_ON_RAMP_CURRENCY_VND: Vietnamese Dong
+   *  - FIAT_ON_RAMP_CURRENCY_ZAR: South African Rand
+   * @default FIAT_ON_RAMP_CURRENCY_UNSPECIFIED
+   * @enum {string}
+   */
   v1FiatOnRampCurrency:
+    | "FIAT_ON_RAMP_CURRENCY_UNSPECIFIED"
     | "FIAT_ON_RAMP_CURRENCY_AUD"
     | "FIAT_ON_RAMP_CURRENCY_BGN"
     | "FIAT_ON_RAMP_CURRENCY_BRL"
@@ -2190,8 +3482,31 @@ export type definitions = {
     | "FIAT_ON_RAMP_CURRENCY_USD"
     | "FIAT_ON_RAMP_CURRENCY_VND"
     | "FIAT_ON_RAMP_CURRENCY_ZAR";
-  /** @enum {string} */
+  /**
+   * - FIAT_ON_RAMP_PAYMENT_METHOD_UNSPECIFIED: Unspecified
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_CREDIT_DEBIT_CARD: Shared methods (supported by both MoonPay and Coinbase)
+   * @description MoonPay: CREDIT_DEBIT_CARD, Coinbase: CARD
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_APPLE_PAY: MoonPay: APPLE_PAY, Coinbase: APPLE_PAY
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_GBP_BANK_TRANSFER: MoonPay-specific methods
+   *
+   * MoonPay: GBP_BANK_TRANSFER
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_GBP_OPEN_BANKING_PAYMENT: MoonPay: GBP_OPEN_BANKING_PAYMENT
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_GOOGLE_PAY: MoonPay: GOOGLE_PAY
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_SEPA_BANK_TRANSFER: MoonPay: SEPA_BANK_TRANSFER
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_PIX_INSTANT_PAYMENT: MoonPay: PIX_INSTANT_PAYMENT
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_PAYPAL: MoonPay: PAYPAL
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_VENMO: MoonPay: VENMO
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_MOONPAY_BALANCE: MoonPay: MOONPAY_BALANCE
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_CRYPTO_ACCOUNT: Coinbase-specific methods
+   *
+   * Coinbase: CRYPTO_ACCOUNT
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_FIAT_WALLET: Coinbase: FIAT_WALLET
+   *  - FIAT_ON_RAMP_PAYMENT_METHOD_ACH_BANK_ACCOUNT: Coinbase: ACH_BANK_ACCOUNT
+   * @default FIAT_ON_RAMP_PAYMENT_METHOD_UNSPECIFIED
+   * @enum {string}
+   */
   v1FiatOnRampPaymentMethod:
+    | "FIAT_ON_RAMP_PAYMENT_METHOD_UNSPECIFIED"
     | "FIAT_ON_RAMP_PAYMENT_METHOD_CREDIT_DEBIT_CARD"
     | "FIAT_ON_RAMP_PAYMENT_METHOD_APPLE_PAY"
     | "FIAT_ON_RAMP_PAYMENT_METHOD_GBP_BANK_TRANSFER"
@@ -2205,8 +3520,13 @@ export type definitions = {
     | "FIAT_ON_RAMP_PAYMENT_METHOD_CRYPTO_ACCOUNT"
     | "FIAT_ON_RAMP_PAYMENT_METHOD_FIAT_WALLET"
     | "FIAT_ON_RAMP_PAYMENT_METHOD_ACH_BANK_ACCOUNT";
-  /** @enum {string} */
+  /**
+   * @description The supported Fiat On Ramp Providers.
+   * @default FIAT_ON_RAMP_PROVIDER_UNSPECIFIED
+   * @enum {string}
+   */
   v1FiatOnRampProvider:
+    | "FIAT_ON_RAMP_PROVIDER_UNSPECIFIED"
     | "FIAT_ON_RAMP_PROVIDER_COINBASE"
     | "FIAT_ON_RAMP_PROVIDER_MOONPAY";
   v1GetActivitiesRequest: {
@@ -2258,19 +3578,6 @@ export type definitions = {
   v1GetAppProofsResponse: {
     appProofs: definitions["v1AppProof"][];
   };
-  v1GetAttestationDocumentRequest: {
-    /** @description Unique identifier for a given organization. */
-    organizationId: string;
-    /** @description The enclave type, one of: ump, notarizer, signer, evm-parser. */
-    enclaveType: string;
-  };
-  v1GetAttestationDocumentResponse: {
-    /**
-     * Format: byte
-     * @description Raw (CBOR-encoded) attestation document.
-     */
-    attestationDocument: string;
-  };
   v1GetAuthenticatorRequest: {
     /** @description Unique identifier for a given organization. */
     organizationId: string;
@@ -2297,11 +3604,59 @@ export type definitions = {
     /** @description Hex encoded ephemeral public key. */
     ephemeralKey: string;
   };
+  v1GetGasUsageRequest: {
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+  };
+  v1GetGasUsageResponse: {
+    /**
+     * Format: int32
+     * @description The window duration (in minutes) for the organization or sub-organization.
+     */
+    windowDurationMinutes: number;
+    /** @description The window limit (in USD) for the organization or sub-organization. */
+    windowLimitUsd: string;
+    /** @description The total gas usage (in USD) of all sponsored transactions processed over the last `window_duration_minutes` */
+    usageUsd: string;
+  };
   v1GetLatestBootProofRequest: {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     /** @description Name of enclave app. */
     appName: string;
+  };
+  v1GetNoncesRequest: {
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    /** @description The Ethereum address to query nonces for. */
+    address: string;
+    /**
+     * @description CAIP-2 chain ID (e.g., 'eip155:1' for Ethereum mainnet).
+     * @enum {string}
+     */
+    caip2:
+      | "eip155:1"
+      | "eip155:11155111"
+      | "eip155:8453"
+      | "eip155:84532"
+      | "eip155:137"
+      | "eip155:80002";
+    /** @description Whether to fetch the standard on-chain nonce. */
+    nonce?: boolean;
+    /** @description Whether to fetch the gas station nonce used for sponsored transactions. */
+    gasStationNonce?: boolean;
+  };
+  v1GetNoncesResponse: {
+    /**
+     * Format: uint64
+     * @description The standard on-chain nonce for the address, if requested.
+     */
+    nonce?: string;
+    /**
+     * Format: uint64
+     * @description The gas station nonce for sponsored transactions, if requested.
+     */
+    gasStationNonce?: string;
   };
   v1GetOauth2CredentialRequest: {
     /** @description Unique identifier for a given Organization. */
@@ -2341,14 +3696,6 @@ export type definitions = {
   v1GetOrganizationConfigsResponse: {
     /** @description Organization configs including quorum settings and organization features. */
     configs: definitions["v1Config"];
-  };
-  v1GetOrganizationRequest: {
-    /** @description Unique identifier for a given organization. */
-    organizationId: string;
-  };
-  v1GetOrganizationResponse: {
-    /** @description Object representing the full current and deleted / disabled collection of users, policies, private keys, and invitations attributable to a particular organization. */
-    organizationData: definitions["v1OrganizationData"];
   };
   v1GetPoliciesRequest: {
     /** @description Unique identifier for a given organization. */
@@ -2404,10 +3751,15 @@ export type definitions = {
   v1GetSendTransactionStatusResponse: {
     /** @description The current status of the send transaction. */
     txStatus: string;
-    /** @description The blockchain transaction hash, if available. */
-    txHash?: string;
+    /** @description Ethereum-specific transaction status. */
+    eth?: definitions["v1EthSendTransactionStatus"];
+    /** @description Solana-specific transaction status. */
+    solana?: definitions["v1SolanaSendTransactionStatus"];
+    tron?: definitions["v1TronSendTransactionStatus"];
     /** @description The error encountered when broadcasting or confirming the transaction, if any. */
     txError?: string;
+    /** @description Structured error information including revert details, if available. */
+    error?: definitions["v1TxError"];
   };
   v1GetSmartContractInterfaceRequest: {
     /** @description Unique identifier for a given organization. */
@@ -2417,7 +3769,7 @@ export type definitions = {
   };
   v1GetSmartContractInterfaceResponse: {
     /** @description Object to be used in conjunction with policies to guard transaction signing. */
-    smartContractInterface: definitions["v1SmartContractInterface"];
+    smartContractInterface: definitions["externaldatav1SmartContractInterface"];
   };
   v1GetSmartContractInterfacesRequest: {
     /** @description Unique identifier for a given organization. */
@@ -2425,7 +3777,7 @@ export type definitions = {
   };
   v1GetSmartContractInterfacesResponse: {
     /** @description A list of smart contract interfaces. */
-    smartContractInterfaces: definitions["v1SmartContractInterface"][];
+    smartContractInterfaces: definitions["externaldatav1SmartContractInterface"][];
   };
   v1GetSubOrgIdsRequest: {
     /** @description Unique identifier for the parent organization. This is used to find sub-organizations within it. */
@@ -2533,22 +3885,41 @@ export type definitions = {
     /** @description Human-readable name for a user. */
     username: string;
   };
-  /** @enum {string} */
+  /**
+   * @default HASH_FUNCTION_UNSPECIFIED
+   * @enum {string}
+   */
   v1HashFunction:
+    | "HASH_FUNCTION_UNSPECIFIED"
     | "HASH_FUNCTION_NO_OP"
     | "HASH_FUNCTION_SHA256"
     | "HASH_FUNCTION_KECCAK256"
     | "HASH_FUNCTION_NOT_APPLICABLE";
   v1ImportPrivateKeyIntent: {
-    /** @description The ID of the User importing a Private Key. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description The ID of the User importing a Private Key.
+     */
     userId: string;
-    /** @description Human-readable name for a Private Key. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a Private Key.
+     */
     privateKeyName: string;
-    /** @description Bundle containing a raw private key encrypted to the enclave's target public key. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Bundle containing a raw private key encrypted to the enclave's target public key.
+     */
     encryptedBundle: string;
-    /** @description Cryptographic Curve used to generate a given Private Key. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Cryptographic Curve used to generate a given Private Key.
+     */
     curve: definitions["v1Curve"];
-    /** @description Cryptocurrency-specific formats for a derived address (e.g., Ethereum). */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description Cryptocurrency-specific formats for a derived address (e.g., Ethereum).
+     */
     addressFormats: definitions["v1AddressFormat"][];
   };
   v1ImportPrivateKeyRequest: {
@@ -2559,6 +3930,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1ImportPrivateKeyIntent"];
+    generateAppProofs?: boolean;
   };
   v1ImportPrivateKeyResult: {
     /** @description Unique identifier for a Private Key. */
@@ -2567,13 +3939,25 @@ export type definitions = {
     addresses: definitions["immutableactivityv1Address"][];
   };
   v1ImportWalletIntent: {
-    /** @description The ID of the User importing a Wallet. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description The ID of the User importing a Wallet.
+     */
     userId: string;
-    /** @description Human-readable name for a Wallet. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a Wallet.
+     */
     walletName: string;
-    /** @description Bundle containing a wallet mnemonic encrypted to the enclave's target public key. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Bundle containing a wallet mnemonic encrypted to the enclave's target public key.
+     */
     encryptedBundle: string;
-    /** @description A list of wallet Accounts. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of wallet Accounts.
+     */
     accounts: definitions["v1WalletAccountParams"][];
   };
   v1ImportWalletRequest: {
@@ -2584,6 +3968,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1ImportWalletIntent"];
+    generateAppProofs?: boolean;
   };
   v1ImportWalletResult: {
     /** @description Unique identifier for a Wallet. */
@@ -2592,13 +3977,25 @@ export type definitions = {
     addresses: string[];
   };
   v1InitFiatOnRampIntent: {
-    /** @description Enum to specifiy which on-ramp provider to use */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Enum to specifiy which on-ramp provider to use
+     */
     onrampProvider: definitions["v1FiatOnRampProvider"];
-    /** @description Destination wallet address for the buy transaction. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Destination wallet address for the buy transaction.
+     */
     walletAddress: string;
-    /** @description Blockchain network to be used for the transaction, e.g., bitcoin, ethereum. Maps to MoonPay's network or Coinbase's defaultNetwork. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Blockchain network to be used for the transaction, e.g., bitcoin, ethereum. Maps to MoonPay's network or Coinbase's defaultNetwork.
+     */
     network: definitions["v1FiatOnRampBlockchainNetwork"];
-    /** @description Code for the cryptocurrency to be purchased, e.g., btc, eth. Maps to MoonPay's currencyCode or Coinbase's defaultAsset. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Code for the cryptocurrency to be purchased, e.g., btc, eth. Maps to MoonPay's currencyCode or Coinbase's defaultAsset.
+     */
     cryptoCurrencyCode: definitions["v1FiatOnRampCryptoCurrency"];
     /** @description Code for the fiat currency to be used in the transaction, e.g., USD, EUR. */
     fiatCurrencyCode?: definitions["v1FiatOnRampCurrency"];
@@ -2623,6 +4020,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1InitFiatOnRampIntent"];
+    generateAppProofs?: boolean;
   };
   v1InitFiatOnRampResult: {
     /** @description Unique URL for a given fiat on-ramp flow. */
@@ -2644,6 +4042,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1InitImportPrivateKeyIntent"];
+    generateAppProofs?: boolean;
   };
   v1InitImportPrivateKeyResult: {
     /** @description Import bundle containing a public key and signature to use for importing client data. */
@@ -2661,13 +4060,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1InitImportWalletIntent"];
+    generateAppProofs?: boolean;
   };
   v1InitImportWalletResult: {
     /** @description Import bundle containing a public key and signature to use for importing client data. */
     importBundle: string;
   };
   v1InitOtpAuthIntent: {
-    /** @description Enum to specifiy whether to send OTP via SMS or email */
+    /**
+     * @inject_tag: validate:"required,oneof=OTP_TYPE_SMS OTP_TYPE_EMAIL"
+     * @description Enum to specifiy whether to send OTP via SMS or email
+     */
     otpType: string;
     /** @description Email or phone number to send the OTP code to */
     contact: string;
@@ -2677,63 +4080,106 @@ export type definitions = {
     smsCustomization?: definitions["v1SmsCustomizationParams"];
     /** @description Optional client-generated user identifier to enable per-user rate limiting for SMS auth. We recommend using a hash of the client-side IP address. */
     userIdentifier?: string;
-    /** @description Optional custom email address from which to send the OTP email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the OTP email
+     */
     sendFromEmailAddress?: string;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1InitOtpAuthIntentV2: {
-    /** @description Enum to specifiy whether to send OTP via SMS or email */
+    /**
+     * @inject_tag: validate:"required,oneof=OTP_TYPE_SMS OTP_TYPE_EMAIL"
+     * @description Enum to specifiy whether to send OTP via SMS or email
+     */
     otpType: string;
     /** @description Email or phone number to send the OTP code to */
     contact: string;
     /**
+     * @inject_tag: validate:"omitempty,min=6,max=9"
      * Format: int32
      * @description Optional length of the OTP code. Default = 9
      */
     otpLength?: number;
     /** @description Optional parameters for customizing emails. If not provided, the default email will be used. */
     emailCustomization?: definitions["v1EmailCustomizationParams"];
-    /** @description Optional parameters for customizing SMS message. If not provided, the default sms message will be used. */
+    /** @description Optional parameters for customizing SMS message. If not provided, the default SMS message will be used. */
     smsCustomization?: definitions["v1SmsCustomizationParams"];
     /** @description Optional client-generated user identifier to enable per-user rate limiting for SMS auth. We recommend using a hash of the client-side IP address. */
     userIdentifier?: string;
-    /** @description Optional custom email address from which to send the OTP email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the OTP email
+     */
     sendFromEmailAddress?: string;
     /** @description Optional flag to specify if the OTP code should be alphanumeric (Crockford’s Base32). Default = true */
     alphanumeric?: boolean;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1InitOtpAuthIntentV3: {
-    /** @description Enum to specifiy whether to send OTP via SMS or email */
+    /**
+     * @inject_tag: validate:"required,oneof=OTP_TYPE_SMS OTP_TYPE_EMAIL"
+     * @description Whether to send OTP via SMS or email. Possible values: OTP_TYPE_SMS, OTP_TYPE_EMAIL
+     */
     otpType: string;
     /** @description Email or phone number to send the OTP code to */
     contact: string;
-    /** @description The name of the application. */
-    appName: string;
     /**
+     * @inject_tag: validate:"omitempty,min=6,max=9"
      * Format: int32
      * @description Optional length of the OTP code. Default = 9
      */
     otpLength?: number;
+    /**
+     * @inject_tag: validate:"tk_label_length,tk_label"
+     * @description The name of the application. This field is required and will be used in email notifications if an email template is not provided.
+     */
+    appName: string;
     /** @description Optional parameters for customizing emails. If not provided, the default email will be used. */
-    emailCustomization?: definitions["v1EmailCustomizationParams"];
-    /** @description Optional parameters for customizing SMS message. If not provided, the default sms message will be used. */
+    emailCustomization?: definitions["v1EmailCustomizationParamsV2"];
+    /** @description Optional parameters for customizing SMS message. If not provided, the default SMS message will be used. */
     smsCustomization?: definitions["v1SmsCustomizationParams"];
     /** @description Optional client-generated user identifier to enable per-user rate limiting for SMS auth. We recommend using a hash of the client-side IP address. */
     userIdentifier?: string;
-    /** @description Optional custom email address from which to send the OTP email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the OTP email
+     */
     sendFromEmailAddress?: string;
     /** @description Optional flag to specify if the OTP code should be alphanumeric (Crockford’s Base32). Default = true */
     alphanumeric?: boolean;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,numeric,max=600"
+     * @description Expiration window (in seconds) indicating how long the OTP is valid for. If not provided, a default of 5 minutes will be used. Maximum value is 600 seconds (10 minutes)
+     */
+    expirationSeconds?: string;
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1InitOtpAuthRequest: {
@@ -2744,6 +4190,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1InitOtpAuthIntentV3"];
+    generateAppProofs?: boolean;
   };
   v1InitOtpAuthResult: {
     /** @description Unique identifier for an OTP authentication */
@@ -2754,11 +4201,15 @@ export type definitions = {
     otpId: string;
   };
   v1InitOtpIntent: {
-    /** @description Whether to send OTP via SMS or email. Possible values: OTP_TYPE_SMS, OTP_TYPE_EMAIL */
+    /**
+     * @inject_tag: validate:"required,oneof=OTP_TYPE_SMS OTP_TYPE_EMAIL"
+     * @description Whether to send OTP via SMS or email. Possible values: OTP_TYPE_SMS, OTP_TYPE_EMAIL
+     */
     otpType: string;
     /** @description Email or phone number to send the OTP code to */
     contact: string;
     /**
+     * @inject_tag: validate:"omitempty,min=6,max=9"
      * Format: int32
      * @description Optional length of the OTP code. Default = 9
      */
@@ -2769,91 +4220,205 @@ export type definitions = {
     smsCustomization?: definitions["v1SmsCustomizationParams"];
     /** @description Optional client-generated user identifier to enable per-user rate limiting for SMS auth. We recommend using a hash of the client-side IP address. */
     userIdentifier?: string;
-    /** @description Optional custom email address from which to send the OTP email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the OTP email
+     */
     sendFromEmailAddress?: string;
     /** @description Optional flag to specify if the OTP code should be alphanumeric (Crockford’s Base32). Default = true */
     alphanumeric?: boolean;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Expiration window (in seconds) indicating how long the OTP is valid for. If not provided, a default of 5 minutes will be used. Maximum value is 600 seconds (10 minutes) */
+    /**
+     * @inject_tag: validate:"omitempty,numeric,max=600"
+     * @description Expiration window (in seconds) indicating how long the OTP is valid for. If not provided, a default of 5 minutes will be used. Maximum value is 600 seconds (10 minutes)
+     */
     expirationSeconds?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1InitOtpIntentV2: {
-    /** @description Whether to send OTP via SMS or email. Possible values: OTP_TYPE_SMS, OTP_TYPE_EMAIL */
+    /**
+     * @inject_tag: validate:"required,oneof=OTP_TYPE_SMS OTP_TYPE_EMAIL"
+     * @description Whether to send OTP via SMS or email. Possible values: OTP_TYPE_SMS, OTP_TYPE_EMAIL
+     */
     otpType: string;
     /** @description Email or phone number to send the OTP code to */
     contact: string;
-    /** @description The name of the application. */
+    /**
+     * @inject_tag: validate:"omitempty,min=6,max=9"
+     * Format: int32
+     * @description Optional length of the OTP code. Default = 9
+     */
+    otpLength?: number;
+    /**
+     * @inject_tag: validate:"tk_label_length,tk_label"
+     * @description The name of the application. This field is required and will be used in email notifications if an email template is not provided.
+     */
+    appName: string;
+    /** @description Optional parameters for customizing emails. If not provided, the default email will be used. */
+    emailCustomization?: definitions["v1EmailCustomizationParamsV2"];
+    /** @description Optional parameters for customizing SMS message. If not provided, the default SMS message will be used. */
+    smsCustomization?: definitions["v1SmsCustomizationParams"];
+    /** @description Optional client-generated user identifier to enable per-user rate limiting for SMS auth. We recommend using a hash of the client-side IP address. */
+    userIdentifier?: string;
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the OTP email
+     */
+    sendFromEmailAddress?: string;
+    /** @description Optional flag to specify if the OTP code should be alphanumeric (Crockford’s Base32). Default = true */
+    alphanumeric?: boolean;
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
+    sendFromEmailSenderName?: string;
+    /**
+     * @inject_tag: validate:"omitempty,numeric,max=600"
+     * @description Expiration window (in seconds) indicating how long the OTP is valid for. If not provided, a default of 5 minutes will be used. Maximum value is 600 seconds (10 minutes)
+     */
+    expirationSeconds?: string;
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
+    replyToEmailAddress?: string;
+  };
+  v1InitOtpIntentV3: {
+    /**
+     * @inject_tag: validate:"required,oneof=OTP_TYPE_SMS OTP_TYPE_EMAIL"
+     * @description Whether to send OTP via SMS or email. Possible values: OTP_TYPE_SMS, OTP_TYPE_EMAIL
+     */
+    otpType: string;
+    /** @description Email or phone number to send the OTP code to */
+    contact: string;
+    /**
+     * @inject_tag: validate:"tk_label_length,tk_label"
+     * @description The name of the application.
+     */
     appName: string;
     /**
+     * @inject_tag: validate:"omitempty,min=6,max=9"
      * Format: int32
      * @description Optional length of the OTP code. Default = 9
      */
     otpLength?: number;
     /** @description Optional parameters for customizing emails. If not provided, the default email will be used. */
-    emailCustomization?: definitions["v1EmailCustomizationParams"];
+    emailCustomization?: definitions["v1EmailCustomizationParamsV2"];
     /** @description Optional parameters for customizing SMS message. If not provided, the default sms message will be used. */
     smsCustomization?: definitions["v1SmsCustomizationParams"];
     /** @description Optional client-generated user identifier to enable per-user rate limiting for SMS auth. We recommend using a hash of the client-side IP address. */
     userIdentifier?: string;
-    /** @description Optional custom email address from which to send the OTP email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the OTP email
+     */
     sendFromEmailAddress?: string;
-    /** @description Optional flag to specify if the OTP code should be alphanumeric (Crockford’s Base32). Default = true */
+    /** @description Optional flag to specify if the OTP code should be alphanumeric (Crockford's Base32). If set to false, OTP code will only be numeric. Default = true */
     alphanumeric?: boolean;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Expiration window (in seconds) indicating how long the OTP is valid for. If not provided, a default of 5 minutes will be used. Maximum value is 600 seconds (10 minutes) */
+    /**
+     * @inject_tag: validate:"omitempty,numeric,max=600"
+     * @description Expiration window (in seconds) indicating how long the OTP is valid for. If not provided, a default of 5 minutes will be used. Maximum value is 600 seconds (10 minutes)
+     */
     expirationSeconds?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1InitOtpRequest: {
     /** @enum {string} */
-    type: "ACTIVITY_TYPE_INIT_OTP_V2";
+    type: "ACTIVITY_TYPE_INIT_OTP_V3";
     /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
     timestampMs: string;
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
-    parameters: definitions["v1InitOtpIntentV2"];
+    parameters: definitions["v1InitOtpIntentV3"];
+    generateAppProofs?: boolean;
   };
   v1InitOtpResult: {
     /** @description Unique identifier for an OTP authentication */
     otpId: string;
   };
+  v1InitOtpResultV2: {
+    /** @description Unique identifier for an OTP flow */
+    otpId: string;
+    /** @description Signed bundle containing a target encryption key to use when submitting OTP codes. */
+    otpEncryptionTargetBundle: string;
+  };
   v1InitUserEmailRecoveryIntent: {
-    /** @description Email of the user starting recovery */
+    /**
+     * @inject_tag: validate:"email,tk_email"
+     * @description Email of the user starting recovery
+     */
     email: string;
-    /** @description Client-side public key generated by the user, to which the recovery bundle will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the recovery bundle will be encrypted.
+     */
     targetPublicKey: string;
     /** @description Expiration window (in seconds) indicating how long the recovery credential is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
     /** @description Optional parameters for customizing emails. If not provided, the default email will be used. */
     emailCustomization?: definitions["v1EmailCustomizationParams"];
-    /** @description Optional custom email address from which to send the OTP email */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the OTP email
+     */
     sendFromEmailAddress?: string;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1InitUserEmailRecoveryIntentV2: {
-    /** @description Email of the user starting recovery */
+    /**
+     * @inject_tag: validate:"email,tk_email"
+     * @description Email of the user starting recovery
+     */
     email: string;
-    /** @description Client-side public key generated by the user, to which the recovery bundle will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the recovery bundle will be encrypted.
+     */
     targetPublicKey: string;
-    /** @description The name of the application. */
-    appName: string;
     /** @description Expiration window (in seconds) indicating how long the recovery credential is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
-    /** @description Optional parameters for customizing emails. If not provided, the default email will be used. */
-    emailCustomization?: definitions["v1EmailCustomizationParams"];
-    /** @description Optional custom email address from which to send the OTP email */
+    /** @description Parameters for customizing emails. If not provided, the default email will be used. Note that `app_name` is required. */
+    emailCustomization: definitions["v1EmailAuthCustomizationParams"];
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address from which to send the OTP email
+     */
     sendFromEmailAddress?: string;
-    /** @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications'
+     */
     sendFromEmailSenderName?: string;
-    /** @description Optional custom email address to use as reply-to */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Optional custom email address to use as reply-to
+     */
     replyToEmailAddress?: string;
   };
   v1InitUserEmailRecoveryRequest: {
@@ -2864,11 +4429,13 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1InitUserEmailRecoveryIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1InitUserEmailRecoveryResult: {
     /** @description Unique identifier for the user being recovered. */
     userId: string;
   };
+  /** @description Intent object crafted by 0xkey based on the user request, used to assess the permissibility of an action. */
   v1Intent: {
     createOrganizationIntent?: definitions["v1CreateOrganizationIntent"];
     createAuthenticatorsIntent?: definitions["v1CreateAuthenticatorsIntent"];
@@ -2982,42 +4549,55 @@ export type definitions = {
     initUserEmailRecoveryIntentV2?: definitions["v1InitUserEmailRecoveryIntentV2"];
     initOtpIntentV2?: definitions["v1InitOtpIntentV2"];
     initOtpAuthIntentV3?: definitions["v1InitOtpAuthIntentV3"];
-  };
-  v1Invitation: {
-    /** @description Unique identifier for a given Invitation object. */
-    invitationId: string;
-    /** @description The name of the intended Invitation recipient. */
-    receiverUserName: string;
-    /** @description The email address of the intended Invitation recipient. */
-    receiverEmail: string;
-    /** @description A list of tags assigned to the Invitation recipient. */
-    receiverUserTags: string[];
-    /** @description The User's permissible access method(s). */
-    accessType: definitions["v1AccessType"];
-    /** @description The current processing status of a specified Invitation. */
-    status: definitions["v1InvitationStatus"];
-    createdAt: definitions["externaldatav1Timestamp"];
-    updatedAt: definitions["externaldatav1Timestamp"];
-    /** @description Unique identifier for the Sender of an Invitation. */
-    senderUserId: string;
+    upsertGasUsageConfigIntent?: definitions["v1UpsertGasUsageConfigIntent"];
+    createTvcAppIntent?: definitions["v1CreateTvcAppIntent"];
+    createTvcDeploymentIntent?: definitions["v1CreateTvcDeploymentIntent"];
+    createTvcManifestApprovalsIntent?: definitions["v1CreateTvcManifestApprovalsIntent"];
+    solSendTransactionIntent?: definitions["v1SolSendTransactionIntent"];
+    initOtpIntentV3?: definitions["v1InitOtpIntentV3"];
+    verifyOtpIntentV2?: definitions["v1VerifyOtpIntentV2"];
+    otpLoginIntentV2?: definitions["v1OtpLoginIntentV2"];
+    updateOrganizationNameIntent?: definitions["v1UpdateOrganizationNameIntent"];
+    createSubOrganizationIntentV8?: definitions["v1CreateSubOrganizationIntentV8"];
+    createOauthProvidersIntentV2?: definitions["v1CreateOauthProvidersIntentV2"];
+    createUsersIntentV4?: definitions["v1CreateUsersIntentV4"];
+    createWebhookEndpointIntent?: definitions["v1CreateWebhookEndpointIntent"];
+    updateWebhookEndpointIntent?: definitions["v1UpdateWebhookEndpointIntent"];
+    deleteWebhookEndpointIntent?: definitions["v1DeleteWebhookEndpointIntent"];
+    solSendRawTransactionIntent?: definitions["v1SolSendRawTransactionIntent"];
+    tronSendTransactionIntent?: definitions["v1TronSendTransactionIntent"];
+    createMfaPolicyIntent?: definitions["v1CreateMfaPolicyIntent"];
+    updateMfaPolicyIntent?: definitions["v1UpdateMfaPolicyIntent"];
+    deleteMfaPolicyIntent?: definitions["v1DeleteMfaPolicyIntent"];
+    createSessionProfileIntent?: definitions["v1CreateSessionProfileIntent"];
   };
   v1InvitationParams: {
-    /** @description The name of the intended Invitation recipient. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description The name of the intended Invitation recipient.
+     */
     receiverUserName: string;
-    /** @description The email address of the intended Invitation recipient. */
+    /**
+     * @inject_tag: validate:"required,email,tk_email"
+     * @description The email address of the intended Invitation recipient.
+     */
     receiverUserEmail: string;
-    /** @description A list of tags assigned to the Invitation recipient. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of tags assigned to the Invitation recipient. This field, if not needed, should be an empty array in your request body.
+     */
     receiverUserTags: string[];
-    /** @description The User's permissible access method(s). */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The User's permissible access method(s).
+     */
     accessType: definitions["v1AccessType"];
-    /** @description Unique identifier for the Sender of an Invitation. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for the Sender of an Invitation.
+     */
     senderUserId: string;
   };
-  /** @enum {string} */
-  v1InvitationStatus:
-    | "INVITATION_STATUS_CREATED"
-    | "INVITATION_STATUS_ACCEPTED"
-    | "INVITATION_STATUS_REVOKED";
   v1ListFiatOnRampCredentialsRequest: {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
@@ -3048,8 +4628,16 @@ export type definitions = {
     /** @description A list of user tags. */
     userTags: definitions["datav1Tag"][];
   };
-  /** @enum {string} */
+  v1LoginUsage: {
+    /** @description Public key for authentication */
+    publicKey: string;
+  };
+  /**
+   * @default MNEMONIC_LANGUAGE_UNSPECIFIED
+   * @enum {string}
+   */
   v1MnemonicLanguage:
+    | "MNEMONIC_LANGUAGE_UNSPECIFIED"
     | "MNEMONIC_LANGUAGE_ENGLISH"
     | "MNEMONIC_LANGUAGE_SIMPLIFIED_CHINESE"
     | "MNEMONIC_LANGUAGE_TRADITIONAL_CHINESE"
@@ -3061,15 +4649,39 @@ export type definitions = {
     | "MNEMONIC_LANGUAGE_SPANISH";
   v1NOOPCodegenAnchorResponse: {
     stamp: definitions["v1WebAuthnStamp"];
+    tokenUsage?: definitions["v1TokenUsage"];
+  };
+  v1NativeRevertError: {
+    /** @description The type of native error: 'error_string', 'panic', or 'execution_reverted'. */
+    nativeType?: string;
+    /** @description The error message for Error(string) reverts. */
+    message?: string;
+    /**
+     * Format: uint64
+     * @description The panic code for Panic(uint256) reverts.
+     */
+    panicCode?: string;
   };
   v1Oauth2AuthenticateIntent: {
-    /** @description The OAuth 2.0 credential id whose client_id and client_secret will be used in the OAuth 2.0 flow */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The OAuth 2.0 credential id whose client_id and client_secret will be used in the OAuth 2.0 flow
+     */
     oauth2CredentialId: string;
-    /** @description The auth_code provided by the OAuth 2.0 provider to the end user to be exchanged for a Bearer token in the OAuth 2.0 flow */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The auth_code provided by the OAuth 2.0 provider to the end user to be exchanged for a Bearer token in the OAuth 2.0 flow
+     */
     authCode: string;
-    /** @description The URI the user is redirected to after they have authenticated with the OAuth 2.0 provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The URI the user is redirected to after they have authenticated with the OAuth 2.0 provider
+     */
     redirectUri: string;
-    /** @description The code verifier used by OAuth 2.0 PKCE providers */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The code verifier used by OAuth 2.0 PKCE providers
+     */
     codeVerifier: string;
     /** @description An optional nonce used by the client to prevent replay/substitution of an ID token */
     nonce?: string;
@@ -3084,9 +4696,13 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1Oauth2AuthenticateIntent"];
+    generateAppProofs?: boolean;
   };
   v1Oauth2AuthenticateResult: {
-    /** @description Base64 encoded OIDC token issued by ZeroXKey to be used with the LoginWithOAuth activity */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Base64 encoded OIDC token issued by 0xkey to be used with the LoginWithOAuth activity
+     */
     oidcToken: string;
   };
   v1Oauth2Credential: {
@@ -3103,14 +4719,30 @@ export type definitions = {
     createdAt: definitions["externaldatav1Timestamp"];
     updatedAt: definitions["externaldatav1Timestamp"];
   };
-  /** @enum {string} */
-  v1Oauth2Provider: "OAUTH2_PROVIDER_X" | "OAUTH2_PROVIDER_DISCORD";
+  /**
+   * A list of OAuth 2.0 providers that are supported
+   * @default OAUTH2_PROVIDER_UNSPECIFIED
+   * @enum {string}
+   */
+  v1Oauth2Provider:
+    | "OAUTH2_PROVIDER_UNSPECIFIED"
+    | "OAUTH2_PROVIDER_X"
+    | "OAUTH2_PROVIDER_DISCORD";
   v1OauthIntent: {
-    /** @description Base64 encoded OIDC token */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Base64 encoded OIDC token
+     */
     oidcToken: string;
-    /** @description Client-side public key generated by the user, to which the oauth bundle (credentials) will be encrypted. */
+    /**
+     * @inject_tag: validate:"hexadecimal"
+     * @description Client-side public key generated by the user, to which the oauth bundle (credentials) will be encrypted.
+     */
     targetPublicKey: string;
-    /** @description Optional human-readable name for an API Key. If none provided, default to Oauth - <Timestamp> */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional human-readable name for an API Key. If none provided, default to Oauth - <Timestamp>
+     */
     apiKeyName?: string;
     /** @description Expiration window (in seconds) indicating how long the API key is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
@@ -3118,14 +4750,21 @@ export type definitions = {
     invalidateExisting?: boolean;
   };
   v1OauthLoginIntent: {
-    /** @description Base64 encoded OIDC token */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Base64 encoded OIDC token
+     */
     oidcToken: string;
-    /** @description Client-side public key generated by the user, which will be conditionally added to org data based on the validity of the oidc token associated with this request */
+    /**
+     * @inject_tag: validate:"omitempty,hexadecimal"
+     * @description Client-side public key generated by the user, which will be conditionally added to org data based on the validity of the oidc token associated with this request
+     */
     publicKey: string;
     /** @description Expiration window (in seconds) indicating how long the Session is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
     /** @description Invalidate all other previously generated Login API keys */
     invalidateExisting?: boolean;
+    sessionProfileId?: string;
   };
   v1OauthLoginRequest: {
     /** @enum {string} */
@@ -3135,6 +4774,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1OauthLoginIntent"];
+    generateAppProofs?: boolean;
   };
   v1OauthLoginResult: {
     /** @description Signed JWT containing an expiry, public key, session type, user id, and organization id */
@@ -3160,6 +4800,14 @@ export type definitions = {
     /** @description Base64 encoded OIDC token */
     oidcToken: string;
   };
+  v1OauthProviderParamsV2: {
+    /** @description Human-readable name to identify a Provider. */
+    providerName: string;
+    /** @description Base64 encoded OIDC token */
+    oidcToken?: string;
+    /** @description OIDC claims (iss, sub, aud) to uniquely identify the user */
+    oidcClaims?: definitions["v1OidcClaims"];
+  };
   v1OauthRequest: {
     /** @enum {string} */
     type: "ACTIVITY_TYPE_OAUTH";
@@ -3168,6 +4816,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1OauthIntent"];
+    generateAppProofs?: boolean;
   };
   v1OauthResult: {
     /** @description Unique identifier for the authenticating User. */
@@ -3177,8 +4826,29 @@ export type definitions = {
     /** @description HPKE encrypted credential bundle */
     credentialBundle: string;
   };
-  /** @enum {string} */
+  v1OidcClaims: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description The issuer identifier from the OIDC token (iss claim)
+     */
+    iss: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description The subject identifier from the OIDC token (sub claim)
+     */
+    sub: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description The audience from the OIDC token (aud claim)
+     */
+    aud: string;
+  };
+  /**
+   * @default OPERATOR_UNSPECIFIED
+   * @enum {string}
+   */
   v1Operator:
+    | "OPERATOR_UNSPECIFIED"
     | "OPERATOR_EQUAL"
     | "OPERATOR_MORE_THAN"
     | "OPERATOR_MORE_THAN_OR_EQUAL"
@@ -3190,27 +4860,23 @@ export type definitions = {
     | "OPERATOR_NOT_IN"
     | "OPERATOR_CONTAINS_ONE"
     | "OPERATOR_CONTAINS_ALL";
-  v1OrganizationData: {
-    organizationId?: string;
-    name?: string;
-    users?: definitions["v1User"][];
-    policies?: definitions["v1Policy"][];
-    privateKeys?: definitions["v1PrivateKey"][];
-    invitations?: definitions["v1Invitation"][];
-    tags?: definitions["datav1Tag"][];
-    rootQuorum?: definitions["externaldatav1Quorum"];
-    features?: definitions["v1Feature"][];
-    wallets?: definitions["v1Wallet"][];
-    smartContractInterfaceReferences?: definitions["v1SmartContractInterfaceReference"][];
-  };
   v1OtpAuthIntent: {
-    /** @description ID representing the result of an init OTP activity. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description ID representing the result of an init OTP activity.
+     */
     otpId: string;
     /** @description OTP sent out to a user's contact (email or SMS) */
     otpCode: string;
-    /** @description Client-side public key generated by the user, to which the OTP bundle (credentials) will be encrypted. */
+    /**
+     * @inject_tag: validate:"omitempty,hexadecimal"
+     * @description Client-side public key generated by the user, to which the OTP bundle (credentials) will be encrypted.
+     */
     targetPublicKey: string;
-    /** @description Optional human-readable name for an API Key. If none provided, default to OTP Auth - <Timestamp> */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label_length,tk_label"
+     * @description Optional human-readable name for an API Key. If none provided, default to OTP Auth - <Timestamp>
+     */
     apiKeyName?: string;
     /** @description Expiration window (in seconds) indicating how long the API key is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
@@ -3225,6 +4891,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1OtpAuthIntent"];
+    generateAppProofs?: boolean;
   };
   v1OtpAuthResult: {
     /** @description Unique identifier for the authenticating User. */
@@ -3237,23 +4904,44 @@ export type definitions = {
   v1OtpLoginIntent: {
     /** @description Signed JWT containing a unique id, expiry, verification type, contact */
     verificationToken: string;
-    /** @description Client-side public key generated by the user, which will be conditionally added to org data based on the validity of the verification token */
+    /**
+     * @inject_tag: validate:"omitempty,hexadecimal"
+     * @description Client-side public key generated by the user, which will be conditionally added to org data based on the validity of the verification token
+     */
     publicKey: string;
     /** @description Expiration window (in seconds) indicating how long the Session is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
     /** @description Invalidate all other previously generated Login API keys */
     invalidateExisting?: boolean;
-    /** @description Optional signature associated with the public key passed into the verification step. This must be a hex-encoded ECDSA signature over the verification token. Only required if a public key was provided during the verification step. */
-    clientSignature?: string;
+    /** @description Optional signature proving authorization for this login. The signature is over the verification token ID and the public key. Only required if a public key was provided during the verification step. */
+    clientSignature?: definitions["v1ClientSignature"];
+    sessionProfileId?: string;
+  };
+  v1OtpLoginIntentV2: {
+    /** @description Signed Verification Token containing a unique id, expiry, verification type, contact */
+    verificationToken: string;
+    /**
+     * @inject_tag: validate:"omitempty,hexadecimal"
+     * @description Client-side public key generated by the user, used as the session public key upon successful login
+     */
+    publicKey: string;
+    /** @description Required signature proving authorization for this login. The signature is over the verification token ID and the public key. Required for secure OTP login process. */
+    clientSignature: definitions["v1ClientSignature"];
+    /** @description Expiration window (in seconds) indicating how long the Session is valid for. If not provided, a default of 15 minutes will be used. */
+    expirationSeconds?: string;
+    /** @description Invalidate all other previously generated Login sessions */
+    invalidateExisting?: boolean;
+    sessionProfileId?: string;
   };
   v1OtpLoginRequest: {
     /** @enum {string} */
-    type: "ACTIVITY_TYPE_OTP_LOGIN";
+    type: "ACTIVITY_TYPE_OTP_LOGIN_V2";
     /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
     timestampMs: string;
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
-    parameters: definitions["v1OtpLoginIntent"];
+    parameters: definitions["v1OtpLoginIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1OtpLoginResult: {
     /** @description Signed JWT containing an expiry, public key, session type, user id, and organization id */
@@ -3275,10 +4963,29 @@ export type definitions = {
     /** @description A pagination cursor. This is an object ID that enables you to fetch all objects after this ID. */
     after?: string;
   };
-  /** @enum {string} */
-  v1PathFormat: "PATH_FORMAT_BIP32";
-  /** @enum {string} */
+  /**
+   * @default PATH_FORMAT_UNSPECIFIED
+   * @enum {string}
+   */
+  v1PathFormat: "PATH_FORMAT_UNSPECIFIED" | "PATH_FORMAT_BIP32";
+  /**
+   * - PAYLOAD_ENCODING_UNSPECIFIED: Default value if payload encoding is not set explicitly
+   *  - PAYLOAD_ENCODING_HEXADECIMAL: Payload is encoded in hexadecimal
+   * We accept 0x-prefixed or non-0x prefixed payloads.
+   * We accept any casing (uppercase, lowercase, or mixed)
+   *  - PAYLOAD_ENCODING_TEXT_UTF8: Payload is encoded as utf-8 text
+   * Will be converted to bytes for signature with Rust's standard String.as_bytes()
+   *  - PAYLOAD_ENCODING_EIP712: Payload is encoded as EIP-712 typed data
+   * See JSON schema definition in EIP-712 documentation here: https://eips.ethereum.org/EIPS/eip-712#parameters
+   * Will be converted to bytes for signing using serde_json::from_str
+   *  - PAYLOAD_ENCODING_EIP7702_AUTHORIZATION: Payload is encoded as an EIP-7702 Authorization
+   * See spec here: https://eips.ethereum.org/EIPS/eip-7702#behavior
+   * Will be converted to bytes for signing using serde_json::from_str
+   * @default PAYLOAD_ENCODING_UNSPECIFIED
+   * @enum {string}
+   */
   v1PayloadEncoding:
+    | "PAYLOAD_ENCODING_UNSPECIFIED"
     | "PAYLOAD_ENCODING_HEXADECIMAL"
     | "PAYLOAD_ENCODING_TEXT_UTF8"
     | "PAYLOAD_ENCODING_EIP712"
@@ -3320,13 +5027,25 @@ export type definitions = {
     imported: boolean;
   };
   v1PrivateKeyParams: {
-    /** @description Human-readable name for a Private Key. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a Private Key.
+     */
     privateKeyName: string;
-    /** @description Cryptographic Curve used to generate a given Private Key. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Cryptographic Curve used to generate a given Private Key.
+     */
     curve: definitions["v1Curve"];
-    /** @description A list of Private Key Tag IDs. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of Private Key Tag IDs. This field, if not needed, should be an empty array in your request body.
+     */
     privateKeyTags: string[];
-    /** @description Cryptocurrency-specific formats for a derived address (e.g., Ethereum). */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description Cryptocurrency-specific formats for a derived address (e.g., Ethereum).
+     */
     addressFormats: definitions["v1AddressFormat"][];
   };
   v1PrivateKeyResult: {
@@ -3335,18 +5054,25 @@ export type definitions = {
   };
   v1PublicKeyCredentialWithAttestation: {
     id: string;
-    /** @enum {string} */
+    /**
+     * Must be literal string "public-key"
+     * @enum {string}
+     */
     type: "public-key";
+    /** ENCODING: base64url */
     rawId: string;
     /** @enum {string} */
-    authenticatorAttachment?: "cross-platform" | "platform" | null;
+    authenticatorAttachment?: "cross-platform" | "platform";
     response: definitions["v1AuthenticatorAttestationResponse"];
     clientExtensionResults: definitions["v1SimpleClientExtensionResults"];
   };
   v1RecoverUserIntent: {
     /** @description The new authenticator to register. */
     authenticator: definitions["v1AuthenticatorParamsV2"];
-    /** @description Unique identifier for the user performing recovery. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for the user performing recovery.
+     */
     userId: string;
   };
   v1RecoverUserRequest: {
@@ -3357,13 +5083,17 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1RecoverUserIntent"];
+    generateAppProofs?: boolean;
   };
   v1RecoverUserResult: {
     /** @description ID of the authenticator created. */
     authenticatorId: string[];
   };
   v1RejectActivityIntent: {
-    /** @description An artifact verifying a User's action. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description An artifact verifying a User's action.
+     */
     fingerprint: string;
   };
   v1RejectActivityRequest: {
@@ -3374,6 +5104,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1RejectActivityIntent"];
+    generateAppProofs?: boolean;
   };
   v1RemoveOrganizationFeatureIntent: {
     /** @description Name of the feature to remove */
@@ -3387,11 +5118,13 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1RemoveOrganizationFeatureIntent"];
+    generateAppProofs?: boolean;
   };
   v1RemoveOrganizationFeatureResult: {
     /** @description Resulting list of organization features. */
     features: definitions["v1Feature"][];
   };
+  /** @description Result of the intended action. */
   v1Result: {
     createOrganizationResult?: definitions["v1CreateOrganizationResult"];
     createAuthenticatorsResult?: definitions["v1CreateAuthenticatorsResult"];
@@ -3486,54 +5219,181 @@ export type definitions = {
     updateFiatOnRampCredentialResult?: definitions["v1UpdateFiatOnRampCredentialResult"];
     deleteFiatOnRampCredentialResult?: definitions["v1DeleteFiatOnRampCredentialResult"];
     ethSendTransactionResult?: definitions["v1EthSendTransactionResult"];
+    upsertGasUsageConfigResult?: definitions["v1UpsertGasUsageConfigResult"];
+    createTvcAppResult?: definitions["v1CreateTvcAppResult"];
+    createTvcDeploymentResult?: definitions["v1CreateTvcDeploymentResult"];
+    createTvcManifestApprovalsResult?: definitions["v1CreateTvcManifestApprovalsResult"];
+    solSendTransactionResult?: definitions["v1SolSendTransactionResult"];
+    initOtpResultV2?: definitions["v1InitOtpResultV2"];
+    updateOrganizationNameResult?: definitions["v1UpdateOrganizationNameResult"];
+    createSubOrganizationResultV8?: definitions["v1CreateSubOrganizationResultV8"];
+    createOauthProvidersResultV2?: definitions["v1CreateOauthProvidersResultV2"];
+    createWebhookEndpointResult?: definitions["v1CreateWebhookEndpointResult"];
+    updateWebhookEndpointResult?: definitions["v1UpdateWebhookEndpointResult"];
+    deleteWebhookEndpointResult?: definitions["v1DeleteWebhookEndpointResult"];
+    solSendRawTransactionResult?: definitions["v1SolSendRawTransactionResult"];
+    tronSendTransactionResult?: definitions["v1TronSendTransactionResult"];
+    createOidcProviderResult?: definitions["v1CreateOidcProviderResult"];
+    updateOidcProviderResult?: definitions["v1UpdateOidcProviderResult"];
+    deleteOidcProviderResult?: definitions["v1DeleteOidcProviderResult"];
+    createMfaPolicyResult?: definitions["v1CreateMfaPolicyResult"];
+    updateMfaPolicyResult?: definitions["v1UpdateMfaPolicyResult"];
+    deleteMfaPolicyResult?: definitions["v1DeleteMfaPolicyResult"];
+    createSessionProfileResult?: definitions["v1CreateSessionProfileResult"];
+  };
+  v1RevertChainEntry: {
+    /** @description The contract address where the revert occurred. */
+    address?: string;
+    /** @description Type of error: 'unknown', 'native', or 'custom'. */
+    errorType?: string;
+    /** @description Human-readable message describing this revert. */
+    displayMessage?: string;
+    /** @description Details for unknown error types. */
+    unknown?: definitions["v1UnknownRevertError"];
+    /** @description Details for native Solidity errors (Error, Panic, execution reverted). */
+    native?: definitions["v1NativeRevertError"];
+    /** @description Details for custom contract errors. */
+    custom?: definitions["v1CustomRevertError"];
   };
   v1RootUserParams: {
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
     userName: string;
-    /** @description The user's email address. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
     userEmail?: string;
-    /** @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
     apiKeys: definitions["apiApiKeyParams"][];
-    /** @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
     authenticators: definitions["v1AuthenticatorParamsV2"][];
   };
   v1RootUserParamsV2: {
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
     userName: string;
-    /** @description The user's email address. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
     userEmail?: string;
-    /** @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
     apiKeys: definitions["apiApiKeyParams"][];
-    /** @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
     authenticators: definitions["v1AuthenticatorParamsV2"][];
-    /** @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body.
+     */
     oauthProviders: definitions["v1OauthProviderParams"][];
   };
   v1RootUserParamsV3: {
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
     userName: string;
-    /** @description The user's email address. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
     userEmail?: string;
-    /** @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
     apiKeys: definitions["v1ApiKeyParamsV2"][];
-    /** @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
     authenticators: definitions["v1AuthenticatorParamsV2"][];
-    /** @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body.
+     */
     oauthProviders: definitions["v1OauthProviderParams"][];
   };
   v1RootUserParamsV4: {
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
     userName: string;
-    /** @description The user's email address. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
     userEmail?: string;
-    /** @description The user's phone number in E.164 format e.g. +13214567890 */
+    /**
+     * @inject_tag: validate:"omitempty,e164"
+     * @description The user's phone number in E.164 format e.g. +13214567890
+     */
     userPhoneNumber?: string;
-    /** @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
     apiKeys: definitions["v1ApiKeyParamsV2"][];
-    /** @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
     authenticators: definitions["v1AuthenticatorParamsV2"][];
-    /** @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body.
+     */
     oauthProviders: definitions["v1OauthProviderParams"][];
+  };
+  v1RootUserParamsV5: {
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
+    userName: string;
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
+    userEmail?: string;
+    /**
+     * @inject_tag: validate:"omitempty,e164"
+     * @description The user's phone number in E.164 format e.g. +13214567890
+     */
+    userPhoneNumber?: string;
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
+    apiKeys: definitions["v1ApiKeyParamsV2"][];
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
+    authenticators: definitions["v1AuthenticatorParamsV2"][];
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body.
+     */
+    oauthProviders: definitions["v1OauthProviderParamsV2"][];
   };
   v1Selector: {
     subject?: string;
@@ -3559,27 +5419,46 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1SetOrganizationFeatureIntent"];
+    generateAppProofs?: boolean;
   };
   v1SetOrganizationFeatureResult: {
     /** @description Resulting list of organization features. */
     features: definitions["v1Feature"][];
   };
   v1SignRawPayloadIntent: {
-    /** @description Unique identifier for a given Private Key. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Private Key.
+     */
     privateKeyId: string;
-    /** @description Raw unsigned payload to be signed. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Raw unsigned payload to be signed.
+     */
     payload: string;
-    /** @description Encoding of the `payload` string. ZeroXKey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Encoding of the `payload` string. 0xkey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8).
+     */
     encoding: definitions["v1PayloadEncoding"];
     /** @description Hash function to apply to payload bytes before signing. This field must be set to HASH_FUNCTION_NOT_APPLICABLE for EdDSA/ed25519 signature requests; configurable payload hashing is not supported by RFC 8032. */
     hashFunction: definitions["v1HashFunction"];
   };
   v1SignRawPayloadIntentV2: {
-    /** @description A Wallet account address, Private Key address, or Private Key identifier. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description A Wallet account address, Private Key address, or Private Key identifier.
+     */
     signWith: string;
-    /** @description Raw unsigned payload to be signed. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Raw unsigned payload to be signed.
+     */
     payload: string;
-    /** @description Encoding of the `payload` string. ZeroXKey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Encoding of the `payload` string. 0xkey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8).
+     */
     encoding: definitions["v1PayloadEncoding"];
     /** @description Hash function to apply to payload bytes before signing. This field must be set to HASH_FUNCTION_NOT_APPLICABLE for EdDSA/ed25519 signature requests; configurable payload hashing is not supported by RFC 8032. */
     hashFunction: definitions["v1HashFunction"];
@@ -3592,6 +5471,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1SignRawPayloadIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1SignRawPayloadResult: {
     /** @description Component of an ECSDA signature. */
@@ -3602,11 +5482,20 @@ export type definitions = {
     v: string;
   };
   v1SignRawPayloadsIntent: {
-    /** @description A Wallet account address, Private Key address, or Private Key identifier. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description A Wallet account address, Private Key address, or Private Key identifier.
+     */
     signWith: string;
-    /** @description An array of raw unsigned payloads to be signed. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description An array of raw unsigned payloads to be signed.
+     */
     payloads: string[];
-    /** @description Encoding of the `payload` string. ZeroXKey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Encoding of the `payload` string. 0xkey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8).
+     */
     encoding: definitions["v1PayloadEncoding"];
     /** @description Hash function to apply to payload bytes before signing. This field must be set to HASH_FUNCTION_NOT_APPLICABLE for EdDSA/ed25519 signature requests; configurable payload hashing is not supported by RFC 8032. */
     hashFunction: definitions["v1HashFunction"];
@@ -3619,22 +5508,37 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1SignRawPayloadsIntent"];
+    generateAppProofs?: boolean;
   };
   v1SignRawPayloadsResult: {
     signatures?: definitions["v1SignRawPayloadResult"][];
   };
   v1SignTransactionIntent: {
-    /** @description Unique identifier for a given Private Key. */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given Private Key.
+     */
     privateKeyId: string;
-    /** @description Raw unsigned transaction to be signed by a particular Private Key. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Raw unsigned transaction to be signed by a particular Private Key.
+     */
     unsignedTransaction: string;
+    /** @inject_tag: validate:"required" */
     type: definitions["v1TransactionType"];
   };
   v1SignTransactionIntentV2: {
-    /** @description A Wallet account address, Private Key address, or Private Key identifier. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description A Wallet account address, Private Key address, or Private Key identifier.
+     */
     signWith: string;
-    /** @description Raw unsigned transaction to be signed */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Raw unsigned transaction to be signed
+     */
     unsignedTransaction: string;
+    /** @inject_tag: validate:"required" */
     type: definitions["v1TransactionType"];
   };
   v1SignTransactionRequest: {
@@ -3645,55 +5549,137 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1SignTransactionIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1SignTransactionResult: {
     signedTransaction: string;
   };
-  /** @enum {string} */
-  v1SignatureScheme: "SIGNATURE_SCHEME_EPHEMERAL_KEY_P256";
+  v1SignupUsage: {
+    email?: string;
+    phoneNumber?: string;
+    apiKeys?: definitions["v1ApiKeyParamsV2"][];
+    authenticators?: definitions["v1AuthenticatorParamsV2"][];
+    oauthProviders?: definitions["v1OauthProviderParams"][];
+  };
+  v1SignupUsageV2: {
+    email?: string;
+    phoneNumber?: string;
+    apiKeys?: definitions["v1ApiKeyParamsV2"][];
+    authenticators?: definitions["v1AuthenticatorParamsV2"][];
+    oauthProviders?: definitions["v1OauthProviderParamsV2"][];
+  };
   v1SimpleClientExtensionResults: {
     appid?: boolean;
     appidExclude?: boolean;
     credProps?: definitions["v1CredPropsAuthenticationExtensionsClientOutputs"];
   };
-  v1SmartContractInterface: {
-    /** @description The Organization the Smart Contract Interface belongs to. */
-    organizationId: string;
-    /** @description Unique identifier for a given Smart Contract Interface (ABI or IDL). */
-    smartContractInterfaceId: string;
-    /** @description The address corresponding to the Smart Contract or Program. */
-    smartContractAddress: string;
-    /** @description The JSON corresponding to the Smart Contract Interface (ABI or IDL). */
-    smartContractInterface: string;
-    /** @description The type corresponding to the Smart Contract Interface (either ETHEREUM or SOLANA). */
-    type: string;
-    /** @description The label corresponding to the Smart Contract Interface (either ETHEREUM or SOLANA). */
-    label: string;
-    /** @description The notes corresponding to the Smart Contract Interface (either ETHEREUM or SOLANA). */
-    notes: string;
-    createdAt: definitions["externaldatav1Timestamp"];
-    updatedAt: definitions["externaldatav1Timestamp"];
-  };
-  v1SmartContractInterfaceReference: {
-    smartContractInterfaceId?: string;
-    smartContractAddress?: string;
-    digest?: string;
-  };
-  /** @enum {string} */
+  /**
+   * @default SMART_CONTRACT_INTERFACE_TYPE_UNSPECIFIED
+   * @enum {string}
+   */
   v1SmartContractInterfaceType:
+    | "SMART_CONTRACT_INTERFACE_TYPE_UNSPECIFIED"
     | "SMART_CONTRACT_INTERFACE_TYPE_ETHEREUM"
     | "SMART_CONTRACT_INTERFACE_TYPE_SOLANA";
+  /** @description Each of these customization parameters are optional; resort to defaults if any are not provided. */
   v1SmsCustomizationParams: {
     /** @description Template containing references to .OtpCode i.e Your OTP is {{.OtpCode}} */
     template?: string;
   };
+  v1SolSendTransactionIntent: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description Base64-encoded serialized unsigned Solana transaction
+     */
+    unsignedTransaction: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description A wallet or private key address to sign with. This does not support private key IDs.
+     */
+    signWith: string;
+    /**
+     * If true, 0xkey acts as fee payer and may inject a fresh blockhash
+     * @description Whether to sponsor this transaction via Gas Station.
+     */
+    sponsor?: boolean;
+    /**
+     * @inject_tag: validate:"required"
+     * @description CAIP-2 chain ID (e.g., 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' for Solana mainnet).
+     * @enum {string}
+     */
+    caip2:
+      | "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+      | "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+      | "solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY";
+    /** @description user-provided blockhash for replay protection / deadline control. If omitted and sponsor=true, we fetch a fresh blockhash during execution */
+    recentBlockhash?: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * Format: uint64
+     * @description Optional lastValidBlockHeight for the pinned recent_blockhash (as returned by prepare_sol_transaction); persisted with the broadcast so the confirmation worker can detect blockhash-expiry drops precisely.
+     */
+    lastValidBlockHeight?: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Platform Solana fee-payer address (account_keys[0]) when sponsor=true. Bound by the policy engine against the parser-attested fee payer.
+     */
+    feePayer?: string;
+  };
+  v1SolSendTransactionRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_SOL_SEND_TRANSACTION";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1SolSendTransactionIntent"];
+    generateAppProofs?: boolean;
+  };
+  v1SolSendTransactionResult: {
+    /** @description The send_transaction_status ID associated with the transaction submission */
+    sendTransactionStatusId: string;
+  };
+  v1SolanaConfig: {
+    /** @description Whether Solana rent prefunding is enabled for the organization. When omitted, the existing rent-prefund state is left unchanged. */
+    rentPrefundEnabled?: boolean;
+  };
+  v1SolanaFailureDetails: {
+    /** @description Where the Solana failure occurred, such as simulation or preflight. */
+    source?: string;
+    /**
+     * Format: int32
+     * @description The Solana JSON-RPC error code, if available.
+     */
+    rpcCode?: number;
+    /** @description The Solana JSON-RPC error message, if available. */
+    rpcMessage?: string;
+    /** @description The raw Solana transaction error object serialized as JSON, if available. */
+    transactionErrorJson?: string;
+    /** @description Program logs returned by Solana simulation or preflight, if available. */
+    logs?: string[];
+    /**
+     * Format: uint64
+     * @description Compute units consumed during simulation or preflight, if available.
+     */
+    unitsConsumed?: string;
+    /** @description The raw Solana inner instructions payload serialized as JSON, if available. */
+    innerInstructionsJson?: string;
+  };
+  v1SolanaSendTransactionStatus: {
+    /** @description The Solana transaction signature, if available. */
+    signature?: string;
+  };
   v1StampLoginIntent: {
-    /** @description Client-side public key generated by the user, which will be conditionally added to org data based on the passkey stamp associated with this request */
+    /**
+     * @inject_tag: validate:"omitempty,hexadecimal"
+     * @description Client-side public key generated by the user, which will be conditionally added to org data based on the passkey stamp associated with this request
+     */
     publicKey: string;
     /** @description Expiration window (in seconds) indicating how long the Session is valid for. If not provided, a default of 15 minutes will be used. */
     expirationSeconds?: string;
     /** @description Invalidate all other previously generated Login API keys */
     invalidateExisting?: boolean;
+    sessionProfileId?: string;
   };
   v1StampLoginRequest: {
     /** @enum {string} */
@@ -3703,6 +5689,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1StampLoginIntent"];
+    generateAppProofs?: boolean;
   };
   v1StampLoginResult: {
     /** @description Signed JWT containing an expiry, public key, session type, user id, and organization id */
@@ -3710,41 +5697,129 @@ export type definitions = {
   };
   /** @enum {string} */
   v1TagType: "TAG_TYPE_USER" | "TAG_TYPE_PRIVATE_KEY";
-  v1TestRateLimitsRequest: {
-    /** @description Unique identifier for a given organization. If the request is being made by a WebAuthN user and their sub-organization ID is unknown, this can be the parent organization ID; using the sub-organization ID when possible is preferred due to performance reasons. */
-    organizationId: string;
-    /** @description Whether or not to set a limit on this request. */
-    isSetLimit: boolean;
-    /**
-     * Format: int64
-     * @description Rate limit to set for org, if is_set_limit is set to true.
-     */
-    limit: number;
+  v1TokenUsage: {
+    /** @description Type of token usage */
+    type: definitions["v1UsageType"];
+    /** @description Unique identifier for the verification token */
+    tokenId: string;
+    signup?: definitions["v1SignupUsage"];
+    login?: definitions["v1LoginUsage"];
+    signupV2?: definitions["v1SignupUsageV2"];
   };
-  v1TestRateLimitsResponse: { [key: string]: unknown };
-  /** @enum {string} */
+  /**
+   * - TRANSACTION_TYPE_ETHEREUM: Unsigned Ethereum transaction, RLP-encoded and hex-encoded
+   *  - TRANSACTION_TYPE_SOLANA: Unsigned Solana transaction in hex bytes
+   *  - TRANSACTION_TYPE_TRON: Unsigned Tron transaction, protobuf encoded and hex encoded
+   *  - TRANSACTION_TYPE_BITCOIN: Unsigned Bitcoin transaction, hex encoded
+   * @default TRANSACTION_TYPE_UNSPECIFIED
+   * @enum {string}
+   */
   v1TransactionType:
+    | "TRANSACTION_TYPE_UNSPECIFIED"
     | "TRANSACTION_TYPE_ETHEREUM"
     | "TRANSACTION_TYPE_SOLANA"
     | "TRANSACTION_TYPE_TRON"
     | "TRANSACTION_TYPE_BITCOIN";
+  /** @enum {string} */
+  v1TvcHealthCheckType:
+    | "TVC_HEALTH_CHECK_TYPE_HTTP"
+    | "TVC_HEALTH_CHECK_TYPE_GRPC";
+  v1TvcManifestApproval: {
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier of the operator providing this approval
+     */
+    operatorId: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description Signature from the operator approving the manifest
+     */
+    signature: string;
+  };
+  v1TvcOperatorParams: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description The name for this new operator
+     */
+    name: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description Public key for this operator
+     */
+    publicKey: string;
+  };
+  v1TvcOperatorSetParams: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description Short description for this new operator set
+     */
+    name: string;
+    /** @description Operators to create as part of this new operator set */
+    newOperators?: definitions["v1TvcOperatorParams"][];
+    /** @description Existing operators to use as part of this new operator set */
+    existingOperatorIds?: string[];
+    /**
+     * @inject_tag: validate:"required"
+     * Format: int64
+     * @description The threshold of operators needed to reach consensus in this new Operator Set
+     */
+    threshold: number;
+  };
+  v1TxError: {
+    /** @description Human-readable error message describing what went wrong. */
+    message?: string;
+    /** @description Chain of revert errors from nested contract calls, ordered from outermost to innermost. */
+    revertChain?: definitions["v1RevertChainEntry"][];
+    /** @description Solana-specific failure details for simulation or preflight errors, if available. */
+    solana?: definitions["v1SolanaFailureDetails"];
+    /** @description Ethereum-specific failure details, if available. */
+    eth?: definitions["v1EthFailureDetails"];
+  };
+  v1UnknownRevertError: {
+    /** @description The 4-byte error selector, if available. */
+    selector?: string;
+    /** @description The raw error data, hex-encoded. */
+    data?: string;
+  };
   v1UpdateAllowedOriginsIntent: {
-    /** @description Additional origins requests are allowed from besides ZeroXKey origins */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Additional origins requests are allowed from besides 0xkey origins
+     */
     allowedOrigins: string[];
   };
+  /** TODO: this should include the new origins */
   v1UpdateAllowedOriginsResult: { [key: string]: unknown };
   v1UpdateAuthProxyConfigIntent: {
-    /** @description Updated list of allowed origins for CORS. */
+    /**
+     * @inject_tag: validate:"omitempty,dive"
+     * @description Updated list of allowed origins for CORS.
+     */
     allowedOrigins?: string[];
-    /** @description Updated list of allowed proxy authentication methods. */
+    /**
+     * @inject_tag: validate:"omitempty,dive"
+     * @description Updated list of allowed proxy authentication methods.
+     */
     allowedAuthMethods?: string[];
-    /** @description Custom 'from' address for auth-related emails. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Custom 'from' address for auth-related emails.
+     */
     sendFromEmailAddress?: string;
-    /** @description Custom reply-to address for auth-related emails. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description Custom reply-to address for auth-related emails.
+     */
     replyToEmailAddress?: string;
-    /** @description Template ID for email-auth messages. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Template ID for email-auth messages.
+     */
     emailAuthTemplateId?: string;
-    /** @description Template ID for OTP SMS messages. */
+    /**
+     * @inject_tag: validate:"omitempty,uuid"
+     * @description Template ID for OTP SMS messages.
+     */
     otpTemplateId?: string;
     /** @description Optional parameters for customizing emails. If not provided, the default email will be used. */
     emailCustomizationParams?: definitions["v1EmailCustomizationParams"];
@@ -3753,48 +5828,86 @@ export type definitions = {
     /** @description Overrides for react wallet kit related settings. */
     walletKitSettings?: definitions["v1WalletKitSettingsParams"];
     /**
+     * @inject_tag: validate:"omitempty,numeric"
      * Format: int32
      * @description OTP code lifetime in seconds.
      */
     otpExpirationSeconds?: number;
     /**
+     * @inject_tag: validate:"omitempty,numeric"
      * Format: int32
      * @description Verification-token lifetime in seconds.
      */
     verificationTokenExpirationSeconds?: number;
     /**
+     * @inject_tag: validate:"omitempty,numeric"
      * Format: int32
      * @description Session lifetime in seconds.
      */
     sessionExpirationSeconds?: number;
-    /** @description Enable alphanumeric OTP codes. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Enable alphanumeric OTP codes.
+     */
     otpAlphanumeric?: boolean;
     /**
+     * @inject_tag: validate:"omitempty,numeric,min=6,max=9"
      * Format: int32
      * @description Desired OTP code length (6–9).
      */
     otpLength?: number;
     /** @description Custom 'from' email sender for auth-related emails. */
     sendFromEmailSenderName?: string;
-    /** @description Verification token required for get account with PII (email/phone number). Default false. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Verification token required for get account with PII (email/phone number). Default false.
+     */
     verificationTokenRequiredForGetAccountPii?: boolean;
+    /**
+     * @inject_tag: validate:"omitempty,dive"
+     * @description Whitelisted OAuth client IDs for social account linking.
+     */
+    socialLinkingClientIds?: string[];
+    /** @description Whether captcha verification is required on sign up and OTP init. */
+    captchaEnabled?: boolean;
   };
   v1UpdateAuthProxyConfigResult: {
-    /** @description Unique identifier for a given User. (representing the 0xkey signer user id) */
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier for a given User. (representing the 0xkey signer user id)
+     */
     configId?: string;
   };
   v1UpdateFiatOnRampCredentialIntent: {
-    /** @description The ID of the fiat on-ramp credential to update */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The ID of the fiat on-ramp credential to update
+     */
     fiatOnrampCredentialId: string;
-    /** @description The fiat on-ramp provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The fiat on-ramp provider
+     */
     onrampProvider: definitions["v1FiatOnRampProvider"];
-    /** @description Project ID for the on-ramp provider. Some providers, like Coinbase, require this additional identifier. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Project ID for the on-ramp provider. Some providers, like Coinbase, require this additional identifier.
+     */
     projectId?: string;
-    /** @description Publishable API key for the on-ramp provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Publishable API key for the on-ramp provider
+     */
     publishableApiKey: string;
-    /** @description Secret API key for the on-ramp provider encrypted to our on-ramp encryption public key */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Secret API key for the on-ramp provider encrypted to our on-ramp encryption public key
+     */
     encryptedSecretApiKey: string;
-    /** @description Private API key for the on-ramp provider encrypted to our on-ramp encryption public key. Some providers, like Coinbase, require this additional key. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Private API key for the on-ramp provider encrypted to our on-ramp encryption public key. Some providers, like Coinbase, require this additional key.
+     */
     encryptedPrivateApiKey?: string;
   };
   v1UpdateFiatOnRampCredentialRequest: {
@@ -3805,19 +5918,32 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateFiatOnRampCredentialIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdateFiatOnRampCredentialResult: {
     /** @description Unique identifier of the Fiat On-Ramp credential that was updated */
     fiatOnRampCredentialId: string;
   };
   v1UpdateOauth2CredentialIntent: {
-    /** @description The ID of the OAuth 2.0 credential to update */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The ID of the OAuth 2.0 credential to update
+     */
     oauth2CredentialId: string;
-    /** @description The OAuth 2.0 provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The OAuth 2.0 provider
+     */
     provider: definitions["v1Oauth2Provider"];
-    /** @description The Client ID issued by the OAuth 2.0 provider */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The Client ID issued by the OAuth 2.0 provider
+     */
     clientId: string;
-    /** @description The client secret issued by the OAuth 2.0 provider encrypted to the TLS Fetcher quorum key */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The client secret issued by the OAuth 2.0 provider encrypted to the TLS Fetcher quorum key
+     */
     encryptedClientSecret: string;
   };
   v1UpdateOauth2CredentialRequest: {
@@ -3828,15 +5954,44 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateOauth2CredentialIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdateOauth2CredentialResult: {
     /** @description Unique identifier of the OAuth 2.0 credential that was updated */
     oauth2CredentialId: string;
   };
+  v1UpdateOrganizationNameIntent: {
+    /**
+     * @inject_tag: validate:"required,tk_label,tk_label_length"
+     * @description New name for the Organization.
+     */
+    organizationName: string;
+  };
+  v1UpdateOrganizationNameRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_UPDATE_ORGANIZATION_NAME";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1UpdateOrganizationNameIntent"];
+  };
+  v1UpdateOrganizationNameResult: {
+    /** @description Unique identifier for the Organization. */
+    organizationId: string;
+    /** @description The updated organization name. */
+    organizationName: string;
+  };
   v1UpdatePolicyIntent: {
-    /** @description Unique identifier for a given Policy. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given Policy.
+     */
     policyId: string;
-    /** @description Human-readable name for a Policy. */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Human-readable name for a Policy.
+     */
     policyName?: string;
     /** @description The instruction to DENY or ALLOW an activity (optional). */
     policyEffect?: definitions["v1Effect"];
@@ -3848,9 +6003,15 @@ export type definitions = {
     policyNotes?: string;
   };
   v1UpdatePolicyIntentV2: {
-    /** @description Unique identifier for a given Policy. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given Policy.
+     */
     policyId: string;
-    /** @description Human-readable name for a Policy. */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Human-readable name for a Policy.
+     */
     policyName?: string;
     /** @description The instruction to DENY or ALLOW an activity (optional). */
     policyEffect?: definitions["v1Effect"];
@@ -3869,6 +6030,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdatePolicyIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1UpdatePolicyResult: {
     /** @description Unique identifier for a given Policy. */
@@ -3879,13 +6041,25 @@ export type definitions = {
     policyId: string;
   };
   v1UpdatePrivateKeyTagIntent: {
-    /** @description Unique identifier for a given Private Key Tag. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given Private Key Tag.
+     */
     privateKeyTagId: string;
-    /** @description The new, human-readable name for the tag with the given ID. */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description The new, human-readable name for the tag with the given ID.
+     */
     newPrivateKeyTagName?: string;
-    /** @description A list of Private Keys IDs to add this tag to. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of Private Keys IDs to add this tag to.
+     */
     addPrivateKeyIds: string[];
-    /** @description A list of Private Key IDs to remove this tag from. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of Private Key IDs to remove this tag from.
+     */
     removePrivateKeyIds: string[];
   };
   v1UpdatePrivateKeyTagRequest: {
@@ -3896,6 +6070,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdatePrivateKeyTagIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdatePrivateKeyTagResult: {
     /** @description Unique identifier for a given Private Key Tag. */
@@ -3903,11 +6078,15 @@ export type definitions = {
   };
   v1UpdateRootQuorumIntent: {
     /**
+     * @inject_tag: validate:"required"
      * Format: int32
      * @description The threshold of unique approvals to reach quorum.
      */
     threshold: number;
-    /** @description The unique identifiers of users who comprise the quorum set. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description The unique identifiers of users who comprise the quorum set.
+     */
     userIds: string[];
   };
   v1UpdateRootQuorumRequest: {
@@ -3918,12 +6097,20 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateRootQuorumIntent"];
+    generateAppProofs?: boolean;
   };
+  /** TODO: this should include the new root quorum */
   v1UpdateRootQuorumResult: { [key: string]: unknown };
   v1UpdateUserEmailIntent: {
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
-    /** @description The user's email address. Setting this to an empty string will remove the user's email. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address. Setting this to an empty string will remove the user's email.
+     */
     userEmail: string;
     /** @description Signed JWT containing a unique id, expiry, verification type, contact */
     verificationToken?: string;
@@ -3936,27 +6123,49 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateUserEmailIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdateUserEmailResult: {
     /** @description Unique identifier of the User whose email was updated. */
     userId: string;
   };
   v1UpdateUserIntent: {
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Human-readable name for a User.
+     */
     userName?: string;
-    /** @description The user's email address. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
     userEmail?: string;
-    /** @description An updated list of User Tags to apply to this User. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"omitempty,dive,uuid"
+     * @description An updated list of User Tags to apply to this User. This field, if not needed, should be an empty array in your request body.
+     */
     userTagIds?: string[];
-    /** @description The user's phone number in E.164 format e.g. +13214567890 */
+    /**
+     * @inject_tag: validate:"omitempty,e164"
+     * @description The user's phone number in E.164 format e.g. +13214567890
+     */
     userPhoneNumber?: string;
   };
   v1UpdateUserNameIntent: {
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"required,tk_label,tk_label_length"
+     * @description Human-readable name for a User.
+     */
     userName: string;
   };
   v1UpdateUserNameRequest: {
@@ -3967,15 +6176,22 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateUserNameIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdateUserNameResult: {
     /** @description Unique identifier of the User whose name was updated. */
     userId: string;
   };
   v1UpdateUserPhoneNumberIntent: {
-    /** @description Unique identifier for a given User. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given User.
+     */
     userId: string;
-    /** @description The user's phone number in E.164 format e.g. +13214567890. Setting this to an empty string will remove the user's phone number. */
+    /**
+     * @inject_tag: validate:"omitempty,e164"
+     * @description The user's phone number in E.164 format e.g. +13214567890. Setting this to an empty string will remove the user's phone number.
+     */
     userPhoneNumber: string;
     /** @description Signed JWT containing a unique id, expiry, verification type, contact */
     verificationToken?: string;
@@ -3988,6 +6204,7 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateUserPhoneNumberIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdateUserPhoneNumberResult: {
     /** @description Unique identifier of the User whose phone number was updated. */
@@ -4001,19 +6218,32 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateUserIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdateUserResult: {
     /** @description A User ID. */
     userId: string;
   };
   v1UpdateUserTagIntent: {
-    /** @description Unique identifier for a given User Tag. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given User Tag.
+     */
     userTagId: string;
-    /** @description The new, human-readable name for the tag with the given ID. */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description The new, human-readable name for the tag with the given ID.
+     */
     newUserTagName?: string;
-    /** @description A list of User IDs to add this tag to. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of User IDs to add this tag to.
+     */
     addUserIds: string[];
-    /** @description A list of User IDs to remove this tag from. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of User IDs to remove this tag from.
+     */
     removeUserIds: string[];
   };
   v1UpdateUserTagRequest: {
@@ -4024,15 +6254,22 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateUserTagIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdateUserTagResult: {
     /** @description Unique identifier for a given User Tag. */
     userTagId: string;
   };
   v1UpdateWalletIntent: {
-    /** @description Unique identifier for a given Wallet. */
+    /**
+     * @inject_tag: validate:"uuid"
+     * @description Unique identifier for a given Wallet.
+     */
     walletId: string;
-    /** @description Human-readable name for a Wallet. */
+    /**
+     * @inject_tag: validate:"omitempty,tk_label,tk_label_length"
+     * @description Human-readable name for a Wallet.
+     */
     walletName?: string;
   };
   v1UpdateWalletRequest: {
@@ -4043,17 +6280,47 @@ export type definitions = {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     parameters: definitions["v1UpdateWalletIntent"];
+    generateAppProofs?: boolean;
   };
   v1UpdateWalletResult: {
     /** @description A Wallet ID. */
     walletId: string;
   };
+  v1UpsertGasUsageConfigIntent: {
+    /**
+     * @inject_tag: validate:"required,numeric"
+     * @description Gas sponsorship USD limit for the billing organization window.
+     */
+    orgWindowLimitUsd: string;
+    /**
+     * @inject_tag: validate:"required,numeric"
+     * @description Gas sponsorship USD limit for sub-organizations under the billing organization.
+     */
+    subOrgWindowLimitUsd: string;
+    /**
+     * @inject_tag: validate:"required,numeric"
+     * @description Rolling sponsorship window duration, expressed in minutes.
+     */
+    windowDurationMinutes: string;
+  };
+  v1UpsertGasUsageConfigResult: {
+    /**
+     * @inject_tag: validate:"required,uuid4"
+     * @description Unique identifier for the gas usage configuration that was created or updated.
+     */
+    gasUsageConfigId: string;
+  };
+  /** @enum {string} */
+  v1UsageType: "USAGE_TYPE_SIGNUP" | "USAGE_TYPE_LOGIN";
   v1User: {
     /** @description Unique identifier for a given User. */
     userId: string;
     /** @description Human-readable name for a User. */
     userName: string;
-    /** @description The user's email address. */
+    /**
+     * some users do not have emails (programmatic users)
+     * @description The user's email address.
+     */
     userEmail?: string;
     /** @description The user's phone number in E.164 format e.g. +13214567890 */
     userPhoneNumber?: string;
@@ -4069,70 +6336,186 @@ export type definitions = {
     updatedAt: definitions["externaldatav1Timestamp"];
   };
   v1UserParams: {
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
     userName: string;
-    /** @description The user's email address. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
     userEmail?: string;
-    /** @description The User's permissible access method(s). */
+    /**
+     * @inject_tag: validate:"required"
+     * @description The User's permissible access method(s).
+     */
     accessType: definitions["v1AccessType"];
-    /** @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
     apiKeys: definitions["apiApiKeyParams"][];
-    /** @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
     authenticators: definitions["v1AuthenticatorParams"][];
-    /** @description A list of User Tag IDs. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of User Tag IDs. This field, if not needed, should be an empty array in your request body.
+     */
     userTags: string[];
   };
   v1UserParamsV2: {
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
     userName: string;
-    /** @description The user's email address. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
     userEmail?: string;
-    /** @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
     apiKeys: definitions["apiApiKeyParams"][];
-    /** @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
     authenticators: definitions["v1AuthenticatorParamsV2"][];
-    /** @description A list of User Tag IDs. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of User Tag IDs. This field, if not needed, should be an empty array in your request body.
+     */
     userTags: string[];
   };
   v1UserParamsV3: {
-    /** @description Human-readable name for a User. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
     userName: string;
-    /** @description The user's email address. */
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
     userEmail?: string;
-    /** @description The user's phone number in E.164 format e.g. +13214567890 */
+    /**
+     * @inject_tag: validate:"omitempty,e164"
+     * @description The user's phone number in E.164 format e.g. +13214567890
+     */
     userPhoneNumber?: string;
-    /** @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
     apiKeys: definitions["v1ApiKeyParamsV2"][];
-    /** @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
     authenticators: definitions["v1AuthenticatorParamsV2"][];
-    /** @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body.
+     */
     oauthProviders: definitions["v1OauthProviderParams"][];
-    /** @description A list of User Tag IDs. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of User Tag IDs. This field, if not needed, should be an empty array in your request body.
+     */
+    userTags: string[];
+  };
+  v1UserParamsV4: {
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a User.
+     */
+    userName: string;
+    /**
+     * @inject_tag: validate:"omitempty,email,tk_email"
+     * @description The user's email address.
+     */
+    userEmail?: string;
+    /**
+     * @inject_tag: validate:"omitempty,e164"
+     * @description The user's phone number in E.164 format e.g. +13214567890
+     */
+    userPhoneNumber?: string;
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of API Key parameters. This field, if not needed, should be an empty array in your request body.
+     */
+    apiKeys: definitions["v1ApiKeyParamsV2"][];
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Authenticator parameters. This field, if not needed, should be an empty array in your request body.
+     */
+    authenticators: definitions["v1AuthenticatorParamsV2"][];
+    /**
+     * @inject_tag: validate:"dive"
+     * @description A list of Oauth providers. This field, if not needed, should be an empty array in your request body.
+     */
+    oauthProviders: definitions["v1OauthProviderParamsV2"][];
+    /**
+     * @inject_tag: validate:"dive,uuid"
+     * @description A list of User Tag IDs. This field, if not needed, should be an empty array in your request body.
+     */
     userTags: string[];
   };
   v1VerifyOtpIntent: {
-    /** @description ID representing the result of an init OTP activity. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description ID representing the result of an init OTP activity.
+     */
     otpId: string;
     /** @description OTP sent out to a user's contact (email or SMS) */
     otpCode: string;
-    /** @description Expiration window (in seconds) indicating how long the verification token is valid for. If not provided, a default of 1 hour will be used. Maximum value is 86400 seconds (24 hours) */
+    /**
+     * @inject_tag: validate:"omitempty,numeric,max=86400"
+     * @description Expiration window (in seconds) indicating how long the verification token is valid for. If not provided, a default of 1 hour will be used. Maximum value is 86400 seconds (24 hours)
+     */
     expirationSeconds?: string;
-    /** @description Client-side public key generated by the user, which will be added to the JWT response and verified in subsequent requests via a client proof signature */
+    /**
+     * @inject_tag: validate:"omitempty,hexadecimal"
+     * @description Client-side public key generated by the user, which will be added to the JWT response and verified in subsequent requests via a client proof signature
+     */
     publicKey?: string;
+  };
+  v1VerifyOtpIntentV2: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description UUID representing an OTP flow. A new UUID is created for each init OTP activity.
+     */
+    otpId: string;
+    /** @description Encrypted bundle containing the OTP code and a client-generated public key. 0xkey's secure enclaves will decrypt this bundle, verify the OTP code, and issue a new Verification Token. Encrypted using the target encryption key provided in the INIT_OTP activity result. */
+    encryptedOtpBundle: string;
+    /**
+     * @inject_tag: validate:"omitempty,numeric,max=86400"
+     * @description Expiration window (in seconds) indicating how long the verification token is valid for. If not provided, a default of 1 hour will be used. Maximum value is 86400 seconds (24 hours)
+     */
+    expirationSeconds?: string;
   };
   v1VerifyOtpRequest: {
     /** @enum {string} */
-    type: "ACTIVITY_TYPE_VERIFY_OTP";
+    type: "ACTIVITY_TYPE_VERIFY_OTP_V2";
     /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
     timestampMs: string;
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
-    parameters: definitions["v1VerifyOtpIntent"];
+    parameters: definitions["v1VerifyOtpIntentV2"];
+    generateAppProofs?: boolean;
   };
   v1VerifyOtpResult: {
     /** @description Signed JWT containing a unique id, expiry, verification type, contact. Verification status of a user is updated when the token is consumed (in OTP_LOGIN requests) */
     verificationToken: string;
   };
+  /** @description Object representing a particular User's approval or rejection of a Consensus request, including all relevant metadata. */
   v1Vote: {
     /** @description Unique identifier for a given Vote object. */
     id: string;
@@ -4152,6 +6535,7 @@ export type definitions = {
     signature: string;
     /** @description Method used to produce a signature. */
     scheme: string;
+    /** @description Timestamp of when the Vote was cast. */
     createdAt: definitions["externaldatav1Timestamp"];
   };
   v1Wallet: {
@@ -4191,15 +6575,28 @@ export type definitions = {
     walletDetails?: definitions["v1Wallet"];
   };
   v1WalletAccountParams: {
-    /** @description Cryptographic curve used to generate a wallet Account. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Cryptographic curve used to generate a wallet Account.
+     */
     curve: definitions["v1Curve"];
-    /** @description Path format used to generate a wallet Account. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Path format used to generate a wallet Account.
+     */
     pathFormat: definitions["v1PathFormat"];
-    /** @description Path used to generate a wallet Account. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Path used to generate a wallet Account.
+     */
     path: string;
-    /** @description Address format used to generate a wallet Acccount. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Address format used to generate a wallet Acccount.
+     */
     addressFormat: definitions["v1AddressFormat"];
   };
+  /** The Wallet Kit pulls from these settings automatically. They can be overwritten locally by passing them into the OxkeyProvider */
   v1WalletKitSettingsParams: {
     /**
      * Enabled Social Providers
@@ -4216,13 +6613,25 @@ export type definitions = {
      * @description Oauth redirect URL to be used for social login flows.
      */
     oauthRedirectUrl?: string;
+    /**
+     * OAuth2 Credential IDs
+     * @description Mapping of social providers to stored OAuth2 credential IDs.
+     */
+    oauth2CredentialIds?: { [key: string]: string };
   };
   v1WalletParams: {
-    /** @description Human-readable name for a Wallet. */
+    /**
+     * @inject_tag: validate:"required,tk_label_length,tk_label"
+     * @description Human-readable name for a Wallet.
+     */
     walletName: string;
-    /** @description A list of wallet Accounts. This field, if not needed, should be an empty array in your request body. */
+    /**
+     * @inject_tag: validate:"dive,required"
+     * @description A list of wallet Accounts. This field, if not needed, should be an empty array in your request body.
+     */
     accounts: definitions["v1WalletAccountParams"][];
     /**
+     * @inject_tag: validate:"omitempty"
      * Format: int32
      * @description Length of mnemonic to generate the Wallet seed. Defaults to 12. Accepted values: 12, 15, 18, 21, 24.
      */
@@ -4243,9 +6652,318 @@ export type definitions = {
     /** @description The base64 url encoded signature bytes contained within the WebAuthn assertion response. */
     signature: string;
   };
-};
+  v1WebhookSubscriptionParams: {
+    /** @description The event type to subscribe to, e.g. ACTIVITY_UPDATES, BALANCE_CONFIRMED_UPDATES. */
+    eventType: string;
+    /** @description JSON-encoded filter criteria for this subscription. Reserved for future use. */
+    filtersJson?: string;
+    /** @description Whether this subscription is active. Defaults to true. */
+    isActive?: boolean;
+  };
+  v1GetMfaPoliciesRequest: {
+    organizationId: string;
+    userId: string;
+  };
+  v1GetSessionProfilesRequest: {
+    organizationId: string;
+  };
+  v1GetSessionProfileRequest: {
+    organizationId: string;
+    sessionProfileId: string;
+  };
+  v1GetMfaPoliciesResponse: {
+    mfaPolicies: definitions["v1MfaPolicy"][];
+  };
+  v1MfaPolicy: {
+    mfaPolicyId: string;
+    mfaPolicyName: string;
+    condition: string;
+    requiredAuthenticationMethods: definitions["v1RequiredAuthenticationMethod"][];
+    /** Format: int64 */
+    order: number;
+    notes?: string;
+    createdAt: definitions["externaldatav1Timestamp"];
+    updatedAt: definitions["externaldatav1Timestamp"];
+  };
+  v1RequiredAuthenticationMethod: {
+    any: definitions["v1AuthenticationMethod"][];
+  };
+  v1AuthenticationMethod: {
+    type: definitions["v1AuthenticationType"];
+    id?: string;
+  };
+  /**
+   * @default AUTHENTICATION_TYPE_UNSPECIFIED
+   * @enum {string}
+   */
+  v1AuthenticationType:
+    | "AUTHENTICATION_TYPE_UNSPECIFIED"
+    | "AUTHENTICATION_TYPE_EMAIL_OTP"
+    | "AUTHENTICATION_TYPE_SMS_OTP"
+    | "AUTHENTICATION_TYPE_PASSKEY"
+    | "AUTHENTICATION_TYPE_API_KEY"
+    | "AUTHENTICATION_TYPE_OAUTH"
+    | "AUTHENTICATION_TYPE_SESSION";
+  v1DeleteMfaPolicyRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_DELETE_MFA_POLICY";
+    timestampMs: string;
+    organizationId: string;
+    parameters: definitions["v1DeleteMfaPolicyIntent"];
+  };
+  v1DeleteMfaPolicyIntent: {
+    userId: string;
+    mfaPolicyId: string;
+  };
+  v1CreateWebhookEndpointResult: {
+    /** @description Unique identifier for the created Webhook Endpoint. */
+    endpointId: string;
+    /** @description The created webhook endpoint data, including the signing public key. */
+    webhookEndpoint: definitions["v1WebhookEndpointData"];
+  };
+  v1WebhookEndpointData: {
+    /** @description Unique identifier for a given Webhook Endpoint. */
+    endpointId: string;
+    /** @description Unique identifier for the Organization that owns this endpoint. */
+    organizationId: string;
+    /** @description The destination URL for webhook deliveries. */
+    url: string;
+    /** @description Human-readable name for the webhook endpoint. */
+    name: string;
+    /** @description Whether the endpoint is currently active and receiving deliveries. */
+    isActive: boolean;
+    /** @description Event subscriptions for this endpoint. */
+    subscriptions?: definitions["v1WebhookSubscriptionParams"][];
+    /** @description Ed25519 public key (whpk_ prefixed) for verifying webhook signatures. Only returned on creation. */
+    signingPublicKey?: string;
+  };
+  v1CreateSessionProfileResult: {
+    sessionProfileId: string;
+  };
+  v1SolSendRawTransactionResult: {
+    /** @description The transaction signature (base58) of the sent Solana transaction. */
+    transactionHash: string;
+  };
+  v1CreateApiOnlyUsersResult: {
+    /** @description A list of API-only User IDs. */
+    userIds: string[];
+  };
+  v1UpdateOidcProviderResult: {
+    /** @description Unique identifier for the updated OIDC provider. */
+    providerId: string;
+  };
+  v1CreateOidcProviderResult: {
+    /** @description Unique identifier for the newly registered OIDC provider. */
+    providerId: string;
+  };
+  v1UpdateMfaPolicyResult: {
+    mfaPolicyId: string;
+  };
+  v1DeleteWebhookEndpointResult: {
+    /** @description Unique identifier for the deleted Webhook Endpoint. */
+    endpointId: string;
+  };
+  v1CreateMfaPolicyResult: {
+    mfaPolicyId: string;
+  };
+  v1DeleteOidcProviderResult: {
+    /** @description A list of unique identifiers for OIDC providers that were removed. */
+    providerIds: string[];
+  };
+  v1UpdateWebhookEndpointResult: {
+    /** @description Unique identifier for the updated Webhook Endpoint. */
+    endpointId: string;
+  };
+  v1DeleteMfaPolicyResult: {
+    mfaPolicyId: string;
+  };
+  v1SolSendRawTransactionIntent: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description The raw, signed Solana transaction to be sent (hex- or base64-encoded wire bytes).
+     */
+    signedTransaction: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description CAIP-2 chain ID (e.g., 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG' for devnet).
+     * @enum {string}
+     */
+    caip2:
+      | "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+      | "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+      | "solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY";
+    /**
+     * @inject_tag: validate:"omitempty"
+     * Format: uint64
+     * @description Optional lastValidBlockHeight returned by prepare_sol_transaction for the pinned blockhash; persisted so the confirmation worker can detect blockhash-expiry drops precisely.
+     */
+    lastValidBlockHeight?: string;
+  };
+  v1CreateWebhookEndpointIntent: {
+    /**
+     * @inject_tag: validate:"required,url"
+     * @description The destination URL for webhook deliveries.
+     */
+    url: string;
+    /**
+     * @inject_tag: validate:"required,tk_label_length"
+     * @description Human-readable name for the webhook endpoint.
+     */
+    name: string;
+    /**
+     * @inject_tag: validate:"dive"
+     * @description Event subscriptions. If empty, the endpoint receives all event types.
+     */
+    subscriptions?: definitions["v1WebhookSubscriptionParams"][];
+  };
+  v1CreateMfaPolicyIntent: {
+    userId: string;
+    mfaPolicyName: string;
+    condition: string;
+    requiredAuthenticationMethods: definitions["v1RequiredAuthenticationMethodParams"][];
+    /** Format: int64 */
+    order: number;
+    notes?: string;
+  };
+  v1RequiredAuthenticationMethodParams: {
+    any: definitions["v1AuthenticationMethodParams"][];
+  };
+  v1AuthenticationMethodParams: {
+    type: definitions["v1AuthenticationType"];
+    id?: string;
+  };
+  v1DeleteWebhookEndpointIntent: {
+    /**
+     * @inject_tag: validate:"required,uuid4"
+     * @description Unique identifier of the webhook endpoint to delete.
+     */
+    endpointId: string;
+  };
+  v1OrganizationProtectionProfileRequest: {
+    /** @description Must be ORGANIZATION_PROTECTION_PROFILE_TYPE_PROTECTED_SPONSORED for F0. */
+    profileType: string;
+    /**
+     * Format: int64
+     * @description Protection profile protocol version. F0 supports version 1.
+     */
+    version: number;
+  };
+  v1UpdateMfaPolicyIntent: {
+    userId: string;
+    mfaPolicyId: string;
+    mfaPolicyName?: string;
+    condition?: string;
+    requiredAuthenticationMethods?: definitions["v1RequiredAuthenticationMethodParams"][];
+    /** Format: int64 */
+    order?: number;
+    notes?: string;
+  };
+  v1CreateApiOnlyUsersIntent: {
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of API-only Users to create.
+     */
+    apiOnlyUsers: definitions["v1ApiOnlyUserParams"][];
+  };
+  v1UpdateWebhookEndpointIntent: {
+    /**
+     * @inject_tag: validate:"required,uuid4"
+     * @description Unique identifier of the webhook endpoint to update.
+     */
+    endpointId: string;
+    /** @description Updated destination URL. */
+    url?: string;
+    /** @description Updated human-readable name. */
+    name?: string;
+    /** @description Updated active status. */
+    isActive?: boolean;
+  };
+  /**
+   * @description See `CreateOrganizationIntentV2.imported_root_authenticator`. The public
+   * key / aaguid / transports MUST be resolved server-side from Coordinator's
+   * own authenticator store (never trusted verbatim from an HTTP client).
+   */
+  v1ImportedRootAuthenticatorParams: {
+    /** @inject_tag: validate:"required,tk_label,tk_label_length" */
+    authenticatorName: string;
+    /** @inject_tag: validate:"required,max=256" */
+    credentialId: string;
+    /**
+     * Uncompressed P-256 public key, hex-encoded (with or without "0x" prefix).
+     * @inject_tag: validate:"required"
+     */
+    publicKey: string;
+    aaguid?: string;
+    transports?: definitions["v1AuthenticatorTransport"][];
+  };
+  v1CreateSessionProfileIntent: {
+    sessionProfileName: string;
+    scope: string;
+    expirationSeconds?: string;
+    notes?: string;
+  };
+  v1GetMfaPolicyResponse: {
+    mfaPolicy: definitions["v1MfaPolicy"];
+  };
+  v1GetMfaPolicyRequest: {
+    organizationId: string;
+    userId: string;
+    mfaPolicyId: string;
+  };
+  v1UpdateMfaPolicyRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_UPDATE_MFA_POLICY";
+    timestampMs: string;
+    organizationId: string;
+    parameters: definitions["v1UpdateMfaPolicyIntent"];
+  };
+  v1GetMfaStatusResponse: {
+    mfaStatuses: definitions["v1MfaStatus"][];
+  };
+  v1MfaStatus: {
+    mfaPolicyId: string;
+    userId: string;
+    satisfied: boolean;
+    satisfiedMethods: definitions["v1AuthenticationMethod"][];
+    requiredMethods: definitions["v1RequiredAuthenticationMethod"][];
+  };
+  v1CreateMfaPolicyRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_CREATE_MFA_POLICY";
+    timestampMs: string;
+    organizationId: string;
+    parameters: definitions["v1CreateMfaPolicyIntent"];
+  };
+  v1GetSessionProfileResponse: {
+    sessionProfile: definitions["v1SessionProfile"];
+  };
+  v1SessionProfile: {
+    sessionProfileId: string;
+    sessionProfileName: string;
+    scope: string;
+    expirationSeconds?: string;
+    notes?: string;
+    createdAt: definitions["externaldatav1Timestamp"];
+    updatedAt: definitions["externaldatav1Timestamp"];
+  };
+  v1GetMfaStatusRequest: {
+    organizationId: string;
+    activityId: string;
+    userId?: string;
+  };
+  v1GetSessionProfilesResponse: {
+    sessionProfiles: definitions["v1SessionProfile"][];
+  };
+  v1CreateSessionProfileRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_CREATE_SESSION_PROFILE";
+    timestampMs: string;
+    organizationId: string;
+    parameters: definitions["v1CreateSessionProfileIntent"];
+  };
+}
 
-export type operations = {
+export interface operations {
   /** Get details about an activity. */
   PublicApiService_GetActivity: {
     parameters: {
@@ -4257,6 +6975,24 @@ export type operations = {
       /** A successful response. */
       200: {
         schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
+  PublicApiService_GetAttestationDocument: {
+    parameters: {
+      body: {
+        body: definitions["v1GetAttestationDocumentRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetAttestationDocumentResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -4293,24 +7029,6 @@ export type operations = {
       /** A successful response. */
       200: {
         schema: definitions["v1GetApiKeysResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Get the attestation document corresponding to an enclave. */
-  PublicApiService_GetAttestationDocument: {
-    parameters: {
-      body: {
-        body: definitions["v1GetAttestationDocumentRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1GetAttestationDocumentResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -4372,6 +7090,24 @@ export type operations = {
       };
     };
   };
+  /** Get gas usage and gas limits for either the parent organization or a sub-organization. */
+  PublicApiService_GetGasUsage: {
+    parameters: {
+      body: {
+        body: definitions["v1GetGasUsageRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetGasUsageResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   /** Get the latest boot proof for a given enclave app name. */
   PublicApiService_GetLatestBootProof: {
     parameters: {
@@ -4383,6 +7119,24 @@ export type operations = {
       /** A successful response. */
       200: {
         schema: definitions["v1BootProofResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get nonce values for an address on a given network. Can fetch the standard on-chain nonce and/or the gas station nonce used for sponsored transactions. */
+  PublicApiService_GetNonces: {
+    parameters: {
+      body: {
+        body: definitions["v1GetNoncesRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetNoncesResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -4437,24 +7191,6 @@ export type operations = {
       /** A successful response. */
       200: {
         schema: definitions["v1GetOnRampTransactionStatusResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Get details about an organization. */
-  PublicApiService_GetOrganization: {
-    parameters: {
-      body: {
-        body: definitions["v1GetOrganizationRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1GetOrganizationResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -4917,24 +7653,6 @@ export type operations = {
     parameters: {
       body: {
         body: definitions["v1CreateApiKeysRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1ActivityResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Create API-only users in an existing organization. */
-  PublicApiService_CreateApiOnlyUsers: {
-    parameters: {
-      body: {
-        body: definitions["v1CreateApiOnlyUsersRequest"];
       };
     };
     responses: {
@@ -5560,25 +8278,7 @@ export type operations = {
       };
     };
   };
-  /** Submit a raw transaction (serialized and signed) for broadcasting to the network. */
-  PublicApiService_EthSendRawTransaction: {
-    parameters: {
-      body: {
-        body: definitions["v1EthSendRawTransactionRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1ActivityResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Submit a transaction intent describing a transaction you would like to broadcast. */
+  /** Submit a transaction intent describing an EVM transaction you would like to broadcast. */
   PublicApiService_EthSendTransaction: {
     parameters: {
       body: {
@@ -6010,6 +8710,42 @@ export type operations = {
       };
     };
   };
+  /** Submit a native TRX transfer intent describing a transaction you would like to broadcast. */
+  PublicApiService_TronSendTransaction: {
+    parameters: {
+      body: {
+        body: definitions["v1TronSendTransactionRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Submit a transaction intent describing an SVM transaction you would like to broadcast. */
+  PublicApiService_SolSendTransaction: {
+    parameters: {
+      body: {
+        body: definitions["v1SolSendTransactionRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   /** Create a session for a user through stamping client side (API key, wallet client, or passkey client). */
   PublicApiService_StampLogin: {
     parameters: {
@@ -6051,6 +8787,24 @@ export type operations = {
     parameters: {
       body: {
         body: definitions["v1UpdateOauth2CredentialRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Update the name of an organization. */
+  PublicApiService_UpdateOrganizationName: {
+    parameters: {
+      body: {
+        body: definitions["v1UpdateOrganizationNameRequest"];
       };
     };
     responses: {
@@ -6256,17 +9010,17 @@ export type operations = {
       };
     };
   };
-  /** Set a rate local rate limit just on the current endpoint, for purposes of testing with Vivosuite. */
-  PublicApiService_TestRateLimits: {
+  /** Get the MFA status of an activity for one user or all voting users. */
+  PublicApiService_GetMfaStatus: {
     parameters: {
       body: {
-        body: definitions["v1TestRateLimitsRequest"];
+        body: definitions["v1GetMfaStatusRequest"];
       };
     };
     responses: {
       /** A successful response. */
       200: {
-        schema: definitions["v1TestRateLimitsResponse"];
+        schema: definitions["v1GetMfaStatusResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -6274,6 +9028,150 @@ export type operations = {
       };
     };
   };
-};
+  /** Get all MFA policies for a user. */
+  PublicApiService_GetMfaPolicies: {
+    parameters: {
+      body: {
+        body: definitions["v1GetMfaPoliciesRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetMfaPoliciesResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get a single MFA policy for a user. */
+  PublicApiService_GetMfaPolicy: {
+    parameters: {
+      body: {
+        body: definitions["v1GetMfaPolicyRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetMfaPolicyResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get one session profile for an organization. */
+  PublicApiService_GetSessionProfile: {
+    parameters: {
+      body: {
+        body: definitions["v1GetSessionProfileRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetSessionProfileResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get all session profiles for an organization. */
+  PublicApiService_GetSessionProfiles: {
+    parameters: {
+      body: {
+        body: definitions["v1GetSessionProfilesRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetSessionProfilesResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Create a new MFA policy for a user. */
+  PublicApiService_CreateMfaPolicy: {
+    parameters: {
+      body: {
+        body: definitions["v1CreateMfaPolicyRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Update an MFA policy for a user. */
+  PublicApiService_UpdateMfaPolicy: {
+    parameters: {
+      body: {
+        body: definitions["v1UpdateMfaPolicyRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Delete an MFA policy for a user. */
+  PublicApiService_DeleteMfaPolicy: {
+    parameters: {
+      body: {
+        body: definitions["v1DeleteMfaPolicyRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Create a new session profile for an organization. */
+  PublicApiService_CreateSessionProfile: {
+    parameters: {
+      body: {
+        body: definitions["v1CreateSessionProfileRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+}
 
-export type external = {};
+export interface external {}
