@@ -1,6 +1,11 @@
 import type { ZeroXKeyClient } from ".";
 import { PublicApiService as ZeroXKeyApi } from "./__generated__/barrel";
-import { TActivity, TActivityResponse, ZeroXKeyActivityError } from "./shared";
+import {
+  TActivity,
+  TActivityResponse,
+  ZeroXKeyActivityAuthenticatorsNeededError,
+  ZeroXKeyActivityError,
+} from "./shared";
 import { sleep } from "./_kernel/transport";
 
 const DEFAULT_REFRESH_INTERVAL_MS = 500;
@@ -68,6 +73,17 @@ export function withAsyncPolling<
           });
         }
         default: {
+          if (
+            (activity.status as string) ===
+            "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED"
+          ) {
+            throw new ZeroXKeyActivityAuthenticatorsNeededError({
+              message: `Authenticators needed for activity ${activity.id}`,
+              activityId: activity.id,
+              activityStatus: activity.status,
+              activityType: activity.type,
+            });
+          }
           // Make sure the switch block is exhaustive
           assertNever(activity.status);
         }
@@ -161,6 +177,17 @@ export function createActivityPoller<
           });
         }
         default: {
+          if (
+            (activity.status as string) ===
+            "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED"
+          ) {
+            throw new ZeroXKeyActivityAuthenticatorsNeededError({
+              message: `Authenticators needed for activity ${activity.id}`,
+              activityId: activity.id,
+              activityStatus: activity.status,
+              activityType: activity.type,
+            });
+          }
           // Make sure the switch block is exhaustive
           assertNever(activity.status);
         }
