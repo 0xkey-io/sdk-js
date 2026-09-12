@@ -13,19 +13,38 @@ const PILOT_PACKAGES = new Set([
   "@0xkey-io/attested-stamper",
 ]);
 
+/**
+ * @param {string} command
+ * @param {string[]} args
+ * @param {{ cwd?: string, label?: string }} options
+ */
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { encoding: "utf8", ...options });
+  const { label, ...spawnOptions } = options;
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    ...spawnOptions,
+  });
   if (result.status !== 0) {
     const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
     throw new Error(
-      `${options.label ?? command} failed${output ? `:\n${output}` : ""}`,
+      `${label ?? command} failed${output ? `:\n${output}` : ""}`,
     );
   }
-  return result.stdout;
+  return result.stdout ?? "";
 }
 
+/** @param {string} tarball */
 function readPackedManifest(tarball) {
-  return JSON.parse(run("tar", ["-xOf", tarball, "package/package.json"]));
+  /** @type {{ name: string, version: string }} */
+  const manifest = JSON.parse(
+    run("tar", ["-xOf", tarball, "package/package.json"]),
+  );
+  return manifest;
+}
+
+/** @param {unknown} error */
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /**
@@ -85,7 +104,9 @@ export function verifyPackedConsumer({ tarballs, tempRoot }) {
   const consumerDir = path.join(tempRoot, "consumer");
   fs.mkdirSync(consumerDir, { recursive: true });
 
+  /** @type {string[]} */
   const packageNames = [];
+  /** @type {Record<string, string>} */
   const dependencies = {};
   for (const tarball of tarballs) {
     const manifest = readPackedManifest(tarball);
@@ -147,6 +168,11 @@ export function verifyPackedConsumer({ tarballs, tempRoot }) {
     },
   );
 
+  /** @type {{
+   *   importers?: Record<string, { dependencies?: Record<string, { specifier?: unknown, version?: unknown }> }>,
+   *   packages?: Record<string, unknown>,
+   *   snapshots?: Record<string, unknown>
+   * }} */
   const lockfile = YAML.parse(
     fs.readFileSync(path.join(consumerDir, "pnpm-lock.yaml"), "utf8"),
   );
@@ -165,8 +191,11 @@ export function verifyPackedConsumer({ tarballs, tempRoot }) {
       );
     }
   }
-  for (const sectionName of ["packages", "snapshots"]) {
-    for (const resolutionKey of Object.keys(lockfile[sectionName] ?? {})) {
+  for (const resolutions of [
+    lockfile.packages ?? {},
+    lockfile.snapshots ?? {},
+  ]) {
+    for (const resolutionKey of Object.keys(resolutions)) {
       if (
         resolutionKey.includes("@0xkey-io/") &&
         !resolutionKey.includes("@file:")
@@ -197,7 +226,9 @@ export function verifyPackedConsumer({ tarballs, tempRoot }) {
 
 export function main() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "0xkey-pack-smoke-"));
+  /** @type {string[]} */
   const failures = [];
+  /** @type {string[]} */
   const tarballs = [];
 
   try {
@@ -210,7 +241,7 @@ export function main() {
           label: `${pkgMeta.pkg.name} pack`,
         });
       } catch (error) {
-        failures.push(error.message);
+        failures.push(errorMessage(error));
         continue;
       }
 
@@ -224,7 +255,12 @@ export function main() {
         continue;
       }
 
-      const tarball = path.join(tempRoot, newTarballs[0]);
+      const tarballName = newTarballs[0];
+      if (!tarballName) {
+        failures.push(`${pkgMeta.pkg.name}: packed tarball name is missing`);
+        continue;
+      }
+      const tarball = path.join(tempRoot, tarballName);
       tarballs.push(tarball);
       const extractDir = path.join(tempRoot, pkgMeta.dirName);
       fs.mkdirSync(extractDir, { recursive: true });
@@ -233,7 +269,7 @@ export function main() {
           label: `${pkgMeta.pkg.name} extract`,
         });
       } catch (error) {
-        failures.push(error.message);
+        failures.push(errorMessage(error));
         continue;
       }
 
@@ -259,6 +295,7 @@ export function main() {
         }
       }
 
+      /** @param {string} dir */
       const walk = (dir) => {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
           const fullPath = path.join(dir, entry.name);
@@ -280,7 +317,7 @@ export function main() {
       try {
         verifyPackedConsumer({ tarballs, tempRoot });
       } catch (error) {
-        failures.push(error.message);
+        failures.push(errorMessage(error));
       }
     }
 

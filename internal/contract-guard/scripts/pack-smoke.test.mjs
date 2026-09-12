@@ -10,6 +10,11 @@ import {
   verifyPackedConsumer,
 } from "./pack-smoke.mjs";
 
+/**
+ * @param {string} tempRoot
+ * @param {{ name: string, version: string, [key: string]: unknown }} manifest
+ * @param {Record<string, string>} files
+ */
 function createTarball(tempRoot, manifest, files) {
   const fixtureRoot = fs.mkdtempSync(path.join(tempRoot, "fixture-"));
   const packageRoot = path.join(fixtureRoot, "package");
@@ -32,12 +37,20 @@ function createTarball(tempRoot, manifest, files) {
 test("includes runtime workspace dependencies in the pilot package closure", () => {
   const packages = [
     {
+      dirName: "pilot",
+      dirPath: "/fixture/pilot",
+      packageJsonPath: "/fixture/pilot/package.json",
       pkg: {
         name: "@0xkey-io/pilot",
         dependencies: { "@0xkey-io/runtime": "workspace:*" },
       },
     },
-    { pkg: { name: "@0xkey-io/runtime" } },
+    {
+      dirName: "runtime",
+      dirPath: "/fixture/runtime",
+      packageJsonPath: "/fixture/runtime/package.json",
+      pkg: { name: "@0xkey-io/runtime" },
+    },
   ];
 
   assert.deepEqual(
