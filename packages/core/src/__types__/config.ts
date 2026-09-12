@@ -1,6 +1,25 @@
-import type { Session } from "@0xkey-io/sdk-types";
+import type {
+  Session,
+  v1ActivityStatus,
+  v1ActivityType,
+} from "@0xkey-io/sdk-types";
 import type { TStamper } from "./auth";
 import type { StamperType } from "./enums";
+
+export interface MfaContext {
+  activityId: string;
+  fingerprint: string;
+  organizationId: string;
+  activityType: v1ActivityType;
+  activityStatus: v1ActivityStatus;
+  mfaStatuses: Array<{
+    mfaPolicyId: string;
+    userId: string;
+    satisfied: boolean;
+    satisfiedMethods: unknown[];
+    requiredMethods: unknown[];
+  }>;
+}
 
 /**
  * ZeroXKeyHttpClientConfig defines the configuration for the ZeroXKey HTTP client.
@@ -31,9 +50,11 @@ export interface ZeroXKeyHttpClientConfig {
   apiKeyStamper?: TStamper | undefined;
   passkeyStamper?: TStamper | undefined;
   walletStamper?: TStamper | undefined;
+  attestedStamper?: TStamper | undefined;
   storageManager?: StorageBase | undefined;
 
   defaultStamperType?: StamperType | undefined;
+  onMfaRequired?: ((context: MfaContext) => Promise<void>) | undefined;
 }
 
 /**
@@ -67,6 +88,7 @@ export interface ZeroXKeySDKClientConfig {
   walletConfig?: TWalletManagerConfig;
   /** default stamper to be used for all requests */
   defaultStamperType?: StamperType | undefined;
+  onMfaRequired?: ((context: MfaContext) => Promise<void>) | undefined;
 }
 
 /**

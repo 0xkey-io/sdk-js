@@ -21,6 +21,25 @@
     "types": "./dist/index.d.ts"
   },
   {
+    "dirName": "attested-stamper",
+    "exports": {
+      ".": {
+        "default": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "files": [
+      "dist/"
+    ],
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "name": "@0xkey-io/attested-stamper",
+    "sideEffects": false,
+    "types": "./dist/index.d.ts"
+  },
+  {
     "dirName": "core",
     "exports": null,
     "files": [

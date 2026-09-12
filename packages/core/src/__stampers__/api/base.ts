@@ -121,6 +121,7 @@ export class CrossPlatformApiKeyStamper implements TStamper {
   async sign(
     payload: string,
     format: SignatureFormat = SignatureFormat.Der,
+    explicitPublicKey?: string,
   ): Promise<string> {
     if (!this.stamper) {
       throw new ZeroXKeyError(
@@ -128,7 +129,7 @@ export class CrossPlatformApiKeyStamper implements TStamper {
         ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
       );
     }
-    let publicKeyHex = this.temporaryPublicKey;
+    let publicKeyHex = explicitPublicKey ?? this.temporaryPublicKey;
     if (!publicKeyHex) {
       const session = await this.storageManager.getActiveSession();
       if (!session) {

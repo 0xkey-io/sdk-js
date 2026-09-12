@@ -224,6 +224,7 @@ const generateSDKClientFromSwagger = async (
   imports.push(
     'import { GrpcStatus, StorageBase, TActivityResponse, TActivityStatus, TERMINAL_ACTIVITY_STATUSES, TSignedRequest, TStamper, ZeroXKeyHttpClientConfig, ZeroXKeyRequestError } from "../__types__";',
   );
+  imports.push('import type { MfaContext } from "../__types__";');
 
   imports.push('import { VERSION } from "../__generated__/version";');
 
@@ -242,6 +243,7 @@ const generateSDKClientFromSwagger = async (
     private apiKeyStamper?: TStamper | undefined;
     private passkeyStamper?: TStamper | undefined;
     private walletStamper?: TStamper | undefined;
+    private attestedStamper?: TStamper | undefined;
 
     public defaultStamperType: StamperType | undefined;
     
@@ -260,6 +262,9 @@ const generateSDKClientFromSwagger = async (
         if (config.walletStamper) {
         this.walletStamper = config.walletStamper;
         }
+        if (config.attestedStamper) {
+        this.attestedStamper = config.attestedStamper;
+        }
         if (config.storageManager) {
         this.storageManager = config.storageManager;
         }
@@ -273,6 +278,8 @@ const generateSDKClientFromSwagger = async (
             this.defaultStamperType = StamperType.Passkey;
           } else if (this.walletStamper) {
             this.defaultStamperType = StamperType.Wallet;
+          } else if (this.attestedStamper) {
+            this.defaultStamperType = StamperType.Attested;
           } else {
             this.defaultStamperType = undefined;
           }
@@ -293,6 +300,8 @@ const generateSDKClientFromSwagger = async (
             return this.passkeyStamper;
         case StamperType.Wallet:
             return this.walletStamper;
+        case StamperType.Attested:
+            return this.attestedStamper;
         default:
             return this.apiKeyStamper;
         }
@@ -362,6 +371,35 @@ const generateSDKClientFromSwagger = async (
         return activityData as TResponseType;
     }
 
+    private async handleMfaIfNeeded(
+        activityData: TActivityResponse,
+        stampWith?: StamperType
+    ): Promise<TActivityResponse> {
+        const status = activityData.activity.status as string;
+        if (status !== "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED" && status !== "ACTIVITY_STATUS_CONSENSUS_NEEDED") {
+        return activityData;
+        }
+        if (!this.config.onMfaRequired) return activityData;
+
+        const { mfaStatuses } = await this.getMfaStatus({
+        activityId: activityData.activity.id,
+        organizationId: activityData.activity.organizationId
+        }, stampWith);
+        if (status === "ACTIVITY_STATUS_CONSENSUS_NEEDED" && mfaStatuses.length === 0) {
+        return activityData;
+        }
+        const context: MfaContext = {
+        activityId: activityData.activity.id,
+        fingerprint: activityData.activity.fingerprint ?? "",
+        organizationId: activityData.activity.organizationId,
+        activityType: activityData.activity.type,
+        activityStatus: status as TActivityStatus,
+        mfaStatuses: mfaStatuses as MfaContext["mfaStatuses"]
+        };
+        await this.config.onMfaRequired(context);
+        return this.pollForCompletion(activityData.activity.id, stampWith);
+    }
+
     async request<TBodyType, TResponseType>(
         url: string,
         body: TBodyType,
@@ -412,11 +450,15 @@ const generateSDKClientFromSwagger = async (
     ): Promise<TResponseType> {
         // Make the initial request
         let activityData = await this.request<TBodyType, TActivityResponse>(url, body, stampWith);
+
+        activityData = await this.handleMfaIfNeeded(activityData, stampWith);
         
         // Poll if not in terminal status
         if (!TERMINAL_ACTIVITY_STATUSES.includes(activityData.activity.status as TActivityStatus)) {
         activityData = await this.pollForCompletion(activityData.activity.id, stampWith);
         }
+
+        activityData = await this.handleMfaIfNeeded(activityData, stampWith);
 
         return this.handleActivityResponse<TResponseType>(activityData, resultKey);
     }

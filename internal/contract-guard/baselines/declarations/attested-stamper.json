@@ -1,0 +1,25 @@
+{
+  "name": "@0xkey-io/attested-stamper",
+  "exports": [
+    {
+      "kind": "re-export",
+      "name": "AttestedScheme"
+    },
+    {
+      "kind": "re-export",
+      "name": "AttestedStamper"
+    },
+    {
+      "kind": "re-export",
+      "name": "type AttestedConfig"
+    },
+    {
+      "kind": "re-export",
+      "name": "type AttestedSigner"
+    },
+    {
+      "kind": "re-export",
+      "name": "type AttestedStamp"
+    }
+  ]
+}

@@ -12,6 +12,8 @@ import {
   ZeroXKeyRequestError,
 } from "../__types__";
 
+import type { MfaContext } from "../__types__";
+
 import { VERSION } from "../__generated__/version";
 
 import type * as SdkTypes from "@0xkey-io/sdk-types";
@@ -27,6 +29,7 @@ export class ZeroXKeySDKClientBase {
   private apiKeyStamper?: TStamper | undefined;
   private passkeyStamper?: TStamper | undefined;
   private walletStamper?: TStamper | undefined;
+  private attestedStamper?: TStamper | undefined;
 
   public defaultStamperType: StamperType | undefined;
 
@@ -45,6 +48,9 @@ export class ZeroXKeySDKClientBase {
     if (config.walletStamper) {
       this.walletStamper = config.walletStamper;
     }
+    if (config.attestedStamper) {
+      this.attestedStamper = config.attestedStamper;
+    }
     if (config.storageManager) {
       this.storageManager = config.storageManager;
     }
@@ -58,6 +64,8 @@ export class ZeroXKeySDKClientBase {
         this.defaultStamperType = StamperType.Passkey;
       } else if (this.walletStamper) {
         this.defaultStamperType = StamperType.Wallet;
+      } else if (this.attestedStamper) {
+        this.defaultStamperType = StamperType.Attested;
       } else {
         this.defaultStamperType = undefined;
       }
@@ -77,6 +85,8 @@ export class ZeroXKeySDKClientBase {
         return this.passkeyStamper;
       case StamperType.Wallet:
         return this.walletStamper;
+      case StamperType.Attested:
+        return this.attestedStamper;
       default:
         return this.apiKeyStamper;
     }
@@ -154,6 +164,44 @@ export class ZeroXKeySDKClientBase {
     return activityData as TResponseType;
   }
 
+  private async handleMfaIfNeeded(
+    activityData: TActivityResponse,
+    stampWith?: StamperType,
+  ): Promise<TActivityResponse> {
+    const status = activityData.activity.status as string;
+    if (
+      status !== "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED" &&
+      status !== "ACTIVITY_STATUS_CONSENSUS_NEEDED"
+    ) {
+      return activityData;
+    }
+    if (!this.config.onMfaRequired) return activityData;
+
+    const { mfaStatuses } = await this.getMfaStatus(
+      {
+        activityId: activityData.activity.id,
+        organizationId: activityData.activity.organizationId,
+      },
+      stampWith,
+    );
+    if (
+      status === "ACTIVITY_STATUS_CONSENSUS_NEEDED" &&
+      mfaStatuses.length === 0
+    ) {
+      return activityData;
+    }
+    const context: MfaContext = {
+      activityId: activityData.activity.id,
+      fingerprint: activityData.activity.fingerprint ?? "",
+      organizationId: activityData.activity.organizationId,
+      activityType: activityData.activity.type,
+      activityStatus: status as TActivityStatus,
+      mfaStatuses: mfaStatuses as MfaContext["mfaStatuses"],
+    };
+    await this.config.onMfaRequired(context);
+    return this.pollForCompletion(activityData.activity.id, stampWith);
+  }
+
   async request<TBodyType, TResponseType>(
     url: string,
     body: TBodyType,
@@ -209,6 +257,8 @@ export class ZeroXKeySDKClientBase {
       stampWith,
     );
 
+    activityData = await this.handleMfaIfNeeded(activityData, stampWith);
+
     // Poll if not in terminal status
     if (
       !TERMINAL_ACTIVITY_STATUSES.includes(
@@ -220,6 +270,8 @@ export class ZeroXKeySDKClientBase {
         stampWith,
       );
     }
+
+    activityData = await this.handleMfaIfNeeded(activityData, stampWith);
 
     return this.handleActivityResponse<TResponseType>(activityData, resultKey);
   }

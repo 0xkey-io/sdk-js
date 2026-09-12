@@ -1,0 +1,15 @@
+{
+  "name": "@0xkey-io/attested-stamper",
+  "skipped": false,
+  "exports": [
+    {
+      "name": "AttestedScheme",
+      "kind": "object"
+    },
+    {
+      "name": "AttestedStamper",
+      "kind": "class",
+      "arity": 1
+    }
+  ]
+}

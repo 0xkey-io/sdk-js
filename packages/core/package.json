@@ -36,6 +36,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@0xkey-io/attested-stamper": "workspace:*",
     "@0xkey-io/api-key-stamper": "workspace:*",
     "@0xkey-io/crypto": "workspace:*",
     "@0xkey-io/encoding": "workspace:*",
