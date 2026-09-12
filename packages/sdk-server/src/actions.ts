@@ -141,6 +141,7 @@ export async function otpLogin(
       organizationId: request.suborgID,
       verificationToken: request.verificationToken,
       publicKey: request.publicKey,
+      clientSignature: request.clientSignature,
       ...(request.sessionLengthSeconds !== undefined && {
         expirationSeconds: request.sessionLengthSeconds.toString(),
       }),

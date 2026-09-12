@@ -3219,6 +3219,14 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         config: masterConfig,
         httpClient: client?.httpClient,
         createHttpClient,
+        overrideAttestedStamper: async (params) => {
+          if (!client) throw new Error("0xKey client is not initialized");
+          return client.overrideAttestedStamper(params);
+        },
+        setMfaHandler: (handler) => {
+          if (!client) throw new Error("0xKey client is not initialized");
+          client.setMfaHandler(handler);
+        },
         createPasskey,
         logout,
         loginWithPasskey,

@@ -69,7 +69,7 @@
     {
       "name": "ZeroXKeyClient",
       "kind": "class",
-      "arity": 4
+      "arity": 5
     },
     {
       "name": "ZeroXKeyProvider",

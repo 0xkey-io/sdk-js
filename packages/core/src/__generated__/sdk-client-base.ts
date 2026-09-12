@@ -12,6 +12,8 @@ import {
   ZeroXKeyRequestError,
 } from "../__types__";
 
+import type { MfaContext } from "../__types__";
+
 import { VERSION } from "../__generated__/version";
 
 import type * as SdkTypes from "@0xkey-io/sdk-types";
@@ -27,6 +29,7 @@ export class ZeroXKeySDKClientBase {
   private apiKeyStamper?: TStamper | undefined;
   private passkeyStamper?: TStamper | undefined;
   private walletStamper?: TStamper | undefined;
+  private attestedStamper?: TStamper | undefined;
 
   public defaultStamperType: StamperType | undefined;
 
@@ -45,6 +48,9 @@ export class ZeroXKeySDKClientBase {
     if (config.walletStamper) {
       this.walletStamper = config.walletStamper;
     }
+    if (config.attestedStamper) {
+      this.attestedStamper = config.attestedStamper;
+    }
     if (config.storageManager) {
       this.storageManager = config.storageManager;
     }
@@ -58,6 +64,8 @@ export class ZeroXKeySDKClientBase {
         this.defaultStamperType = StamperType.Passkey;
       } else if (this.walletStamper) {
         this.defaultStamperType = StamperType.Wallet;
+      } else if (this.attestedStamper) {
+        this.defaultStamperType = StamperType.Attested;
       } else {
         this.defaultStamperType = undefined;
       }
@@ -77,6 +85,8 @@ export class ZeroXKeySDKClientBase {
         return this.passkeyStamper;
       case StamperType.Wallet:
         return this.walletStamper;
+      case StamperType.Attested:
+        return this.attestedStamper;
       default:
         return this.apiKeyStamper;
     }
@@ -154,6 +164,44 @@ export class ZeroXKeySDKClientBase {
     return activityData as TResponseType;
   }
 
+  private async handleMfaIfNeeded(
+    activityData: TActivityResponse,
+    stampWith?: StamperType,
+  ): Promise<TActivityResponse> {
+    const status = activityData.activity.status as string;
+    if (
+      status !== "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED" &&
+      status !== "ACTIVITY_STATUS_CONSENSUS_NEEDED"
+    ) {
+      return activityData;
+    }
+    if (!this.config.onMfaRequired) return activityData;
+
+    const { mfaStatuses } = await this.getMfaStatus(
+      {
+        activityId: activityData.activity.id,
+        organizationId: activityData.activity.organizationId,
+      },
+      stampWith,
+    );
+    if (
+      status === "ACTIVITY_STATUS_CONSENSUS_NEEDED" &&
+      mfaStatuses.length === 0
+    ) {
+      return activityData;
+    }
+    const context: MfaContext = {
+      activityId: activityData.activity.id,
+      fingerprint: activityData.activity.fingerprint ?? "",
+      organizationId: activityData.activity.organizationId,
+      activityType: activityData.activity.type,
+      activityStatus: status as TActivityStatus,
+      mfaStatuses: mfaStatuses as MfaContext["mfaStatuses"],
+    };
+    await this.config.onMfaRequired(context);
+    return this.pollForCompletion(activityData.activity.id, stampWith);
+  }
+
   async request<TBodyType, TResponseType>(
     url: string,
     body: TBodyType,
@@ -209,6 +257,8 @@ export class ZeroXKeySDKClientBase {
       stampWith,
     );
 
+    activityData = await this.handleMfaIfNeeded(activityData, stampWith);
+
     // Poll if not in terminal status
     if (
       !TERMINAL_ACTIVITY_STATUSES.includes(
@@ -220,6 +270,8 @@ export class ZeroXKeySDKClientBase {
         stampWith,
       );
     }
+
+    activityData = await this.handleMfaIfNeeded(activityData, stampWith);
 
     return this.handleActivityResponse<TResponseType>(activityData, resultKey);
   }
@@ -484,6 +536,52 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  getAttestationDocument = async (
+    input: SdkTypes.TGetAttestationDocumentBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TGetAttestationDocumentResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/get_attestation",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampGetAttestationDocument = async (
+    input: SdkTypes.TGetAttestationDocumentBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl = this.config.apiBaseUrl + "/public/v1/query/get_attestation";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   getAuthenticator = async (
     input: SdkTypes.TGetAuthenticatorBody,
     stampWith?: StamperType,
@@ -561,52 +659,6 @@ export class ZeroXKeySDKClientBase {
     const session = await this.storageManager?.getActiveSession();
     const fullUrl =
       this.config.apiBaseUrl + "/public/v1/query/get_authenticators";
-    const body = {
-      ...input,
-      organizationId:
-        input.organizationId ??
-        session?.organizationId ??
-        this.config.organizationId,
-    };
-
-    const stringifiedBody = JSON.stringify(body);
-    const stamp = await activeStamper.stamp(stringifiedBody);
-    return {
-      body: stringifiedBody,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  getAttestationDocument = async (
-    input: SdkTypes.TGetAttestationDocumentBody,
-    stampWith?: StamperType,
-  ): Promise<SdkTypes.TGetAttestationDocumentResponse> => {
-    const session = await this.storageManager?.getActiveSession();
-    return this.request(
-      "/public/v1/query/get_attestation",
-      {
-        ...input,
-        organizationId:
-          input.organizationId ??
-          session?.organizationId ??
-          this.config.organizationId,
-      },
-      stampWith,
-    );
-  };
-
-  stampGetAttestationDocument = async (
-    input: SdkTypes.TGetAttestationDocumentBody,
-    stampWith?: StamperType,
-  ): Promise<TSignedRequest | undefined> => {
-    const activeStamper = this.getStamper(stampWith);
-    if (!activeStamper) {
-      return undefined;
-    }
-
-    const session = await this.storageManager?.getActiveSession();
-    const fullUrl = this.config.apiBaseUrl + "/public/v1/query/get_attestation";
     const body = {
       ...input,
       organizationId:
@@ -746,6 +798,145 @@ export class ZeroXKeySDKClientBase {
     const session = await this.storageManager?.getActiveSession();
     const fullUrl =
       this.config.apiBaseUrl + "/public/v1/query/get_latest_boot_proof";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  getMfaPolicies = async (
+    input: SdkTypes.TGetMfaPoliciesBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TGetMfaPoliciesResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/get_mfa_policies",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampGetMfaPolicies = async (
+    input: SdkTypes.TGetMfaPoliciesBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/get_mfa_policies";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  getMfaPolicy = async (
+    input: SdkTypes.TGetMfaPolicyBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TGetMfaPolicyResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/get_mfa_policy",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampGetMfaPolicy = async (
+    input: SdkTypes.TGetMfaPolicyBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl = this.config.apiBaseUrl + "/public/v1/query/get_mfa_policy";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  getMfaStatus = async (
+    input: SdkTypes.TGetMfaStatusBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TGetMfaStatusResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/get_mfa_status",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampGetMfaStatus = async (
+    input: SdkTypes.TGetMfaStatusBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl = this.config.apiBaseUrl + "/public/v1/query/get_mfa_status";
     const body = {
       ...input,
       organizationId:
@@ -1166,6 +1357,100 @@ export class ZeroXKeySDKClientBase {
     const session = await this.storageManager?.getActiveSession();
     const fullUrl =
       this.config.apiBaseUrl + "/public/v1/query/get_send_transaction_status";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  getSessionProfile = async (
+    input: SdkTypes.TGetSessionProfileBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TGetSessionProfileResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/get_session_profile",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampGetSessionProfile = async (
+    input: SdkTypes.TGetSessionProfileBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/get_session_profile";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  getSessionProfiles = async (
+    input: SdkTypes.TGetSessionProfilesBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TGetSessionProfilesResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/get_session_profiles",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampGetSessionProfiles = async (
+    input: SdkTypes.TGetSessionProfilesBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/get_session_profiles";
     const body = {
       ...input,
       organizationId:
@@ -2336,6 +2621,60 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  createMfaPolicy = async (
+    input: SdkTypes.TCreateMfaPolicyBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TCreateMfaPolicyResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/create_mfa_policy",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_CREATE_MFA_POLICY",
+      },
+      "createMfaPolicyResult",
+      stampWith,
+    );
+  };
+
+  stampCreateMfaPolicy = async (
+    input: SdkTypes.TCreateMfaPolicyBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/create_mfa_policy";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_CREATE_MFA_POLICY",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   createOauth2Credential = async (
     input: SdkTypes.TCreateOauth2CredentialBody,
     stampWith?: StamperType,
@@ -2756,6 +3095,60 @@ export class ZeroXKeySDKClientBase {
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_CREATE_READ_WRITE_SESSION_V2",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  createSessionProfile = async (
+    input: SdkTypes.TCreateSessionProfileBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TCreateSessionProfileResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/create_session_profile",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_CREATE_SESSION_PROFILE",
+      },
+      "createSessionProfileResult",
+      stampWith,
+    );
+  };
+
+  stampCreateSessionProfile = async (
+    input: SdkTypes.TCreateSessionProfileBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/create_session_profile";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_CREATE_SESSION_PROFILE",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -3296,6 +3689,60 @@ export class ZeroXKeySDKClientBase {
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_DELETE_INVITATION",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  deleteMfaPolicy = async (
+    input: SdkTypes.TDeleteMfaPolicyBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TDeleteMfaPolicyResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/delete_mfa_policy",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_DELETE_MFA_POLICY",
+      },
+      "deleteMfaPolicyResult",
+      stampWith,
+    );
+  };
+
+  stampDeleteMfaPolicy = async (
+    input: SdkTypes.TDeleteMfaPolicyBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/delete_mfa_policy";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_DELETE_MFA_POLICY",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -5345,6 +5792,59 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  stampLogin = async (
+    input: SdkTypes.TStampLoginBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TStampLoginResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/stamp_login",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_STAMP_LOGIN",
+      },
+      "stampLoginResult",
+      stampWith,
+    );
+  };
+
+  stampStampLogin = async (
+    input: SdkTypes.TStampLoginBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl = this.config.apiBaseUrl + "/public/v1/submit/stamp_login";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_STAMP_LOGIN",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   tronSendTransaction = async (
     input: SdkTypes.TTronSendTransactionBody,
     stampWith?: StamperType,
@@ -5388,59 +5888,6 @@ export class ZeroXKeySDKClientBase {
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_TRON_SEND_TRANSACTION",
-    };
-
-    const stringifiedBody = JSON.stringify(bodyWithType);
-    const stamp = await activeStamper.stamp(stringifiedBody);
-    return {
-      body: stringifiedBody,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  stampLogin = async (
-    input: SdkTypes.TStampLoginBody,
-    stampWith?: StamperType,
-  ): Promise<SdkTypes.TStampLoginResponse> => {
-    const { organizationId, timestampMs, ...rest } = input;
-    const session = await this.storageManager?.getActiveSession();
-
-    return this.activity(
-      "/public/v1/submit/stamp_login",
-      {
-        parameters: rest,
-        organizationId:
-          organizationId ??
-          session?.organizationId ??
-          this.config.organizationId,
-        timestampMs: timestampMs ?? String(Date.now()),
-        type: "ACTIVITY_TYPE_STAMP_LOGIN",
-      },
-      "stampLoginResult",
-      stampWith,
-    );
-  };
-
-  stampStampLogin = async (
-    input: SdkTypes.TStampLoginBody,
-    stampWith?: StamperType,
-  ): Promise<TSignedRequest | undefined> => {
-    const activeStamper = this.getStamper(stampWith);
-    if (!activeStamper) {
-      return undefined;
-    }
-
-    const { organizationId, timestampMs, ...parameters } = input;
-    const session = await this.storageManager?.getActiveSession();
-
-    const fullUrl = this.config.apiBaseUrl + "/public/v1/submit/stamp_login";
-    const bodyWithType = {
-      parameters,
-      organizationId:
-        organizationId ?? session?.organizationId ?? this.config.organizationId,
-      timestampMs: timestampMs ?? String(Date.now()),
-      type: "ACTIVITY_TYPE_STAMP_LOGIN",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -5496,6 +5943,60 @@ export class ZeroXKeySDKClientBase {
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_UPDATE_FIAT_ON_RAMP_CREDENTIAL",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  updateMfaPolicy = async (
+    input: SdkTypes.TUpdateMfaPolicyBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TUpdateMfaPolicyResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/update_mfa_policy",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_UPDATE_MFA_POLICY",
+      },
+      "updateMfaPolicyResult",
+      stampWith,
+    );
+  };
+
+  stampUpdateMfaPolicy = async (
+    input: SdkTypes.TUpdateMfaPolicyBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/update_mfa_policy";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_UPDATE_MFA_POLICY",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);

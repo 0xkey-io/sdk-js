@@ -5,6 +5,7 @@ import {
   init,
   withAsyncPolling,
   ZeroXKeyActivityError,
+  ZeroXKeyActivityAuthenticatorsNeededError,
 } from "../index";
 import { readFixture } from "../__fixtures__/shared";
 import type { TActivity } from "../shared";
@@ -183,6 +184,41 @@ test("`withAsyncPolling` should throw a rich error when activity is rejected", a
         "message": "Activity ee916c38-8151-460d-91c0-8bdbf5a9b20e was rejected",
       }
     `);
+  }
+
+  expect(fetch).toHaveBeenCalledTimes(expectedCallCount);
+});
+
+test("`withAsyncPolling` should throw AuthenticatorsNeeded and not treat MFA pause as success or failure", async () => {
+  const mutation = withAsyncPolling({
+    request: ZeroXKeyApi.createPrivateKeys,
+  });
+
+  const mockedFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+  const { expectedCallCount } = chainMockResponseSequence(mockedFetch, [
+    {
+      activity: {
+        status: "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED",
+        type: "ACTIVITY_TYPE_CREATE_PRIVATE_KEYS_V2",
+        id: "ee916c38-8151-460d-91c0-8bdbf5a9b20e",
+      },
+    },
+  ]);
+
+  try {
+    await mutation(sampleCreatePrivateKeysInput);
+    expect("the mutation above must throw").toEqual("an error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ZeroXKeyActivityAuthenticatorsNeededError);
+    expect(error).not.toBeInstanceOf(ZeroXKeyActivityError);
+    const richError = error as ZeroXKeyActivityAuthenticatorsNeededError;
+    expect(richError.activityStatus).toBe(
+      "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED",
+    );
+    expect(richError.message).toContain("Authenticators needed");
+    expect(richError.message.toLowerCase()).not.toContain("failed");
+    expect(richError.message.toLowerCase()).not.toContain("completed");
   }
 
   expect(fetch).toHaveBeenCalledTimes(expectedCallCount);

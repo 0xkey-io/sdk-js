@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "turnkey-alignment/sdk-attested-v1",
+  "header": "X-Stamp-Attested",
+  "headerEncoding": "base64url-unpadded-json",
+  "signatureInput": "exact-http-request-body-bytes",
+  "bodyUtf8": "{\"organizationId\":\"org_test\",\"timestampMs\":\"1\"}",
+  "publicKey": "045ef9",
+  "highDerHex": "3046022100ca6d07d75a3db93e630fb55244c18ecfeea84e07ccbe0614e740f675ddf783ff022100dfaf338b059281886c6852da80d3f72448bfd2939e5ae763c7d42eacfc26ed61",
+  "lowDerHex": "3045022100ca6d07d75a3db93e630fb55244c18ecfeea84e07ccbe0614e740f675ddf783ff02202050cc73fa6d7e789397ad257f2c08db7427281a08bcb7212be59c16003c37f0"
+}

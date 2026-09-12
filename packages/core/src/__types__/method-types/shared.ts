@@ -14,6 +14,7 @@ import type {
   v1AppProof,
 } from "@0xkey-io/sdk-types";
 import type { QuorumManifestSetAnchor } from "@0xkey-io/crypto";
+import type { ZeroXKeyHttpClientConfig } from "../config";
 import type {
   CreateSubOrgParams,
   OtpType,
@@ -31,6 +32,13 @@ export type CreateHttpClientParams = {
   authProxyUrl?: string | undefined;
   authProxyConfigId?: string | undefined;
   defaultStamperType?: StamperType | undefined;
+  onMfaRequired?: ZeroXKeyHttpClientConfig["onMfaRequired"];
+};
+
+export type OverrideAttestedStamperParams = {
+  verificationToken?: string | undefined;
+  oidcToken?: string | undefined;
+  publicKey?: string | undefined;
 };
 
 export type CreatePasskeyParams = {

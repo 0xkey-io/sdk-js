@@ -33,6 +33,30 @@ export class ZeroXKeyActivityError extends Error {
   }
 }
 
+export class ZeroXKeyActivityAuthenticatorsNeededError extends Error {
+  activityId: TActivityId | undefined;
+  activityStatus: TActivityStatus | undefined;
+  activityType: TActivityType | undefined;
+  cause: Error | undefined;
+
+  constructor(input: {
+    message: string;
+    cause?: Error | undefined;
+    activityId?: TActivityId | undefined;
+    activityStatus?: TActivityStatus | undefined;
+    activityType?: TActivityType | undefined;
+  }) {
+    const { message, cause, activityId, activityStatus, activityType } = input;
+    super(message);
+
+    this.name = "ZeroXKeyActivityAuthenticatorsNeededError";
+    this.activityId = activityId ?? undefined;
+    this.activityStatus = activityStatus ?? undefined;
+    this.activityType = activityType ?? undefined;
+    this.cause = cause ?? undefined;
+  }
+}
+
 export class ZeroXKeyActivityConsensusNeededError extends Error {
   activityId: TActivityId | undefined;
   activityStatus: TActivityStatus | undefined;
@@ -89,6 +113,14 @@ export function assertActivityCompleted(activity: TActivity) {
       message: "Activity requires consensus",
       activityId,
       activityStatus,
+    });
+  }
+
+  if ((activityStatus as string) === "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED") {
+    throw new ZeroXKeyActivityAuthenticatorsNeededError({
+      message: "Activity requires additional authenticators",
+      activityId,
+      activityStatus: activityStatus as TActivityStatus,
     });
   }
 

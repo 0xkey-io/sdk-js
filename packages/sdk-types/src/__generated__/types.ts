@@ -84,7 +84,8 @@ export type externalactivityv1PolicyEvaluation = {
   voteId: string;
   /** Detailed evaluation result for each Policy that was run. */
   policyEvaluations: immutablecommonv1PolicyEvaluation[];
-  createdAt: externaldatav1Timestamp;
+  /** An ISO 8601 timestamp indicating when the PolicyEvaluation was created. */
+  createdAt: string;
 };
 
 export type externaldatav1Address = {
@@ -106,7 +107,8 @@ export type externaldatav1Quorum = {
 };
 
 export type externaldatav1SignatureScheme =
-  "SIGNATURE_SCHEME_EPHEMERAL_KEY_P256";
+  | "SIGNATURE_SCHEME_UNSPECIFIED"
+  | "SIGNATURE_SCHEME_EPHEMERAL_KEY_P256";
 
 export type externaldatav1SmartContractInterface = {
   /** The Organization the Smart Contract Interface belongs to. */
@@ -143,13 +145,49 @@ export type immutablecommonv1PolicyEvaluation = {
 };
 
 export type protobufAny = {
+  /** A URL/resource name that uniquely identifies the type of the serialized
+protocol buffer message. This string must contain at least
+one "/" character. The last segment of the URL's path must represent
+the fully qualified name of the type (as in
+`path/google.protobuf.Duration`). The name should be in a canonical form
+(e.g., leading "." is not accepted).
+
+In practice, teams usually precompile into the binary all types that they
+expect it to use in the context of Any. However, for URLs which use the
+scheme `http`, `https`, or no scheme, one can optionally set up a type
+server that maps type URLs to message definitions as follows:
+
+* If no scheme is provided, `https` is assumed.
+* An HTTP GET on the URL must yield a [google.protobuf.Type][]
+  value in binary format, or produce an error.
+* Applications are allowed to cache lookup results based on the
+  URL, or have them precompiled into a binary to avoid any
+  lookup. Therefore, binary compatibility needs to be preserved
+  on changes to types. (Use versioned type names to manage
+  breaking changes.)
+
+Note: this functionality is not currently available in the official
+protobuf release, and it is not used for type URLs beginning with
+type.googleapis.com. As of May 2023, there are no widely used type server
+implementations and no plans to implement one.
+
+Schemes other than `http`, `https` (or the empty scheme) might be
+used with implementation specific semantics. */
   "@type"?: string;
   [key: string]: any;
 };
 
 export type rpcStatus = {
+  /** The status code, which should be an enum value of
+[google.rpc.Code][google.rpc.Code]. */
   code?: number;
+  /** A developer-facing error message, which should be in English. Any
+user-facing error message should be localized and sent in the
+[google.rpc.Status.details][google.rpc.Status.details] field, or localized
+by the client. */
   message?: string;
+  /** A list of messages that carry the error details.  There is a common set of
+message types for APIs to use. */
   details?: protobufAny[];
 };
 
@@ -158,7 +196,7 @@ export type v1AcceptInvitationIntent = {
   invitationId: string;
   /** Unique identifier for a given User. */
   userId: string;
-  /** WebAuthN hardware devices that can be used to log in to the ZeroXKey web app. */
+  /** WebAuthN hardware devices that can be used to log in to the 0xkey web app. */
   authenticator: v1AuthenticatorParams;
 };
 
@@ -167,7 +205,7 @@ export type v1AcceptInvitationIntentV2 = {
   invitationId: string;
   /** Unique identifier for a given User. */
   userId: string;
-  /** WebAuthN hardware devices that can be used to log in to the ZeroXKey web app. */
+  /** WebAuthN hardware devices that can be used to log in to the 0xkey web app. */
   authenticator: v1AuthenticatorParamsV2;
 };
 
@@ -179,6 +217,7 @@ export type v1AcceptInvitationResult = {
 };
 
 export type v1AccessType =
+  | "ACCESS_TYPE_UNSPECIFIED"
   | "ACCESS_TYPE_WEB"
   | "ACCESS_TYPE_API"
   | "ACCESS_TYPE_ALL";
@@ -192,7 +231,7 @@ export type v1Activity = {
   status: v1ActivityStatus;
   /** Type of Activity, such as Add User, or Sign Transaction. */
   type: v1ActivityType;
-  /** Intent object crafted by ZeroXKey based on the user request, used to assess the permissibility of an action. */
+  /** Intent object crafted by 0xkey based on the user request, used to assess the permissibility of an action. */
   intent: v1Intent;
   /** Result of the intended action. */
   result: v1Result;
@@ -204,26 +243,33 @@ export type v1Activity = {
   fingerprint: string;
   canApprove: boolean;
   canReject: boolean;
+  /** Timestamp of when the Activity was created. */
   createdAt: externaldatav1Timestamp;
+  /** Timestamp of when the Activity was last updated. */
   updatedAt: externaldatav1Timestamp;
   /** Failure reason of the intended action. */
   failure?: rpcStatus;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
 };
 
 export type v1ActivityResponse = {
-  /** An action that can be taken within the ZeroXKey infrastructure. */
+  /** An action that can be taken within the 0xkey infrastructure. */
   activity: v1Activity;
 };
 
 export type v1ActivityStatus =
+  | "ACTIVITY_STATUS_UNSPECIFIED"
   | "ACTIVITY_STATUS_CREATED"
   | "ACTIVITY_STATUS_PENDING"
   | "ACTIVITY_STATUS_COMPLETED"
   | "ACTIVITY_STATUS_FAILED"
   | "ACTIVITY_STATUS_CONSENSUS_NEEDED"
-  | "ACTIVITY_STATUS_REJECTED";
+  | "ACTIVITY_STATUS_REJECTED"
+  | "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED";
 
 export type v1ActivityType =
+  | "ACTIVITY_TYPE_UNSPECIFIED"
   | "ACTIVITY_TYPE_CREATE_API_KEYS"
   | "ACTIVITY_TYPE_CREATE_USERS"
   | "ACTIVITY_TYPE_CREATE_PRIVATE_KEYS"
@@ -341,7 +387,6 @@ export type v1ActivityType =
   | "ACTIVITY_TYPE_CREATE_TVC_DEPLOYMENT"
   | "ACTIVITY_TYPE_CREATE_TVC_MANIFEST_APPROVALS"
   | "ACTIVITY_TYPE_SOL_SEND_TRANSACTION"
-  | "ACTIVITY_TYPE_TRON_SEND_TRANSACTION"
   | "ACTIVITY_TYPE_INIT_OTP_V3"
   | "ACTIVITY_TYPE_VERIFY_OTP_V2"
   | "ACTIVITY_TYPE_OTP_LOGIN_V2"
@@ -351,9 +396,19 @@ export type v1ActivityType =
   | "ACTIVITY_TYPE_CREATE_USERS_V4"
   | "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT"
   | "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT"
-  | "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT";
+  | "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT"
+  | "ACTIVITY_TYPE_SOL_SEND_RAW_TRANSACTION"
+  | "ACTIVITY_TYPE_TRON_SEND_TRANSACTION"
+  | "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER"
+  | "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER"
+  | "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER"
+  | "ACTIVITY_TYPE_CREATE_MFA_POLICY"
+  | "ACTIVITY_TYPE_UPDATE_MFA_POLICY"
+  | "ACTIVITY_TYPE_DELETE_MFA_POLICY"
+  | "ACTIVITY_TYPE_CREATE_SESSION_PROFILE";
 
 export type v1AddressFormat =
+  | "ADDRESS_FORMAT_UNSPECIFIED"
   | "ADDRESS_FORMAT_UNCOMPRESSED"
   | "ADDRESS_FORMAT_COMPRESSED"
   | "ADDRESS_FORMAT_ETHEREUM"
@@ -392,7 +447,7 @@ export type v1AddressFormat =
   | "ADDRESS_FORMAT_XRP";
 
 export type v1ApiKey = {
-  /** A User credential that can be used to authenticate to ZeroXKey. */
+  /** A User credential that can be used to authenticate to 0xkey. */
   credential: externaldatav1Credential;
   /** Unique identifier for a given API Key. */
   apiKeyId: string;
@@ -405,6 +460,7 @@ export type v1ApiKey = {
 };
 
 export type v1ApiKeyCurve =
+  | "API_KEY_CURVE_UNSPECIFIED"
   | "API_KEY_CURVE_P256"
   | "API_KEY_CURVE_SECP256K1"
   | "API_KEY_CURVE_ED25519";
@@ -442,15 +498,6 @@ export type v1AppProof = {
   signature: string;
 };
 
-export type v1AppStatus = {
-  /** Unique identifier for this TVC App */
-  appId: string;
-  /** List of deployment statuses for this app */
-  deployments: v1DeploymentStatus[];
-  /** The deployment ID currently serving traffic for this app */
-  targetedDeploymentId: string;
-};
-
 export type v1ApproveActivityIntent = {
   /** An artifact verifying a User's action. */
   fingerprint: string;
@@ -466,41 +513,6 @@ export type v1ApproveActivityRequest = {
   generateAppProofs?: boolean;
 };
 
-export type v1AssetBalance = {
-  /** The caip-19 asset identifier */
-  caip19?: string;
-  /** The asset symbol */
-  symbol?: string;
-  /** The balance in atomic units */
-  balance?: string;
-  /** The number of decimals this asset uses */
-  decimals?: number;
-  /** Normalized balance values for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. Use the balance field instead. */
-  display?: v1AssetBalanceDisplay;
-  /** The asset name */
-  name?: string;
-};
-
-export type v1AssetBalanceDisplay = {
-  /** USD value for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. */
-  usd?: string;
-  /** Normalized crypto value for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. */
-  crypto?: string;
-};
-
-export type v1AssetMetadata = {
-  /** The caip-19 asset identifier */
-  caip19?: string;
-  /** The asset symbol */
-  symbol?: string;
-  /** The number of decimals this asset uses */
-  decimals?: number;
-  /** The url of the asset logo */
-  logoUrl?: string;
-  /** The asset name */
-  name?: string;
-};
-
 export type v1Attestation = {
   /** The cbor encoded then base64 url encoded id of the credential. */
   credentialId: string;
@@ -512,6 +524,25 @@ export type v1Attestation = {
   transports: v1AuthenticatorTransport[];
 };
 
+export type v1AuthenticationMethod = {
+  type: v1AuthenticationType;
+  id?: string;
+};
+
+export type v1AuthenticationMethodParams = {
+  type: v1AuthenticationType;
+  id?: string;
+};
+
+export type v1AuthenticationType =
+  | "AUTHENTICATION_TYPE_UNSPECIFIED"
+  | "AUTHENTICATION_TYPE_EMAIL_OTP"
+  | "AUTHENTICATION_TYPE_SMS_OTP"
+  | "AUTHENTICATION_TYPE_PASSKEY"
+  | "AUTHENTICATION_TYPE_API_KEY"
+  | "AUTHENTICATION_TYPE_OAUTH"
+  | "AUTHENTICATION_TYPE_SESSION";
+
 export type v1Authenticator = {
   /** Types of transports that may be used by an Authenticator (e.g., USB, NFC, BLE). */
   transports: v1AuthenticatorTransport[];
@@ -522,7 +553,7 @@ export type v1Authenticator = {
   credentialId: string;
   /** The type of Authenticator device. */
   model: string;
-  /** A User credential that can be used to authenticate to ZeroXKey. */
+  /** A User credential that can be used to authenticate to 0xkey. */
   credential: externaldatav1Credential;
   /** Unique identifier for a given Authenticator. */
   authenticatorId: string;
@@ -559,6 +590,7 @@ export type v1AuthenticatorParamsV2 = {
 };
 
 export type v1AuthenticatorTransport =
+  | "AUTHENTICATOR_TRANSPORT_UNSPECIFIED"
   | "AUTHENTICATOR_TRANSPORT_BLE"
   | "AUTHENTICATOR_TRANSPORT_INTERNAL"
   | "AUTHENTICATOR_TRANSPORT_NFC"
@@ -598,7 +630,9 @@ export type v1ClientSignature = {
   signature: string;
 };
 
-export type v1ClientSignatureScheme = "CLIENT_SIGNATURE_SCHEME_API_P256";
+export type v1ClientSignatureScheme =
+  | "CLIENT_SIGNATURE_SCHEME_UNSPECIFIED"
+  | "CLIENT_SIGNATURE_SCHEME_API_P256";
 
 export type v1Config = {
   features?: v1Feature[];
@@ -632,6 +666,16 @@ export type v1CreateApiKeysRequest = {
 export type v1CreateApiKeysResult = {
   /** A list of API Key IDs. */
   apiKeyIds: string[];
+};
+
+export type v1CreateApiOnlyUsersIntent = {
+  /** A list of API-only Users to create. */
+  apiOnlyUsers: v1ApiOnlyUserParams[];
+};
+
+export type v1CreateApiOnlyUsersResult = {
+  /** A list of API-only User IDs. */
+  userIds: string[];
 };
 
 export type v1CreateAuthenticatorsIntent = {
@@ -713,6 +757,26 @@ export type v1CreateInvitationsResult = {
   invitationIds: string[];
 };
 
+export type v1CreateMfaPolicyIntent = {
+  userId: string;
+  mfaPolicyName: string;
+  condition: string;
+  requiredAuthenticationMethods: v1RequiredAuthenticationMethodParams[];
+  order: number;
+  notes?: string;
+};
+
+export type v1CreateMfaPolicyRequest = {
+  type: string;
+  timestampMs: string;
+  organizationId: string;
+  parameters: v1CreateMfaPolicyIntent;
+};
+
+export type v1CreateMfaPolicyResult = {
+  mfaPolicyId: string;
+};
+
 export type v1CreateOauth2CredentialIntent = {
   /** The OAuth 2.0 provider */
   provider: v1Oauth2Provider;
@@ -771,6 +835,11 @@ export type v1CreateOauthProvidersResultV2 = {
   providerIds: string[];
 };
 
+export type v1CreateOidcProviderResult = {
+  /** Unique identifier for the newly registered OIDC provider. */
+  providerId: string;
+};
+
 export type v1CreateOrganizationIntent = {
   /** Human-readable name for an Organization. */
   organizationName: string;
@@ -787,10 +856,20 @@ export type v1CreateOrganizationIntentV2 = {
   organizationName: string;
   /** The root user's email address. */
   rootEmail: string;
-  /** The root user's Authenticator. */
-  rootAuthenticator: v1AuthenticatorParamsV2;
+  /** The root user's Authenticator (fresh WebAuthn attestation). */
+  rootAuthenticator?: v1AuthenticatorParamsV2;
   /** Unique identifier for the root user object. */
   rootUserId?: string;
+  /** INTERNAL ONLY: import an already-registered authenticator's public key
+(no attestation) as this new root organization's sole root authenticator.
+Used for secondary-root-organization creation, where the same physical
+passkey already exists under another root org of the same tenant — see
+docs/strategy/billing/09-multi-org-billing.md §3.3. Coordinator rejects
+this field unless the call carries a valid internal M2M token
+(`SECONDARY_ORG_IMPORT_TOKEN`); the public API Gateway has no such
+token, so external callers can never reach this path even though the
+field is visible on the wire. */
+  importedRootAuthenticator?: v1ImportedRootAuthenticatorParams;
 };
 
 export type v1CreateOrganizationResult = {
@@ -1010,6 +1089,24 @@ export type v1CreateReadWriteSessionResultV2 = {
   credentialBundle: string;
 };
 
+export type v1CreateSessionProfileIntent = {
+  sessionProfileName: string;
+  scope: string;
+  expirationSeconds?: string;
+  notes?: string;
+};
+
+export type v1CreateSessionProfileRequest = {
+  type: string;
+  timestampMs: string;
+  organizationId: string;
+  parameters: v1CreateSessionProfileIntent;
+};
+
+export type v1CreateSessionProfileResult = {
+  sessionProfileId: string;
+};
+
 export type v1CreateSmartContractInterfaceIntent = {
   /** Corresponding contract address or program ID */
   smartContractAddress: string;
@@ -1153,6 +1250,8 @@ export type v1CreateSubOrganizationIntentV8 = {
   verificationToken?: string;
   /** Optional signature proving authorization for this sub-organization creation. The signature is over the verification token ID and the root user parameters for the root user associated with the verification token. Only required if a public key was provided during the verification step. */
   clientSignature?: v1ClientSignature;
+  /** Requests a Notarizer-issued immutable protection profile. Sponsor powers and exit policy are protocol-fixed and cannot be supplied by callers. */
+  organizationProtectionProfile?: v1OrganizationProtectionProfileRequest;
 };
 
 export type v1CreateSubOrganizationRequest = {
@@ -1220,8 +1319,8 @@ export type v1CreateTvcAppIntent = {
   shareSetId?: string;
   /** Configuration to create a new TVC operator set, used as the Share Set for this TVC application. If left empty, a Share Set ID is required */
   shareSetParams?: v1TvcOperatorSetParams;
-  /** Enables network egress for this TVC app. Default if not provided: false. */
-  enableEgress?: boolean;
+  /** Enables external connectivity for this TVC app. Default if not provided: false. */
+  externalConnectivity?: boolean;
 };
 
 export type v1CreateTvcAppResult = {
@@ -1248,18 +1347,14 @@ export type v1CreateTvcDeploymentIntent = {
   pivotArgs: string[];
   /** Digest of the pivot binary in the pivot container. This value will be inserted in the QOS manifest to ensure application integrity. */
   expectedPivotDigest: string;
+  /** URL of the container containing the host binary */
+  hostContainerImageUrl: string;
+  /** Location of the binary inside the host container */
+  hostPath: string;
+  /** Arguments to pass to the host binary at startup. Encoded as a list of strings, for example ["--foo", "bar"] */
+  hostArgs: string[];
   /** Optional nonce to ensure uniqueness of the deployment manifest. If not provided, it defaults to the current Unix timestamp in seconds. */
   nonce?: number;
-  /** Optional encrypted pull secret to authorize ZeroXKey to pull the pivot container image. If your image is public, leave this empty. */
-  pivotContainerEncryptedPullSecret?: string;
-  /** Optional flag to indicate whether to deploy the TVC app in debug mode, which includes additional logging and debugging tools. Default is false. */
-  debugMode?: boolean;
-  /** Heath check type (TVC_HEALTH_CHECK_TYPE_HTTP or TVC_HEALTH_CHECK_TYPE_GRPC). HTTP health checks are made with a GET request on /health, and gRPC health checks follow the standard gRPC health checking protocol. */
-  healthCheckType: v1TvcHealthCheckType;
-  /** Port to use for health checks. */
-  healthCheckPort: number;
-  /** Port to use for public ingress. */
-  publicIngressPort: number;
 };
 
 export type v1CreateTvcDeploymentResult = {
@@ -1390,11 +1485,28 @@ export type v1CreateWalletResult = {
   addresses: string[];
 };
 
+export type v1CreateWebhookEndpointIntent = {
+  /** The destination URL for webhook deliveries. */
+  url: string;
+  /** Human-readable name for the webhook endpoint. */
+  name: string;
+  /** Event subscriptions. If empty, the endpoint receives all event types. */
+  subscriptions?: v1WebhookSubscriptionParams[];
+};
+
+export type v1CreateWebhookEndpointResult = {
+  /** Unique identifier for the created Webhook Endpoint. */
+  endpointId: string;
+  /** The created webhook endpoint data, including the signing public key. */
+  webhookEndpoint: v1WebhookEndpointData;
+};
+
 export type v1CredPropsAuthenticationExtensionsClientOutputs = {
   rk: boolean;
 };
 
 export type v1CredentialType =
+  | "CREDENTIAL_TYPE_UNSPECIFIED"
   | "CREDENTIAL_TYPE_WEBAUTHN_AUTHENTICATOR"
   | "CREDENTIAL_TYPE_API_KEY_P256"
   | "CREDENTIAL_TYPE_RECOVER_USER_KEY_P256"
@@ -1406,7 +1518,11 @@ export type v1CredentialType =
   | "CREDENTIAL_TYPE_OAUTH_KEY_P256"
   | "CREDENTIAL_TYPE_LOGIN";
 
-export type v1Curve = "CURVE_SECP256K1" | "CURVE_ED25519" | "CURVE_P256";
+export type v1Curve =
+  | "CURVE_UNSPECIFIED"
+  | "CURVE_SECP256K1"
+  | "CURVE_ED25519"
+  | "CURVE_P256";
 
 export type v1CustomRevertError = {
   /** The name of the custom error. */
@@ -1499,6 +1615,22 @@ export type v1DeleteInvitationResult = {
   invitationId: string;
 };
 
+export type v1DeleteMfaPolicyIntent = {
+  userId: string;
+  mfaPolicyId: string;
+};
+
+export type v1DeleteMfaPolicyRequest = {
+  type: string;
+  timestampMs: string;
+  organizationId: string;
+  parameters: v1DeleteMfaPolicyIntent;
+};
+
+export type v1DeleteMfaPolicyResult = {
+  mfaPolicyId: string;
+};
+
 export type v1DeleteOauth2CredentialIntent = {
   /** The ID of the OAuth 2.0 credential to delete */
   oauth2CredentialId: string;
@@ -1538,6 +1670,11 @@ export type v1DeleteOauthProvidersRequest = {
 
 export type v1DeleteOauthProvidersResult = {
   /** A list of unique identifiers for Oauth Providers */
+  providerIds: string[];
+};
+
+export type v1DeleteOidcProviderResult = {
+  /** A list of unique identifiers for OIDC providers that were removed. */
   providerIds: string[];
 };
 
@@ -1761,15 +1898,14 @@ export type v1DeleteWalletsResult = {
   walletIds: string[];
 };
 
-export type v1DeploymentStatus = {
-  /** Unique identifier for this deployment (corresponds to k8s deployment label) */
-  deploymentId: string;
-  /** Number of ready replicas */
-  readyReplicas: number;
-  /** Desired number of replicas */
-  desiredReplicas: number;
-  /** Last time this deployment was updated */
-  lastUpdatedTime: externaldatav1Timestamp;
+export type v1DeleteWebhookEndpointIntent = {
+  /** Unique identifier of the webhook endpoint to delete. */
+  endpointId: string;
+};
+
+export type v1DeleteWebhookEndpointResult = {
+  /** Unique identifier for the deleted Webhook Endpoint. */
+  endpointId: string;
 };
 
 export type v1DisableAuthProxyIntent = {};
@@ -1784,7 +1920,7 @@ export type v1DisablePrivateKeyResult = {
   privateKeyId: string;
 };
 
-export type v1Effect = "EFFECT_ALLOW" | "EFFECT_DENY";
+export type v1Effect = "EFFECT_UNSPECIFIED" | "EFFECT_ALLOW" | "EFFECT_DENY";
 
 export type v1EmailAuthCustomizationParams = {
   /** The name of the application. This field is required and will be used in email notifications if an email template is not provided. */
@@ -1877,6 +2013,8 @@ export type v1EmailAuthResult = {
   userId: string;
   /** Unique identifier for the created API key. */
   apiKeyId: string;
+  /** HPKE-encrypted credential bundle. Present only in dev/console mailer mode. */
+  credentialBundle?: string;
 };
 
 export type v1EmailCustomizationParams = {
@@ -1907,11 +2045,8 @@ export type v1EnableAuthProxyIntent = {};
 export type v1EnableAuthProxyResult = {
   /** A User ID with permission to initiate authentication. */
   userId: string;
-};
-
-export type v1EthFailureDetails = {
-  /** Ethereum revert chain, ordered from outermost to innermost. */
-  revertChain?: v1RevertChainEntry[];
+  /** The proxy signing key generated by the Notarizer (dev: plaintext hex, prod: HPKE-encrypted). */
+  encryptedApiKey: string;
 };
 
 export type v1EthSendRawTransactionIntent = {
@@ -1919,6 +2054,10 @@ export type v1EthSendRawTransactionIntent = {
   signedTransaction: string;
   /** CAIP-2 chain ID (e.g., 'eip155:1' for Ethereum mainnet). */
   caip2: string;
+  /** Optional reservation_id returned by prepare_eth_transaction; when set, the server promotes that exact nonce reservation instead of matching by (caip2, from, nonce). */
+  reservationId?: string;
+  /** Optional send_transaction_status_id of an in-flight transaction this raw send replaces or cancels (same nonce, higher fee). */
+  replacesStatusId?: string;
 };
 
 export type v1EthSendRawTransactionResult = {
@@ -1939,7 +2078,7 @@ export type v1EthSendTransactionIntent = {
   value?: string;
   /** Hex-encoded call data for contract interactions. */
   data?: string;
-  /** Transaction nonce, for EIP-1559 and ZeroXKey Gas Station authorizations. */
+  /** Transaction nonce, for EIP-1559 and 0xkey Gas Station authorizations. */
   nonce?: string;
   /** Maximum amount of gas to use for this transaction, for EIP-1559 transactions. */
   gasLimit?: string;
@@ -1949,6 +2088,10 @@ export type v1EthSendTransactionIntent = {
   maxPriorityFeePerGas?: string;
   /** The gas station delegate contract nonce. Only used when sponsor=true. Include this if you want maximal security posture. */
   gasStationNonce?: string;
+  /** EIP-712 deadline (unix seconds, uint32 decimal string) the EOA signed into the sponsored Execution intent. Required when sponsor=true. */
+  deadline?: string;
+  /** 65-byte (r || s || v) EIP-712 signature the EOA produced over the sponsored Execution intent (Phase 1, signed client-side). Hex with 0x prefix. Required when sponsor=true. */
+  userIntentSignature?: string;
 };
 
 export type v1EthSendTransactionRequest = {
@@ -2051,6 +2194,7 @@ export type v1Feature = {
 };
 
 export type v1FeatureName =
+  | "FEATURE_NAME_UNSPECIFIED"
   | "FEATURE_NAME_ROOT_USER_EMAIL_RECOVERY"
   | "FEATURE_NAME_WEBAUTHN_ORIGINS"
   | "FEATURE_NAME_EMAIL_AUTH"
@@ -2058,10 +2202,10 @@ export type v1FeatureName =
   | "FEATURE_NAME_WEBHOOK"
   | "FEATURE_NAME_SMS_AUTH"
   | "FEATURE_NAME_OTP_EMAIL_AUTH"
-  | "FEATURE_NAME_AUTH_PROXY"
-  | "FEATURE_NAME_SOLANA_RENT_PREFUND_ENABLED";
+  | "FEATURE_NAME_AUTH_PROXY";
 
 export type v1FiatOnRampBlockchainNetwork =
+  | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_UNSPECIFIED"
   | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_BITCOIN"
   | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_ETHEREUM"
   | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_SOLANA"
@@ -2089,12 +2233,14 @@ export type v1FiatOnRampCredential = {
 };
 
 export type v1FiatOnRampCryptoCurrency =
+  | "FIAT_ON_RAMP_CRYPTO_CURRENCY_UNSPECIFIED"
   | "FIAT_ON_RAMP_CRYPTO_CURRENCY_BTC"
   | "FIAT_ON_RAMP_CRYPTO_CURRENCY_ETH"
   | "FIAT_ON_RAMP_CRYPTO_CURRENCY_SOL"
   | "FIAT_ON_RAMP_CRYPTO_CURRENCY_USDC";
 
 export type v1FiatOnRampCurrency =
+  | "FIAT_ON_RAMP_CURRENCY_UNSPECIFIED"
   | "FIAT_ON_RAMP_CURRENCY_AUD"
   | "FIAT_ON_RAMP_CURRENCY_BGN"
   | "FIAT_ON_RAMP_CURRENCY_BRL"
@@ -2131,6 +2277,7 @@ export type v1FiatOnRampCurrency =
   | "FIAT_ON_RAMP_CURRENCY_ZAR";
 
 export type v1FiatOnRampPaymentMethod =
+  | "FIAT_ON_RAMP_PAYMENT_METHOD_UNSPECIFIED"
   | "FIAT_ON_RAMP_PAYMENT_METHOD_CREDIT_DEBIT_CARD"
   | "FIAT_ON_RAMP_PAYMENT_METHOD_APPLE_PAY"
   | "FIAT_ON_RAMP_PAYMENT_METHOD_GBP_BANK_TRANSFER"
@@ -2146,6 +2293,7 @@ export type v1FiatOnRampPaymentMethod =
   | "FIAT_ON_RAMP_PAYMENT_METHOD_ACH_BANK_ACCOUNT";
 
 export type v1FiatOnRampProvider =
+  | "FIAT_ON_RAMP_PROVIDER_UNSPECIFIED"
   | "FIAT_ON_RAMP_PROVIDER_COINBASE"
   | "FIAT_ON_RAMP_PROVIDER_MOONPAY";
 
@@ -2207,6 +2355,18 @@ export type v1GetAppProofsResponse = {
   appProofs: v1AppProof[];
 };
 
+export type v1GetAttestationDocumentRequest = {
+  /** Unique identifier for a given organization. */
+  organizationId: string;
+  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+  enclaveType: string;
+};
+
+export type v1GetAttestationDocumentResponse = {
+  /** Raw (CBOR-encoded) attestation document. */
+  attestationDocument: string;
+};
+
 export type v1GetAuthenticatorRequest = {
   /** Unique identifier for a given organization. */
   organizationId: string;
@@ -2231,22 +2391,6 @@ export type v1GetAuthenticatorsResponse = {
   authenticators: v1Authenticator[];
 };
 
-export type v1GetAttestationDocumentRequest = {
-  /** Unique identifier for a given organization. */
-  organizationId: string;
-  /**
-   * Enclave app to attest. Accepted values (case-insensitive): signer; notarizer;
-   * tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy.
-   * Turnkey alias `ump` maps to 0xkey `policy-engine`.
-   */
-  enclaveType: string;
-};
-
-export type v1GetAttestationDocumentResponse = {
-  /** Raw (CBOR-encoded) attestation document. */
-  attestationDocument: string;
-};
-
 export type v1GetBootProofRequest = {
   /** Unique identifier for a given Organization. */
   organizationId: string;
@@ -2266,6 +2410,16 @@ export type v1GetGasUsageResponse = {
   windowLimitUsd: string;
   /** The total gas usage (in USD) of all sponsored transactions processed over the last `window_duration_minutes` */
   usageUsd: string;
+  /** The native-currency spend cap per window in wei. '0' = uncapped. This is the ENFORCED cap (no price oracle required). */
+  windowLimitNative?: string;
+  /** Total native-currency gas spent (wei) over the window, from confirmed on-chain fees. */
+  usageNative?: string;
+  /** Whether the native spend cap is enforced. False (or no config) = uncapped. */
+  enabled?: boolean;
+  /** The Solana native-currency spend cap per window in lamports. '0' = uncapped. Parallel ENFORCED cap to window_limit_native, scoped to Solana (solana:*) usage. */
+  windowLimitLamports?: string;
+  /** Total Solana native-currency gas spent (lamports) over the window, from confirmed on-chain fees. */
+  usageLamports?: string;
 };
 
 export type v1GetLatestBootProofRequest = {
@@ -2275,12 +2429,41 @@ export type v1GetLatestBootProofRequest = {
   appName: string;
 };
 
+export type v1GetMfaPoliciesRequest = {
+  organizationId: string;
+  userId: string;
+};
+
+export type v1GetMfaPoliciesResponse = {
+  mfaPolicies: v1MfaPolicy[];
+};
+
+export type v1GetMfaPolicyRequest = {
+  organizationId: string;
+  userId: string;
+  mfaPolicyId: string;
+};
+
+export type v1GetMfaPolicyResponse = {
+  mfaPolicy: v1MfaPolicy;
+};
+
+export type v1GetMfaStatusRequest = {
+  organizationId: string;
+  activityId: string;
+  userId?: string;
+};
+
+export type v1GetMfaStatusResponse = {
+  mfaStatuses: v1MfaStatus[];
+};
+
 export type v1GetNoncesRequest = {
   /** Unique identifier for a given Organization. */
   organizationId: string;
   /** The Ethereum address to query nonces for. */
   address: string;
-  /** CAIP-2 chain ID (e.g., 'eip155:1' for Ethereum mainnet). */
+  /** The network identifier in CAIP-2 format (e.g., 'eip155:1' for Ethereum mainnet). */
   caip2: string;
   /** Whether to fetch the standard on-chain nonce. */
   nonce?: boolean;
@@ -2410,13 +2593,30 @@ export type v1GetSendTransactionStatusResponse = {
   /** Ethereum-specific transaction status. */
   eth?: v1EthSendTransactionStatus;
   /** Solana-specific transaction status. */
-  solana?: v1SolanaSendTransactionStatus;
+  sol?: v1SolSendTransactionStatus;
   /** Tron-specific transaction status. */
   tron?: v1TronSendTransactionStatus;
   /** The error encountered when broadcasting or confirming the transaction, if any. */
   txError?: string;
   /** Structured error information including revert details, if available. */
   error?: v1TxError;
+};
+
+export type v1GetSessionProfileRequest = {
+  organizationId: string;
+  sessionProfileId: string;
+};
+
+export type v1GetSessionProfileResponse = {
+  sessionProfile: v1SessionProfile;
+};
+
+export type v1GetSessionProfilesRequest = {
+  organizationId: string;
+};
+
+export type v1GetSessionProfilesResponse = {
+  sessionProfiles: v1SessionProfile[];
 };
 
 export type v1GetSmartContractInterfaceRequest = {
@@ -2566,6 +2766,7 @@ export type v1GetWhoamiResponse = {
 };
 
 export type v1HashFunction =
+  | "HASH_FUNCTION_UNSPECIFIED"
   | "HASH_FUNCTION_NO_OP"
   | "HASH_FUNCTION_SHA256"
   | "HASH_FUNCTION_KECCAK256"
@@ -2629,8 +2830,16 @@ export type v1ImportWalletResult = {
   addresses: string[];
 };
 
+export type v1ImportedRootAuthenticatorParams = {
+  authenticatorName: string;
+  credentialId: string;
+  publicKey: string;
+  aaguid?: string;
+  transports?: v1AuthenticatorTransport[];
+};
+
 export type v1InitFiatOnRampIntent = {
-  /** Enum to specify which on-ramp provider to use */
+  /** Enum to specifiy which on-ramp provider to use */
   onrampProvider: v1FiatOnRampProvider;
   /** Destination wallet address for the buy transaction. */
   walletAddress: string;
@@ -2714,7 +2923,7 @@ export type v1InitImportWalletResult = {
 };
 
 export type v1InitOtpAuthIntent = {
-  /** Enum to specify whether to send OTP via SMS or email */
+  /** Enum to specifiy whether to send OTP via SMS or email */
   otpType: string;
   /** Email or phone number to send the OTP code to */
   contact: string;
@@ -2733,7 +2942,7 @@ export type v1InitOtpAuthIntent = {
 };
 
 export type v1InitOtpAuthIntentV2 = {
-  /** Enum to specify whether to send OTP via SMS or email */
+  /** Enum to specifiy whether to send OTP via SMS or email */
   otpType: string;
   /** Email or phone number to send the OTP code to */
   contact: string;
@@ -2871,7 +3080,7 @@ export type v1InitOtpIntentV3 = {
   userIdentifier?: string;
   /** Optional custom email address from which to send the OTP email */
   sendFromEmailAddress?: string;
-  /** Optional flag to specify if the OTP code should be alphanumeric (Crockford’s Base32). If set to false, OTP code will only be numeric. Default = true */
+  /** Optional flag to specify if the OTP code should be alphanumeric (Crockford's Base32). If set to false, OTP code will only be numeric. Default = true */
   alphanumeric?: boolean;
   /** Optional custom sender name for use with sendFromEmailAddress; if left empty, will default to 'Notifications' */
   sendFromEmailSenderName?: string;
@@ -2981,6 +3190,7 @@ export type v1Intent = {
   activateBillingTierIntent?: billingActivateBillingTierIntent;
   deletePaymentMethodIntent?: billingDeletePaymentMethodIntent;
   createPolicyIntentV3?: v1CreatePolicyIntentV3;
+  createApiOnlyUsersIntent?: v1CreateApiOnlyUsersIntent;
   updateRootQuorumIntent?: v1UpdateRootQuorumIntent;
   updateUserTagIntent?: v1UpdateUserTagIntent;
   updatePrivateKeyTagIntent?: v1UpdatePrivateKeyTagIntent;
@@ -3069,7 +3279,6 @@ export type v1Intent = {
   createTvcDeploymentIntent?: v1CreateTvcDeploymentIntent;
   createTvcManifestApprovalsIntent?: v1CreateTvcManifestApprovalsIntent;
   solSendTransactionIntent?: v1SolSendTransactionIntent;
-  tronSendTransactionIntent?: v1TronSendTransactionIntent;
   initOtpIntentV3?: v1InitOtpIntentV3;
   verifyOtpIntentV2?: v1VerifyOtpIntentV2;
   otpLoginIntentV2?: v1OtpLoginIntentV2;
@@ -3077,6 +3286,15 @@ export type v1Intent = {
   createSubOrganizationIntentV8?: v1CreateSubOrganizationIntentV8;
   createOauthProvidersIntentV2?: v1CreateOauthProvidersIntentV2;
   createUsersIntentV4?: v1CreateUsersIntentV4;
+  createWebhookEndpointIntent?: v1CreateWebhookEndpointIntent;
+  updateWebhookEndpointIntent?: v1UpdateWebhookEndpointIntent;
+  deleteWebhookEndpointIntent?: v1DeleteWebhookEndpointIntent;
+  solSendRawTransactionIntent?: v1SolSendRawTransactionIntent;
+  tronSendTransactionIntent?: v1TronSendTransactionIntent;
+  createMfaPolicyIntent?: v1CreateMfaPolicyIntent;
+  updateMfaPolicyIntent?: v1UpdateMfaPolicyIntent;
+  deleteMfaPolicyIntent?: v1DeleteMfaPolicyIntent;
+  createSessionProfileIntent?: v1CreateSessionProfileIntent;
 };
 
 export type v1InvitationParams = {
@@ -3130,12 +3348,27 @@ export type v1ListUserTagsResponse = {
   userTags: datav1Tag[];
 };
 
-export type v1LoginUsage = {
-  /** Public key for authentication */
-  publicKey: string;
+export type v1MfaPolicy = {
+  mfaPolicyId: string;
+  mfaPolicyName: string;
+  condition: string;
+  requiredAuthenticationMethods: v1RequiredAuthenticationMethod[];
+  order: number;
+  notes?: string;
+  createdAt: externaldatav1Timestamp;
+  updatedAt: externaldatav1Timestamp;
+};
+
+export type v1MfaStatus = {
+  mfaPolicyId: string;
+  userId: string;
+  satisfied: boolean;
+  satisfiedMethods: v1AuthenticationMethod[];
+  requiredMethods: v1RequiredAuthenticationMethod[];
 };
 
 export type v1MnemonicLanguage =
+  | "MNEMONIC_LANGUAGE_UNSPECIFIED"
   | "MNEMONIC_LANGUAGE_ENGLISH"
   | "MNEMONIC_LANGUAGE_SIMPLIFIED_CHINESE"
   | "MNEMONIC_LANGUAGE_TRADITIONAL_CHINESE"
@@ -3145,11 +3378,6 @@ export type v1MnemonicLanguage =
   | "MNEMONIC_LANGUAGE_JAPANESE"
   | "MNEMONIC_LANGUAGE_KOREAN"
   | "MNEMONIC_LANGUAGE_SPANISH";
-
-export type v1NOOPCodegenAnchorResponse = {
-  stamp: v1WebAuthnStamp;
-  tokenUsage?: v1TokenUsage;
-};
 
 export type v1NativeRevertError = {
   /** The type of native error: 'error_string', 'panic', or 'execution_reverted'. */
@@ -3186,7 +3414,7 @@ export type v1Oauth2AuthenticateRequest = {
 };
 
 export type v1Oauth2AuthenticateResult = {
-  /** Base64 encoded OIDC token issued by ZeroXKey to be used with the LoginWithOAuth activity */
+  /** Base64 encoded OIDC token issued by 0xkey to be used with the LoginWithOAuth activity */
   oidcToken: string;
 };
 
@@ -3205,7 +3433,10 @@ export type v1Oauth2Credential = {
   updatedAt: externaldatav1Timestamp;
 };
 
-export type v1Oauth2Provider = "OAUTH2_PROVIDER_X" | "OAUTH2_PROVIDER_DISCORD";
+export type v1Oauth2Provider =
+  | "OAUTH2_PROVIDER_UNSPECIFIED"
+  | "OAUTH2_PROVIDER_X"
+  | "OAUTH2_PROVIDER_DISCORD";
 
 export type v1OauthIntent = {
   /** Base64 encoded OIDC token */
@@ -3218,6 +3449,8 @@ export type v1OauthIntent = {
   expirationSeconds?: string;
   /** Invalidate all other previously generated Oauth API keys */
   invalidateExisting?: boolean;
+  /** Optional immutable Session Profile applied to the OAuth Auth session. */
+  sessionProfileId?: string;
 };
 
 export type v1OauthLoginIntent = {
@@ -3229,6 +3462,7 @@ export type v1OauthLoginIntent = {
   expirationSeconds?: string;
   /** Invalidate all other previously generated Login API keys */
   invalidateExisting?: boolean;
+  sessionProfileId?: string;
 };
 
 export type v1OauthLoginRequest = {
@@ -3306,6 +3540,7 @@ export type v1OidcClaims = {
 };
 
 export type v1Operator =
+  | "OPERATOR_UNSPECIFIED"
   | "OPERATOR_EQUAL"
   | "OPERATOR_MORE_THAN"
   | "OPERATOR_MORE_THAN_OR_EQUAL"
@@ -3317,6 +3552,13 @@ export type v1Operator =
   | "OPERATOR_NOT_IN"
   | "OPERATOR_CONTAINS_ONE"
   | "OPERATOR_CONTAINS_ALL";
+
+export type v1OrganizationProtectionProfileRequest = {
+  /** Must be ORGANIZATION_PROTECTION_PROFILE_TYPE_PROTECTED_SPONSORED for F0. */
+  profileType: string;
+  /** Protection profile protocol version. F0 supports version 1. */
+  version: number;
+};
 
 export type v1OtpAuthIntent = {
   /** ID representing the result of an init OTP activity. */
@@ -3363,6 +3605,7 @@ export type v1OtpLoginIntent = {
   invalidateExisting?: boolean;
   /** Optional signature proving authorization for this login. The signature is over the verification token ID and the public key. Only required if a public key was provided during the verification step. */
   clientSignature?: v1ClientSignature;
+  sessionProfileId?: string;
 };
 
 export type v1OtpLoginIntentV2 = {
@@ -3376,6 +3619,7 @@ export type v1OtpLoginIntentV2 = {
   expirationSeconds?: string;
   /** Invalidate all other previously generated Login sessions */
   invalidateExisting?: boolean;
+  sessionProfileId?: string;
 };
 
 export type v1OtpLoginRequest = {
@@ -3394,6 +3638,7 @@ export type v1OtpLoginResult = {
 };
 
 export type v1Outcome =
+  | "OUTCOME_UNSPECIFIED"
   | "OUTCOME_ALLOW"
   | "OUTCOME_DENY_EXPLICIT"
   | "OUTCOME_DENY_IMPLICIT"
@@ -3410,9 +3655,10 @@ export type v1Pagination = {
   after?: string;
 };
 
-export type v1PathFormat = "PATH_FORMAT_BIP32";
+export type v1PathFormat = "PATH_FORMAT_UNSPECIFIED" | "PATH_FORMAT_BIP32";
 
 export type v1PayloadEncoding =
+  | "PAYLOAD_ENCODING_UNSPECIFIED"
   | "PAYLOAD_ENCODING_HEXADECIMAL"
   | "PAYLOAD_ENCODING_TEXT_UTF8"
   | "PAYLOAD_ENCODING_EIP712"
@@ -3538,6 +3784,14 @@ export type v1RemoveOrganizationFeatureResult = {
   features: v1Feature[];
 };
 
+export type v1RequiredAuthenticationMethod = {
+  any: v1AuthenticationMethod[];
+};
+
+export type v1RequiredAuthenticationMethodParams = {
+  any: v1AuthenticationMethodParams[];
+};
+
 export type v1Result = {
   createOrganizationResult?: v1CreateOrganizationResult;
   createAuthenticatorsResult?: v1CreateAuthenticatorsResult;
@@ -3563,6 +3817,7 @@ export type v1Result = {
   setPaymentMethodResult?: billingSetPaymentMethodResult;
   activateBillingTierResult?: billingActivateBillingTierResult;
   deletePaymentMethodResult?: billingDeletePaymentMethodResult;
+  createApiOnlyUsersResult?: v1CreateApiOnlyUsersResult;
   updateRootQuorumResult?: v1UpdateRootQuorumResult;
   updateUserTagResult?: v1UpdateUserTagResult;
   updatePrivateKeyTagResult?: v1UpdatePrivateKeyTagResult;
@@ -3636,11 +3891,22 @@ export type v1Result = {
   createTvcDeploymentResult?: v1CreateTvcDeploymentResult;
   createTvcManifestApprovalsResult?: v1CreateTvcManifestApprovalsResult;
   solSendTransactionResult?: v1SolSendTransactionResult;
-  tronSendTransactionResult?: v1TronSendTransactionResult;
   initOtpResultV2?: v1InitOtpResultV2;
   updateOrganizationNameResult?: v1UpdateOrganizationNameResult;
   createSubOrganizationResultV8?: v1CreateSubOrganizationResultV8;
   createOauthProvidersResultV2?: v1CreateOauthProvidersResultV2;
+  createWebhookEndpointResult?: v1CreateWebhookEndpointResult;
+  updateWebhookEndpointResult?: v1UpdateWebhookEndpointResult;
+  deleteWebhookEndpointResult?: v1DeleteWebhookEndpointResult;
+  solSendRawTransactionResult?: v1SolSendRawTransactionResult;
+  tronSendTransactionResult?: v1TronSendTransactionResult;
+  createOidcProviderResult?: v1CreateOidcProviderResult;
+  updateOidcProviderResult?: v1UpdateOidcProviderResult;
+  deleteOidcProviderResult?: v1DeleteOidcProviderResult;
+  createMfaPolicyResult?: v1CreateMfaPolicyResult;
+  updateMfaPolicyResult?: v1UpdateMfaPolicyResult;
+  deleteMfaPolicyResult?: v1DeleteMfaPolicyResult;
+  createSessionProfileResult?: v1CreateSessionProfileResult;
 };
 
 export type v1RevertChainEntry = {
@@ -3737,6 +4003,16 @@ export type v1SelectorV2 = {
   targets?: string[];
 };
 
+export type v1SessionProfile = {
+  sessionProfileId: string;
+  sessionProfileName: string;
+  scope: string;
+  expirationSeconds?: string;
+  notes?: string;
+  createdAt: externaldatav1Timestamp;
+  updatedAt: externaldatav1Timestamp;
+};
+
 export type v1SetOrganizationFeatureIntent = {
   /** Name of the feature to set */
   name: v1FeatureName;
@@ -3764,7 +4040,7 @@ export type v1SignRawPayloadIntent = {
   privateKeyId: string;
   /** Raw unsigned payload to be signed. */
   payload: string;
-  /** Encoding of the `payload` string. ZeroXKey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
+  /** Encoding of the `payload` string. 0xkey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
   encoding: v1PayloadEncoding;
   /** Hash function to apply to payload bytes before signing. This field must be set to HASH_FUNCTION_NOT_APPLICABLE for EdDSA/ed25519 signature requests; configurable payload hashing is not supported by RFC 8032. */
   hashFunction: v1HashFunction;
@@ -3775,7 +4051,7 @@ export type v1SignRawPayloadIntentV2 = {
   signWith: string;
   /** Raw unsigned payload to be signed. */
   payload: string;
-  /** Encoding of the `payload` string. ZeroXKey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
+  /** Encoding of the `payload` string. 0xkey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
   encoding: v1PayloadEncoding;
   /** Hash function to apply to payload bytes before signing. This field must be set to HASH_FUNCTION_NOT_APPLICABLE for EdDSA/ed25519 signature requests; configurable payload hashing is not supported by RFC 8032. */
   hashFunction: v1HashFunction;
@@ -3805,7 +4081,7 @@ export type v1SignRawPayloadsIntent = {
   signWith: string;
   /** An array of raw unsigned payloads to be signed. */
   payloads: string[];
-  /** Encoding of the `payload` string. ZeroXKey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
+  /** Encoding of the `payload` string. 0xkey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
   encoding: v1PayloadEncoding;
   /** Hash function to apply to payload bytes before signing. This field must be set to HASH_FUNCTION_NOT_APPLICABLE for EdDSA/ed25519 signature requests; configurable payload hashing is not supported by RFC 8032. */
   hashFunction: v1HashFunction;
@@ -3855,22 +4131,6 @@ export type v1SignTransactionResult = {
   signedTransaction: string;
 };
 
-export type v1SignupUsage = {
-  email?: string;
-  phoneNumber?: string;
-  apiKeys?: v1ApiKeyParamsV2[];
-  authenticators?: v1AuthenticatorParamsV2[];
-  oauthProviders?: v1OauthProviderParams[];
-};
-
-export type v1SignupUsageV2 = {
-  email?: string;
-  phoneNumber?: string;
-  apiKeys?: v1ApiKeyParamsV2[];
-  authenticators?: v1AuthenticatorParamsV2[];
-  oauthProviders?: v1OauthProviderParamsV2[];
-};
-
 export type v1SimpleClientExtensionResults = {
   appid?: boolean;
   appidExclude?: boolean;
@@ -3878,6 +4138,7 @@ export type v1SimpleClientExtensionResults = {
 };
 
 export type v1SmartContractInterfaceType =
+  | "SMART_CONTRACT_INTERFACE_TYPE_UNSPECIFIED"
   | "SMART_CONTRACT_INTERFACE_TYPE_ETHEREUM"
   | "SMART_CONTRACT_INTERFACE_TYPE_SOLANA";
 
@@ -3886,6 +4147,98 @@ export type v1SmsCustomizationParams = {
   template?: string;
 };
 
+export type v1SolSendRawTransactionIntent = {
+  /** The raw, signed Solana transaction to be sent (hex- or base64-encoded wire bytes). */
+  signedTransaction: string;
+  /** CAIP-2 chain ID (e.g., 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG' for devnet). */
+  caip2: string;
+  /** Optional lastValidBlockHeight returned by prepare_sol_transaction for the pinned blockhash; persisted so the confirmation worker can detect blockhash-expiry drops precisely. */
+  lastValidBlockHeight?: string;
+};
+
+export type v1SolSendRawTransactionResult = {
+  /** The transaction signature (base58) of the sent Solana transaction. */
+  transactionHash: string;
+};
+
+export type v1SolSendTransactionIntent = {
+  /** Base64-encoded serialized unsigned Solana transaction */
+  unsignedTransaction: string;
+  /** A wallet or private key address to sign with. This does not support private key IDs. */
+  signWith: string;
+  /** Whether to sponsor this transaction via Gas Station. */
+  sponsor?: boolean;
+  /** CAIP-2 chain ID (e.g., 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' for Solana mainnet). */
+  caip2: string;
+  /** user-provided blockhash for replay protection / deadline control. If omitted and sponsor=true, we fetch a fresh blockhash during execution */
+  recentBlockhash?: string;
+  /** Optional lastValidBlockHeight for the pinned recent_blockhash (as returned by prepare_sol_transaction); persisted with the broadcast so the confirmation worker can detect blockhash-expiry drops precisely. */
+  lastValidBlockHeight?: string;
+  /** Platform Solana fee-payer address (account_keys[0]) when sponsor=true. Bound by the policy engine against the parser-attested fee payer. */
+  feePayer?: string;
+};
+
+export type v1SolSendTransactionRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1SolSendTransactionIntent;
+  generateAppProofs?: boolean;
+};
+
+export type v1SolSendTransactionResult = {
+  /** The send_transaction_status ID associated with the transaction submission */
+  sendTransactionStatusId: string;
+};
+
+export type v1SolSendTransactionStatus = {
+  /** The Solana transaction signature. */
+  signature?: string;
+  /** The slot the transaction was confirmed in, if available. */
+  slot?: string;
+  /** The Solana confirmation status (processed | confirmed | finalized), if available. */
+  confirmationStatus?: string;
+};
+
+export type v1StampLoginIntent = {
+  /** Client-side public key generated by the user, which will be conditionally added to org data based on the passkey stamp associated with this request */
+  publicKey: string;
+  /** Expiration window (in seconds) indicating how long the Session is valid for. If not provided, a default of 15 minutes will be used. */
+  expirationSeconds?: string;
+  /** Invalidate all other previously generated Login API keys */
+  invalidateExisting?: boolean;
+  sessionProfileId?: string;
+};
+
+export type v1StampLoginRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1StampLoginIntent;
+  generateAppProofs?: boolean;
+};
+
+export type v1StampLoginResult = {
+  /** Signed JWT containing an expiry, public key, session type, user id, and organization id */
+  session: string;
+};
+
+export type v1TagType =
+  | "TAG_TYPE_UNSPECIFIED"
+  | "TAG_TYPE_USER"
+  | "TAG_TYPE_PRIVATE_KEY";
+
+export type v1TransactionType =
+  | "TRANSACTION_TYPE_UNSPECIFIED"
+  | "TRANSACTION_TYPE_ETHEREUM"
+  | "TRANSACTION_TYPE_SOLANA"
+  | "TRANSACTION_TYPE_TRON"
+  | "TRANSACTION_TYPE_BITCOIN";
+
 export type v1TronSendTransactionIntent = {
   /** A wallet or private key address to sign with (base58 T... form). This does not support private key IDs. */
   from: string;
@@ -3893,11 +4246,11 @@ export type v1TronSendTransactionIntent = {
   caip2: string;
   /** Recipient address (base58 T... form). */
   to: string;
-  /** Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contractAddress is set. */
+  /** Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contract_address is set. */
   value?: string;
-  /** TRC-20 contract address (base58 T... form). When set, this is a token transfer instead of native TRX. */
+  /** TRC-20 contract address (base58 T... form). When set, this is a token transfer(address,uint256) to `to` instead of a native TRX transfer, ABI-encoded server-side. */
   contractAddress?: string;
-  /** TRC-20 transfer amount in the token's atomic unit. Required when contractAddress is set. */
+  /** TRC-20 transfer amount in the token's atomic (smallest) unit. Required when contract_address is set. */
   tokenAmount?: string;
 };
 
@@ -3920,108 +4273,6 @@ export type v1TronSendTransactionStatus = {
   /** The Tron transaction id (sha256(raw_data), hex), if available. */
   txHash?: string;
 };
-
-export type v1SolSendTransactionIntent = {
-  /** Base64-encoded serialized unsigned Solana transaction */
-  unsignedTransaction: string;
-  /** A wallet or private key address to sign with. This does not support private key IDs. */
-  signWith: string;
-  /** Whether to sponsor this transaction via Gas Station. */
-  sponsor?: boolean;
-  /** CAIP-2 chain ID (e.g., 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' for Solana mainnet). */
-  caip2: string;
-  /** user-provided blockhash for replay protection / deadline control. If omitted and sponsor=true, we fetch a fresh blockhash during execution */
-  recentBlockhash?: string;
-};
-
-export type v1SolSendTransactionRequest = {
-  type: string;
-  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
-  timestampMs: string;
-  /** Unique identifier for a given Organization. */
-  organizationId: string;
-  parameters: v1SolSendTransactionIntent;
-  generateAppProofs?: boolean;
-};
-
-export type v1SolSendTransactionResult = {
-  /** The send_transaction_status ID associated with the transaction submission */
-  sendTransactionStatusId: string;
-};
-
-export type v1SolanaConfig = {
-  /** Whether Solana rent prefunding is enabled for the organization. When omitted, the existing rent-prefund state is left unchanged. */
-  rentPrefundEnabled?: boolean;
-};
-
-export type v1SolanaFailureDetails = {
-  /** Where the Solana failure occurred, such as simulation or preflight. */
-  source?: string;
-  /** The Solana JSON-RPC error code, if available. */
-  rpcCode?: number;
-  /** The Solana JSON-RPC error message, if available. */
-  rpcMessage?: string;
-  /** The raw Solana transaction error object serialized as JSON, if available. */
-  transactionErrorJson?: string;
-  /** Program logs returned by Solana simulation or preflight, if available. */
-  logs?: string[];
-  /** Compute units consumed during simulation or preflight, if available. */
-  unitsConsumed?: string;
-  /** The raw Solana inner instructions payload serialized as JSON, if available. */
-  innerInstructionsJson?: string;
-};
-
-export type v1SolanaSendTransactionStatus = {
-  /** The Solana transaction signature, if available. */
-  signature?: string;
-};
-
-export type v1StampLoginIntent = {
-  /** Client-side public key generated by the user, which will be conditionally added to org data based on the passkey stamp associated with this request */
-  publicKey: string;
-  /** Expiration window (in seconds) indicating how long the Session is valid for. If not provided, a default of 15 minutes will be used. */
-  expirationSeconds?: string;
-  /** Invalidate all other previously generated Login API keys */
-  invalidateExisting?: boolean;
-};
-
-export type v1StampLoginRequest = {
-  type: string;
-  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
-  timestampMs: string;
-  /** Unique identifier for a given Organization. */
-  organizationId: string;
-  parameters: v1StampLoginIntent;
-  generateAppProofs?: boolean;
-};
-
-export type v1StampLoginResult = {
-  /** Signed JWT containing an expiry, public key, session type, user id, and organization id */
-  session: string;
-};
-
-export type v1TagType = "TAG_TYPE_USER" | "TAG_TYPE_PRIVATE_KEY";
-
-export type v1TokenUsage = {
-  /** Type of token usage */
-  type: v1UsageType;
-  /** Unique identifier for the verification token */
-  tokenId: string;
-  signup?: v1SignupUsage;
-  login?: v1LoginUsage;
-  signupV2?: v1SignupUsageV2;
-};
-
-export type v1TransactionType =
-  | "TRANSACTION_TYPE_ETHEREUM"
-  | "TRANSACTION_TYPE_SOLANA"
-  | "TRANSACTION_TYPE_TRON"
-  | "TRANSACTION_TYPE_BITCOIN"
-  | "TRANSACTION_TYPE_TEMPO";
-
-export type v1TvcHealthCheckType =
-  | "TVC_HEALTH_CHECK_TYPE_HTTP"
-  | "TVC_HEALTH_CHECK_TYPE_GRPC";
 
 export type v1TvcManifestApproval = {
   /** Unique identifier of the operator providing this approval */
@@ -4049,13 +4300,9 @@ export type v1TvcOperatorSetParams = {
 };
 
 export type v1TxError = {
-  /** Human-readable error message describing what went wrong. */
   message?: string;
-  /** Chain of revert errors from nested contract calls, ordered from outermost to innermost. */
   revertChain?: v1RevertChainEntry[];
-  /** Solana-specific failure details for simulation or preflight errors, if available. */
   solana?: v1SolanaFailureDetails;
-  /** Ethereum-specific failure details, if available. */
   eth?: v1EthFailureDetails;
 };
 
@@ -4067,7 +4314,7 @@ export type v1UnknownRevertError = {
 };
 
 export type v1UpdateAllowedOriginsIntent = {
-  /** Additional origins requests are allowed from besides ZeroXKey origins */
+  /** Additional origins requests are allowed from besides 0xkey origins */
   allowedOrigins: string[];
 };
 
@@ -4105,8 +4352,10 @@ export type v1UpdateAuthProxyConfigIntent = {
   sendFromEmailSenderName?: string;
   /** Verification token required for get account with PII (email/phone number). Default false. */
   verificationTokenRequiredForGetAccountPii?: boolean;
-  /** Whitelisted OAuth client IDs for social account linking. When a user authenticates via a social provider with an email matching an existing account, the accounts will be linked if the client ID is in this list and the issuer is considered a trusted provider. */
+  /** Whitelisted OAuth client IDs for social account linking. */
   socialLinkingClientIds?: string[];
+  /** Whether captcha verification is required on sign up and OTP init. */
+  captchaEnabled?: boolean;
 };
 
 export type v1UpdateAuthProxyConfigResult = {
@@ -4144,6 +4393,29 @@ export type v1UpdateFiatOnRampCredentialResult = {
   fiatOnRampCredentialId: string;
 };
 
+export type v1UpdateMfaPolicyIntent = {
+  userId: string;
+  mfaPolicyId: string;
+  mfaPolicyName?: string;
+  condition?: string;
+  /** Proto3 repeated cannot encode omitted vs []. HTTP JSON raw_body is the
+presence source: omitted → leave unchanged; [] → reject; null → invalid. */
+  requiredAuthenticationMethods?: v1RequiredAuthenticationMethodParams[];
+  order?: number;
+  notes?: string;
+};
+
+export type v1UpdateMfaPolicyRequest = {
+  type: string;
+  timestampMs: string;
+  organizationId: string;
+  parameters: v1UpdateMfaPolicyIntent;
+};
+
+export type v1UpdateMfaPolicyResult = {
+  mfaPolicyId: string;
+};
+
 export type v1UpdateOauth2CredentialIntent = {
   /** The ID of the OAuth 2.0 credential to update */
   oauth2CredentialId: string;
@@ -4168,6 +4440,11 @@ export type v1UpdateOauth2CredentialRequest = {
 export type v1UpdateOauth2CredentialResult = {
   /** Unique identifier of the OAuth 2.0 credential that was updated */
   oauth2CredentialId: string;
+};
+
+export type v1UpdateOidcProviderResult = {
+  /** Unique identifier for the updated OIDC provider. */
+  providerId: string;
 };
 
 export type v1UpdateOrganizationNameIntent = {
@@ -4431,6 +4708,22 @@ export type v1UpdateWalletResult = {
   walletId: string;
 };
 
+export type v1UpdateWebhookEndpointIntent = {
+  /** Unique identifier of the webhook endpoint to update. */
+  endpointId: string;
+  /** Updated destination URL. */
+  url?: string;
+  /** Updated human-readable name. */
+  name?: string;
+  /** Updated active status. */
+  isActive?: boolean;
+};
+
+export type v1UpdateWebhookEndpointResult = {
+  /** Unique identifier for the updated Webhook Endpoint. */
+  endpointId: string;
+};
+
 export type v1UpsertGasUsageConfigIntent = {
   /** Gas sponsorship USD limit for the billing organization window. */
   orgWindowLimitUsd: string;
@@ -4438,18 +4731,12 @@ export type v1UpsertGasUsageConfigIntent = {
   subOrgWindowLimitUsd: string;
   /** Rolling sponsorship window duration, expressed in minutes. */
   windowDurationMinutes: string;
-  /** Whether gas sponsorship is enabled for the organization. */
-  enabled?: boolean;
-  /** Optional Solana sponsorship settings. If omitted, the existing Solana sponsorship state is left unchanged. */
-  solanaConfig?: v1SolanaConfig;
 };
 
 export type v1UpsertGasUsageConfigResult = {
   /** Unique identifier for the gas usage configuration that was created or updated. */
   gasUsageConfigId: string;
 };
-
-export type v1UsageType = "USAGE_TYPE_SIGNUP" | "USAGE_TYPE_LOGIN";
 
 export type v1User = {
   /** Unique identifier for a given User. */
@@ -4548,7 +4835,7 @@ export type v1VerifyOtpIntent = {
 export type v1VerifyOtpIntentV2 = {
   /** UUID representing an OTP flow. A new UUID is created for each init OTP activity. */
   otpId: string;
-  /** Encrypted bundle containing the OTP code and a client-generated public key. ZeroXKey's secure enclaves will decrypt this bundle, verify the OTP code, and issue a new Verification Token. Encrypted using the target encryption key provided in the INIT_OTP activity result. */
+  /** Encrypted bundle containing the OTP code and a client-generated public key. 0xkey's secure enclaves will decrypt this bundle, verify the OTP code, and issue a new Verification Token. Encrypted using the target encryption key provided in the INIT_OTP activity result. */
   encryptedOtpBundle: string;
   /** Expiration window (in seconds) indicating how long the verification token is valid for. If not provided, a default of 1 hour will be used. Maximum value is 86400 seconds (24 hours) */
   expirationSeconds?: string;
@@ -4560,7 +4847,7 @@ export type v1VerifyOtpRequest = {
   timestampMs: string;
   /** Unique identifier for a given Organization. */
   organizationId: string;
-  parameters: v1VerifyOtpIntentV2;
+  parameters: v1VerifyOtpIntent;
   generateAppProofs?: boolean;
 };
 
@@ -4587,6 +4874,7 @@ export type v1Vote = {
   signature: string;
   /** Method used to produce a signature. */
   scheme: string;
+  /** Timestamp of when the Vote was cast. */
   createdAt: externaldatav1Timestamp;
 };
 
@@ -4646,6 +4934,8 @@ export type v1WalletKitSettingsParams = {
   oauthClientIds?: Record<string, any>;
   /** Oauth redirect URL to be used for social login flows. */
   oauthRedirectUrl?: string;
+  /** Mapping of social providers to stored OAuth2 credential IDs. */
+  oauth2CredentialIds?: Record<string, any>;
 };
 
 export type v1WalletParams = {
@@ -4663,6 +4953,80 @@ export type v1WalletResult = {
   addresses: string[];
 };
 
+export type v1WebhookEndpointData = {
+  /** Unique identifier for a given Webhook Endpoint. */
+  endpointId: string;
+  /** Unique identifier for the Organization that owns this endpoint. */
+  organizationId: string;
+  /** The destination URL for webhook deliveries. */
+  url: string;
+  /** Human-readable name for the webhook endpoint. */
+  name: string;
+  /** Whether the endpoint is currently active and receiving deliveries. */
+  isActive: boolean;
+  /** Event subscriptions for this endpoint. */
+  subscriptions?: v1WebhookSubscriptionParams[];
+  /** Ed25519 public key (whpk_ prefixed) for verifying webhook signatures. Only returned on creation. */
+  signingPublicKey?: string;
+};
+
+export type v1WebhookSubscriptionParams = {
+  /** The event type to subscribe to, e.g. ACTIVITY_UPDATES, BALANCE_CONFIRMED_UPDATES. */
+  eventType: string;
+  /** JSON-encoded filter criteria for this subscription. Reserved for future use. */
+  filtersJson?: string;
+  /** Whether this subscription is active. Defaults to true. */
+  isActive?: boolean;
+};
+
+export type v1EthFailureDetails = {
+  /** Ethereum revert chain, ordered from outermost to innermost. */
+  revertChain?: v1RevertChainEntry[];
+};
+
+export type v1LoginUsage = {
+  /** Public key for authentication */
+  publicKey: string;
+};
+
+export type v1SignupUsage = {
+  email?: string;
+  phoneNumber?: string;
+  apiKeys?: v1ApiKeyParamsV2[];
+  authenticators?: v1AuthenticatorParamsV2[];
+  oauthProviders?: v1OauthProviderParams[];
+};
+
+export type v1SignupUsageV2 = {
+  email?: string;
+  phoneNumber?: string;
+  apiKeys?: v1ApiKeyParamsV2[];
+  authenticators?: v1AuthenticatorParamsV2[];
+  oauthProviders?: v1OauthProviderParamsV2[];
+};
+
+export type v1SolanaFailureDetails = {
+  source?: string;
+  rpcCode?: number;
+  rpcMessage?: string;
+  transactionErrorJson?: string;
+  logs?: string[];
+  unitsConsumed?: string;
+  innerInstructionsJson?: string;
+};
+
+export type v1TokenUsage = {
+  /** Type of token usage */
+  type: v1UsageType;
+  /** Unique identifier for the verification token */
+  tokenId: string;
+  signup?: v1SignupUsage;
+  login?: v1LoginUsage;
+  signupV2?: v1SignupUsageV2;
+};
+
+export type v1UsageType = "USAGE_TYPE_SIGNUP" | "USAGE_TYPE_LOGIN";
+
 export type v1WebAuthnStamp = {
   /** A base64 url encoded Unique identifier for a given credential. */
   credentialId: string;
@@ -4674,18 +5038,18 @@ export type v1WebAuthnStamp = {
   signature: string;
 };
 
-export type v1WebhookSubscriptionParams = {
-  /** The event type to subscribe to (for example, ACTIVITY_UPDATES or BALANCE_UPDATES). */
-  eventType: string;
-  /** JSON-encoded filter criteria for this subscription. */
-  filtersJson?: string;
-  /** Whether this subscription is active. */
-  isActive?: boolean;
+export type v1NOOPCodegenAnchorResponse = {
+  stamp: v1WebAuthnStamp;
+  tokenUsage?: v1TokenUsage;
 };
 
 // --- API Types from Swagger Paths ---
+export type TNOOPCodegenAnchorResponse = {
+  activity: v1Activity;
+};
+
 export type TGetActivityResponse = {
-  /** An action that can be taken within the ZeroXKey infrastructure. */
+  /** An action that can be taken within the 0xkey infrastructure. */
   activity: v1Activity;
 };
 
@@ -4723,6 +5087,21 @@ export type TGetApiKeysBody = {
 
 export type TGetApiKeysInput = { body: TGetApiKeysBody };
 
+export type TGetAttestationDocumentResponse = {
+  /** Raw (CBOR-encoded) attestation document. */
+  attestationDocument: string;
+};
+
+export type TGetAttestationDocumentBody = {
+  organizationId?: string;
+  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+  enclaveType: string;
+};
+
+export type TGetAttestationDocumentInput = {
+  body: TGetAttestationDocumentBody;
+};
+
 export type TGetAuthenticatorResponse = {
   /** An authenticator. */
   authenticator: v1Authenticator;
@@ -4749,25 +5128,6 @@ export type TGetAuthenticatorsBody = {
 
 export type TGetAuthenticatorsInput = { body: TGetAuthenticatorsBody };
 
-export type TGetAttestationDocumentResponse = {
-  /** Raw (CBOR-encoded) attestation document. */
-  attestationDocument: string;
-};
-
-export type TGetAttestationDocumentBody = {
-  organizationId?: string;
-  /**
-   * Enclave app to attest. Accepted values (case-insensitive): signer; notarizer;
-   * tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy.
-   * Turnkey alias `ump` maps to 0xkey `policy-engine`.
-   */
-  enclaveType: string;
-};
-
-export type TGetAttestationDocumentInput = {
-  body: TGetAttestationDocumentBody;
-};
-
 export type TGetBootProofResponse = {
   bootProof: v1BootProof;
 };
@@ -4787,6 +5147,16 @@ export type TGetGasUsageResponse = {
   windowLimitUsd: string;
   /** The total gas usage (in USD) of all sponsored transactions processed over the last `window_duration_minutes` */
   usageUsd: string;
+  /** The native-currency spend cap per window in wei. '0' = uncapped. This is the ENFORCED cap (no price oracle required). */
+  windowLimitNative?: string;
+  /** Total native-currency gas spent (wei) over the window, from confirmed on-chain fees. */
+  usageNative?: string;
+  /** Whether the native spend cap is enforced. False (or no config) = uncapped. */
+  enabled?: boolean;
+  /** The Solana native-currency spend cap per window in lamports. '0' = uncapped. Parallel ENFORCED cap to window_limit_native, scoped to Solana (solana:*) usage. */
+  windowLimitLamports?: string;
+  /** Total Solana native-currency gas spent (lamports) over the window, from confirmed on-chain fees. */
+  usageLamports?: string;
 };
 
 export type TGetGasUsageBody = {
@@ -4807,6 +5177,41 @@ export type TGetLatestBootProofBody = {
 
 export type TGetLatestBootProofInput = { body: TGetLatestBootProofBody };
 
+export type TGetMfaPoliciesResponse = {
+  mfaPolicies: v1MfaPolicy[];
+};
+
+export type TGetMfaPoliciesBody = {
+  organizationId?: string;
+  userId: string;
+};
+
+export type TGetMfaPoliciesInput = { body: TGetMfaPoliciesBody };
+
+export type TGetMfaPolicyResponse = {
+  mfaPolicy: v1MfaPolicy;
+};
+
+export type TGetMfaPolicyBody = {
+  organizationId?: string;
+  userId: string;
+  mfaPolicyId: string;
+};
+
+export type TGetMfaPolicyInput = { body: TGetMfaPolicyBody };
+
+export type TGetMfaStatusResponse = {
+  mfaStatuses: v1MfaStatus[];
+};
+
+export type TGetMfaStatusBody = {
+  organizationId?: string;
+  activityId: string;
+  userId?: string;
+};
+
+export type TGetMfaStatusInput = { body: TGetMfaStatusBody };
+
 export type TGetNoncesResponse = {
   /** The standard on-chain nonce for the address, if requested. */
   nonce?: string;
@@ -4818,7 +5223,7 @@ export type TGetNoncesBody = {
   organizationId?: string;
   /** The Ethereum address to query nonces for. */
   address: string;
-  /** CAIP-2 chain ID (e.g., 'eip155:1' for Ethereum mainnet). */
+  /** The network identifier in CAIP-2 format (e.g., 'eip155:1' for Ethereum mainnet). */
   caip2: string;
   /** Whether to fetch the standard on-chain nonce. */
   nonce?: boolean;
@@ -4927,7 +5332,8 @@ export type TGetSendTransactionStatusResponse = {
   /** Ethereum-specific transaction status. */
   eth?: v1EthSendTransactionStatus;
   /** Solana-specific transaction status. */
-  solana?: v1SolanaSendTransactionStatus;
+  sol?: v1SolSendTransactionStatus;
+  /** Tron-specific transaction status. */
   tron?: v1TronSendTransactionStatus;
   /** The error encountered when broadcasting or confirming the transaction, if any. */
   txError?: string;
@@ -4944,6 +5350,27 @@ export type TGetSendTransactionStatusBody = {
 export type TGetSendTransactionStatusInput = {
   body: TGetSendTransactionStatusBody;
 };
+
+export type TGetSessionProfileResponse = {
+  sessionProfile: v1SessionProfile;
+};
+
+export type TGetSessionProfileBody = {
+  organizationId?: string;
+  sessionProfileId: string;
+};
+
+export type TGetSessionProfileInput = { body: TGetSessionProfileBody };
+
+export type TGetSessionProfilesResponse = {
+  sessionProfiles: v1SessionProfile[];
+};
+
+export type TGetSessionProfilesBody = {
+  organizationId?: string;
+};
+
+export type TGetSessionProfilesInput = { body: TGetSessionProfilesBody };
 
 export type TGetSmartContractInterfaceResponse = {
   /** Object to be used in conjunction with policies to guard transaction signing. */
@@ -5290,6 +5717,24 @@ export type TCreateInvitationsBody = {
 
 export type TCreateInvitationsInput = { body: TCreateInvitationsBody };
 
+export type TCreateMfaPolicyResponse = {
+  activity: v1Activity;
+  mfaPolicyId: string;
+};
+
+export type TCreateMfaPolicyBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  userId: string;
+  mfaPolicyName: string;
+  condition: string;
+  requiredAuthenticationMethods: v1RequiredAuthenticationMethodParams[];
+  order: number;
+  notes?: string;
+};
+
+export type TCreateMfaPolicyInput = { body: TCreateMfaPolicyBody };
+
 export type TCreateOauth2CredentialResponse = {
   activity: v1Activity;
   /** Unique identifier of the OAuth 2.0 credential that was created */
@@ -5458,6 +5903,22 @@ export type TCreateReadWriteSessionInput = {
   body: TCreateReadWriteSessionBody;
 };
 
+export type TCreateSessionProfileResponse = {
+  activity: v1Activity;
+  sessionProfileId: string;
+};
+
+export type TCreateSessionProfileBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  sessionProfileName: string;
+  scope: string;
+  expirationSeconds?: string;
+  notes?: string;
+};
+
+export type TCreateSessionProfileInput = { body: TCreateSessionProfileBody };
+
 export type TCreateSmartContractInterfaceResponse = {
   activity: v1Activity;
   /** The ID of the created Smart Contract Interface. */
@@ -5512,6 +5973,8 @@ export type TCreateSubOrganizationBody = {
   verificationToken?: string;
   /** Optional signature proving authorization for this sub-organization creation. The signature is over the verification token ID and the root user parameters for the root user associated with the verification token. Only required if a public key was provided during the verification step. */
   clientSignature?: v1ClientSignature;
+  /** Requests a Notarizer-issued immutable protection profile. Sponsor powers and exit policy are protocol-fixed and cannot be supplied by callers. */
+  organizationProtectionProfile?: v1OrganizationProtectionProfileRequest;
 };
 
 export type TCreateSubOrganizationInput = { body: TCreateSubOrganizationBody };
@@ -5655,6 +6118,20 @@ export type TDeleteInvitationBody = {
 };
 
 export type TDeleteInvitationInput = { body: TDeleteInvitationBody };
+
+export type TDeleteMfaPolicyResponse = {
+  activity: v1Activity;
+  mfaPolicyId: string;
+};
+
+export type TDeleteMfaPolicyBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  userId: string;
+  mfaPolicyId: string;
+};
+
+export type TDeleteMfaPolicyInput = { body: TDeleteMfaPolicyBody };
 
 export type TDeleteOauth2CredentialResponse = {
   activity: v1Activity;
@@ -5858,6 +6335,8 @@ export type TEmailAuthResponse = {
   userId: string;
   /** Unique identifier for the created API key. */
   apiKeyId: string;
+  /** HPKE-encrypted credential bundle. Present only in dev/console mailer mode. */
+  credentialBundle?: string;
 };
 
 export type TEmailAuthBody = {
@@ -5906,7 +6385,7 @@ export type TEthSendTransactionBody = {
   value?: string;
   /** Hex-encoded call data for contract interactions. */
   data?: string;
-  /** Transaction nonce, for EIP-1559 and ZeroXKey Gas Station authorizations. */
+  /** Transaction nonce, for EIP-1559 and 0xkey Gas Station authorizations. */
   nonce?: string;
   /** Maximum amount of gas to use for this transaction, for EIP-1559 transactions. */
   gasLimit?: string;
@@ -5916,6 +6395,10 @@ export type TEthSendTransactionBody = {
   maxPriorityFeePerGas?: string;
   /** The gas station delegate contract nonce. Only used when sponsor=true. Include this if you want maximal security posture. */
   gasStationNonce?: string;
+  /** EIP-712 deadline (unix seconds, uint32 decimal string) the EOA signed into the sponsored Execution intent. Required when sponsor=true. */
+  deadline?: string;
+  /** 65-byte (r || s || v) EIP-712 signature the EOA produced over the sponsored Execution intent (Phase 1, signed client-side). Hex with 0x prefix. Required when sponsor=true. */
+  userIntentSignature?: string;
 };
 
 export type TEthSendTransactionInput = { body: TEthSendTransactionBody };
@@ -6040,7 +6523,7 @@ export type TInitFiatOnRampResponse = {
 export type TInitFiatOnRampBody = {
   timestampMs?: string;
   organizationId?: string;
-  /** Enum to specify which on-ramp provider to use */
+  /** Enum to specifiy which on-ramp provider to use */
   onrampProvider: v1FiatOnRampProvider;
   /** Destination wallet address for the buy transaction. */
   walletAddress: string;
@@ -6220,13 +6703,15 @@ export type TOauthBody = {
   expirationSeconds?: string;
   /** Invalidate all other previously generated Oauth API keys */
   invalidateExisting?: boolean;
+  /** Optional immutable Session Profile applied to the OAuth Auth session. */
+  sessionProfileId?: string;
 };
 
 export type TOauthInput = { body: TOauthBody };
 
 export type TOauth2AuthenticateResponse = {
   activity: v1Activity;
-  /** Base64 encoded OIDC token issued by ZeroXKey to be used with the LoginWithOAuth activity */
+  /** Base64 encoded OIDC token issued by 0xkey to be used with the LoginWithOAuth activity */
   oidcToken: string;
 };
 
@@ -6266,6 +6751,7 @@ export type TOauthLoginBody = {
   expirationSeconds?: string;
   /** Invalidate all other previously generated Login API keys */
   invalidateExisting?: boolean;
+  sessionProfileId?: string;
 };
 
 export type TOauthLoginInput = { body: TOauthLoginBody };
@@ -6318,6 +6804,7 @@ export type TOtpLoginBody = {
   expirationSeconds?: string;
   /** Invalidate all other previously generated Login sessions */
   invalidateExisting?: boolean;
+  sessionProfileId?: string;
 };
 
 export type TOtpLoginInput = { body: TOtpLoginBody };
@@ -6405,7 +6892,7 @@ export type TSignRawPayloadBody = {
   signWith: string;
   /** Raw unsigned payload to be signed. */
   payload: string;
-  /** Encoding of the `payload` string. ZeroXKey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
+  /** Encoding of the `payload` string. 0xkey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
   encoding: v1PayloadEncoding;
   /** Hash function to apply to payload bytes before signing. This field must be set to HASH_FUNCTION_NOT_APPLICABLE for EdDSA/ed25519 signature requests; configurable payload hashing is not supported by RFC 8032. */
   hashFunction: v1HashFunction;
@@ -6425,7 +6912,7 @@ export type TSignRawPayloadsBody = {
   signWith: string;
   /** An array of raw unsigned payloads to be signed. */
   payloads: string[];
-  /** Encoding of the `payload` string. ZeroXKey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
+  /** Encoding of the `payload` string. 0xkey uses this information to convert `payload` into bytes with the correct decoder (e.g. hex, utf8). */
   encoding: v1PayloadEncoding;
   /** Hash function to apply to payload bytes before signing. This field must be set to HASH_FUNCTION_NOT_APPLICABLE for EdDSA/ed25519 signature requests; configurable payload hashing is not supported by RFC 8032. */
   hashFunction: v1HashFunction;
@@ -6450,31 +6937,6 @@ export type TSignTransactionBody = {
 
 export type TSignTransactionInput = { body: TSignTransactionBody };
 
-export type TTronSendTransactionResponse = {
-  activity: v1Activity;
-  /** The send_transaction_status ID associated with the transaction submission */
-  sendTransactionStatusId: string;
-};
-
-export type TTronSendTransactionBody = {
-  timestampMs?: string;
-  organizationId?: string;
-  /** A wallet or private key address to sign with (base58 T... form). This does not support private key IDs. */
-  from: string;
-  /** CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet). */
-  caip2: string;
-  /** Recipient address (base58 T... form). */
-  to: string;
-  /** Native TRX amount to transfer, in sun. Ignored when contractAddress is set. */
-  value?: string;
-  /** TRC-20 contract address (base58 T... form). */
-  contractAddress?: string;
-  /** TRC-20 transfer amount in atomic units. Required when contractAddress is set. */
-  tokenAmount?: string;
-};
-
-export type TTronSendTransactionInput = { body: TTronSendTransactionBody };
-
 export type TSolSendTransactionResponse = {
   activity: v1Activity;
   /** The send_transaction_status ID associated with the transaction submission */
@@ -6494,6 +6956,10 @@ export type TSolSendTransactionBody = {
   caip2: string;
   /** user-provided blockhash for replay protection / deadline control. If omitted and sponsor=true, we fetch a fresh blockhash during execution */
   recentBlockhash?: string;
+  /** Optional lastValidBlockHeight for the pinned recent_blockhash (as returned by prepare_sol_transaction); persisted with the broadcast so the confirmation worker can detect blockhash-expiry drops precisely. */
+  lastValidBlockHeight?: string;
+  /** Platform Solana fee-payer address (account_keys[0]) when sponsor=true. Bound by the policy engine against the parser-attested fee payer. */
+  feePayer?: string;
 };
 
 export type TSolSendTransactionInput = { body: TSolSendTransactionBody };
@@ -6513,9 +6979,35 @@ export type TStampLoginBody = {
   expirationSeconds?: string;
   /** Invalidate all other previously generated Login API keys */
   invalidateExisting?: boolean;
+  sessionProfileId?: string;
 };
 
 export type TStampLoginInput = { body: TStampLoginBody };
+
+export type TTronSendTransactionResponse = {
+  activity: v1Activity;
+  /** The send_transaction_status ID associated with the transaction submission */
+  sendTransactionStatusId: string;
+};
+
+export type TTronSendTransactionBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  /** A wallet or private key address to sign with (base58 T... form). This does not support private key IDs. */
+  from: string;
+  /** CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet). */
+  caip2: string;
+  /** Recipient address (base58 T... form). */
+  to: string;
+  /** Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contract_address is set. */
+  value?: string;
+  /** TRC-20 contract address (base58 T... form). When set, this is a token transfer(address,uint256) to `to` instead of a native TRX transfer, ABI-encoded server-side. */
+  contractAddress?: string;
+  /** TRC-20 transfer amount in the token's atomic (smallest) unit. Required when contract_address is set. */
+  tokenAmount?: string;
+};
+
+export type TTronSendTransactionInput = { body: TTronSendTransactionBody };
 
 export type TUpdateFiatOnRampCredentialResponse = {
   activity: v1Activity;
@@ -6543,6 +7035,27 @@ export type TUpdateFiatOnRampCredentialBody = {
 export type TUpdateFiatOnRampCredentialInput = {
   body: TUpdateFiatOnRampCredentialBody;
 };
+
+export type TUpdateMfaPolicyResponse = {
+  activity: v1Activity;
+  mfaPolicyId: string;
+};
+
+export type TUpdateMfaPolicyBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  userId: string;
+  mfaPolicyId: string;
+  mfaPolicyName?: string;
+  condition?: string;
+  /** Proto3 repeated cannot encode omitted vs []. HTTP JSON raw_body is the
+presence source: omitted → leave unchanged; [] → reject; null → invalid. */
+  requiredAuthenticationMethods?: v1RequiredAuthenticationMethodParams[];
+  order?: number;
+  notes?: string;
+};
+
+export type TUpdateMfaPolicyInput = { body: TUpdateMfaPolicyBody };
 
 export type TUpdateOauth2CredentialResponse = {
   activity: v1Activity;
@@ -6772,19 +7285,17 @@ export type TVerifyOtpResponse = {
 export type TVerifyOtpBody = {
   timestampMs?: string;
   organizationId?: string;
-  /** UUID representing an OTP flow. A new UUID is created for each init OTP activity. */
+  /** ID representing the result of an init OTP activity. */
   otpId: string;
-  /** Encrypted bundle containing the OTP code and a client-generated public key. ZeroXKey's secure enclaves will decrypt this bundle, verify the OTP code, and issue a new Verification Token. Encrypted using the target encryption key provided in the INIT_OTP activity result. */
-  encryptedOtpBundle: string;
+  /** OTP sent out to a user's contact (email or SMS) */
+  otpCode: string;
   /** Expiration window (in seconds) indicating how long the verification token is valid for. If not provided, a default of 1 hour will be used. Maximum value is 86400 seconds (24 hours) */
   expirationSeconds?: string;
+  /** Client-side public key generated by the user, which will be added to the JWT response and verified in subsequent requests via a client proof signature */
+  publicKey?: string;
 };
 
 export type TVerifyOtpInput = { body: TVerifyOtpBody };
-
-export type TNOOPCodegenAnchorResponse = {
-  activity: v1Activity;
-};
 
 export type ProxyTGetAccountResponse = {
   organizationId?: string;
@@ -6848,8 +7359,6 @@ export type ProxyTOAuthLoginInput = { body: ProxyTOAuthLoginBody };
 export type ProxyTInitOtpResponse = {
   /** Unique identifier for an OTP authentication */
   otpId: string;
-  /** Encryption target bundle used to encrypt the OTP attempt */
-  otpEncryptionTargetBundle: string;
 };
 
 export type ProxyTInitOtpBody = {
@@ -6926,9 +7435,7 @@ export type ProxyTVerifyOtpBody = {
   /** ID representing the result of an init OTP activity. */
   otpId: string;
   /** OTP sent out to a user's contact (email or SMS) */
-  otpCode?: string;
-  /** Encrypted OTP bundle containing the OTP code */
-  encryptedOtpBundle?: string;
+  otpCode: string;
   /** Client-side public key generated by the user, which will be added to the JWT response and verified in subsequent requests via a client proof signature */
   publicKey?: string;
 };

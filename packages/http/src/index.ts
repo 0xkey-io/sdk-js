@@ -20,6 +20,7 @@ export {
   getSignedTransactionFromActivity,
   InvalidArgumentError,
   ZeroXKeyActivityError,
+  ZeroXKeyActivityAuthenticatorsNeededError,
   ZeroXKeyActivityConsensusNeededError,
   type TActivity,
   type TActivityId,
@@ -32,6 +33,14 @@ export {
 export type { SignedRequest, TSignedRequest } from "./base";
 export { getWebAuthnAttestation } from "./webauthn";
 export { withAsyncPolling, createActivityPoller } from "./async";
+export {
+  AUTHENTICATORS_NEEDED,
+  RECOVERY_SCOPE,
+  RECOVERY_TTL_SECONDS,
+  isAuthenticatorsNeededStatus,
+  missingFactorTypes,
+  recoveryIndependenceWarning,
+} from "./mfa";
 
 export { ZeroXKeyApi };
 

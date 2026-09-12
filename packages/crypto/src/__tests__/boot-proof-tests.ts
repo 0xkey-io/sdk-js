@@ -64,6 +64,31 @@ describe("Boot proof verification (verifyBootProof)", () => {
     );
   });
 
+  test("verifyBootProof enforces an explicitly selected QoS 0.14 policy", async () => {
+    const strictAnchor: QuorumManifestSetAnchor = {
+      ...preprodAnchor,
+      qosAttestationPolicy: {
+        mode: "qos-0.14",
+        allowedManifestDigestsHex: ["00".repeat(32)],
+      },
+    };
+
+    await expect(verifyBootProof(testBootProof1, strictAnchor)).rejects.toThrow(
+      "QoS attestation must contain exactly PCR0 through PCR31",
+    );
+  });
+
+  test("verifyBootProof rejects an unknown QoS policy mode", async () => {
+    const unknownPolicyAnchor = {
+      ...preprodAnchor,
+      qosAttestationPolicy: { mode: "typo" },
+    } as unknown as QuorumManifestSetAnchor;
+
+    await expect(
+      verifyBootProof(testBootProof1, unknownPolicyAnchor),
+    ).rejects.toThrow("Unsupported QoS attestation policy mode");
+  });
+
   test("verifyBootProof rejects against the production anchor (different quorum)", async () => {
     // Uses the real PRODUCTION_QUORUM_MANIFEST_SET default anchor: this
     // preprod manifest belongs to a different quorum ceremony entirely (its

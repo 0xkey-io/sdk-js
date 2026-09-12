@@ -43,6 +43,7 @@ export type Passkey = {
     clientDataJson: string;
     attestationObject: string;
     transports: (
+      | "AUTHENTICATOR_TRANSPORT_UNSPECIFIED"
       | "AUTHENTICATOR_TRANSPORT_BLE"
       | "AUTHENTICATOR_TRANSPORT_INTERNAL"
       | "AUTHENTICATOR_TRANSPORT_NFC"

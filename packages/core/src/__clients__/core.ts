@@ -108,6 +108,7 @@ import {
   type CreateApiKeyPairParams,
   type FetchBootProofForAppProofParams,
   type CreateHttpClientParams,
+  type OverrideAttestedStamperParams,
   type BuildWalletLoginRequestResult,
   type BuildWalletLoginRequestParams,
   type VerifyAppProofsParams,
@@ -147,6 +148,7 @@ import {
 import { createStorageManager } from "../__storage__/base";
 import { CrossPlatformApiKeyStamper } from "../__stampers__/api/base";
 import { CrossPlatformPasskeyStamper } from "../__stampers__/passkey/base";
+import { AttestedScheme, AttestedStamper } from "@0xkey-io/attested-stamper";
 import {
   DEFAULT_ETHEREUM_ACCOUNTS,
   DEFAULT_SOLANA_ACCOUNTS,
@@ -247,6 +249,7 @@ export class ZeroXKeyClient {
 
   private apiKeyStamper?: CrossPlatformApiKeyStamper | undefined;
   private passkeyStamper?: CrossPlatformPasskeyStamper | undefined;
+  private attestedStamper?: AttestedStamper | undefined;
   private walletManager?: WalletManagerBase | undefined;
   private storageManager!: StorageBase;
 
@@ -257,12 +260,14 @@ export class ZeroXKeyClient {
     apiKeyStamper?: CrossPlatformApiKeyStamper,
     passkeyStamper?: CrossPlatformPasskeyStamper,
     walletManager?: WalletManagerBase,
+    attestedStamper?: AttestedStamper,
   ) {
     this.config = config;
 
     // Just store any explicitly provided stampers
     this.apiKeyStamper = apiKeyStamper;
     this.passkeyStamper = passkeyStamper;
+    this.attestedStamper = attestedStamper;
     this.walletManager = walletManager;
 
     // Actual initialization will happen in init()
@@ -275,6 +280,7 @@ export class ZeroXKeyClient {
 
     // Initialize the API key stamper
     this.apiKeyStamper = new CrossPlatformApiKeyStamper(this.storageManager);
+    this.attestedStamper = new AttestedStamper(this.apiKeyStamper);
 
     // we parallelize independent initializations:
     // - API key stamper init
@@ -350,8 +356,65 @@ export class ZeroXKeyClient {
       apiKeyStamper: this.apiKeyStamper,
       passkeyStamper: this.passkeyStamper,
       walletStamper: this.walletManager?.stamper,
+      attestedStamper: this.attestedStamper,
       storageManager: this.storageManager,
     });
+  };
+
+  overrideAttestedStamper = async (
+    params: OverrideAttestedStamperParams,
+  ): Promise<void> => {
+    return withZeroXKeyErrorHandling(
+      async () => {
+        if (!this.attestedStamper) {
+          throw new ZeroXKeyError(
+            "Attested stamper is not initialized",
+            ZeroXKeyErrorCodes.INTERNAL_ERROR,
+          );
+        }
+        const { verificationToken, oidcToken, publicKey } = params;
+        if (verificationToken && oidcToken) {
+          throw new ZeroXKeyError(
+            "Cannot set both verificationToken and oidcToken. Please provide only one.",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+        if ((verificationToken || oidcToken) && !publicKey) {
+          throw new ZeroXKeyError(
+            "A publicKey must be provided when setting a verificationToken or oidcToken.",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+        if (verificationToken) {
+          this.attestedStamper.configure({
+            attestedIdentity: verificationToken,
+            publicKey: publicKey!,
+            scheme: AttestedScheme.P256_VERIFICATION_TOKEN,
+          });
+        } else if (oidcToken) {
+          this.attestedStamper.configure({
+            attestedIdentity: oidcToken,
+            publicKey: publicKey!,
+            scheme: AttestedScheme.P256_OIDC,
+          });
+        } else {
+          this.attestedStamper.clear();
+        }
+      },
+      {
+        errorMessage: "Failed to override attested stamper",
+        errorCode: ZeroXKeyErrorCodes.INTERNAL_ERROR,
+      },
+    );
+  };
+
+  setMfaHandler = (handler: ZeroXKeySDKClientConfig["onMfaRequired"]): void => {
+    if (handler) this.config.onMfaRequired = handler;
+    else delete this.config.onMfaRequired;
+    if (this.httpClient) {
+      if (handler) this.httpClient.config.onMfaRequired = handler;
+      else delete this.httpClient.config.onMfaRequired;
+    }
   };
 
   /**
@@ -1282,7 +1345,7 @@ export class ZeroXKeyClient {
   initOtp = async (params: InitOtpParams): Promise<InitOtpResult> => {
     return withZeroXKeyErrorHandling(
       async () => {
-        const initOtpRes = await this.httpClient.proxyInitOtp(params);
+        const initOtpRes = await this.httpClient.proxyInitOtpV2(params);
 
         if (
           !initOtpRes ||
@@ -1345,7 +1408,7 @@ export class ZeroXKeyClient {
           publicKey: resolvedPublicKey!,
           otpEncryptionTargetBundle,
         });
-        const verifyOtpRes = await this.httpClient.proxyVerifyOtp({
+        const verifyOtpRes = await this.httpClient.proxyVerifyOtpV2({
           otpId,
           encryptedOtpBundle,
         });

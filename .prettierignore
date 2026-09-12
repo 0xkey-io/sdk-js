@@ -120,6 +120,12 @@ dist
 # Generated files
 pnpm-lock.yaml
 packages/pay/src/commerce/generated/rc-bundle/
+contracts/services-public-api.swagger.json
+packages/core/src/__inputs__/public_api.swagger.json
+packages/http/src/__generated__/services/coordinator/public/v1/public_api.swagger.json
+packages/sdk-browser/src/__inputs__/public_api.swagger.json
+packages/sdk-server/src/__inputs__/public_api.swagger.json
+packages/sdk-types/src/__inputs__/public_api.swagger.json
 
 # Hardhat files
 cache/

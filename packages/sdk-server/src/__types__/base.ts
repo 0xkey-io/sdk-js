@@ -148,6 +148,7 @@ export type OtpLoginRequest = {
   suborgID: string;
   verificationToken: string;
   publicKey: string;
+  clientSignature: ZeroXKeyApiTypes["v1ClientSignature"];
   sessionLengthSeconds?: number | undefined;
 };
 

@@ -6,10 +6,6 @@
       "sha256": "ec489551ae8b1892dc5569322b1b426153c0b7a21a143260ab418c9c7576c7ee"
     },
     {
-      "path": "internal/contract-guard/baselines/package-surfaces.json",
-      "sha256": "9452b80352c46087a2c8372b03a07e83cbe451d92ca564629d78a77258b2b352"
-    },
-    {
       "path": "internal/pay-conformance/fault-coverage.md",
       "sha256": "b1fa88fe09d3551a7ad6f7b1d831fe658f26708adfec1f65a0898c6695d3afc7"
     },

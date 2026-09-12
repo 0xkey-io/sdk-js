@@ -8,6 +8,7 @@ const PILOT_PACKAGES = new Set([
   "@0xkey-io/encoding",
   "@0xkey-io/crypto",
   "@0xkey-io/api-key-stamper",
+  "@0xkey-io/attested-stamper",
 ]);
 
 function main() {

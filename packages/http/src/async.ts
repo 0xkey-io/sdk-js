@@ -1,6 +1,11 @@
 import type { ZeroXKeyClient } from ".";
 import { PublicApiService as ZeroXKeyApi } from "./__generated__/barrel";
-import { TActivity, TActivityResponse, ZeroXKeyActivityError } from "./shared";
+import {
+  TActivity,
+  TActivityResponse,
+  ZeroXKeyActivityAuthenticatorsNeededError,
+  ZeroXKeyActivityError,
+} from "./shared";
 import { sleep } from "./_kernel/transport";
 
 const DEFAULT_REFRESH_INTERVAL_MS = 500;
@@ -62,6 +67,22 @@ export function withAsyncPolling<
           // Activity was rejected
           throw new ZeroXKeyActivityError({
             message: `Activity ${activity.id} was rejected`,
+            activityId: activity.id,
+            activityStatus: activity.status,
+            activityType: activity.type,
+          });
+        }
+        case "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED": {
+          throw new ZeroXKeyActivityAuthenticatorsNeededError({
+            message: `Authenticators needed for activity ${activity.id}`,
+            activityId: activity.id,
+            activityStatus: activity.status,
+            activityType: activity.type,
+          });
+        }
+        case "ACTIVITY_STATUS_UNSPECIFIED": {
+          throw new ZeroXKeyActivityError({
+            message: `Unexpected unspecified status for activity ${activity.id}`,
             activityId: activity.id,
             activityStatus: activity.status,
             activityType: activity.type,
@@ -155,6 +176,22 @@ export function createActivityPoller<
           // Activity was rejected
           throw new ZeroXKeyActivityError({
             message: `Activity ${activity.id} was rejected`,
+            activityId: activity.id,
+            activityStatus: activity.status,
+            activityType: activity.type,
+          });
+        }
+        case "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED": {
+          throw new ZeroXKeyActivityAuthenticatorsNeededError({
+            message: `Authenticators needed for activity ${activity.id}`,
+            activityId: activity.id,
+            activityStatus: activity.status,
+            activityType: activity.type,
+          });
+        }
+        case "ACTIVITY_STATUS_UNSPECIFIED": {
+          throw new ZeroXKeyActivityError({
+            message: `Unexpected unspecified status for activity ${activity.id}`,
             activityId: activity.id,
             activityStatus: activity.status,
             activityType: activity.type,
