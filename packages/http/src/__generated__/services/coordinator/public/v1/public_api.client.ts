@@ -13,14 +13,14 @@ import type {
   TGetActivityBody,
   TGetActivityResponse,
 } from "./public_api.fetcher";
-import type {
-  TGetAttestationDocumentBody,
-  TGetAttestationDocumentResponse,
-} from "./public_api.fetcher";
 import type { TGetApiKeyBody, TGetApiKeyResponse } from "./public_api.fetcher";
 import type {
   TGetApiKeysBody,
   TGetApiKeysResponse,
+} from "./public_api.fetcher";
+import type {
+  TGetAttestationDocumentBody,
+  TGetAttestationDocumentResponse,
 } from "./public_api.fetcher";
 import type {
   TGetAuthenticatorBody,
@@ -41,6 +41,18 @@ import type {
 import type {
   TGetLatestBootProofBody,
   TGetLatestBootProofResponse,
+} from "./public_api.fetcher";
+import type {
+  TGetMfaPoliciesBody,
+  TGetMfaPoliciesResponse,
+} from "./public_api.fetcher";
+import type {
+  TGetMfaPolicyBody,
+  TGetMfaPolicyResponse,
+} from "./public_api.fetcher";
+import type {
+  TGetMfaStatusBody,
+  TGetMfaStatusResponse,
 } from "./public_api.fetcher";
 import type { TGetNoncesBody, TGetNoncesResponse } from "./public_api.fetcher";
 import type {
@@ -71,6 +83,14 @@ import type {
 import type {
   TGetSendTransactionStatusBody,
   TGetSendTransactionStatusResponse,
+} from "./public_api.fetcher";
+import type {
+  TGetSessionProfileBody,
+  TGetSessionProfileResponse,
+} from "./public_api.fetcher";
+import type {
+  TGetSessionProfilesBody,
+  TGetSessionProfilesResponse,
 } from "./public_api.fetcher";
 import type {
   TGetSmartContractInterfaceBody,
@@ -157,6 +177,10 @@ import type {
   TCreateInvitationsResponse,
 } from "./public_api.fetcher";
 import type {
+  TCreateMfaPolicyBody,
+  TCreateMfaPolicyResponse,
+} from "./public_api.fetcher";
+import type {
   TCreateOauth2CredentialBody,
   TCreateOauth2CredentialResponse,
 } from "./public_api.fetcher";
@@ -187,6 +211,10 @@ import type {
 import type {
   TCreateReadWriteSessionBody,
   TCreateReadWriteSessionResponse,
+} from "./public_api.fetcher";
+import type {
+  TCreateSessionProfileBody,
+  TCreateSessionProfileResponse,
 } from "./public_api.fetcher";
 import type {
   TCreateSmartContractInterfaceBody,
@@ -227,6 +255,10 @@ import type {
 import type {
   TDeleteInvitationBody,
   TDeleteInvitationResponse,
+} from "./public_api.fetcher";
+import type {
+  TDeleteMfaPolicyBody,
+  TDeleteMfaPolicyResponse,
 } from "./public_api.fetcher";
 import type {
   TDeleteOauth2CredentialBody,
@@ -362,10 +394,6 @@ import type {
   TSignTransactionResponse,
 } from "./public_api.fetcher";
 import type {
-  TTronSendTransactionBody,
-  TTronSendTransactionResponse,
-} from "./public_api.fetcher";
-import type {
   TSolSendTransactionBody,
   TSolSendTransactionResponse,
 } from "./public_api.fetcher";
@@ -374,8 +402,16 @@ import type {
   TStampLoginResponse,
 } from "./public_api.fetcher";
 import type {
+  TTronSendTransactionBody,
+  TTronSendTransactionResponse,
+} from "./public_api.fetcher";
+import type {
   TUpdateFiatOnRampCredentialBody,
   TUpdateFiatOnRampCredentialResponse,
+} from "./public_api.fetcher";
+import type {
+  TUpdateMfaPolicyBody,
+  TUpdateMfaPolicyResponse,
 } from "./public_api.fetcher";
 import type {
   TUpdateOauth2CredentialBody,
@@ -422,42 +458,6 @@ import type {
   TUpdateWalletResponse,
 } from "./public_api.fetcher";
 import type { TVerifyOtpBody, TVerifyOtpResponse } from "./public_api.fetcher";
-import type {
-  TGetMfaStatusBody,
-  TGetMfaStatusResponse,
-} from "./public_api.fetcher";
-import type {
-  TGetMfaPoliciesBody,
-  TGetMfaPoliciesResponse,
-} from "./public_api.fetcher";
-import type {
-  TGetMfaPolicyBody,
-  TGetMfaPolicyResponse,
-} from "./public_api.fetcher";
-import type {
-  TGetSessionProfileBody,
-  TGetSessionProfileResponse,
-} from "./public_api.fetcher";
-import type {
-  TGetSessionProfilesBody,
-  TGetSessionProfilesResponse,
-} from "./public_api.fetcher";
-import type {
-  TCreateMfaPolicyBody,
-  TCreateMfaPolicyResponse,
-} from "./public_api.fetcher";
-import type {
-  TUpdateMfaPolicyBody,
-  TUpdateMfaPolicyResponse,
-} from "./public_api.fetcher";
-import type {
-  TDeleteMfaPolicyBody,
-  TDeleteMfaPolicyResponse,
-} from "./public_api.fetcher";
-import type {
-  TCreateSessionProfileBody,
-  TCreateSessionProfileResponse,
-} from "./public_api.fetcher";
 
 export class ZeroXKeyClient {
   config: THttpConfig;
@@ -538,37 +538,6 @@ export class ZeroXKeyClient {
   };
 
   /**
-   * Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.
-   *
-   * Sign the provided `TGetAttestationDocumentBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_attestation).
-   *
-   * See also {@link stampGetAttestationDocument}.
-   */
-  getAttestationDocument = async (
-    input: TGetAttestationDocumentBody,
-  ): Promise<TGetAttestationDocumentResponse> => {
-    return this.request("/public/v1/query/get_attestation", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TGetAttestationDocumentBody` by using the client's `stamp` function.
-   *
-   * See also {@link GetAttestationDocument}.
-   */
-  stampGetAttestationDocument = async (
-    input: TGetAttestationDocumentBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl = this.config.baseUrl + "/public/v1/query/get_attestation";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
    * Get details about an API key.
    *
    * Sign the provided `TGetApiKeyBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_api_key).
@@ -613,6 +582,37 @@ export class ZeroXKeyClient {
    */
   stampGetApiKeys = async (input: TGetApiKeysBody): Promise<TSignedRequest> => {
     const fullUrl = this.config.baseUrl + "/public/v1/query/get_api_keys";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.
+   *
+   * Sign the provided `TGetAttestationDocumentBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_attestation).
+   *
+   * See also {@link stampGetAttestationDocument}.
+   */
+  getAttestationDocument = async (
+    input: TGetAttestationDocumentBody,
+  ): Promise<TGetAttestationDocumentResponse> => {
+    return this.request("/public/v1/query/get_attestation", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TGetAttestationDocumentBody` by using the client's `stamp` function.
+   *
+   * See also {@link GetAttestationDocument}.
+   */
+  stampGetAttestationDocument = async (
+    input: TGetAttestationDocumentBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl = this.config.baseUrl + "/public/v1/query/get_attestation";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -769,6 +769,99 @@ export class ZeroXKeyClient {
   ): Promise<TSignedRequest> => {
     const fullUrl =
       this.config.baseUrl + "/public/v1/query/get_latest_boot_proof";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Get all MFA policies for a user.
+   *
+   * Sign the provided `TGetMfaPoliciesBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_mfa_policies).
+   *
+   * See also {@link stampGetMfaPolicies}.
+   */
+  getMfaPolicies = async (
+    input: TGetMfaPoliciesBody,
+  ): Promise<TGetMfaPoliciesResponse> => {
+    return this.request("/public/v1/query/get_mfa_policies", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TGetMfaPoliciesBody` by using the client's `stamp` function.
+   *
+   * See also {@link GetMfaPolicies}.
+   */
+  stampGetMfaPolicies = async (
+    input: TGetMfaPoliciesBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl = this.config.baseUrl + "/public/v1/query/get_mfa_policies";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Get a single MFA policy for a user.
+   *
+   * Sign the provided `TGetMfaPolicyBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_mfa_policy).
+   *
+   * See also {@link stampGetMfaPolicy}.
+   */
+  getMfaPolicy = async (
+    input: TGetMfaPolicyBody,
+  ): Promise<TGetMfaPolicyResponse> => {
+    return this.request("/public/v1/query/get_mfa_policy", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TGetMfaPolicyBody` by using the client's `stamp` function.
+   *
+   * See also {@link GetMfaPolicy}.
+   */
+  stampGetMfaPolicy = async (
+    input: TGetMfaPolicyBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl = this.config.baseUrl + "/public/v1/query/get_mfa_policy";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Get the MFA status of an activity for one user or all voting users.
+   *
+   * Sign the provided `TGetMfaStatusBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_mfa_status).
+   *
+   * See also {@link stampGetMfaStatus}.
+   */
+  getMfaStatus = async (
+    input: TGetMfaStatusBody,
+  ): Promise<TGetMfaStatusResponse> => {
+    return this.request("/public/v1/query/get_mfa_status", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TGetMfaStatusBody` by using the client's `stamp` function.
+   *
+   * See also {@link GetMfaStatus}.
+   */
+  stampGetMfaStatus = async (
+    input: TGetMfaStatusBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl = this.config.baseUrl + "/public/v1/query/get_mfa_status";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -1049,6 +1142,70 @@ export class ZeroXKeyClient {
   ): Promise<TSignedRequest> => {
     const fullUrl =
       this.config.baseUrl + "/public/v1/query/get_send_transaction_status";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Get one session profile for an organization.
+   *
+   * Sign the provided `TGetSessionProfileBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_session_profile).
+   *
+   * See also {@link stampGetSessionProfile}.
+   */
+  getSessionProfile = async (
+    input: TGetSessionProfileBody,
+  ): Promise<TGetSessionProfileResponse> => {
+    return this.request("/public/v1/query/get_session_profile", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TGetSessionProfileBody` by using the client's `stamp` function.
+   *
+   * See also {@link GetSessionProfile}.
+   */
+  stampGetSessionProfile = async (
+    input: TGetSessionProfileBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/query/get_session_profile";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Get all session profiles for an organization.
+   *
+   * Sign the provided `TGetSessionProfilesBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_session_profiles).
+   *
+   * See also {@link stampGetSessionProfiles}.
+   */
+  getSessionProfiles = async (
+    input: TGetSessionProfilesBody,
+  ): Promise<TGetSessionProfilesResponse> => {
+    return this.request("/public/v1/query/get_session_profiles", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TGetSessionProfilesBody` by using the client's `stamp` function.
+   *
+   * See also {@link GetSessionProfiles}.
+   */
+  stampGetSessionProfiles = async (
+    input: TGetSessionProfilesBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/query/get_session_profiles";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -1703,7 +1860,7 @@ export class ZeroXKeyClient {
   };
 
   /**
-   * Create authenticators to authenticate requests to ZeroXKey.
+   * Create authenticators to authenticate requests to 0xkey.
    *
    * Sign the provided `TCreateAuthenticatorsBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/create_authenticators).
    *
@@ -1792,6 +1949,37 @@ export class ZeroXKeyClient {
   ): Promise<TSignedRequest> => {
     const fullUrl =
       this.config.baseUrl + "/public/v1/submit/create_invitations";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Create a new MFA policy for a user.
+   *
+   * Sign the provided `TCreateMfaPolicyBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/create_mfa_policy).
+   *
+   * See also {@link stampCreateMfaPolicy}.
+   */
+  createMfaPolicy = async (
+    input: TCreateMfaPolicyBody,
+  ): Promise<TCreateMfaPolicyResponse> => {
+    return this.request("/public/v1/submit/create_mfa_policy", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TCreateMfaPolicyBody` by using the client's `stamp` function.
+   *
+   * See also {@link CreateMfaPolicy}.
+   */
+  stampCreateMfaPolicy = async (
+    input: TCreateMfaPolicyBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl = this.config.baseUrl + "/public/v1/submit/create_mfa_policy";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -2046,6 +2234,38 @@ export class ZeroXKeyClient {
   ): Promise<TSignedRequest> => {
     const fullUrl =
       this.config.baseUrl + "/public/v1/submit/create_read_write_session";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Create a new session profile for an organization.
+   *
+   * Sign the provided `TCreateSessionProfileBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/create_session_profile).
+   *
+   * See also {@link stampCreateSessionProfile}.
+   */
+  createSessionProfile = async (
+    input: TCreateSessionProfileBody,
+  ): Promise<TCreateSessionProfileResponse> => {
+    return this.request("/public/v1/submit/create_session_profile", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TCreateSessionProfileBody` by using the client's `stamp` function.
+   *
+   * See also {@link CreateSessionProfile}.
+   */
+  stampCreateSessionProfile = async (
+    input: TCreateSessionProfileBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/submit/create_session_profile";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -2367,6 +2587,37 @@ export class ZeroXKeyClient {
     input: TDeleteInvitationBody,
   ): Promise<TSignedRequest> => {
     const fullUrl = this.config.baseUrl + "/public/v1/submit/delete_invitation";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Delete an MFA policy for a user.
+   *
+   * Sign the provided `TDeleteMfaPolicyBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/delete_mfa_policy).
+   *
+   * See also {@link stampDeleteMfaPolicy}.
+   */
+  deleteMfaPolicy = async (
+    input: TDeleteMfaPolicyBody,
+  ): Promise<TDeleteMfaPolicyResponse> => {
+    return this.request("/public/v1/submit/delete_mfa_policy", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TDeleteMfaPolicyBody` by using the client's `stamp` function.
+   *
+   * See also {@link DeleteMfaPolicy}.
+   */
+  stampDeleteMfaPolicy = async (
+    input: TDeleteMfaPolicyBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl = this.config.baseUrl + "/public/v1/submit/delete_mfa_policy";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -2786,7 +3037,7 @@ export class ZeroXKeyClient {
   };
 
   /**
-   * Submit a transaction intent describing an EVM transaction you would like to broadcast.
+   * Submit a transaction intent describing a transaction you would like to broadcast.
    *
    * Sign the provided `TEthSendTransactionBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/eth_send_transaction).
    *
@@ -3520,39 +3771,7 @@ export class ZeroXKeyClient {
   };
 
   /**
-   * Submit a native TRX transfer intent describing a transaction you would like to broadcast.
-   *
-   * Sign the provided `TTronSendTransactionBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/tron_send_transaction).
-   *
-   * See also {@link stampTronSendTransaction}.
-   */
-  tronSendTransaction = async (
-    input: TTronSendTransactionBody,
-  ): Promise<TTronSendTransactionResponse> => {
-    return this.request("/public/v1/submit/tron_send_transaction", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TTronSendTransactionBody` by using the client's `stamp` function.
-   *
-   * See also {@link TronSendTransaction}.
-   */
-  stampTronSendTransaction = async (
-    input: TTronSendTransactionBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl =
-      this.config.baseUrl + "/public/v1/submit/tron_send_transaction";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Submit a transaction intent describing an SVM transaction you would like to broadcast.
+   * Submit a transaction intent describing a transaction you would like to broadcast.
    *
    * Sign the provided `TSolSendTransactionBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/sol_send_transaction).
    *
@@ -3611,6 +3830,38 @@ export class ZeroXKeyClient {
   };
 
   /**
+   * Submit a native TRX transfer intent describing a transaction you would like to broadcast.
+   *
+   * Sign the provided `TTronSendTransactionBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/tron_send_transaction).
+   *
+   * See also {@link stampTronSendTransaction}.
+   */
+  tronSendTransaction = async (
+    input: TTronSendTransactionBody,
+  ): Promise<TTronSendTransactionResponse> => {
+    return this.request("/public/v1/submit/tron_send_transaction", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TTronSendTransactionBody` by using the client's `stamp` function.
+   *
+   * See also {@link TronSendTransaction}.
+   */
+  stampTronSendTransaction = async (
+    input: TTronSendTransactionBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/submit/tron_send_transaction";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
    * Update a fiat on ramp provider credential
    *
    * Sign the provided `TUpdateFiatOnRampCredentialBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/update_fiat_on_ramp_credential).
@@ -3636,6 +3887,37 @@ export class ZeroXKeyClient {
   ): Promise<TSignedRequest> => {
     const fullUrl =
       this.config.baseUrl + "/public/v1/submit/update_fiat_on_ramp_credential";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Update an MFA policy for a user.
+   *
+   * Sign the provided `TUpdateMfaPolicyBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/update_mfa_policy).
+   *
+   * See also {@link stampUpdateMfaPolicy}.
+   */
+  updateMfaPolicy = async (
+    input: TUpdateMfaPolicyBody,
+  ): Promise<TUpdateMfaPolicyResponse> => {
+    return this.request("/public/v1/submit/update_mfa_policy", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TUpdateMfaPolicyBody` by using the client's `stamp` function.
+   *
+   * See also {@link UpdateMfaPolicy}.
+   */
+  stampUpdateMfaPolicy = async (
+    input: TUpdateMfaPolicyBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl = this.config.baseUrl + "/public/v1/submit/update_mfa_policy";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -3988,7 +4270,7 @@ export class ZeroXKeyClient {
   };
 
   /**
-   * Verify a generic OTP.
+   * Verify a generic OTP (legacy, plaintext otpCode).
    *
    * Sign the provided `TVerifyOtpBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/verify_otp).
    *
@@ -4005,288 +4287,6 @@ export class ZeroXKeyClient {
    */
   stampVerifyOtp = async (input: TVerifyOtpBody): Promise<TSignedRequest> => {
     const fullUrl = this.config.baseUrl + "/public/v1/submit/verify_otp";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Get the MFA status of an activity for one user or all voting users.
-   *
-   * Sign the provided `TGetMfaStatusBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_mfa_status).
-   *
-   * See also {@link stampGetMfaStatus}.
-   */
-  getMfaStatus = async (
-    input: TGetMfaStatusBody,
-  ): Promise<TGetMfaStatusResponse> => {
-    return this.request("/public/v1/query/get_mfa_status", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TGetMfaStatusBody` by using the client's `stamp` function.
-   *
-   * See also {@link GetMfaStatus}.
-   */
-  stampGetMfaStatus = async (
-    input: TGetMfaStatusBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl = this.config.baseUrl + "/public/v1/query/get_mfa_status";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Get all MFA policies for a user.
-   *
-   * Sign the provided `TGetMfaPoliciesBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_mfa_policies).
-   *
-   * See also {@link stampGetMfaPolicies}.
-   */
-  getMfaPolicies = async (
-    input: TGetMfaPoliciesBody,
-  ): Promise<TGetMfaPoliciesResponse> => {
-    return this.request("/public/v1/query/get_mfa_policies", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TGetMfaPoliciesBody` by using the client's `stamp` function.
-   *
-   * See also {@link GetMfaPolicies}.
-   */
-  stampGetMfaPolicies = async (
-    input: TGetMfaPoliciesBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl = this.config.baseUrl + "/public/v1/query/get_mfa_policies";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Get a single MFA policy for a user.
-   *
-   * Sign the provided `TGetMfaPolicyBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_mfa_policy).
-   *
-   * See also {@link stampGetMfaPolicy}.
-   */
-  getMfaPolicy = async (
-    input: TGetMfaPolicyBody,
-  ): Promise<TGetMfaPolicyResponse> => {
-    return this.request("/public/v1/query/get_mfa_policy", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TGetMfaPolicyBody` by using the client's `stamp` function.
-   *
-   * See also {@link GetMfaPolicy}.
-   */
-  stampGetMfaPolicy = async (
-    input: TGetMfaPolicyBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl = this.config.baseUrl + "/public/v1/query/get_mfa_policy";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Get one session profile for an organization.
-   *
-   * Sign the provided `TGetSessionProfileBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_session_profile).
-   *
-   * See also {@link stampGetSessionProfile}.
-   */
-  getSessionProfile = async (
-    input: TGetSessionProfileBody,
-  ): Promise<TGetSessionProfileResponse> => {
-    return this.request("/public/v1/query/get_session_profile", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TGetSessionProfileBody` by using the client's `stamp` function.
-   *
-   * See also {@link GetSessionProfile}.
-   */
-  stampGetSessionProfile = async (
-    input: TGetSessionProfileBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl =
-      this.config.baseUrl + "/public/v1/query/get_session_profile";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Get all session profiles for an organization.
-   *
-   * Sign the provided `TGetSessionProfilesBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_session_profiles).
-   *
-   * See also {@link stampGetSessionProfiles}.
-   */
-  getSessionProfiles = async (
-    input: TGetSessionProfilesBody,
-  ): Promise<TGetSessionProfilesResponse> => {
-    return this.request("/public/v1/query/get_session_profiles", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TGetSessionProfilesBody` by using the client's `stamp` function.
-   *
-   * See also {@link GetSessionProfiles}.
-   */
-  stampGetSessionProfiles = async (
-    input: TGetSessionProfilesBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl =
-      this.config.baseUrl + "/public/v1/query/get_session_profiles";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Create a new MFA policy for a user.
-   *
-   * Sign the provided `TCreateMfaPolicyBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/create_mfa_policy).
-   *
-   * See also {@link stampCreateMfaPolicy}.
-   */
-  createMfaPolicy = async (
-    input: TCreateMfaPolicyBody,
-  ): Promise<TCreateMfaPolicyResponse> => {
-    return this.request("/public/v1/submit/create_mfa_policy", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TCreateMfaPolicyBody` by using the client's `stamp` function.
-   *
-   * See also {@link CreateMfaPolicy}.
-   */
-  stampCreateMfaPolicy = async (
-    input: TCreateMfaPolicyBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl = this.config.baseUrl + "/public/v1/submit/create_mfa_policy";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Update an MFA policy for a user.
-   *
-   * Sign the provided `TUpdateMfaPolicyBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/update_mfa_policy).
-   *
-   * See also {@link stampUpdateMfaPolicy}.
-   */
-  updateMfaPolicy = async (
-    input: TUpdateMfaPolicyBody,
-  ): Promise<TUpdateMfaPolicyResponse> => {
-    return this.request("/public/v1/submit/update_mfa_policy", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TUpdateMfaPolicyBody` by using the client's `stamp` function.
-   *
-   * See also {@link UpdateMfaPolicy}.
-   */
-  stampUpdateMfaPolicy = async (
-    input: TUpdateMfaPolicyBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl = this.config.baseUrl + "/public/v1/submit/update_mfa_policy";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Delete an MFA policy for a user.
-   *
-   * Sign the provided `TDeleteMfaPolicyBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/delete_mfa_policy).
-   *
-   * See also {@link stampDeleteMfaPolicy}.
-   */
-  deleteMfaPolicy = async (
-    input: TDeleteMfaPolicyBody,
-  ): Promise<TDeleteMfaPolicyResponse> => {
-    return this.request("/public/v1/submit/delete_mfa_policy", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TDeleteMfaPolicyBody` by using the client's `stamp` function.
-   *
-   * See also {@link DeleteMfaPolicy}.
-   */
-  stampDeleteMfaPolicy = async (
-    input: TDeleteMfaPolicyBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl = this.config.baseUrl + "/public/v1/submit/delete_mfa_policy";
-    const body = JSON.stringify(input);
-    const stamp = await this.stamper.stamp(body);
-    return {
-      body: body,
-      stamp: stamp,
-      url: fullUrl,
-    };
-  };
-
-  /**
-   * Create a new session profile for an organization.
-   *
-   * Sign the provided `TCreateSessionProfileBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/create_session_profile).
-   *
-   * See also {@link stampCreateSessionProfile}.
-   */
-  createSessionProfile = async (
-    input: TCreateSessionProfileBody,
-  ): Promise<TCreateSessionProfileResponse> => {
-    return this.request("/public/v1/submit/create_session_profile", input);
-  };
-
-  /**
-   * Produce a `SignedRequest` from `TCreateSessionProfileBody` by using the client's `stamp` function.
-   *
-   * See also {@link CreateSessionProfile}.
-   */
-  stampCreateSessionProfile = async (
-    input: TCreateSessionProfileBody,
-  ): Promise<TSignedRequest> => {
-    const fullUrl =
-      this.config.baseUrl + "/public/v1/submit/create_session_profile";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {

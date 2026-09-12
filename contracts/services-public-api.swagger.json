@@ -74,14 +74,16 @@
     "application/json"
   ],
   "paths": {
-    "/api/v1/noop-codegen-anchor": {
+    "/internal/v1/validate_session": {
       "post": {
-        "operationId": "PublicApiService_NOOPCodegenAnchor",
+        "summary": "Validate session",
+        "description": "Validate a session token. Used internally by API Gateway for cookie-based authentication.",
+        "operationId": "PublicApiService_ValidateSession",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1NOOPCodegenAnchorResponse"
+              "$ref": "#/definitions/v1ValidateSessionResponse"
             }
           },
           "default": {
@@ -91,8 +93,86 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ValidateSessionRequest"
+            }
+          }
+        ],
         "tags": [
-          "PublicApiService"
+          "Sessions"
+        ]
+      }
+    },
+    "/public/v1/email_verify_init": {
+      "post": {
+        "summary": "Email verify init (deprecated)",
+        "description": "Deprecated. Use InitialSignup or SendLoginLink instead.",
+        "operationId": "PublicApiService_EmailVerifyInit",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EmailVerifyInitResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1EmailVerifyInitRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Organizations"
+        ]
+      }
+    },
+    "/public/v1/initial_signup": {
+      "post": {
+        "summary": "Initial signup",
+        "description": "Submit email for signup. Backend auto-detects if account exists and adjusts token type accordingly. Response is always {ok:true}.",
+        "operationId": "PublicApiService_InitialSignup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1InitialSignupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1InitialSignupRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Organizations"
         ]
       }
     },
@@ -644,6 +724,40 @@
         ]
       }
     },
+    "/public/v1/query/get_oidc_providers": {
+      "post": {
+        "summary": "Get OIDC providers",
+        "description": "List the OIDC Identity Providers registered as trusted for this organization.",
+        "operationId": "PublicApiService_GetOidcProviders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetOidcProvidersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetOidcProvidersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OIDC Federation"
+        ]
+      }
+    },
     "/public/v1/query/get_onramp_transaction_status": {
       "post": {
         "summary": "Get On Ramp transaction status",
@@ -1154,6 +1268,40 @@
         ]
       }
     },
+    "/public/v1/query/list_gas_sponsorship_usage": {
+      "post": {
+        "summary": "List gas sponsorship usage records.",
+        "description": "List the most recent gas sponsorship usage entries for an organization (newest first), joined with each sponsored transaction's broadcast lifecycle (tx hash, status, block, actual native fee). Powers the Gas Station sponsorship records table.",
+        "operationId": "PublicApiService_ListGasSponsorshipUsage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListGasSponsorshipUsageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListGasSponsorshipUsageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Broadcasting"
+        ]
+      }
+    },
     "/public/v1/query/list_oauth2_credentials": {
       "post": {
         "summary": "List OAuth 2.0 Credentials",
@@ -1287,6 +1435,40 @@
         ],
         "tags": [
           "Private Keys"
+        ]
+      }
+    },
+    "/public/v1/query/list_send_transactions": {
+      "post": {
+        "summary": "List send transactions.",
+        "description": "List the most recent send-transaction records for an organization (newest first), optionally filtered to a single CAIP-2 network. Powers the Dashboard Company Wallets transaction history page.",
+        "operationId": "PublicApiService_ListSendTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSendTransactionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListSendTransactionsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Send Transactions"
         ]
       }
     },
@@ -1528,6 +1710,142 @@
         ]
       }
     },
+    "/public/v1/query/list_webhook_endpoints": {
+      "post": {
+        "summary": "List Webhook Endpoints",
+        "description": "List all webhook endpoints for the organization.",
+        "operationId": "PublicApiService_ListWebhookEndpoints",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWebhookEndpointsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListWebhookEndpointsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/public/v1/query/prepare_eth_transaction": {
+      "post": {
+        "summary": "Prepare an unsigned EVM transaction.",
+        "description": "Build an unsigned EVM transaction server-side: resolve nonce, gas limit and EIP-1559 fees from the network and assemble the unsigned envelope. The client then stamps the returned unsigned transaction (SIGN_TRANSACTION_V2) — no client-side RPC or nonce management required.",
+        "operationId": "PublicApiService_PrepareEthTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PrepareEthTransactionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1PrepareEthTransactionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Broadcasting"
+        ]
+      }
+    },
+    "/public/v1/query/prepare_sol_transaction": {
+      "post": {
+        "summary": "Prepare an unsigned Solana transaction.",
+        "description": "Build an unsigned Solana transaction server-side: fetch a recent blockhash and assemble an unsigned System Transfer message. The client then stamps the returned unsigned transaction (SIGN_TRANSACTION_V2) and broadcasts via SolSendRawTransaction — no client-side RPC or blockhash management required.",
+        "operationId": "PublicApiService_PrepareSolTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PrepareSolTransactionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1PrepareSolTransactionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Broadcasting"
+        ]
+      }
+    },
+    "/public/v1/query/simulate_policy_chain": {
+      "post": {
+        "summary": "Simulate policy chain",
+        "description": "Simulate how the organization's policy chain would evaluate a hypothetical activity. Read-only dry-run executed by the enclave Policy Engine: no activity is created, no Ruling is signed, and consensus scenarios are evaluated with declared approvers instead of real signatures.",
+        "operationId": "PublicApiService_SimulatePolicyChain",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SimulatePolicyChainResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SimulatePolicyChainRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Policies"
+        ]
+      }
+    },
     "/public/v1/query/whoami": {
       "post": {
         "summary": "Who am I",
@@ -1559,6 +1877,107 @@
         ],
         "tags": [
           "Sessions"
+        ]
+      }
+    },
+    "/public/v1/redirect": {
+      "get": {
+        "summary": "Email verify redirect",
+        "description": "Verify email token and establish session. Used by email verification links.",
+        "operationId": "PublicApiService_EmailVerifyRedirect",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EmailVerifyRedirectResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "description": "Verification token from email link (format: uuid1.uuid2).",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Organizations"
+        ]
+      }
+    },
+    "/public/v1/send_login_link": {
+      "post": {
+        "summary": "Send login link",
+        "description": "Submit email for login. Backend auto-detects if account exists and adjusts token type accordingly. Response is always {ok:true}.",
+        "operationId": "PublicApiService_SendLoginLink",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendLoginLinkResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SendLoginLinkRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Organizations"
+        ]
+      }
+    },
+    "/public/v1/submit/activate_billing_tier": {
+      "post": {
+        "summary": "Activate Billing Tier",
+        "description": "Activate a billing plan tier for the organization (product_id carries the plan SKU).",
+        "operationId": "PublicApiService_ActivateBillingTier",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ActivateBillingTierRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Billing"
         ]
       }
     },
@@ -1831,6 +2250,40 @@
         ],
         "tags": [
           "User Auth"
+        ]
+      }
+    },
+    "/public/v1/submit/create_oidc_provider": {
+      "post": {
+        "summary": "Create OIDC provider",
+        "description": "Register a customer OIDC Identity Provider as trusted for this (parent) organization's OAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform this.",
+        "operationId": "PublicApiService_CreateOidcProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateOidcProviderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OIDC Federation"
         ]
       }
     },
@@ -2276,6 +2729,40 @@
         ]
       }
     },
+    "/public/v1/submit/create_webhook_endpoint": {
+      "post": {
+        "summary": "Create Webhook Endpoint",
+        "description": "Create a new webhook endpoint for the organization.",
+        "operationId": "PublicApiService_CreateWebhookEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateWebhookEndpointRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
     "/public/v1/submit/delete_api_keys": {
       "post": {
         "summary": "Delete API keys",
@@ -2511,6 +2998,74 @@
         ],
         "tags": [
           "User Auth"
+        ]
+      }
+    },
+    "/public/v1/submit/delete_oidc_provider": {
+      "post": {
+        "summary": "Delete OIDC provider",
+        "description": "Remove one or more registered OIDC Identity Providers.",
+        "operationId": "PublicApiService_DeleteOidcProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteOidcProviderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OIDC Federation"
+        ]
+      }
+    },
+    "/public/v1/submit/delete_payment_method": {
+      "post": {
+        "summary": "Delete Payment Method",
+        "description": "Remove a payment method from the organization.",
+        "operationId": "PublicApiService_DeletePaymentMethod",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeletePaymentMethodRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Billing"
         ]
       }
     },
@@ -2851,6 +3406,40 @@
         ],
         "tags": [
           "Wallets"
+        ]
+      }
+    },
+    "/public/v1/submit/delete_webhook_endpoint": {
+      "post": {
+        "summary": "Delete Webhook Endpoint",
+        "description": "Delete a webhook endpoint.",
+        "operationId": "PublicApiService_DeleteWebhookEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteWebhookEndpointRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Webhooks"
         ]
       }
     },
@@ -3602,6 +4191,40 @@
         ]
       }
     },
+    "/public/v1/submit/set_payment_method": {
+      "post": {
+        "summary": "Set Payment Method",
+        "description": "Attach a tokenized payment method to the organization (V2, PSP token only — no raw card data).",
+        "operationId": "PublicApiService_SetPaymentMethod",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SetPaymentMethodRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
     "/public/v1/submit/sign_raw_payload": {
       "post": {
         "summary": "Sign raw payload",
@@ -3772,6 +4395,40 @@
         ]
       }
     },
+    "/public/v1/submit/submit_delegation": {
+      "post": {
+        "summary": "Delegate an EOA to the 0xkey gas-station (platform-paid).",
+        "description": "Broadcast a one-time EIP-7702 delegation for an EOA. The caller signs the authorization off-chain (SIGN_RAW_PAYLOAD_V2 + PAYLOAD_ENCODING_EIP7702_AUTHORIZATION); the platform paymaster pays the gas to broadcast the Type-4 transaction that installs the 0xkey gas-station delegate. Only the 0xkey delegate address is accepted (allowlist).",
+        "operationId": "PublicApiService_SubmitDelegation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitDelegationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SubmitDelegationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Broadcasting"
+        ]
+      }
+    },
     "/public/v1/submit/tron_send_transaction": {
       "post": {
         "summary": "Submit a transaction intent for broadcasting.",
@@ -3905,6 +4562,40 @@
         ],
         "tags": [
           "User Auth"
+        ]
+      }
+    },
+    "/public/v1/submit/update_oidc_provider": {
+      "post": {
+        "summary": "Update OIDC provider",
+        "description": "Update a registered OIDC Identity Provider's name, audiences, or enabled state.",
+        "operationId": "PublicApiService_UpdateOidcProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateOidcProviderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OIDC Federation"
         ]
       }
     },
@@ -4248,6 +4939,74 @@
         ]
       }
     },
+    "/public/v1/submit/update_webhook_endpoint": {
+      "post": {
+        "summary": "Update Webhook Endpoint",
+        "description": "Update an existing webhook endpoint (url, name, active status).",
+        "operationId": "PublicApiService_UpdateWebhookEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateWebhookEndpointRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/public/v1/submit/upsert_gas_usage_config": {
+      "post": {
+        "summary": "Configure gas sponsorship spend cap.",
+        "description": "Configure the per-organization gas sponsorship spend cap: rolling window, native-currency limit (wei), and whether it is enforced. Enforced fail-closed before each sponsored broadcast.",
+        "operationId": "PublicApiService_UpsertGasUsageConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertGasUsageConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/coordinatorpublicv1UpsertGasUsageConfigRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Broadcasting"
+        ]
+      }
+    },
     "/public/v1/submit/verify_otp": {
       "post": {
         "summary": "Verify generic OTP",
@@ -4444,6 +5203,38 @@
         "lastFour",
         "cardHolderName",
         "cardHolderEmail"
+      ]
+    },
+    "coordinatorpublicv1UpsertGasUsageConfigRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "windowDurationMinutes": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rolling window length in minutes. 0 = all-time accumulation."
+        },
+        "windowLimitNative": {
+          "type": "string",
+          "description": "Native-currency spend cap per window in wei (decimal string). '0' = uncapped."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the native spend cap is enforced."
+        },
+        "windowLimitLamports": {
+          "type": "string",
+          "description": "Solana native-currency spend cap per window in lamports (decimal string). '0' = uncapped."
+        }
+      },
+      "required": [
+        "organizationId",
+        "windowDurationMinutes",
+        "windowLimitNative",
+        "enabled"
       ]
     },
     "datav1Tag": {
@@ -4673,7 +5464,7 @@
         }
       },
       "additionalProperties": {},
-      "description": "`Any` contains an arbitrary serialized protocol buffer message along with a\nURL that describes the type of the serialized message.\n\nProtobuf library provides support to pack/unpack Any values in the form\nof utility functions or additional generated methods of the Any type.\n\nExample 1: Pack and unpack a message in C++.\n\n    Foo foo = ...;\n    Any any;\n    any.PackFrom(foo);\n    ...\n    if (any.UnpackTo(&foo)) {\n      ...\n    }\n\nExample 2: Pack and unpack a message in Java.\n\n    Foo foo = ...;\n    Any any = Any.pack(foo);\n    ...\n    if (any.is(Foo.class)) {\n      foo = any.unpack(Foo.class);\n    }\n    // or ...\n    if (any.isSameTypeAs(Foo.getDefaultInstance())) {\n      foo = any.unpack(Foo.getDefaultInstance());\n    }\n\n Example 3: Pack and unpack a message in Python.\n\n    foo = Foo(...)\n    any = Any()\n    any.Pack(foo)\n    ...\n    if any.Is(Foo.DESCRIPTOR):\n      any.Unpack(foo)\n      ...\n\n Example 4: Pack and unpack a message in Go\n\n     foo := &pb.Foo{...}\n     any, err := anypb.New(foo)\n     if err != nil {\n       ...\n     }\n     ...\n     foo := &pb.Foo{}\n     if err := any.UnmarshalTo(foo); err != nil {\n       ...\n     }\n\nThe pack methods provided by protobuf library will by default use\n'type.googleapis.com/full.type.name' as the type URL and the unpack\nmethods only use the fully qualified type name after the last '/'\nin the type URL, for example \"foo.bar.com/x/y.z\" will yield type\nname \"y.z\".\n\nJSON\n====\nThe JSON representation of an `Any` value uses the regular\nrepresentation of the deserialized, embedded message, with an\nadditional field `@type` which contains the type URL. Example:\n\n    package google.profile;\n    message Person {\n      string first_name = 1;\n      string last_name = 2;\n    }\n\n    {\n      \"@type\": \"type.googleapis.com/google.profile.Person\",\n      \"firstName\": <string>,\n      \"lastName\": <string>\n    }\n\nIf the embedded message type is well-known and has a custom JSON\nrepresentation, that representation will be embedded adding a field\n`value` which holds the custom JSON in addition to the `@type`\nfield. Example (for message [google.protobuf.Duration][]):\n\n    {\n      \"@type\": \"type.googleapis.com/google.protobuf.Duration\",\n      \"value\": \"1.212s\"\n    }"
+      "description": "`Any` contains an arbitrary serialized protocol buffer message along with a\nURL that describes the type of the serialized message.\n\nProtobuf library provides support to pack/unpack Any values in the form\nof utility functions or additional generated methods of the Any type.\n\nExample 1: Pack and unpack a message in C++.\n\n    Foo foo = ...;\n    Any any;\n    any.PackFrom(foo);\n    ...\n    if (any.UnpackTo(\u0026foo)) {\n      ...\n    }\n\nExample 2: Pack and unpack a message in Java.\n\n    Foo foo = ...;\n    Any any = Any.pack(foo);\n    ...\n    if (any.is(Foo.class)) {\n      foo = any.unpack(Foo.class);\n    }\n    // or ...\n    if (any.isSameTypeAs(Foo.getDefaultInstance())) {\n      foo = any.unpack(Foo.getDefaultInstance());\n    }\n\n Example 3: Pack and unpack a message in Python.\n\n    foo = Foo(...)\n    any = Any()\n    any.Pack(foo)\n    ...\n    if any.Is(Foo.DESCRIPTOR):\n      any.Unpack(foo)\n      ...\n\n Example 4: Pack and unpack a message in Go\n\n     foo := \u0026pb.Foo{...}\n     any, err := anypb.New(foo)\n     if err != nil {\n       ...\n     }\n     ...\n     foo := \u0026pb.Foo{}\n     if err := any.UnmarshalTo(foo); err != nil {\n       ...\n     }\n\nThe pack methods provided by protobuf library will by default use\n'type.googleapis.com/full.type.name' as the type URL and the unpack\nmethods only use the fully qualified type name after the last '/'\nin the type URL, for example \"foo.bar.com/x/y.z\" will yield type\nname \"y.z\".\n\nJSON\n====\nThe JSON representation of an `Any` value uses the regular\nrepresentation of the deserialized, embedded message, with an\nadditional field `@type` which contains the type URL. Example:\n\n    package google.profile;\n    message Person {\n      string first_name = 1;\n      string last_name = 2;\n    }\n\n    {\n      \"@type\": \"type.googleapis.com/google.profile.Person\",\n      \"firstName\": \u003cstring\u003e,\n      \"lastName\": \u003cstring\u003e\n    }\n\nIf the embedded message type is well-known and has a custom JSON\nrepresentation, that representation will be embedded adding a field\n`value` which holds the custom JSON in addition to the `@type`\nfield. Example (for message [google.protobuf.Duration][]):\n\n    {\n      \"@type\": \"type.googleapis.com/google.protobuf.Duration\",\n      \"value\": \"1.212s\"\n    }"
     },
     "rpcStatus": {
       "type": "object",
@@ -4774,6 +5565,37 @@
         "ACCESS_TYPE_ALL"
       ],
       "default": "ACCESS_TYPE_UNSPECIFIED"
+    },
+    "v1ActivateBillingTierRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_ACTIVATE_BILLING_TIER"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/billingActivateBillingTierIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
     },
     "v1Activity": {
       "type": "object",
@@ -5075,7 +5897,7 @@
         "ADDRESS_FORMAT_XRP"
       ],
       "default": "ADDRESS_FORMAT_UNSPECIFIED",
-      "title": "- ADDRESS_FORMAT_UNCOMPRESSED: 04<X_COORDINATE><Y_COORDINATE>\n - ADDRESS_FORMAT_COMPRESSED: 02 or 03, followed by the X coordinate\n - ADDRESS_FORMAT_BITCOIN_MAINNET_P2PKH: Bitcoin Mainnet address types\n - ADDRESS_FORMAT_BITCOIN_TESTNET_P2PKH: Bitcoin Testnet address types\n - ADDRESS_FORMAT_BITCOIN_SIGNET_P2PKH: Bitcoin Signet address types\n - ADDRESS_FORMAT_BITCOIN_REGTEST_P2PKH: Bitcoin Regtest address types\n - ADDRESS_FORMAT_DOGE_MAINNET: Doge Addresses\n - ADDRESS_FORMAT_TON_V3R2: TON Addresses"
+      "title": "- ADDRESS_FORMAT_UNCOMPRESSED: 04\u003cX_COORDINATE\u003e\u003cY_COORDINATE\u003e\n - ADDRESS_FORMAT_COMPRESSED: 02 or 03, followed by the X coordinate\n - ADDRESS_FORMAT_BITCOIN_MAINNET_P2PKH: Bitcoin Mainnet address types\n - ADDRESS_FORMAT_BITCOIN_TESTNET_P2PKH: Bitcoin Testnet address types\n - ADDRESS_FORMAT_BITCOIN_SIGNET_P2PKH: Bitcoin Signet address types\n - ADDRESS_FORMAT_BITCOIN_REGTEST_P2PKH: Bitcoin Regtest address types\n - ADDRESS_FORMAT_DOGE_MAINNET: Doge Addresses\n - ADDRESS_FORMAT_TON_V3R2: TON Addresses"
     },
     "v1ApiKey": {
       "type": "object",
@@ -6203,6 +7025,66 @@
         "providerIds"
       ]
     },
+    "v1CreateOidcProviderIntent": {
+      "type": "object",
+      "properties": {
+        "providerName": {
+          "type": "string",
+          "description": "Human-readable name to identify this Identity Provider (e.g. \"Zapry IdP\").",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "issuer": {
+          "type": "string",
+          "description": "OIDC issuer URL — must exactly match the 'iss' claim of tokens from this IdP (e.g. https://auth.customer.com).",
+          "title": "@inject_tag: validate:\"required,url\""
+        },
+        "audiences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowed OAuth2 audiences (client IDs). A token's 'aud' must match one of these — at least one is required (fail-closed: no wildcard trust).",
+          "title": "@inject_tag: validate:\"required,dive,required\""
+        }
+      },
+      "description": "OIDC Federation — org-level trusted Identity Provider registry.\n\nDistinct from `CreateOauthProvidersIntent` (which binds a specific user's\nidentity, `iss`+`sub`): this registers *trust* in an issuer/audience pair\nfor the whole (parent) organization, enforced by the Signer during\nOAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform\nthis — enforced by the Policy Engine, not here.",
+      "required": [
+        "providerName",
+        "issuer",
+        "audiences"
+      ]
+    },
+    "v1CreateOidcProviderRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1CreateOidcProviderIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
     "v1CreateOidcProviderResult": {
       "type": "object",
       "properties": {
@@ -6743,7 +7625,7 @@
         },
         "apiKeyName": {
           "type": "string",
-          "description": "Optional human-readable name for an API Key. If none provided, default to Read Write Session - <Timestamp>",
+          "description": "Optional human-readable name for an API Key. If none provided, default to Read Write Session - \u003cTimestamp\u003e",
           "title": "@inject_tag: validate:\"omitempty,tk_label_length,tk_label\""
         },
         "expirationSeconds": {
@@ -6770,7 +7652,7 @@
         },
         "apiKeyName": {
           "type": "string",
-          "description": "Optional human-readable name for an API Key. If none provided, default to Read Write Session - <Timestamp>",
+          "description": "Optional human-readable name for an API Key. If none provided, default to Read Write Session - \u003cTimestamp\u003e",
           "title": "@inject_tag: validate:\"omitempty,tk_label_length,tk_label\""
         },
         "expirationSeconds": {
@@ -8118,6 +9000,34 @@
         "name"
       ]
     },
+    "v1CreateWebhookEndpointRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1CreateWebhookEndpointIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
     "v1CreateWebhookEndpointResult": {
       "type": "object",
       "properties": {
@@ -8610,6 +9520,53 @@
         "providerIds"
       ]
     },
+    "v1DeleteOidcProviderIntent": {
+      "type": "object",
+      "properties": {
+        "providerIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Unique identifiers of the OIDC providers to remove.",
+          "title": "@inject_tag: validate:\"required,dive,required,uuid\""
+        }
+      },
+      "required": [
+        "providerIds"
+      ]
+    },
+    "v1DeleteOidcProviderRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1DeleteOidcProviderIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
     "v1DeleteOidcProviderResult": {
       "type": "object",
       "properties": {
@@ -8648,6 +9605,37 @@
       },
       "required": [
         "organizationId"
+      ]
+    },
+    "v1DeletePaymentMethodRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_DELETE_PAYMENT_METHOD"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/billingDeletePaymentMethodIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
       ]
     },
     "v1DeletePoliciesIntent": {
@@ -9289,6 +10277,34 @@
         "endpointId"
       ]
     },
+    "v1DeleteWebhookEndpointRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1DeleteWebhookEndpointIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
     "v1DeleteWebhookEndpointResult": {
       "type": "object",
       "properties": {
@@ -9341,6 +10357,46 @@
       ],
       "default": "EFFECT_UNSPECIFIED"
     },
+    "v1Eip7702Authorization": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The chain id the authorization is bound to (must match the target chain)."
+        },
+        "address": {
+          "type": "string",
+          "description": "The delegate/implementation contract the EOA authorizes (must be the 0xkey gas-station delegate)."
+        },
+        "nonce": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The EOA account nonce at the time the authorization was signed."
+        },
+        "yParity": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The signature recovery id (0 or 1)."
+        },
+        "r": {
+          "type": "string",
+          "description": "The authorization signature r component (0x-prefixed 32-byte hex)."
+        },
+        "s": {
+          "type": "string",
+          "description": "The authorization signature s component (0x-prefixed 32-byte hex)."
+        }
+      },
+      "required": [
+        "chainId",
+        "address",
+        "nonce",
+        "yParity",
+        "r",
+        "s"
+      ]
+    },
     "v1EmailAuthCustomizationParams": {
       "type": "object",
       "properties": {
@@ -9386,7 +10442,7 @@
         },
         "apiKeyName": {
           "type": "string",
-          "description": "Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp>",
+          "description": "Optional human-readable name for an API Key. If none provided, default to Email Auth - \u003cTimestamp\u003e",
           "title": "@inject_tag: validate:\"omitempty,tk_label_length,tk_label\""
         },
         "expirationSeconds": {
@@ -9437,7 +10493,7 @@
         },
         "apiKeyName": {
           "type": "string",
-          "description": "Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp>",
+          "description": "Optional human-readable name for an API Key. If none provided, default to Email Auth - \u003cTimestamp\u003e",
           "title": "@inject_tag: validate:\"omitempty,tk_label_length,tk_label\""
         },
         "expirationSeconds": {
@@ -9488,7 +10544,7 @@
         },
         "apiKeyName": {
           "type": "string",
-          "description": "Optional human-readable name for an API Key. If none provided, default to Email Auth - <Timestamp>",
+          "description": "Optional human-readable name for an API Key. If none provided, default to Email Auth - \u003cTimestamp\u003e",
           "title": "@inject_tag: validate:\"omitempty,tk_label_length,tk_label\""
         },
         "expirationSeconds": {
@@ -9624,6 +10680,57 @@
         }
       },
       "description": "This proto message is to be used for newer email-related activities (OTP).\nNote that app_name is no longer a parameter here, as it is required in the top-level intent for these activities.\nAll other fields remain optional and will fall back to defaults."
+    },
+    "v1EmailVerifyInitRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address to verify."
+        },
+        "mode": {
+          "type": "string",
+          "description": "Verification mode: 'signup' or 'login'."
+        }
+      },
+      "required": [
+        "email",
+        "mode"
+      ]
+    },
+    "v1EmailVerifyInitResponse": {
+      "type": "object",
+      "properties": {
+        "sent": {
+          "type": "boolean",
+          "description": "Whether the verification email was sent."
+        },
+        "mode": {
+          "type": "string",
+          "description": "Actual mode used: may differ from requested mode if account already exists."
+        }
+      }
+    },
+    "v1EmailVerifyRedirectResponse": {
+      "type": "object",
+      "properties": {
+        "verified": {
+          "type": "boolean",
+          "description": "Whether the email was verified."
+        },
+        "sessionToken": {
+          "type": "string",
+          "description": "Session token for cookie."
+        },
+        "mode": {
+          "type": "string",
+          "description": "Original verification mode: 'signup' or 'login'."
+        },
+        "email": {
+          "type": "string",
+          "description": "Verified email address."
+        }
+      }
     },
     "v1EnableAuthProxyIntent": {
       "type": "object"
@@ -10216,6 +11323,64 @@
       "default": "FIAT_ON_RAMP_PROVIDER_UNSPECIFIED",
       "description": "The supported Fiat On Ramp Providers."
     },
+    "v1GasSponsorshipUsageEntry": {
+      "type": "object",
+      "properties": {
+        "activityId": {
+          "type": "string",
+          "description": "The activity that triggered the sponsored transaction."
+        },
+        "sendTransactionStatusId": {
+          "type": "string",
+          "description": "Status id of the outer paymaster broadcast (poll GetSendTransactionStatus)."
+        },
+        "caip2": {
+          "type": "string",
+          "description": "CAIP-2 network identifier (e.g. 'eip155:11155111')."
+        },
+        "gasFeeAtomic": {
+          "type": "string",
+          "description": "Gas fee in chain-native smallest unit (wei). '0' until confirmed."
+        },
+        "gasFeeNative": {
+          "type": "string",
+          "description": "Human-readable native fee (ETH, 18-decimal). Empty until back-filled on confirmation."
+        },
+        "gasFeeUsd": {
+          "type": "string",
+          "description": "USD equivalent at recording time. Empty when no price oracle."
+        },
+        "eoa": {
+          "type": "string",
+          "description": "End-user EOA whose transaction was sponsored."
+        },
+        "userTo": {
+          "type": "string",
+          "description": "End-user target recipient (sponsored intent `to`)."
+        },
+        "userValue": {
+          "type": "string",
+          "description": "End-user transferred value in wei."
+        },
+        "txHash": {
+          "type": "string",
+          "description": "Outer paymaster transaction hash. Empty if not yet broadcast."
+        },
+        "status": {
+          "type": "string",
+          "description": "Broadcast lifecycle status: pending | broadcast | confirmed | failed | dropped."
+        },
+        "blockNumber": {
+          "type": "string",
+          "format": "int64",
+          "description": "Block number the outer tx was mined in (0 if unconfirmed)."
+        },
+        "recordedAt": {
+          "type": "string",
+          "description": "RFC3339 timestamp when the usage was recorded."
+        }
+      }
+    },
     "v1GetActivitiesRequest": {
       "type": "object",
       "properties": {
@@ -10749,6 +11914,34 @@
       },
       "required": [
         "oauthProviders"
+      ]
+    },
+    "v1GetOidcProvidersRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given organization."
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1GetOidcProvidersResponse": {
+      "type": "object",
+      "properties": {
+        "oidcProviders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OidcProviderConfig"
+          },
+          "description": "A list of registered OIDC Identity Providers trusted by this organization."
+        }
+      },
+      "required": [
+        "oidcProviders"
       ]
     },
     "v1GetOnRampTransactionStatusRequest": {
@@ -12464,6 +13657,27 @@
         "userId"
       ]
     },
+    "v1InitialSignupRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address for signup."
+        }
+      },
+      "required": [
+        "email"
+      ]
+    },
+    "v1InitialSignupResponse": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "description": "Always true."
+        }
+      }
+    },
     "v1Intent": {
       "type": "object",
       "properties": {
@@ -12936,6 +14150,41 @@
         "fiatOnRampCredentials"
       ]
     },
+    "v1ListGasSponsorshipUsageRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Max rows to return (default 50, capped at 200)."
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Number of rows to skip for pagination (default 0)."
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1ListGasSponsorshipUsageResponse": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GasSponsorshipUsageEntry"
+          },
+          "description": "Usage records, newest first."
+        }
+      }
+    },
     "v1ListOauth2CredentialsRequest": {
       "type": "object",
       "properties": {
@@ -12991,6 +14240,78 @@
         "privateKeyTags"
       ]
     },
+    "v1ListSendTransactionsRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given organization."
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Deprecated: use page_size. Max rows to return (default 50, capped at 200)."
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Deprecated and ignored now that this list uses keyset pagination; use cursor instead."
+        },
+        "filterByCaip2": {
+          "type": "string",
+          "description": "Restrict results to a single CAIP-2 network (e.g. 'eip155:8453'). Omit for all networks."
+        },
+        "includeSubOrganizations": {
+          "type": "boolean",
+          "description": "When true, organization_id is resolved to its root and results span the root org AND every sub-org / embedded wallet beneath it (each row's ownerOrganizationId identifies which one sent it), including gas-sponsored sends attributed back to the requesting tenant. When false (default), results are scoped to organization_id exactly."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Max rows to return (default 50, capped at 200). Supersedes the deprecated limit field."
+        },
+        "cursor": {
+          "type": "string",
+          "description": "Opaque keyset-pagination cursor from a previous response's next_cursor. Omit to fetch the first page."
+        },
+        "filterByStatus": {
+          "type": "string",
+          "description": "Restrict results to a single lifecycle status: 'pending', 'broadcast', 'confirmed', 'failed', or 'dropped'. Omit for all statuses."
+        },
+        "filterByAddress": {
+          "type": "string",
+          "description": "Case-insensitive match against either the from or to address. Omit for no address filter."
+        },
+        "createdAfter": {
+          "type": "string",
+          "description": "RFC3339 timestamp; only include rows created at or after this time. Omit for no lower bound."
+        },
+        "createdBefore": {
+          "type": "string",
+          "description": "RFC3339 timestamp; only include rows created at or before this time. Omit for no upper bound."
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1ListSendTransactionsResponse": {
+      "type": "object",
+      "properties": {
+        "sendTransactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SendTransactionSummary"
+          },
+          "description": "Send-transaction records, newest first."
+        },
+        "nextCursor": {
+          "type": "string",
+          "description": "Opaque cursor to pass as `cursor` to fetch the next page. Empty when this is the last page."
+        }
+      }
+    },
     "v1ListUserTagsRequest": {
       "type": "object",
       "properties": {
@@ -13017,6 +14338,34 @@
       },
       "required": [
         "userTags"
+      ]
+    },
+    "v1ListWebhookEndpointsRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1ListWebhookEndpointsResponse": {
+      "type": "object",
+      "properties": {
+        "webhookEndpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WebhookEndpointData"
+          },
+          "description": "List of webhook endpoints for the organization."
+        }
+      },
+      "required": [
+        "webhookEndpoints"
       ]
     },
     "v1MfaPolicy": {
@@ -13279,7 +14628,7 @@
         },
         "apiKeyName": {
           "type": "string",
-          "description": "Optional human-readable name for an API Key. If none provided, default to Oauth - <Timestamp>",
+          "description": "Optional human-readable name for an API Key. If none provided, default to Oauth - \u003cTimestamp\u003e",
           "title": "@inject_tag: validate:\"omitempty,tk_label_length,tk_label\""
         },
         "expirationSeconds": {
@@ -13528,6 +14877,50 @@
         "aud"
       ]
     },
+    "v1OidcProviderConfig": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "description": "Unique identifier for this OIDC Identity Provider registration."
+        },
+        "providerName": {
+          "type": "string",
+          "description": "Human-readable name to identify this Identity Provider."
+        },
+        "issuer": {
+          "type": "string",
+          "description": "OIDC issuer URL, matched against the 'iss' claim of incoming tokens."
+        },
+        "audiences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowed OAuth2 audiences (client IDs) for tokens from this issuer."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this provider is currently trusted for OAUTH_LOGIN / CreateOauthProviders."
+        },
+        "createdAt": {
+          "$ref": "#/definitions/externaldatav1Timestamp"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/externaldatav1Timestamp"
+        }
+      },
+      "description": "A customer-registered OIDC Identity Provider, trusted at the organization\nlevel (distinct from `OauthProvider`, which binds one specific user's\nidentity). See the OIDC Federation trust registry docs.",
+      "required": [
+        "providerId",
+        "providerName",
+        "issuer",
+        "audiences",
+        "enabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
     "v1Operator": {
       "type": "string",
       "enum": [
@@ -13583,7 +14976,7 @@
         },
         "apiKeyName": {
           "type": "string",
-          "description": "Optional human-readable name for an API Key. If none provided, default to OTP Auth - <Timestamp>",
+          "description": "Optional human-readable name for an API Key. If none provided, default to OTP Auth - \u003cTimestamp\u003e",
           "title": "@inject_tag: validate:\"omitempty,tk_label_length,tk_label\""
         },
         "expirationSeconds": {
@@ -13856,6 +15249,163 @@
         "consensus",
         "condition"
       ]
+    },
+    "v1PrepareEthTransactionRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "from": {
+          "type": "string",
+          "description": "The sender address (wallet account or private key address) the transaction will be signed with."
+        },
+        "caip2": {
+          "type": "string",
+          "description": "The network identifier in CAIP-2 format (e.g., 'eip155:84532')."
+        },
+        "to": {
+          "type": "string",
+          "description": "Recipient address (0x-prefixed 20-byte hex)."
+        },
+        "value": {
+          "type": "string",
+          "description": "Amount to transfer in wei, decimal string. Defaults to 0."
+        },
+        "data": {
+          "type": "string",
+          "description": "Hex-encoded calldata (with or without 0x). Defaults to empty."
+        },
+        "nonce": {
+          "type": "string",
+          "description": "Nonce override (decimal string). When omitted, the server allocates the next nonce accounting for in-flight transactions."
+        },
+        "gasLimit": {
+          "type": "string",
+          "description": "Gas limit override (decimal string). When omitted, the server estimates it via eth_estimateGas."
+        },
+        "maxFeePerGas": {
+          "type": "string",
+          "description": "EIP-1559 max fee per gas override (wei, decimal string). When omitted, the server suggests it from recent base fees."
+        },
+        "maxPriorityFeePerGas": {
+          "type": "string",
+          "description": "EIP-1559 max priority fee per gas override (wei, decimal string). When omitted, the server suggests it."
+        }
+      },
+      "required": [
+        "organizationId",
+        "from",
+        "caip2",
+        "to"
+      ]
+    },
+    "v1PrepareEthTransactionResponse": {
+      "type": "object",
+      "properties": {
+        "unsignedTransaction": {
+          "type": "string",
+          "description": "The 0x-prefixed unsigned EIP-1559 (type 2) transaction envelope to be signed via SIGN_TRANSACTION_V2."
+        },
+        "txType": {
+          "type": "string",
+          "description": "Transaction type tag for the signer (always 'TRANSACTION_TYPE_ETHEREUM')."
+        },
+        "chainId": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Resolved EVM chain id."
+        },
+        "nonce": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Resolved nonce used to build the transaction."
+        },
+        "gasLimit": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Resolved gas limit."
+        },
+        "maxFeePerGas": {
+          "type": "string",
+          "description": "Resolved EIP-1559 max fee per gas (wei, decimal string)."
+        },
+        "maxPriorityFeePerGas": {
+          "type": "string",
+          "description": "Resolved EIP-1559 max priority fee per gas (wei, decimal string)."
+        },
+        "reservationId": {
+          "type": "string",
+          "description": "Nonce reservation id to echo back in eth_send_raw_transaction for precise promotion. Empty when the caller pinned an explicit nonce (no reservation written)."
+        }
+      }
+    },
+    "v1PrepareSolTransactionRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "from": {
+          "type": "string",
+          "description": "The sender address (base58 Solana public key) the transaction will be signed with."
+        },
+        "caip2": {
+          "type": "string",
+          "description": "The network identifier in CAIP-2 format (e.g., 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG' for devnet)."
+        },
+        "to": {
+          "type": "string",
+          "description": "Recipient address (base58 Solana public key)."
+        },
+        "lamports": {
+          "type": "string",
+          "description": "Amount to transfer in atomic units, decimal string. Native SOL transfer: lamports (1 SOL = 1e9 lamports). SPL transfer (token_mint set): token base units (10^decimals per whole token)."
+        },
+        "tokenMint": {
+          "type": "string",
+          "description": "Optional SPL token mint (base58). When set, the unsigned transaction is an SPL Token TransferChecked between the sender's and recipient's associated token accounts instead of a native System transfer. The recipient's associated token account must already exist."
+        },
+        "sponsor": {
+          "type": "boolean",
+          "description": "When true, build a sponsored (gasless) transaction with the platform Solana fee-payer as account_keys[0] and the user (from) as the second required signer. Requires GAS_STATION_SOL_PAYMASTER to be configured for the target network."
+        }
+      },
+      "required": [
+        "organizationId",
+        "from",
+        "caip2",
+        "to",
+        "lamports"
+      ]
+    },
+    "v1PrepareSolTransactionResponse": {
+      "type": "object",
+      "properties": {
+        "unsignedTransaction": {
+          "type": "string",
+          "description": "Hex-encoded unsigned Solana (Legacy) message to be signed via SIGN_TRANSACTION_V2."
+        },
+        "txType": {
+          "type": "string",
+          "description": "Transaction type tag for the signer (always 'TRANSACTION_TYPE_SOLANA')."
+        },
+        "blockhash": {
+          "type": "string",
+          "description": "Recent blockhash embedded in the unsigned message (base58)."
+        },
+        "lastValidBlockHeight": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Last block height at which the blockhash (and therefore the transaction) remains valid."
+        },
+        "feePayer": {
+          "type": "string",
+          "description": "Fee payer address embedded as account_keys[0]. For sponsor=true this is the platform Solana paymaster; otherwise it equals `from`."
+        }
+      }
     },
     "v1PrivateKey": {
       "type": "object",
@@ -14856,6 +16406,121 @@
         }
       }
     },
+    "v1SendLoginLinkRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address for login."
+        }
+      },
+      "required": [
+        "email"
+      ]
+    },
+    "v1SendLoginLinkResponse": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "description": "Always true."
+        }
+      }
+    },
+    "v1SendTransactionSummary": {
+      "type": "object",
+      "properties": {
+        "sendTransactionStatusId": {
+          "type": "string",
+          "description": "Stable status id (poll via GetSendTransactionStatus)."
+        },
+        "caip2": {
+          "type": "string",
+          "description": "CAIP-2 network identifier, e.g. 'eip155:8453'."
+        },
+        "chainId": {
+          "type": "string",
+          "format": "int64",
+          "description": "EVM numeric chain id (0 for non-EVM networks)."
+        },
+        "fromAddress": {
+          "type": "string",
+          "description": "Sender address."
+        },
+        "toAddress": {
+          "type": "string",
+          "description": "Recipient (or contract) address."
+        },
+        "value": {
+          "type": "string",
+          "description": "Native value transferred, in atomic units (wei/lamports). Empty when not decoded."
+        },
+        "nonce": {
+          "type": "string",
+          "format": "int64",
+          "description": "Transaction nonce (EVM). 0 when not applicable."
+        },
+        "txHash": {
+          "type": "string",
+          "description": "Transaction hash / Solana signature. Empty until broadcast."
+        },
+        "status": {
+          "type": "string",
+          "description": "Broadcast lifecycle status: pending | broadcast | confirmed | failed | dropped."
+        },
+        "blockNumber": {
+          "type": "string",
+          "format": "int64",
+          "description": "Block number (EVM) or slot (Solana) the tx was included in. 0 if unconfirmed."
+        },
+        "error": {
+          "type": "string",
+          "description": "Broadcast/confirmation error, if any."
+        },
+        "sponsored": {
+          "type": "boolean",
+          "description": "True when the platform paymaster broadcast this transaction (Gas Station)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "RFC3339 timestamp the record was created (reservation or broadcast)."
+        },
+        "broadcastAt": {
+          "type": "string",
+          "description": "RFC3339 timestamp the transaction was broadcast. Empty if not yet broadcast."
+        },
+        "confirmedAt": {
+          "type": "string",
+          "description": "RFC3339 timestamp the transaction was confirmed. Empty if not confirmed."
+        },
+        "ownerOrganizationId": {
+          "type": "string",
+          "description": "Tenant that actually initiated the transfer: the requesting org for a gas-sponsored send, otherwise the same org as organization_id. Differs from the queried organization_id only when include_sub_organizations was true."
+        },
+        "ownerOrganizationName": {
+          "type": "string",
+          "description": "Display name of owner_organization_id, when that org still exists. Empty for a dangling/deleted org."
+        },
+        "contractAddress": {
+          "type": "string",
+          "description": "TRC-20/ERC-20 contract this transfer is denominated in. Empty means `value` is the chain's NATIVE unit (wei/lamports/sun); non-empty means `value` is the TOKEN's atomic unit and `to_address` remains the recipient (never the contract)."
+        },
+        "feeAtomic": {
+          "type": "string",
+          "description": "Actual network fee burned, in the chain's native smallest unit (decimal string). Empty while unconfirmed or when the chain family does not expose a per-tx receipt fee."
+        },
+        "energyUsage": {
+          "type": "string",
+          "format": "int64",
+          "description": "Tron Energy consumed (TRC-20/contract calls only). 0 for a native TRX transfer, a non-Tron chain, or an unconfirmed row."
+        },
+        "netUsage": {
+          "type": "string",
+          "format": "int64",
+          "description": "Tron Bandwidth (net) consumed. 0 for a non-Tron chain or an unconfirmed row."
+        }
+      }
+    },
     "v1SessionProfile": {
       "type": "object",
       "properties": {
@@ -14951,6 +16616,37 @@
       },
       "required": [
         "features"
+      ]
+    },
+    "v1SetPaymentMethodRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_SET_PAYMENT_METHOD_V2"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/billingSetPaymentMethodIntentV2"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
       ]
     },
     "v1SignRawPayloadIntent": {
@@ -15246,6 +16942,174 @@
         }
       }
     },
+    "v1SimulatePolicyChainRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given organization."
+        },
+        "activityType": {
+          "type": "string",
+          "description": "Activity type to simulate (e.g. ACTIVITY_TYPE_SIGN_TRANSACTION_V2)."
+        },
+        "parametersJson": {
+          "type": "string",
+          "description": "Activity intent parameters as a JSON object string. Defaults to '{}' when empty."
+        },
+        "initiatorUserId": {
+          "type": "string",
+          "description": "Declared initiator user ID. Defaults to the authenticated user when empty."
+        },
+        "approverUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Declared approver user IDs (assumed to have voted Approved). The initiator is always counted."
+        },
+        "extraPolicies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SimulationPolicy"
+          },
+          "description": "Hypothetical policies appended to the organization's policy list."
+        },
+        "excludePolicyIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Existing policy IDs to exclude from evaluation."
+        }
+      },
+      "required": [
+        "organizationId",
+        "activityType"
+      ]
+    },
+    "v1SimulatePolicyChainResponse": {
+      "type": "object",
+      "properties": {
+        "finalDecision": {
+          "$ref": "#/definitions/v1Outcome",
+          "description": "Final decision: ALLOW, DENY_EXPLICIT, DENY_IMPLICIT, or REQUIRES_CONSENSUS."
+        },
+        "matchedPolicyId": {
+          "type": "string",
+          "description": "Policy that determined the decision. Empty for root quorum bypass, implicit allow, and implicit deny."
+        },
+        "matchedPolicyName": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable explanation of the decision."
+        },
+        "policyDetails": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SimulationPolicyEvalDetail"
+          },
+          "description": "Per-policy evaluation trail in evaluation order. Empty when root quorum bypass decided the outcome."
+        },
+        "evaluatedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of policies actually evaluated (short-circuit stops counting)."
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of policies in the effective set (after extra/exclude adjustments)."
+        }
+      },
+      "required": [
+        "finalDecision"
+      ]
+    },
+    "v1SimulationPolicy": {
+      "type": "object",
+      "properties": {
+        "policyId": {
+          "type": "string",
+          "description": "Identifier for the hypothetical policy (any unique string)."
+        },
+        "policyName": {
+          "type": "string",
+          "description": "Human-readable name for the hypothetical policy."
+        },
+        "effect": {
+          "$ref": "#/definitions/v1Effect",
+          "description": "ALLOW or DENY."
+        },
+        "condition": {
+          "type": "string",
+          "description": "CEL condition expression."
+        },
+        "consensus": {
+          "type": "string",
+          "description": "CEL consensus expression."
+        }
+      },
+      "description": "A policy definition supplied inline for what-if simulation\n(\"what happens if I add this policy?\").",
+      "required": [
+        "effect"
+      ]
+    },
+    "v1SimulationPolicyEvalDetail": {
+      "type": "object",
+      "properties": {
+        "policyId": {
+          "type": "string"
+        },
+        "policyName": {
+          "type": "string"
+        },
+        "effect": {
+          "$ref": "#/definitions/v1Effect"
+        },
+        "conditionMatched": {
+          "type": "boolean"
+        },
+        "consensusMet": {
+          "type": "boolean",
+          "description": "Absent when consensus was never evaluated (condition didn't match or errored)."
+        },
+        "result": {
+          "$ref": "#/definitions/v1SimulationPolicyResult"
+        },
+        "shortCircuited": {
+          "type": "boolean",
+          "description": "True when this DENY stopped the chain — later policies were never evaluated."
+        },
+        "error": {
+          "type": "string",
+          "description": "Consensus CEL evaluation error message, if any."
+        }
+      },
+      "required": [
+        "policyId",
+        "effect",
+        "conditionMatched",
+        "result"
+      ]
+    },
+    "v1SimulationPolicyResult": {
+      "type": "string",
+      "enum": [
+        "SIMULATION_POLICY_RESULT_UNSPECIFIED",
+        "SIMULATION_POLICY_RESULT_ALLOW",
+        "SIMULATION_POLICY_RESULT_DENY_EXPLICIT",
+        "SIMULATION_POLICY_RESULT_REQUIRES_CONSENSUS",
+        "SIMULATION_POLICY_RESULT_NOT_APPLICABLE",
+        "SIMULATION_POLICY_RESULT_ERROR"
+      ],
+      "default": "SIMULATION_POLICY_RESULT_UNSPECIFIED",
+      "description": "Per-policy outcome within a simulated policy chain evaluation.\n\n - SIMULATION_POLICY_RESULT_ALLOW: Condition matched, consensus met, effect = ALLOW.\n - SIMULATION_POLICY_RESULT_DENY_EXPLICIT: Condition matched, consensus met, effect = DENY (short-circuits the chain).\n - SIMULATION_POLICY_RESULT_REQUIRES_CONSENSUS: Condition matched but consensus not met (needs more approvals).\n - SIMULATION_POLICY_RESULT_NOT_APPLICABLE: Condition false or condition CEL error — policy doesn't apply.\n - SIMULATION_POLICY_RESULT_ERROR: Consensus expression evaluation error (does not affect the final decision)."
+    },
     "v1SmartContractInterfaceType": {
       "type": "string",
       "enum": [
@@ -15400,6 +17264,24 @@
         "sendTransactionStatusId"
       ]
     },
+    "v1SolSendTransactionStatus": {
+      "type": "object",
+      "properties": {
+        "signature": {
+          "type": "string",
+          "description": "The Solana transaction signature."
+        },
+        "slot": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The slot the transaction was confirmed in, if available."
+        },
+        "confirmationStatus": {
+          "type": "string",
+          "description": "The Solana confirmation status (processed | confirmed | finalized), if available."
+        }
+      }
+    },
     "v1StampLoginIntent": {
       "type": "object",
       "properties": {
@@ -15466,6 +17348,42 @@
       "required": [
         "session"
       ]
+    },
+    "v1SubmitDelegationRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for the requesting Organization."
+        },
+        "caip2": {
+          "type": "string",
+          "description": "The network identifier in CAIP-2 format (e.g., 'eip155:11155111')."
+        },
+        "eoa": {
+          "type": "string",
+          "description": "The EOA being delegated (the authorization signer)."
+        },
+        "authorization": {
+          "$ref": "#/definitions/v1Eip7702Authorization",
+          "description": "The fully-signed EIP-7702 authorization tuple."
+        }
+      },
+      "required": [
+        "organizationId",
+        "caip2",
+        "eoa",
+        "authorization"
+      ]
+    },
+    "v1SubmitDelegationResponse": {
+      "type": "object",
+      "properties": {
+        "sendTransactionStatusId": {
+          "type": "string",
+          "description": "Status id for the paymaster's Type-4 delegation broadcast (poll GetSendTransactionStatus)."
+        }
+      }
     },
     "v1TagType": {
       "type": "string",
@@ -16050,6 +17968,65 @@
       },
       "required": [
         "oauth2CredentialId"
+      ]
+    },
+    "v1UpdateOidcProviderIntent": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "description": "Unique identifier of the OIDC provider to update.",
+          "title": "@inject_tag: validate:\"required,uuid\""
+        },
+        "providerName": {
+          "type": "string",
+          "description": "New human-readable provider name."
+        },
+        "audiences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "New audience allowlist (replaces the existing list wholesale, if provided)."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable/disable this provider without deleting it."
+        }
+      },
+      "required": [
+        "providerId"
+      ]
+    },
+    "v1UpdateOidcProviderRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1UpdateOidcProviderIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
       ]
     },
     "v1UpdateOidcProviderResult": {
@@ -16820,6 +18797,34 @@
         "endpointId"
       ]
     },
+    "v1UpdateWebhookEndpointRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1UpdateWebhookEndpointIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
     "v1UpdateWebhookEndpointResult": {
       "type": "object",
       "properties": {
@@ -16856,6 +18861,28 @@
         "subOrgWindowLimitUsd",
         "windowDurationMinutes"
       ]
+    },
+    "v1UpsertGasUsageConfigResponse": {
+      "type": "object",
+      "properties": {
+        "windowDurationMinutes": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The stored rolling window length in minutes."
+        },
+        "windowLimitNative": {
+          "type": "string",
+          "description": "The stored native spend cap in wei."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the native spend cap is enforced."
+        },
+        "windowLimitLamports": {
+          "type": "string",
+          "description": "The stored Solana native spend cap in lamports."
+        }
+      }
     },
     "v1UpsertGasUsageConfigResult": {
       "type": "object",
@@ -17162,6 +19189,43 @@
         "oauthProviders",
         "userTags"
       ]
+    },
+    "v1ValidateSessionRequest": {
+      "type": "object",
+      "properties": {
+        "sessionToken": {
+          "type": "string",
+          "description": "Session token from __Host-session cookie."
+        }
+      },
+      "required": [
+        "sessionToken"
+      ]
+    },
+    "v1ValidateSessionResponse": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "description": "Whether the session is valid."
+        },
+        "sessionType": {
+          "type": "string",
+          "description": "Session type: 'initial-registration' or 'standard'."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email associated with the session."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Organization ID (may be empty for initial-registration before org creation)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "User ID (may be empty for initial-registration)."
+        }
+      }
     },
     "v1VerifyOtpIntent": {
       "type": "object",
@@ -17594,20 +19658,6 @@
       },
       "required": [
         "eventType"
-      ]
-    },
-    "v1NOOPCodegenAnchorResponse": {
-      "type": "object",
-      "properties": {
-        "stamp": {
-          "$ref": "#/definitions/v1WebAuthnStamp"
-        },
-        "tokenUsage": {
-          "$ref": "#/definitions/v1TokenUsage"
-        }
-      },
-      "required": [
-        "stamp"
       ]
     }
   },

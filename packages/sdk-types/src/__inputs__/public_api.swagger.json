@@ -8,11 +8,8 @@
   },
   "tags": [
     {
-      "name": "PublicApiService"
-    },
-    {
       "name": "Organizations",
-      "description": "An Organization is the highest level of hierarchy in ZeroXKey. It can contain many Users, Private Keys, and Policies managed by a Root Quorum. The Root Quorum consists of a set of Users with a consensus threshold. This consensus threshold must be reached by Quorum members in order for any actions to take place.\n\nSee [Root Quorum](../concepts/users/root-quorum) for more information"
+      "description": "An Organization is the highest level of hierarchy in 0xkey. It can contain many Users, Private Keys, and Policies managed by a Root Quorum. The Root Quorum consists of a set of Users with a consensus threshold. This consensus threshold must be reached by Quorum members in order for any actions to take place.\n\nSee [Root Quorum](../concepts/users/root-quorum) for more information"
     },
     {
       "name": "Invitations",
@@ -24,15 +21,15 @@
     },
     {
       "name": "Wallets",
-      "description": "Wallets contain collections of deterministically generated cryptographic public / private key pairs that share a common seed. ZeroXKey securely holds the common seed, but only you can access it. In most cases, Wallets should be preferred over Private Keys since they can be represented by a mnemonic phrase, used across a variety of cryptographic curves, and can derive many addresses.\n\nDerived addresses can be used to create digital signatures using the corresponding underlying private key. See [Signing](./api#tag/Signing) for more information"
+      "description": "Wallets contain collections of deterministically generated cryptographic public / private key pairs that share a common seed. 0xkey securely holds the common seed, but only you can access it. In most cases, Wallets should be preferred over Private Keys since they can be represented by a mnemonic phrase, used across a variety of cryptographic curves, and can derive many addresses.\n\nDerived addresses can be used to create digital signatures using the corresponding underlying private key. See [Signing](./api#tag/Signing) for more information"
     },
     {
       "name": "Signing",
-      "description": "Signers allow you to create digital signatures. Signatures are used to validate the authenticity and integrity of a digital message. ZeroXKey makes it easy to produce signatures by allowing you to sign with an address. If ZeroXKey doesn't yet support an address format you need, you can generate and sign with the public key instead by using the address format `ADDRESS_FORMAT_COMPRESSED`."
+      "description": "Signers allow you to create digital signatures. Signatures are used to validate the authenticity and integrity of a digital message. 0xkey makes it easy to produce signatures by allowing you to sign with an address. If 0xkey doesn't yet support an address format you need, you can generate and sign with the public key instead by using the address format `ADDRESS_FORMAT_COMPRESSED`."
     },
     {
       "name": "Private Keys",
-      "description": "Private Keys are cryptographic public / private key pairs that can be used for cryptocurrency needs or more generalized encryption. ZeroXKey securely holds all private key materials for you, but only you can access them.\n\nThe Private Key ID or any derived address can be used to create digital signatures. See [Signing](./api#tag/Signing) for more information"
+      "description": "Private Keys are cryptographic public / private key pairs that can be used for cryptocurrency needs or more generalized encryption. 0xkey securely holds all private key materials for you, but only you can access them.\n\nThe Private Key ID or any derived address can be used to create digital signatures. See [Signing](./api#tag/Signing) for more information"
     },
     {
       "name": "Private Key Tags",
@@ -52,18 +49,21 @@
     },
     {
       "name": "API Keys",
-      "description": "API Keys are used to authenticate requests\n\nSee the 0xkey docs for instructions on generating API Keys"
+      "description": "API Keys are used to authenticate requests\n\nSee our [CLI](https://github.com/0xkey-io) for instructions on generating API Keys"
     },
     {
       "name": "Activities",
-      "description": "Activities encapsulate all the possible actions that can be taken with ZeroXKey. Some examples include adding a new user, creating a private key, and signing a transaction.\n\nActivities that modify your Organization are processed asynchronously. To confirm processing is complete and retrieve the Activity results, these activities must be polled until that status has been updated to a finalized state: `COMPLETED` when the activity is successful or `FAILED` when the activity has failed"
+      "description": "Activities encapsulate all the possible actions that can be taken with 0xkey. Some examples include adding a new user, creating a private key, and signing a transaction.\n\nActivities that modify your Organization are processed asynchronously. To confirm processing is complete and retrieve the Activity results, these activities must be polled until that status has been updated to a finalized state: `COMPLETED` when the activity is successful or `FAILED` when the activity has failed"
     },
     {
       "name": "Consensus",
       "description": "Policies can enforce consensus requirements for Activities. For example, adding a new user requires two admins to approve the request.\n\nActivities that have been proposed, but don't yet meet the Consensus requirements will have the status: `REQUIRES_CONSENSUS`. Activities in this state can be approved or rejected using the unique fingerprint generated when an Activity is created."
+    },
+    {
+      "name": "PublicApiService"
     }
   ],
-  "host": "api.0xkey.com",
+  "host": "api.0xkey.io",
   "schemes": [
     "https"
   ],
@@ -74,7 +74,67 @@
     "application/json"
   ],
   "paths": {
+    "/api/v1/noop-codegen-anchor": {
+      "post": {
+        "operationId": "PublicApiService_NOOPCodegenAnchor",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1NOOPCodegenAnchorResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "PublicApiService"
+        ]
+      }
+    },
     "/public/v1/query/get_activity": {
+      "get": {
+        "summary": "Get activity",
+        "description": "Get details about an activity.",
+        "operationId": "PublicApiService_GetActivity2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "organizationId",
+            "description": "Unique identifier for a given organization.",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "activityId",
+            "description": "Unique identifier for a given activity object.",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Activities"
+        ]
+      },
       "post": {
         "summary": "Get activity",
         "description": "Get details about an activity.",
@@ -105,40 +165,6 @@
         ],
         "tags": [
           "Activities"
-        ]
-      }
-    },
-    "/public/v1/query/get_attestation": {
-      "post": {
-        "summary": "Attestation",
-        "description": "Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.",
-        "operationId": "PublicApiService_GetAttestationDocument",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetAttestationDocumentResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1GetAttestationDocumentRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Attestation"
         ]
       }
     },
@@ -207,6 +233,40 @@
         ],
         "tags": [
           "API keys"
+        ]
+      }
+    },
+    "/public/v1/query/get_attestation": {
+      "post": {
+        "summary": "Attestation",
+        "description": "Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.",
+        "operationId": "PublicApiService_GetAttestationDocument",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetAttestationDocumentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetAttestationDocumentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Attestation"
         ]
       }
     },
@@ -314,7 +374,7 @@
     },
     "/public/v1/query/get_gas_usage": {
       "post": {
-        "summary": "Get gas usage",
+        "summary": "Get gas usage and limits.",
         "description": "Get gas usage and gas limits for either the parent organization or a sub-organization.",
         "operationId": "PublicApiService_GetGasUsage",
         "responses": {
@@ -380,9 +440,111 @@
         ]
       }
     },
+    "/public/v1/query/get_mfa_policies": {
+      "post": {
+        "summary": "Get MFA policies",
+        "description": "Get all MFA policies for a user.",
+        "operationId": "PublicApiService_GetMfaPolicies",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMfaPoliciesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetMfaPoliciesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MFA Policies"
+        ]
+      }
+    },
+    "/public/v1/query/get_mfa_policy": {
+      "post": {
+        "summary": "Get MFA policy",
+        "description": "Get a single MFA policy for a user.",
+        "operationId": "PublicApiService_GetMfaPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMfaPolicyResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetMfaPolicyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MFA Policies"
+        ]
+      }
+    },
+    "/public/v1/query/get_mfa_status": {
+      "post": {
+        "summary": "Get MFA status",
+        "description": "Get the MFA status of an activity for one user or all voting users.",
+        "operationId": "PublicApiService_GetMfaStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMfaStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetMfaStatusRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MFA Policies"
+        ]
+      }
+    },
     "/public/v1/query/get_nonces": {
       "post": {
-        "summary": "Get nonces",
+        "summary": "Get nonces for an address.",
         "description": "Get nonce values for an address on a given network. Can fetch the standard on-chain nonce and/or the gas station nonce used for sponsored transactions.",
         "operationId": "PublicApiService_GetNonces",
         "responses": {
@@ -683,6 +845,74 @@
         ],
         "tags": [
           "Send Transactions"
+        ]
+      }
+    },
+    "/public/v1/query/get_session_profile": {
+      "post": {
+        "summary": "Get session profile",
+        "description": "Get one session profile for an organization.",
+        "operationId": "PublicApiService_GetSessionProfile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSessionProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetSessionProfileRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Session Profiles"
+        ]
+      }
+    },
+    "/public/v1/query/get_session_profiles": {
+      "post": {
+        "summary": "Get session profiles",
+        "description": "Get all session profiles for an organization.",
+        "operationId": "PublicApiService_GetSessionProfiles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSessionProfilesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetSessionProfilesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Session Profiles"
         ]
       }
     },
@@ -1300,7 +1530,7 @@
     },
     "/public/v1/query/whoami": {
       "post": {
-        "summary": "Who am I?",
+        "summary": "Who am I",
         "description": "Get basic information about your current API or WebAuthN user and their organization. Affords sub-organization look ups via parent organization for WebAuthN or API key users.",
         "operationId": "PublicApiService_GetWhoami",
         "responses": {
@@ -1403,7 +1633,7 @@
     "/public/v1/submit/create_authenticators": {
       "post": {
         "summary": "Create authenticators",
-        "description": "Create authenticators to authenticate requests to ZeroXKey.",
+        "description": "Create authenticators to authenticate requests to 0xkey.",
         "operationId": "PublicApiService_CreateAuthenticators",
         "responses": {
           "200": {
@@ -1499,6 +1729,40 @@
         ],
         "tags": [
           "Invitations"
+        ]
+      }
+    },
+    "/public/v1/submit/create_mfa_policy": {
+      "post": {
+        "summary": "Create MFA policy",
+        "description": "Create a new MFA policy for a user.",
+        "operationId": "PublicApiService_CreateMfaPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateMfaPolicyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MFA Policies"
         ]
       }
     },
@@ -1771,6 +2035,40 @@
         ],
         "tags": [
           "Sessions"
+        ]
+      }
+    },
+    "/public/v1/submit/create_session_profile": {
+      "post": {
+        "summary": "Create session profile",
+        "description": "Create a new session profile for an organization.",
+        "operationId": "PublicApiService_CreateSessionProfile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSessionProfileRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Session Profiles"
         ]
       }
     },
@@ -2111,6 +2409,40 @@
         ],
         "tags": [
           "Invitations"
+        ]
+      }
+    },
+    "/public/v1/submit/delete_mfa_policy": {
+      "post": {
+        "summary": "Delete MFA policy",
+        "description": "Delete an MFA policy for a user.",
+        "operationId": "PublicApiService_DeleteMfaPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteMfaPolicyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MFA Policies"
         ]
       }
     },
@@ -2558,8 +2890,8 @@
     },
     "/public/v1/submit/eth_send_transaction": {
       "post": {
-        "summary": "Broadcast EVM transaction",
-        "description": "Submit a transaction intent describing an EVM transaction you would like to broadcast.",
+        "summary": "Submit a transaction intent for broadcasting.",
+        "description": "Submit a transaction intent describing a transaction you would like to broadcast.",
         "operationId": "PublicApiService_EthSendTransaction",
         "responses": {
           "200": {
@@ -3372,44 +3704,10 @@
         ]
       }
     },
-    "/public/v1/submit/tron_send_transaction": {
-      "post": {
-        "summary": "Submit a transaction intent for broadcasting.",
-        "description": "Submit a native TRX transfer intent describing a transaction you would like to broadcast.",
-        "operationId": "PublicApiService_TronSendTransaction",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ActivityResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1TronSendTransactionRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Broadcasting"
-        ]
-      }
-    },
     "/public/v1/submit/sol_send_transaction": {
       "post": {
-        "summary": "Broadcast SVM transaction",
-        "description": "Submit a transaction intent describing an SVM transaction you would like to broadcast.",
+        "summary": "Submit a transaction intent for broadcasting.",
+        "description": "Submit a transaction intent describing a transaction you would like to broadcast.",
         "operationId": "PublicApiService_SolSendTransaction",
         "responses": {
           "200": {
@@ -3474,6 +3772,40 @@
         ]
       }
     },
+    "/public/v1/submit/tron_send_transaction": {
+      "post": {
+        "summary": "Submit a transaction intent for broadcasting.",
+        "description": "Submit a native TRX transfer intent describing a transaction you would like to broadcast.",
+        "operationId": "PublicApiService_TronSendTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TronSendTransactionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Broadcasting"
+        ]
+      }
+    },
     "/public/v1/submit/update_fiat_on_ramp_credential": {
       "post": {
         "summary": "Update a Fiat On Ramp Credential",
@@ -3505,6 +3837,40 @@
         ],
         "tags": [
           "On Ramp"
+        ]
+      }
+    },
+    "/public/v1/submit/update_mfa_policy": {
+      "post": {
+        "summary": "Update MFA policy",
+        "description": "Update an MFA policy for a user.",
+        "operationId": "PublicApiService_UpdateMfaPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateMfaPolicyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MFA Policies"
         ]
       }
     },
@@ -3885,7 +4251,7 @@
     "/public/v1/submit/verify_otp": {
       "post": {
         "summary": "Verify generic OTP",
-        "description": "Verify a generic OTP.",
+        "description": "Verify a generic OTP (legacy, plaintext otpCode).",
         "operationId": "PublicApiService_VerifyOtp",
         "responses": {
           "200": {
@@ -3915,464 +4281,9 @@
           "User Verification"
         ]
       }
-    },
-    "/api/v1/noop-codegen-anchor": {
-      "post": {
-        "operationId": "PublicApiService_NOOPCodegenAnchor",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1NOOPCodegenAnchorResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "PublicApiService"
-        ]
-      }
-    },
-    "/public/v1/query/get_mfa_status": {
-      "post": {
-        "summary": "Get MFA status",
-        "description": "Get the MFA status of an activity for one user or all voting users.",
-        "operationId": "PublicApiService_GetMfaStatus",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetMfaStatusResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1GetMfaStatusRequest"
-            }
-          }
-        ],
-        "tags": [
-          "MFA Policies"
-        ]
-      }
-    },
-    "/public/v1/query/get_mfa_policies": {
-      "post": {
-        "summary": "Get MFA policies",
-        "description": "Get all MFA policies for a user.",
-        "operationId": "PublicApiService_GetMfaPolicies",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetMfaPoliciesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1GetMfaPoliciesRequest"
-            }
-          }
-        ],
-        "tags": [
-          "MFA Policies"
-        ]
-      }
-    },
-    "/public/v1/query/get_mfa_policy": {
-      "post": {
-        "summary": "Get MFA policy",
-        "description": "Get a single MFA policy for a user.",
-        "operationId": "PublicApiService_GetMfaPolicy",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetMfaPolicyResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1GetMfaPolicyRequest"
-            }
-          }
-        ],
-        "tags": [
-          "MFA Policies"
-        ]
-      }
-    },
-    "/public/v1/query/get_session_profile": {
-      "post": {
-        "summary": "Get session profile",
-        "description": "Get one session profile for an organization.",
-        "operationId": "PublicApiService_GetSessionProfile",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetSessionProfileResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1GetSessionProfileRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Session Profiles"
-        ]
-      }
-    },
-    "/public/v1/query/get_session_profiles": {
-      "post": {
-        "summary": "Get session profiles",
-        "description": "Get all session profiles for an organization.",
-        "operationId": "PublicApiService_GetSessionProfiles",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetSessionProfilesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1GetSessionProfilesRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Session Profiles"
-        ]
-      }
-    },
-    "/public/v1/submit/create_mfa_policy": {
-      "post": {
-        "summary": "Create MFA policy",
-        "description": "Create a new MFA policy for a user.",
-        "operationId": "PublicApiService_CreateMfaPolicy",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ActivityResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateMfaPolicyRequest"
-            }
-          }
-        ],
-        "tags": [
-          "MFA Policies"
-        ]
-      }
-    },
-    "/public/v1/submit/update_mfa_policy": {
-      "post": {
-        "summary": "Update MFA policy",
-        "description": "Update an MFA policy for a user.",
-        "operationId": "PublicApiService_UpdateMfaPolicy",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ActivityResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1UpdateMfaPolicyRequest"
-            }
-          }
-        ],
-        "tags": [
-          "MFA Policies"
-        ]
-      }
-    },
-    "/public/v1/submit/delete_mfa_policy": {
-      "post": {
-        "summary": "Delete MFA policy",
-        "description": "Delete an MFA policy for a user.",
-        "operationId": "PublicApiService_DeleteMfaPolicy",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ActivityResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1DeleteMfaPolicyRequest"
-            }
-          }
-        ],
-        "tags": [
-          "MFA Policies"
-        ]
-      }
-    },
-    "/public/v1/submit/create_session_profile": {
-      "post": {
-        "summary": "Create session profile",
-        "description": "Create a new session profile for an organization.",
-        "operationId": "PublicApiService_CreateSessionProfile",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ActivityResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateSessionProfileRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Session Profiles"
-        ]
-      }
     }
   },
   "definitions": {
-    "v1TronSendTransactionIntent": {
-      "type": "object",
-      "properties": {
-        "from": {
-          "type": "string",
-          "description": "A wallet or private key address to sign with (base58 T... form). This does not support private key IDs.",
-          "title": "@inject_tag: validate:\"required\""
-        },
-        "caip2": {
-          "type": "string",
-          "enum": [
-            "tron:0x2b6653dc",
-            "tron:0xcd8690dc",
-            "tron:0x94a9059e"
-          ],
-          "description": "CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet).",
-          "title": "@inject_tag: validate:\"required\""
-        },
-        "to": {
-          "type": "string",
-          "description": "Recipient address (base58 T... form).",
-          "title": "@inject_tag: validate:\"required\""
-        },
-        "value": {
-          "type": "string",
-          "description": "Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contract_address is set.",
-          "title": "@inject_tag: validate:\"omitempty\""
-        },
-        "contractAddress": {
-          "type": "string",
-          "description": "TRC-20 contract address (base58 T... form). When set, this is a token transfer(address,uint256) to `to` instead of a native TRX transfer, ABI-encoded server-side.",
-          "title": "@inject_tag: validate:\"omitempty\""
-        },
-        "tokenAmount": {
-          "type": "string",
-          "description": "TRC-20 transfer amount in the token's atomic (smallest) unit. Required when contract_address is set.",
-          "title": "@inject_tag: validate:\"omitempty\""
-        }
-      },
-      "required": [
-        "from",
-        "caip2",
-        "to"
-      ]
-    },
-    "v1TronSendTransactionRequest": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "ACTIVITY_TYPE_TRON_SEND_TRANSACTION"
-          ]
-        },
-        "timestampMs": {
-          "type": "string",
-          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
-        },
-        "organizationId": {
-          "type": "string",
-          "description": "Unique identifier for a given Organization."
-        },
-        "parameters": {
-          "$ref": "#/definitions/v1TronSendTransactionIntent"
-        },
-        "generateAppProofs": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "type",
-        "timestampMs",
-        "organizationId",
-        "parameters"
-      ]
-    },
-    "v1TronSendTransactionResult": {
-      "type": "object",
-      "properties": {
-        "sendTransactionStatusId": {
-          "type": "string",
-          "description": "The send_transaction_status ID associated with the transaction submission"
-        }
-      },
-      "required": [
-        "sendTransactionStatusId"
-      ]
-    },
-    "v1TronSendTransactionStatus": {
-      "type": "object",
-      "properties": {
-        "txHash": {
-          "type": "string",
-          "description": "The Tron transaction id (sha256(raw_data), hex), if available."
-        }
-      }
-    },
-    "v1GetAttestationDocumentRequest": {
-      "type": "object",
-      "properties": {
-        "organizationId": {
-          "type": "string",
-          "description": "Unique identifier for a given organization."
-        },
-        "enclaveType": {
-          "type": "string",
-          "description": "Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`."
-        }
-      },
-      "required": [
-        "organizationId",
-        "enclaveType"
-      ]
-    },
-    "v1GetAttestationDocumentResponse": {
-      "type": "object",
-      "properties": {
-        "attestationDocument": {
-          "type": "string",
-          "format": "byte",
-          "description": "Raw (CBOR-encoded) attestation document."
-        }
-      },
-      "required": [
-        "attestationDocument"
-      ]
-    },
     "apiApiKeyParams": {
       "type": "object",
       "properties": {
@@ -4592,9 +4503,11 @@
           "description": "Detailed evaluation result for each Policy that was run."
         },
         "createdAt": {
-          "$ref": "#/definitions/externaldatav1Timestamp"
+          "type": "string",
+          "description": "An ISO 8601 timestamp indicating when the PolicyEvaluation was created."
         }
       },
+      "description": "Represents a PolicyEvaluation which contains a set of policy evaluations for a given activity.",
       "required": [
         "id",
         "activityId",
@@ -5302,32 +5215,6 @@
         "signature"
       ]
     },
-    "v1AppStatus": {
-      "type": "object",
-      "properties": {
-        "appId": {
-          "type": "string",
-          "description": "Unique identifier for this TVC App"
-        },
-        "deployments": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1DeploymentStatus"
-          },
-          "description": "List of deployment statuses for this app"
-        },
-        "targetedDeploymentId": {
-          "type": "string",
-          "description": "The deployment ID currently serving traffic for this app"
-        }
-      },
-      "required": [
-        "appId",
-        "deployments",
-        "targetedDeploymentId"
-      ]
-    },
     "v1ApproveActivityIntent": {
       "type": "object",
       "properties": {
@@ -5372,75 +5259,6 @@
         "parameters"
       ]
     },
-    "v1AssetBalance": {
-      "type": "object",
-      "properties": {
-        "caip19": {
-          "type": "string",
-          "description": "The caip-19 asset identifier"
-        },
-        "symbol": {
-          "type": "string",
-          "description": "The asset symbol"
-        },
-        "balance": {
-          "type": "string",
-          "description": "The balance in atomic units"
-        },
-        "decimals": {
-          "type": "integer",
-          "format": "int32",
-          "description": "The number of decimals this asset uses"
-        },
-        "display": {
-          "$ref": "#/definitions/v1AssetBalanceDisplay",
-          "description": "Normalized balance values for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. Use the balance field instead."
-        },
-        "name": {
-          "type": "string",
-          "description": "The asset name"
-        }
-      }
-    },
-    "v1AssetBalanceDisplay": {
-      "type": "object",
-      "properties": {
-        "usd": {
-          "type": "string",
-          "description": "USD value for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise."
-        },
-        "crypto": {
-          "type": "string",
-          "description": "Normalized crypto value for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise."
-        }
-      }
-    },
-    "v1AssetMetadata": {
-      "type": "object",
-      "properties": {
-        "caip19": {
-          "type": "string",
-          "description": "The caip-19 asset identifier"
-        },
-        "symbol": {
-          "type": "string",
-          "description": "The asset symbol"
-        },
-        "decimals": {
-          "type": "integer",
-          "format": "int32",
-          "description": "The number of decimals this asset uses"
-        },
-        "logoUrl": {
-          "type": "string",
-          "description": "The url of the asset logo"
-        },
-        "name": {
-          "type": "string",
-          "description": "The asset name"
-        }
-      }
-    },
     "v1Attestation": {
       "type": "object",
       "properties": {
@@ -5474,6 +5292,47 @@
         "attestationObject",
         "transports"
       ]
+    },
+    "v1AuthenticationMethod": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1AuthenticationType"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "v1AuthenticationMethodParams": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1AuthenticationType"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "v1AuthenticationType": {
+      "type": "string",
+      "enum": [
+        "AUTHENTICATION_TYPE_UNSPECIFIED",
+        "AUTHENTICATION_TYPE_EMAIL_OTP",
+        "AUTHENTICATION_TYPE_SMS_OTP",
+        "AUTHENTICATION_TYPE_PASSKEY",
+        "AUTHENTICATION_TYPE_API_KEY",
+        "AUTHENTICATION_TYPE_OAUTH",
+        "AUTHENTICATION_TYPE_SESSION"
+      ],
+      "default": "AUTHENTICATION_TYPE_UNSPECIFIED"
     },
     "v1Authenticator": {
       "type": "object",
@@ -5827,6 +5686,38 @@
         "apiKeyIds"
       ]
     },
+    "v1CreateApiOnlyUsersIntent": {
+      "type": "object",
+      "properties": {
+        "apiOnlyUsers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ApiOnlyUserParams"
+          },
+          "description": "A list of API-only Users to create.",
+          "title": "@inject_tag: validate:\"required,dive,required\""
+        }
+      },
+      "required": [
+        "apiOnlyUsers"
+      ]
+    },
+    "v1CreateApiOnlyUsersResult": {
+      "type": "object",
+      "properties": {
+        "userIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of API-only User IDs."
+        }
+      },
+      "required": [
+        "userIds"
+      ]
+    },
     "v1CreateAuthenticatorsIntent": {
       "type": "object",
       "properties": {
@@ -6065,6 +5956,78 @@
         "invitationIds"
       ]
     },
+    "v1CreateMfaPolicyIntent": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "mfaPolicyName": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "requiredAuthenticationMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RequiredAuthenticationMethodParams"
+          }
+        },
+        "order": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "userId",
+        "mfaPolicyName",
+        "condition",
+        "requiredAuthenticationMethods",
+        "order"
+      ]
+    },
+    "v1CreateMfaPolicyRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_CREATE_MFA_POLICY"
+          ]
+        },
+        "timestampMs": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1CreateMfaPolicyIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1CreateMfaPolicyResult": {
+      "type": "object",
+      "properties": {
+        "mfaPolicyId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mfaPolicyId"
+      ]
+    },
     "v1CreateOauth2CredentialIntent": {
       "type": "object",
       "properties": {
@@ -6238,6 +6201,18 @@
       },
       "required": [
         "providerIds"
+      ]
+    },
+    "v1CreateOidcProviderResult": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "description": "Unique identifier for the newly registered OIDC provider."
+        }
+      },
+      "required": [
+        "providerId"
       ]
     },
     "v1CreateOrganizationIntent": {
@@ -6914,6 +6889,64 @@
         "username",
         "apiKeyId",
         "credentialBundle"
+      ]
+    },
+    "v1CreateSessionProfileIntent": {
+      "type": "object",
+      "properties": {
+        "sessionProfileName": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "expirationSeconds": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessionProfileName",
+        "scope"
+      ]
+    },
+    "v1CreateSessionProfileRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_CREATE_SESSION_PROFILE"
+          ]
+        },
+        "timestampMs": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1CreateSessionProfileIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1CreateSessionProfileResult": {
+      "type": "object",
+      "properties": {
+        "sessionProfileId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessionProfileId"
       ]
     },
     "v1CreateSmartContractInterfaceIntent": {
@@ -8057,6 +8090,51 @@
         "addresses"
       ]
     },
+    "v1CreateWebhookEndpointIntent": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "The destination URL for webhook deliveries.",
+          "title": "@inject_tag: validate:\"required,url\""
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name for the webhook endpoint.",
+          "title": "@inject_tag: validate:\"required,tk_label_length\""
+        },
+        "subscriptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WebhookSubscriptionParams"
+          },
+          "description": "Event subscriptions. If empty, the endpoint receives all event types.",
+          "title": "@inject_tag: validate:\"dive\""
+        }
+      },
+      "required": [
+        "url",
+        "name"
+      ]
+    },
+    "v1CreateWebhookEndpointResult": {
+      "type": "object",
+      "properties": {
+        "endpointId": {
+          "type": "string",
+          "description": "Unique identifier for the created Webhook Endpoint."
+        },
+        "webhookEndpoint": {
+          "$ref": "#/definitions/v1WebhookEndpointData",
+          "description": "The created webhook endpoint data, including the signing public key."
+        }
+      },
+      "required": [
+        "endpointId",
+        "webhookEndpoint"
+      ]
+    },
     "v1CredPropsAuthenticationExtensionsClientOutputs": {
       "type": "object",
       "properties": {
@@ -8356,6 +8434,58 @@
         "invitationId"
       ]
     },
+    "v1DeleteMfaPolicyIntent": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "mfaPolicyId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "userId",
+        "mfaPolicyId"
+      ]
+    },
+    "v1DeleteMfaPolicyRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_DELETE_MFA_POLICY"
+          ]
+        },
+        "timestampMs": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1DeleteMfaPolicyIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1DeleteMfaPolicyResult": {
+      "type": "object",
+      "properties": {
+        "mfaPolicyId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mfaPolicyId"
+      ]
+    },
     "v1DeleteOauth2CredentialIntent": {
       "type": "object",
       "properties": {
@@ -8474,6 +8604,21 @@
             "type": "string"
           },
           "description": "A list of unique identifiers for Oauth Providers"
+        }
+      },
+      "required": [
+        "providerIds"
+      ]
+    },
+    "v1DeleteOidcProviderResult": {
+      "type": "object",
+      "properties": {
+        "providerIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of unique identifiers for OIDC providers that were removed."
         }
       },
       "required": [
@@ -9131,33 +9276,29 @@
         "walletIds"
       ]
     },
-    "v1DeploymentStatus": {
+    "v1DeleteWebhookEndpointIntent": {
       "type": "object",
       "properties": {
-        "deploymentId": {
+        "endpointId": {
           "type": "string",
-          "description": "Unique identifier for this deployment (corresponds to k8s deployment label)"
-        },
-        "readyReplicas": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Number of ready replicas"
-        },
-        "desiredReplicas": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Desired number of replicas"
-        },
-        "lastUpdatedTime": {
-          "$ref": "#/definitions/externaldatav1Timestamp",
-          "description": "Last time this deployment was updated"
+          "description": "Unique identifier of the webhook endpoint to delete.",
+          "title": "@inject_tag: validate:\"required,uuid4\""
         }
       },
       "required": [
-        "deploymentId",
-        "readyReplicas",
-        "desiredReplicas",
-        "lastUpdatedTime"
+        "endpointId"
+      ]
+    },
+    "v1DeleteWebhookEndpointResult": {
+      "type": "object",
+      "properties": {
+        "endpointId": {
+          "type": "string",
+          "description": "Unique identifier for the deleted Webhook Endpoint."
+        }
+      },
+      "required": [
+        "endpointId"
       ]
     },
     "v1DisableAuthProxyIntent": {
@@ -9504,19 +9645,6 @@
         "userId",
         "encryptedApiKey"
       ]
-    },
-    "v1EthFailureDetails": {
-      "type": "object",
-      "properties": {
-        "revertChain": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1RevertChainEntry"
-          },
-          "description": "Ethereum revert chain, ordered from outermost to innermost."
-        }
-      }
     },
     "v1EthSendRawTransactionIntent": {
       "type": "object",
@@ -9962,23 +10090,28 @@
         },
         "projectId": {
           "type": "string",
-          "description": "Project ID for the on-ramp provider. Some providers, like Coinbase, require this additional identifier."
+          "description": "Project ID for the on-ramp provider. Some providers, like Coinbase, require this additional identifier.",
+          "title": "@inject_tag: validate:\"omitempty\""
         },
         "publishableApiKey": {
           "type": "string",
-          "description": "Publishable API key for the on-ramp provider."
+          "description": "Publishable API key for the on-ramp provider.",
+          "title": "@inject_tag: validate:\"required\""
         },
         "encryptedSecretApiKey": {
           "type": "string",
-          "description": "Secret API key for the on-ramp provider encrypted to our on-ramp encryption public key."
+          "description": "Secret API key for the on-ramp provider encrypted to our on-ramp encryption public key.",
+          "title": "@inject_tag: validate:\"required\""
         },
         "encryptedPrivateApiKey": {
           "type": "string",
-          "description": "Private API key for the on-ramp provider encrypted to our on-ramp encryption public key. Some providers, like Coinbase, require this additional key."
+          "description": "Private API key for the on-ramp provider encrypted to our on-ramp encryption public key. Some providers, like Coinbase, require this additional key.",
+          "title": "@inject_tag: validate:\"omitempty\""
         },
         "sandboxMode": {
           "type": "boolean",
-          "description": "If the on-ramp credential is a sandbox credential."
+          "description": "If the on-ramp credential is a sandbox credential.",
+          "title": "@inject_tag: validate:\"omitempty\""
         },
         "createdAt": {
           "$ref": "#/definitions/externaldatav1Timestamp"
@@ -10239,6 +10372,36 @@
         "appProofs"
       ]
     },
+    "v1GetAttestationDocumentRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given organization."
+        },
+        "enclaveType": {
+          "type": "string",
+          "description": "Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`."
+        }
+      },
+      "required": [
+        "organizationId",
+        "enclaveType"
+      ]
+    },
+    "v1GetAttestationDocumentResponse": {
+      "type": "object",
+      "properties": {
+        "attestationDocument": {
+          "type": "string",
+          "format": "byte",
+          "description": "Raw (CBOR-encoded) attestation document."
+        }
+      },
+      "required": [
+        "attestationDocument"
+      ]
+    },
     "v1GetAuthenticatorRequest": {
       "type": "object",
       "properties": {
@@ -10345,6 +10508,26 @@
         "usageUsd": {
           "type": "string",
           "description": "The total gas usage (in USD) of all sponsored transactions processed over the last `window_duration_minutes`"
+        },
+        "windowLimitNative": {
+          "type": "string",
+          "description": "The native-currency spend cap per window in wei. '0' = uncapped. This is the ENFORCED cap (no price oracle required)."
+        },
+        "usageNative": {
+          "type": "string",
+          "description": "Total native-currency gas spent (wei) over the window, from confirmed on-chain fees."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the native spend cap is enforced. False (or no config) = uncapped."
+        },
+        "windowLimitLamports": {
+          "type": "string",
+          "description": "The Solana native-currency spend cap per window in lamports. '0' = uncapped. Parallel ENFORCED cap to window_limit_native, scoped to Solana (solana:*) usage."
+        },
+        "usageLamports": {
+          "type": "string",
+          "description": "Total Solana native-currency gas spent (lamports) over the window, from confirmed on-chain fees."
         }
       },
       "required": [
@@ -10370,6 +10553,99 @@
         "appName"
       ]
     },
+    "v1GetMfaPoliciesRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "organizationId",
+        "userId"
+      ]
+    },
+    "v1GetMfaPoliciesResponse": {
+      "type": "object",
+      "properties": {
+        "mfaPolicies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MfaPolicy"
+          }
+        }
+      },
+      "required": [
+        "mfaPolicies"
+      ]
+    },
+    "v1GetMfaPolicyRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "mfaPolicyId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "organizationId",
+        "userId",
+        "mfaPolicyId"
+      ]
+    },
+    "v1GetMfaPolicyResponse": {
+      "type": "object",
+      "properties": {
+        "mfaPolicy": {
+          "$ref": "#/definitions/v1MfaPolicy"
+        }
+      },
+      "required": [
+        "mfaPolicy"
+      ]
+    },
+    "v1GetMfaStatusRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        },
+        "activityId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "organizationId",
+        "activityId"
+      ]
+    },
+    "v1GetMfaStatusResponse": {
+      "type": "object",
+      "properties": {
+        "mfaStatuses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MfaStatus"
+          }
+        }
+      },
+      "required": [
+        "mfaStatuses"
+      ]
+    },
     "v1GetNoncesRequest": {
       "type": "object",
       "properties": {
@@ -10383,15 +10659,7 @@
         },
         "caip2": {
           "type": "string",
-          "enum": [
-            "eip155:1",
-            "eip155:11155111",
-            "eip155:8453",
-            "eip155:84532",
-            "eip155:137",
-            "eip155:80002"
-          ],
-          "description": "CAIP-2 chain ID (e.g., 'eip155:1' for Ethereum mainnet)."
+          "description": "The network identifier in CAIP-2 format (e.g., 'eip155:1' for Ethereum mainnet)."
         },
         "nonce": {
           "type": "boolean",
@@ -10714,12 +10982,13 @@
           "$ref": "#/definitions/v1EthSendTransactionStatus",
           "description": "Ethereum-specific transaction status."
         },
-        "solana": {
-          "$ref": "#/definitions/v1SolanaSendTransactionStatus",
+        "sol": {
+          "$ref": "#/definitions/v1SolSendTransactionStatus",
           "description": "Solana-specific transaction status."
         },
         "tron": {
-          "$ref": "#/definitions/v1TronSendTransactionStatus"
+          "$ref": "#/definitions/v1TronSendTransactionStatus",
+          "description": "Tron-specific transaction status."
         },
         "txError": {
           "type": "string",
@@ -10732,6 +11001,58 @@
       },
       "required": [
         "txStatus"
+      ]
+    },
+    "v1GetSessionProfileRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        },
+        "sessionProfileId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "organizationId",
+        "sessionProfileId"
+      ]
+    },
+    "v1GetSessionProfileResponse": {
+      "type": "object",
+      "properties": {
+        "sessionProfile": {
+          "$ref": "#/definitions/v1SessionProfile"
+        }
+      },
+      "required": [
+        "sessionProfile"
+      ]
+    },
+    "v1GetSessionProfilesRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1GetSessionProfilesResponse": {
+      "type": "object",
+      "properties": {
+        "sessionProfiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SessionProfile"
+          }
+        }
+      },
+      "required": [
+        "sessionProfiles"
       ]
     },
     "v1GetSmartContractInterfaceRequest": {
@@ -11286,6 +11607,38 @@
       "required": [
         "walletId",
         "addresses"
+      ]
+    },
+    "v1ImportedRootAuthenticatorParams": {
+      "type": "object",
+      "properties": {
+        "authenticatorName": {
+          "type": "string",
+          "title": "@inject_tag: validate:\"required,tk_label,tk_label_length\""
+        },
+        "credentialId": {
+          "type": "string",
+          "title": "@inject_tag: validate:\"required,max=256\""
+        },
+        "publicKey": {
+          "type": "string",
+          "title": "Uncompressed P-256 public key, hex-encoded (with or without \"0x\" prefix).\n@inject_tag: validate:\"required\""
+        },
+        "aaguid": {
+          "type": "string"
+        },
+        "transports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1AuthenticatorTransport"
+          }
+        }
+      },
+      "description": "See `CreateOrganizationIntentV2.imported_root_authenticator`. The public\nkey / aaguid / transports MUST be resolved server-side from Coordinator's\nown authenticator store (never trusted verbatim from an HTTP client).",
+      "required": [
+        "authenticatorName",
+        "credentialId",
+        "publicKey"
       ]
     },
     "v1InitFiatOnRampIntent": {
@@ -11928,6 +12281,7 @@
         "type": {
           "type": "string",
           "enum": [
+            "ACTIVITY_TYPE_INIT_OTP_V2",
             "ACTIVITY_TYPE_INIT_OTP_V3"
           ]
         },
@@ -12665,16 +13019,82 @@
         "userTags"
       ]
     },
-    "v1LoginUsage": {
+    "v1MfaPolicy": {
       "type": "object",
       "properties": {
-        "publicKey": {
-          "type": "string",
-          "description": "Public key for authentication"
+        "mfaPolicyId": {
+          "type": "string"
+        },
+        "mfaPolicyName": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "requiredAuthenticationMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RequiredAuthenticationMethod"
+          }
+        },
+        "order": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "createdAt": {
+          "$ref": "#/definitions/externaldatav1Timestamp"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/externaldatav1Timestamp"
         }
       },
       "required": [
-        "publicKey"
+        "mfaPolicyId",
+        "mfaPolicyName",
+        "condition",
+        "requiredAuthenticationMethods",
+        "order",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "v1MfaStatus": {
+      "type": "object",
+      "properties": {
+        "mfaPolicyId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "satisfied": {
+          "type": "boolean"
+        },
+        "satisfiedMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthenticationMethod"
+          }
+        },
+        "requiredMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RequiredAuthenticationMethod"
+          }
+        }
+      },
+      "required": [
+        "mfaPolicyId",
+        "userId",
+        "satisfied",
+        "satisfiedMethods",
+        "requiredMethods"
       ]
     },
     "v1MnemonicLanguage": {
@@ -12692,20 +13112,6 @@
         "MNEMONIC_LANGUAGE_SPANISH"
       ],
       "default": "MNEMONIC_LANGUAGE_UNSPECIFIED"
-    },
-    "v1NOOPCodegenAnchorResponse": {
-      "type": "object",
-      "properties": {
-        "stamp": {
-          "$ref": "#/definitions/v1WebAuthnStamp"
-        },
-        "tokenUsage": {
-          "$ref": "#/definitions/v1TokenUsage"
-        }
-      },
-      "required": [
-        "stamp"
-      ]
     },
     "v1NativeRevertError": {
       "type": "object",
@@ -12883,6 +13289,10 @@
         "invalidateExisting": {
           "type": "boolean",
           "description": "Invalidate all other previously generated Oauth API keys"
+        },
+        "sessionProfileId": {
+          "type": "string",
+          "description": "Optional immutable Session Profile applied to the OAuth Auth session."
         }
       },
       "required": [
@@ -13136,6 +13546,24 @@
       ],
       "default": "OPERATOR_UNSPECIFIED"
     },
+    "v1OrganizationProtectionProfileRequest": {
+      "type": "object",
+      "properties": {
+        "profileType": {
+          "type": "string",
+          "description": "Must be ORGANIZATION_PROTECTION_PROFILE_TYPE_PROTECTED_SPONSORED for F0."
+        },
+        "version": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Protection profile protocol version. F0 supports version 1."
+        }
+      },
+      "required": [
+        "profileType",
+        "version"
+      ]
+    },
     "v1OtpAuthIntent": {
       "type": "object",
       "properties": {
@@ -13337,13 +13765,15 @@
     "v1Outcome": {
       "type": "string",
       "enum": [
+        "OUTCOME_UNSPECIFIED",
         "OUTCOME_ALLOW",
         "OUTCOME_DENY_EXPLICIT",
         "OUTCOME_DENY_IMPLICIT",
         "OUTCOME_REQUIRES_CONSENSUS",
         "OUTCOME_REJECTED",
         "OUTCOME_ERROR"
-      ]
+      ],
+      "default": "OUTCOME_UNSPECIFIED"
     },
     "v1Pagination": {
       "type": "object",
@@ -13746,6 +14176,36 @@
       },
       "required": [
         "features"
+      ]
+    },
+    "v1RequiredAuthenticationMethod": {
+      "type": "object",
+      "properties": {
+        "any": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthenticationMethod"
+          }
+        }
+      },
+      "required": [
+        "any"
+      ]
+    },
+    "v1RequiredAuthenticationMethodParams": {
+      "type": "object",
+      "properties": {
+        "any": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthenticationMethodParams"
+          }
+        }
+      },
+      "required": [
+        "any"
       ]
     },
     "v1Result": {
@@ -14396,6 +14856,39 @@
         }
       }
     },
+    "v1SessionProfile": {
+      "type": "object",
+      "properties": {
+        "sessionProfileId": {
+          "type": "string"
+        },
+        "sessionProfileName": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "expirationSeconds": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "createdAt": {
+          "$ref": "#/definitions/externaldatav1Timestamp"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/externaldatav1Timestamp"
+        }
+      },
+      "required": [
+        "sessionProfileId",
+        "sessionProfileName",
+        "scope",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
     "v1SetOrganizationFeatureIntent": {
       "type": "object",
       "properties": {
@@ -14739,70 +15232,6 @@
         "signedTransaction"
       ]
     },
-    "v1SignupUsage": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "phoneNumber": {
-          "type": "string"
-        },
-        "apiKeys": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1ApiKeyParamsV2"
-          }
-        },
-        "authenticators": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AuthenticatorParamsV2"
-          }
-        },
-        "oauthProviders": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1OauthProviderParams"
-          }
-        }
-      }
-    },
-    "v1SignupUsageV2": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "phoneNumber": {
-          "type": "string"
-        },
-        "apiKeys": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1ApiKeyParamsV2"
-          }
-        },
-        "authenticators": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AuthenticatorParamsV2"
-          }
-        },
-        "oauthProviders": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1OauthProviderParamsV2"
-          }
-        }
-      }
-    },
     "v1SimpleClientExtensionResults": {
       "type": "object",
       "properties": {
@@ -14835,6 +15264,48 @@
         }
       },
       "description": "Each of these customization parameters are optional; resort to defaults if any are not provided."
+    },
+    "v1SolSendRawTransactionIntent": {
+      "type": "object",
+      "properties": {
+        "signedTransaction": {
+          "type": "string",
+          "description": "The raw, signed Solana transaction to be sent (hex- or base64-encoded wire bytes).",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "caip2": {
+          "type": "string",
+          "enum": [
+            "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+            "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+            "solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY"
+          ],
+          "description": "CAIP-2 chain ID (e.g., 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG' for devnet).",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "lastValidBlockHeight": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Optional lastValidBlockHeight returned by prepare_sol_transaction for the pinned blockhash; persisted so the confirmation worker can detect blockhash-expiry drops precisely.",
+          "title": "@inject_tag: validate:\"omitempty\""
+        }
+      },
+      "required": [
+        "signedTransaction",
+        "caip2"
+      ]
+    },
+    "v1SolSendRawTransactionResult": {
+      "type": "object",
+      "properties": {
+        "transactionHash": {
+          "type": "string",
+          "description": "The transaction signature (base58) of the sent Solana transaction."
+        }
+      },
+      "required": [
+        "transactionHash"
+      ]
     },
     "v1SolSendTransactionIntent": {
       "type": "object",
@@ -14929,62 +15400,6 @@
         "sendTransactionStatusId"
       ]
     },
-    "v1SolanaConfig": {
-      "type": "object",
-      "properties": {
-        "rentPrefundEnabled": {
-          "type": "boolean",
-          "description": "Whether Solana rent prefunding is enabled for the organization. When omitted, the existing rent-prefund state is left unchanged."
-        }
-      }
-    },
-    "v1SolanaFailureDetails": {
-      "type": "object",
-      "properties": {
-        "source": {
-          "type": "string",
-          "description": "Where the Solana failure occurred, such as simulation or preflight."
-        },
-        "rpcCode": {
-          "type": "integer",
-          "format": "int32",
-          "description": "The Solana JSON-RPC error code, if available."
-        },
-        "rpcMessage": {
-          "type": "string",
-          "description": "The Solana JSON-RPC error message, if available."
-        },
-        "transactionErrorJson": {
-          "type": "string",
-          "description": "The raw Solana transaction error object serialized as JSON, if available."
-        },
-        "logs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Program logs returned by Solana simulation or preflight, if available."
-        },
-        "unitsConsumed": {
-          "type": "string",
-          "format": "uint64",
-          "description": "Compute units consumed during simulation or preflight, if available."
-        },
-        "innerInstructionsJson": {
-          "type": "string",
-          "description": "The raw Solana inner instructions payload serialized as JSON, if available."
-        }
-      }
-    },
-    "v1SolanaSendTransactionStatus": {
-      "type": "object",
-      "properties": {
-        "signature": {
-          "type": "string",
-          "description": "The Solana transaction signature, if available."
-        }
-      }
-    },
     "v1StampLoginIntent": {
       "type": "object",
       "properties": {
@@ -15055,35 +15470,11 @@
     "v1TagType": {
       "type": "string",
       "enum": [
+        "TAG_TYPE_UNSPECIFIED",
         "TAG_TYPE_USER",
         "TAG_TYPE_PRIVATE_KEY"
-      ]
-    },
-    "v1TokenUsage": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "$ref": "#/definitions/v1UsageType",
-          "description": "Type of token usage"
-        },
-        "tokenId": {
-          "type": "string",
-          "description": "Unique identifier for the verification token"
-        },
-        "signup": {
-          "$ref": "#/definitions/v1SignupUsage"
-        },
-        "login": {
-          "$ref": "#/definitions/v1LoginUsage"
-        },
-        "signupV2": {
-          "$ref": "#/definitions/v1SignupUsageV2"
-        }
-      },
-      "required": [
-        "type",
-        "tokenId"
-      ]
+      ],
+      "default": "TAG_TYPE_UNSPECIFIED"
     },
     "v1TransactionType": {
       "type": "string",
@@ -15097,12 +15488,102 @@
       "default": "TRANSACTION_TYPE_UNSPECIFIED",
       "title": "- TRANSACTION_TYPE_ETHEREUM: Unsigned Ethereum transaction, RLP-encoded and hex-encoded\n - TRANSACTION_TYPE_SOLANA: Unsigned Solana transaction in hex bytes\n - TRANSACTION_TYPE_TRON: Unsigned Tron transaction, protobuf encoded and hex encoded\n - TRANSACTION_TYPE_BITCOIN: Unsigned Bitcoin transaction, hex encoded"
     },
-    "v1TvcHealthCheckType": {
-      "type": "string",
-      "enum": [
-        "TVC_HEALTH_CHECK_TYPE_HTTP",
-        "TVC_HEALTH_CHECK_TYPE_GRPC"
+    "v1TronSendTransactionIntent": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "A wallet or private key address to sign with (base58 T... form). This does not support private key IDs.",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "caip2": {
+          "type": "string",
+          "enum": [
+            "tron:0x2b6653dc",
+            "tron:0xcd8690dc",
+            "tron:0x94a9059e"
+          ],
+          "description": "CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet).",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "to": {
+          "type": "string",
+          "description": "Recipient address (base58 T... form).",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "value": {
+          "type": "string",
+          "description": "Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contract_address is set.",
+          "title": "@inject_tag: validate:\"omitempty\""
+        },
+        "contractAddress": {
+          "type": "string",
+          "description": "TRC-20 contract address (base58 T... form). When set, this is a token transfer(address,uint256) to `to` instead of a native TRX transfer, ABI-encoded server-side.",
+          "title": "@inject_tag: validate:\"omitempty\""
+        },
+        "tokenAmount": {
+          "type": "string",
+          "description": "TRC-20 transfer amount in the token's atomic (smallest) unit. Required when contract_address is set.",
+          "title": "@inject_tag: validate:\"omitempty\""
+        }
+      },
+      "required": [
+        "from",
+        "caip2",
+        "to"
       ]
+    },
+    "v1TronSendTransactionRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_TRON_SEND_TRANSACTION"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1TronSendTransactionIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1TronSendTransactionResult": {
+      "type": "object",
+      "properties": {
+        "sendTransactionStatusId": {
+          "type": "string",
+          "description": "The send_transaction_status ID associated with the transaction submission"
+        }
+      },
+      "required": [
+        "sendTransactionStatusId"
+      ]
+    },
+    "v1TronSendTransactionStatus": {
+      "type": "object",
+      "properties": {
+        "txHash": {
+          "type": "string",
+          "description": "The Tron transaction id (sha256(raw_data), hex), if available."
+        }
+      }
     },
     "v1TvcManifestApproval": {
       "type": "object",
@@ -15191,14 +15672,6 @@
             "$ref": "#/definitions/v1RevertChainEntry"
           },
           "description": "Chain of revert errors from nested contract calls, ordered from outermost to innermost."
-        },
-        "solana": {
-          "$ref": "#/definitions/v1SolanaFailureDetails",
-          "description": "Solana-specific failure details for simulation or preflight errors, if available."
-        },
-        "eth": {
-          "$ref": "#/definitions/v1EthFailureDetails",
-          "description": "Ethereum-specific failure details, if available."
         }
       }
     },
@@ -15432,6 +15905,79 @@
         "fiatOnRampCredentialId"
       ]
     },
+    "v1UpdateMfaPolicyIntent": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "mfaPolicyId": {
+          "type": "string"
+        },
+        "mfaPolicyName": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "requiredAuthenticationMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RequiredAuthenticationMethodParams"
+          },
+          "description": "Proto3 repeated cannot encode omitted vs []. HTTP JSON raw_body is the\npresence source: omitted → leave unchanged; [] → reject; null → invalid."
+        },
+        "order": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "userId",
+        "mfaPolicyId"
+      ]
+    },
+    "v1UpdateMfaPolicyRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_UPDATE_MFA_POLICY"
+          ]
+        },
+        "timestampMs": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1UpdateMfaPolicyIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1UpdateMfaPolicyResult": {
+      "type": "object",
+      "properties": {
+        "mfaPolicyId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mfaPolicyId"
+      ]
+    },
     "v1UpdateOauth2CredentialIntent": {
       "type": "object",
       "properties": {
@@ -15504,6 +16050,18 @@
       },
       "required": [
         "oauth2CredentialId"
+      ]
+    },
+    "v1UpdateOidcProviderResult": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "description": "Unique identifier for the updated OIDC provider."
+        }
+      },
+      "required": [
+        "providerId"
       ]
     },
     "v1UpdateOrganizationNameIntent": {
@@ -16237,6 +16795,43 @@
         "walletId"
       ]
     },
+    "v1UpdateWebhookEndpointIntent": {
+      "type": "object",
+      "properties": {
+        "endpointId": {
+          "type": "string",
+          "description": "Unique identifier of the webhook endpoint to update.",
+          "title": "@inject_tag: validate:\"required,uuid4\""
+        },
+        "url": {
+          "type": "string",
+          "description": "Updated destination URL."
+        },
+        "name": {
+          "type": "string",
+          "description": "Updated human-readable name."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "required": [
+        "endpointId"
+      ]
+    },
+    "v1UpdateWebhookEndpointResult": {
+      "type": "object",
+      "properties": {
+        "endpointId": {
+          "type": "string",
+          "description": "Unique identifier for the updated Webhook Endpoint."
+        }
+      },
+      "required": [
+        "endpointId"
+      ]
+    },
     "v1UpsertGasUsageConfigIntent": {
       "type": "object",
       "properties": {
@@ -16273,13 +16868,6 @@
       },
       "required": [
         "gasUsageConfigId"
-      ]
-    },
-    "v1UsageType": {
-      "type": "string",
-      "enum": [
-        "USAGE_TYPE_SIGNUP",
-        "USAGE_TYPE_LOGIN"
       ]
     },
     "v1User": {
@@ -16632,7 +17220,7 @@
         "type": {
           "type": "string",
           "enum": [
-            "ACTIVITY_TYPE_VERIFY_OTP_V2"
+            "ACTIVITY_TYPE_VERIFY_OTP"
           ]
         },
         "timestampMs": {
@@ -16644,7 +17232,7 @@
           "description": "Unique identifier for a given Organization."
         },
         "parameters": {
-          "$ref": "#/definitions/v1VerifyOtpIntentV2"
+          "$ref": "#/definitions/v1VerifyOtpIntent"
         },
         "generateAppProofs": {
           "type": "boolean"
@@ -16812,9 +17400,11 @@
         },
         "walletDetails": {
           "$ref": "#/definitions/v1Wallet",
-          "description": "Wallet details for this account. This is only present when include_wallet_details=true."
+          "description": "Wallet details for this account. This is only present when include_wallet_details=true.",
+          "title": "TODO(tim): temporarily removing this since it's always \"false\"\nbool exported = 12 [\n  (google.api.field_behavior) = REQUIRED,\n  (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: \"True when a given Account is exported, false otherwise.\"}\n];"
         }
       },
+      "title": "An account derived from a Wallet",
       "required": [
         "walletAccountId",
         "organizationId",
@@ -16942,252 +17532,6 @@
         "addresses"
       ]
     },
-    "v1WebAuthnStamp": {
-      "type": "object",
-      "properties": {
-        "credentialId": {
-          "type": "string",
-          "description": "A base64 url encoded Unique identifier for a given credential."
-        },
-        "clientDataJson": {
-          "type": "string",
-          "description": "A base64 encoded payload containing metadata about the signing context and the challenge."
-        },
-        "authenticatorData": {
-          "type": "string",
-          "description": "A base64 encoded payload containing metadata about the authenticator."
-        },
-        "signature": {
-          "type": "string",
-          "description": "The base64 url encoded signature bytes contained within the WebAuthn assertion response."
-        }
-      },
-      "required": [
-        "credentialId",
-        "clientDataJson",
-        "authenticatorData",
-        "signature"
-      ]
-    },
-    "v1WebhookSubscriptionParams": {
-      "type": "object",
-      "properties": {
-        "eventType": {
-          "type": "string",
-          "description": "The event type to subscribe to, e.g. ACTIVITY_UPDATES, BALANCE_CONFIRMED_UPDATES."
-        },
-        "filtersJson": {
-          "type": "string",
-          "description": "JSON-encoded filter criteria for this subscription. Reserved for future use."
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "Whether this subscription is active. Defaults to true."
-        }
-      },
-      "required": [
-        "eventType"
-      ]
-    },
-    "v1GetMfaPoliciesRequest": {
-      "type": "object",
-      "properties": {
-        "organizationId": {
-          "type": "string"
-        },
-        "userId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "organizationId",
-        "userId"
-      ]
-    },
-    "v1GetSessionProfilesRequest": {
-      "type": "object",
-      "properties": {
-        "organizationId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "organizationId"
-      ]
-    },
-    "v1GetSessionProfileRequest": {
-      "type": "object",
-      "properties": {
-        "organizationId": {
-          "type": "string"
-        },
-        "sessionProfileId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "organizationId",
-        "sessionProfileId"
-      ]
-    },
-    "v1GetMfaPoliciesResponse": {
-      "type": "object",
-      "properties": {
-        "mfaPolicies": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1MfaPolicy"
-          }
-        }
-      },
-      "required": [
-        "mfaPolicies"
-      ]
-    },
-    "v1MfaPolicy": {
-      "type": "object",
-      "properties": {
-        "mfaPolicyId": {
-          "type": "string"
-        },
-        "mfaPolicyName": {
-          "type": "string"
-        },
-        "condition": {
-          "type": "string"
-        },
-        "requiredAuthenticationMethods": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1RequiredAuthenticationMethod"
-          }
-        },
-        "order": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "notes": {
-          "type": "string"
-        },
-        "createdAt": {
-          "$ref": "#/definitions/externaldatav1Timestamp"
-        },
-        "updatedAt": {
-          "$ref": "#/definitions/externaldatav1Timestamp"
-        }
-      },
-      "required": [
-        "mfaPolicyId",
-        "mfaPolicyName",
-        "condition",
-        "requiredAuthenticationMethods",
-        "order",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "v1RequiredAuthenticationMethod": {
-      "type": "object",
-      "properties": {
-        "any": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AuthenticationMethod"
-          }
-        }
-      },
-      "required": [
-        "any"
-      ]
-    },
-    "v1AuthenticationMethod": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "$ref": "#/definitions/v1AuthenticationType"
-        },
-        "id": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "type"
-      ]
-    },
-    "v1AuthenticationType": {
-      "type": "string",
-      "enum": [
-        "AUTHENTICATION_TYPE_UNSPECIFIED",
-        "AUTHENTICATION_TYPE_EMAIL_OTP",
-        "AUTHENTICATION_TYPE_SMS_OTP",
-        "AUTHENTICATION_TYPE_PASSKEY",
-        "AUTHENTICATION_TYPE_API_KEY",
-        "AUTHENTICATION_TYPE_OAUTH",
-        "AUTHENTICATION_TYPE_SESSION"
-      ],
-      "default": "AUTHENTICATION_TYPE_UNSPECIFIED"
-    },
-    "v1DeleteMfaPolicyRequest": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "ACTIVITY_TYPE_DELETE_MFA_POLICY"
-          ]
-        },
-        "timestampMs": {
-          "type": "string"
-        },
-        "organizationId": {
-          "type": "string"
-        },
-        "parameters": {
-          "$ref": "#/definitions/v1DeleteMfaPolicyIntent"
-        }
-      },
-      "required": [
-        "type",
-        "timestampMs",
-        "organizationId",
-        "parameters"
-      ]
-    },
-    "v1DeleteMfaPolicyIntent": {
-      "type": "object",
-      "properties": {
-        "userId": {
-          "type": "string"
-        },
-        "mfaPolicyId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "userId",
-        "mfaPolicyId"
-      ]
-    },
-    "v1CreateWebhookEndpointResult": {
-      "type": "object",
-      "properties": {
-        "endpointId": {
-          "type": "string",
-          "description": "Unique identifier for the created Webhook Endpoint."
-        },
-        "webhookEndpoint": {
-          "$ref": "#/definitions/v1WebhookEndpointData",
-          "description": "The created webhook endpoint data, including the signing public key."
-        }
-      },
-      "required": [
-        "endpointId",
-        "webhookEndpoint"
-      ]
-    },
     "v1WebhookEndpointData": {
       "type": "object",
       "properties": {
@@ -17232,656 +17576,38 @@
         "isActive"
       ]
     },
-    "v1CreateSessionProfileResult": {
+    "v1WebhookSubscriptionParams": {
       "type": "object",
       "properties": {
-        "sessionProfileId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "sessionProfileId"
-      ]
-    },
-    "v1SolSendRawTransactionResult": {
-      "type": "object",
-      "properties": {
-        "transactionHash": {
+        "eventType": {
           "type": "string",
-          "description": "The transaction signature (base58) of the sent Solana transaction."
-        }
-      },
-      "required": [
-        "transactionHash"
-      ]
-    },
-    "v1CreateApiOnlyUsersResult": {
-      "type": "object",
-      "properties": {
-        "userIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "A list of API-only User IDs."
-        }
-      },
-      "required": [
-        "userIds"
-      ]
-    },
-    "v1UpdateOidcProviderResult": {
-      "type": "object",
-      "properties": {
-        "providerId": {
+          "description": "The event type to subscribe to, e.g. ACTIVITY_UPDATES, BALANCE_CONFIRMED_UPDATES."
+        },
+        "filtersJson": {
           "type": "string",
-          "description": "Unique identifier for the updated OIDC provider."
-        }
-      },
-      "required": [
-        "providerId"
-      ]
-    },
-    "v1CreateOidcProviderResult": {
-      "type": "object",
-      "properties": {
-        "providerId": {
-          "type": "string",
-          "description": "Unique identifier for the newly registered OIDC provider."
-        }
-      },
-      "required": [
-        "providerId"
-      ]
-    },
-    "v1UpdateMfaPolicyResult": {
-      "type": "object",
-      "properties": {
-        "mfaPolicyId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "mfaPolicyId"
-      ]
-    },
-    "v1DeleteWebhookEndpointResult": {
-      "type": "object",
-      "properties": {
-        "endpointId": {
-          "type": "string",
-          "description": "Unique identifier for the deleted Webhook Endpoint."
-        }
-      },
-      "required": [
-        "endpointId"
-      ]
-    },
-    "v1CreateMfaPolicyResult": {
-      "type": "object",
-      "properties": {
-        "mfaPolicyId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "mfaPolicyId"
-      ]
-    },
-    "v1DeleteOidcProviderResult": {
-      "type": "object",
-      "properties": {
-        "providerIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "A list of unique identifiers for OIDC providers that were removed."
-        }
-      },
-      "required": [
-        "providerIds"
-      ]
-    },
-    "v1UpdateWebhookEndpointResult": {
-      "type": "object",
-      "properties": {
-        "endpointId": {
-          "type": "string",
-          "description": "Unique identifier for the updated Webhook Endpoint."
-        }
-      },
-      "required": [
-        "endpointId"
-      ]
-    },
-    "v1DeleteMfaPolicyResult": {
-      "type": "object",
-      "properties": {
-        "mfaPolicyId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "mfaPolicyId"
-      ]
-    },
-    "v1SolSendRawTransactionIntent": {
-      "type": "object",
-      "properties": {
-        "signedTransaction": {
-          "type": "string",
-          "description": "The raw, signed Solana transaction to be sent (hex- or base64-encoded wire bytes).",
-          "title": "@inject_tag: validate:\"required\""
-        },
-        "caip2": {
-          "type": "string",
-          "enum": [
-            "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
-            "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
-            "solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY"
-          ],
-          "description": "CAIP-2 chain ID (e.g., 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG' for devnet).",
-          "title": "@inject_tag: validate:\"required\""
-        },
-        "lastValidBlockHeight": {
-          "type": "string",
-          "format": "uint64",
-          "description": "Optional lastValidBlockHeight returned by prepare_sol_transaction for the pinned blockhash; persisted so the confirmation worker can detect blockhash-expiry drops precisely.",
-          "title": "@inject_tag: validate:\"omitempty\""
-        }
-      },
-      "required": [
-        "signedTransaction",
-        "caip2"
-      ]
-    },
-    "v1CreateWebhookEndpointIntent": {
-      "type": "object",
-      "properties": {
-        "url": {
-          "type": "string",
-          "description": "The destination URL for webhook deliveries.",
-          "title": "@inject_tag: validate:\"required,url\""
-        },
-        "name": {
-          "type": "string",
-          "description": "Human-readable name for the webhook endpoint.",
-          "title": "@inject_tag: validate:\"required,tk_label_length\""
-        },
-        "subscriptions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1WebhookSubscriptionParams"
-          },
-          "description": "Event subscriptions. If empty, the endpoint receives all event types.",
-          "title": "@inject_tag: validate:\"dive\""
-        }
-      },
-      "required": [
-        "url",
-        "name"
-      ]
-    },
-    "v1CreateMfaPolicyIntent": {
-      "type": "object",
-      "properties": {
-        "userId": {
-          "type": "string"
-        },
-        "mfaPolicyName": {
-          "type": "string"
-        },
-        "condition": {
-          "type": "string"
-        },
-        "requiredAuthenticationMethods": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1RequiredAuthenticationMethodParams"
-          }
-        },
-        "order": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "notes": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "userId",
-        "mfaPolicyName",
-        "condition",
-        "requiredAuthenticationMethods",
-        "order"
-      ]
-    },
-    "v1RequiredAuthenticationMethodParams": {
-      "type": "object",
-      "properties": {
-        "any": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AuthenticationMethodParams"
-          }
-        }
-      },
-      "required": [
-        "any"
-      ]
-    },
-    "v1AuthenticationMethodParams": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "$ref": "#/definitions/v1AuthenticationType"
-        },
-        "id": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "type"
-      ]
-    },
-    "v1DeleteWebhookEndpointIntent": {
-      "type": "object",
-      "properties": {
-        "endpointId": {
-          "type": "string",
-          "description": "Unique identifier of the webhook endpoint to delete.",
-          "title": "@inject_tag: validate:\"required,uuid4\""
-        }
-      },
-      "required": [
-        "endpointId"
-      ]
-    },
-    "v1OrganizationProtectionProfileRequest": {
-      "type": "object",
-      "properties": {
-        "profileType": {
-          "type": "string",
-          "description": "Must be ORGANIZATION_PROTECTION_PROFILE_TYPE_PROTECTED_SPONSORED for F0."
-        },
-        "version": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Protection profile protocol version. F0 supports version 1."
-        }
-      },
-      "required": [
-        "profileType",
-        "version"
-      ]
-    },
-    "v1UpdateMfaPolicyIntent": {
-      "type": "object",
-      "properties": {
-        "userId": {
-          "type": "string"
-        },
-        "mfaPolicyId": {
-          "type": "string"
-        },
-        "mfaPolicyName": {
-          "type": "string"
-        },
-        "condition": {
-          "type": "string"
-        },
-        "requiredAuthenticationMethods": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1RequiredAuthenticationMethodParams"
-          }
-        },
-        "order": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "notes": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "userId",
-        "mfaPolicyId"
-      ]
-    },
-    "v1CreateApiOnlyUsersIntent": {
-      "type": "object",
-      "properties": {
-        "apiOnlyUsers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1ApiOnlyUserParams"
-          },
-          "description": "A list of API-only Users to create.",
-          "title": "@inject_tag: validate:\"required,dive,required\""
-        }
-      },
-      "required": [
-        "apiOnlyUsers"
-      ]
-    },
-    "v1UpdateWebhookEndpointIntent": {
-      "type": "object",
-      "properties": {
-        "endpointId": {
-          "type": "string",
-          "description": "Unique identifier of the webhook endpoint to update.",
-          "title": "@inject_tag: validate:\"required,uuid4\""
-        },
-        "url": {
-          "type": "string",
-          "description": "Updated destination URL."
-        },
-        "name": {
-          "type": "string",
-          "description": "Updated human-readable name."
+          "description": "JSON-encoded filter criteria for this subscription. Reserved for future use."
         },
         "isActive": {
           "type": "boolean",
-          "description": "Updated active status."
+          "description": "Whether this subscription is active. Defaults to true."
         }
       },
       "required": [
-        "endpointId"
+        "eventType"
       ]
     },
-    "v1ImportedRootAuthenticatorParams": {
+    "v1NOOPCodegenAnchorResponse": {
       "type": "object",
       "properties": {
-        "authenticatorName": {
-          "type": "string",
-          "title": "@inject_tag: validate:\"required,tk_label,tk_label_length\""
+        "stamp": {
+          "$ref": "#/definitions/v1WebAuthnStamp"
         },
-        "credentialId": {
-          "type": "string",
-          "title": "@inject_tag: validate:\"required,max=256\""
-        },
-        "publicKey": {
-          "type": "string",
-          "title": "Uncompressed P-256 public key, hex-encoded (with or without \"0x\" prefix).\n@inject_tag: validate:\"required\""
-        },
-        "aaguid": {
-          "type": "string"
-        },
-        "transports": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1AuthenticatorTransport"
-          }
-        }
-      },
-      "description": "See `CreateOrganizationIntentV2.imported_root_authenticator`. The public\nkey / aaguid / transports MUST be resolved server-side from Coordinator's\nown authenticator store (never trusted verbatim from an HTTP client).",
-      "required": [
-        "authenticatorName",
-        "credentialId",
-        "publicKey"
-      ]
-    },
-    "v1CreateSessionProfileIntent": {
-      "type": "object",
-      "properties": {
-        "sessionProfileName": {
-          "type": "string"
-        },
-        "scope": {
-          "type": "string"
-        },
-        "expirationSeconds": {
-          "type": "string"
-        },
-        "notes": {
-          "type": "string"
+        "tokenUsage": {
+          "$ref": "#/definitions/v1TokenUsage"
         }
       },
       "required": [
-        "sessionProfileName",
-        "scope"
-      ]
-    },
-    "v1GetMfaPolicyResponse": {
-      "type": "object",
-      "properties": {
-        "mfaPolicy": {
-          "$ref": "#/definitions/v1MfaPolicy"
-        }
-      },
-      "required": [
-        "mfaPolicy"
-      ]
-    },
-    "v1GetMfaPolicyRequest": {
-      "type": "object",
-      "properties": {
-        "organizationId": {
-          "type": "string"
-        },
-        "userId": {
-          "type": "string"
-        },
-        "mfaPolicyId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "organizationId",
-        "userId",
-        "mfaPolicyId"
-      ]
-    },
-    "v1UpdateMfaPolicyRequest": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "ACTIVITY_TYPE_UPDATE_MFA_POLICY"
-          ]
-        },
-        "timestampMs": {
-          "type": "string"
-        },
-        "organizationId": {
-          "type": "string"
-        },
-        "parameters": {
-          "$ref": "#/definitions/v1UpdateMfaPolicyIntent"
-        }
-      },
-      "required": [
-        "type",
-        "timestampMs",
-        "organizationId",
-        "parameters"
-      ]
-    },
-    "v1GetMfaStatusResponse": {
-      "type": "object",
-      "properties": {
-        "mfaStatuses": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1MfaStatus"
-          }
-        }
-      },
-      "required": [
-        "mfaStatuses"
-      ]
-    },
-    "v1MfaStatus": {
-      "type": "object",
-      "properties": {
-        "mfaPolicyId": {
-          "type": "string"
-        },
-        "userId": {
-          "type": "string"
-        },
-        "satisfied": {
-          "type": "boolean"
-        },
-        "satisfiedMethods": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AuthenticationMethod"
-          }
-        },
-        "requiredMethods": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1RequiredAuthenticationMethod"
-          }
-        }
-      },
-      "required": [
-        "mfaPolicyId",
-        "userId",
-        "satisfied",
-        "satisfiedMethods",
-        "requiredMethods"
-      ]
-    },
-    "v1CreateMfaPolicyRequest": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "ACTIVITY_TYPE_CREATE_MFA_POLICY"
-          ]
-        },
-        "timestampMs": {
-          "type": "string"
-        },
-        "organizationId": {
-          "type": "string"
-        },
-        "parameters": {
-          "$ref": "#/definitions/v1CreateMfaPolicyIntent"
-        }
-      },
-      "required": [
-        "type",
-        "timestampMs",
-        "organizationId",
-        "parameters"
-      ]
-    },
-    "v1GetSessionProfileResponse": {
-      "type": "object",
-      "properties": {
-        "sessionProfile": {
-          "$ref": "#/definitions/v1SessionProfile"
-        }
-      },
-      "required": [
-        "sessionProfile"
-      ]
-    },
-    "v1SessionProfile": {
-      "type": "object",
-      "properties": {
-        "sessionProfileId": {
-          "type": "string"
-        },
-        "sessionProfileName": {
-          "type": "string"
-        },
-        "scope": {
-          "type": "string"
-        },
-        "expirationSeconds": {
-          "type": "string"
-        },
-        "notes": {
-          "type": "string"
-        },
-        "createdAt": {
-          "$ref": "#/definitions/externaldatav1Timestamp"
-        },
-        "updatedAt": {
-          "$ref": "#/definitions/externaldatav1Timestamp"
-        }
-      },
-      "required": [
-        "sessionProfileId",
-        "sessionProfileName",
-        "scope",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "v1GetMfaStatusRequest": {
-      "type": "object",
-      "properties": {
-        "organizationId": {
-          "type": "string"
-        },
-        "activityId": {
-          "type": "string"
-        },
-        "userId": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "organizationId",
-        "activityId"
-      ]
-    },
-    "v1GetSessionProfilesResponse": {
-      "type": "object",
-      "properties": {
-        "sessionProfiles": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1SessionProfile"
-          }
-        }
-      },
-      "required": [
-        "sessionProfiles"
-      ]
-    },
-    "v1CreateSessionProfileRequest": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "ACTIVITY_TYPE_CREATE_SESSION_PROFILE"
-          ]
-        },
-        "timestampMs": {
-          "type": "string"
-        },
-        "organizationId": {
-          "type": "string"
-        },
-        "parameters": {
-          "$ref": "#/definitions/v1CreateSessionProfileIntent"
-        }
-      },
-      "required": [
-        "type",
-        "timestampMs",
-        "organizationId",
-        "parameters"
+        "stamp"
       ]
     }
   },
@@ -17889,6 +17615,11 @@
     "ApiKeyAuth": {
       "type": "apiKey",
       "name": "X-Stamp",
+      "in": "header"
+    },
+    "AttestedAuth": {
+      "type": "apiKey",
+      "name": "X-Stamp-Attested",
       "in": "header"
     },
     "AuthenticatorAuth": {

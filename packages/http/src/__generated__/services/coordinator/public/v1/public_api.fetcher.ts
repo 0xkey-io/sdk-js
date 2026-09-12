@@ -8,6 +8,35 @@ import {
 import type { operations } from "./public_api.types";
 
 /**
+ * `POST /api/v1/noop-codegen-anchor`
+ */
+export type TNOOPCodegenAnchorResponse =
+  operations["PublicApiService_NOOPCodegenAnchor"]["responses"]["200"]["schema"];
+
+/**
+ * NOOPCodegenAnchor
+ *
+ *
+ *
+ * `POST /api/v1/noop-codegen-anchor`
+ */
+export const nOOPCodegenAnchor = () =>
+  request<TNOOPCodegenAnchorResponse, never, never, never, never>({
+    uri: "/api/v1/noop-codegen-anchor",
+    method: "POST",
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `NOOPCodegenAnchor` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link NOOPCodegenAnchor}
+ */
+export const signNOOPCodegenAnchor = () =>
+  signedRequest<never, never, never>({
+    uri: "/api/v1/noop-codegen-anchor",
+  });
+
+/**
  * `POST /public/v1/query/get_activity`
  */
 export type TGetActivityResponse =
@@ -49,60 +78,6 @@ export const signGetActivity = (
 ) =>
   signedRequest<TGetActivityBody, never, never>({
     uri: "/public/v1/query/get_activity",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/query/get_attestation`
- */
-export type TGetAttestationDocumentResponse =
-  operations["PublicApiService_GetAttestationDocument"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/query/get_attestation`
- */
-export type TGetAttestationDocumentInput = {
-  body: TGetAttestationDocumentBody;
-};
-
-/**
- * `POST /public/v1/query/get_attestation`
- */
-export type TGetAttestationDocumentBody =
-  operations["PublicApiService_GetAttestationDocument"]["parameters"]["body"]["body"];
-
-/**
- * Attestation
- *
- * Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.
- *
- * `POST /public/v1/query/get_attestation`
- */
-export const getAttestationDocument = (input: TGetAttestationDocumentInput) =>
-  request<
-    TGetAttestationDocumentResponse,
-    TGetAttestationDocumentBody,
-    never,
-    never,
-    never
-  >({
-    uri: "/public/v1/query/get_attestation",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `GetAttestationDocument` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link GetAttestationDocument}
- */
-export const signGetAttestationDocument = (
-  input: TGetAttestationDocumentInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TGetAttestationDocumentBody, never, never>({
-    uri: "/public/v1/query/get_attestation",
     body: input.body,
     options,
   });
@@ -195,6 +170,60 @@ export const signGetApiKeys = (
 ) =>
   signedRequest<TGetApiKeysBody, never, never>({
     uri: "/public/v1/query/get_api_keys",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/query/get_attestation`
+ */
+export type TGetAttestationDocumentResponse =
+  operations["PublicApiService_GetAttestationDocument"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/get_attestation`
+ */
+export type TGetAttestationDocumentInput = {
+  body: TGetAttestationDocumentBody;
+};
+
+/**
+ * `POST /public/v1/query/get_attestation`
+ */
+export type TGetAttestationDocumentBody =
+  operations["PublicApiService_GetAttestationDocument"]["parameters"]["body"]["body"];
+
+/**
+ * Attestation
+ *
+ * Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.
+ *
+ * `POST /public/v1/query/get_attestation`
+ */
+export const getAttestationDocument = (input: TGetAttestationDocumentInput) =>
+  request<
+    TGetAttestationDocumentResponse,
+    TGetAttestationDocumentBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/query/get_attestation",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `GetAttestationDocument` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link GetAttestationDocument}
+ */
+export const signGetAttestationDocument = (
+  input: TGetAttestationDocumentInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TGetAttestationDocumentBody, never, never>({
+    uri: "/public/v1/query/get_attestation",
     body: input.body,
     options,
   });
@@ -367,7 +396,7 @@ export type TGetGasUsageBody =
   operations["PublicApiService_GetGasUsage"]["parameters"]["body"]["body"];
 
 /**
- * Get gas usage
+ * Get gas usage and limits.
  *
  * Get gas usage and gas limits for either the parent organization or a sub-organization.
  *
@@ -448,6 +477,144 @@ export const signGetLatestBootProof = (
   });
 
 /**
+ * `POST /public/v1/query/get_mfa_policies`
+ */
+export type TGetMfaPoliciesResponse =
+  operations["PublicApiService_GetMfaPolicies"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/get_mfa_policies`
+ */
+export type TGetMfaPoliciesInput = { body: TGetMfaPoliciesBody };
+
+/**
+ * `POST /public/v1/query/get_mfa_policies`
+ */
+export type TGetMfaPoliciesBody =
+  operations["PublicApiService_GetMfaPolicies"]["parameters"]["body"]["body"];
+
+/**
+ * Get MFA policies
+ *
+ * Get all MFA policies for a user.
+ *
+ * `POST /public/v1/query/get_mfa_policies`
+ */
+export const getMfaPolicies = (input: TGetMfaPoliciesInput) =>
+  request<TGetMfaPoliciesResponse, TGetMfaPoliciesBody, never, never, never>({
+    uri: "/public/v1/query/get_mfa_policies",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `GetMfaPolicies` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link GetMfaPolicies}
+ */
+export const signGetMfaPolicies = (
+  input: TGetMfaPoliciesInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TGetMfaPoliciesBody, never, never>({
+    uri: "/public/v1/query/get_mfa_policies",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/query/get_mfa_policy`
+ */
+export type TGetMfaPolicyResponse =
+  operations["PublicApiService_GetMfaPolicy"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/get_mfa_policy`
+ */
+export type TGetMfaPolicyInput = { body: TGetMfaPolicyBody };
+
+/**
+ * `POST /public/v1/query/get_mfa_policy`
+ */
+export type TGetMfaPolicyBody =
+  operations["PublicApiService_GetMfaPolicy"]["parameters"]["body"]["body"];
+
+/**
+ * Get MFA policy
+ *
+ * Get a single MFA policy for a user.
+ *
+ * `POST /public/v1/query/get_mfa_policy`
+ */
+export const getMfaPolicy = (input: TGetMfaPolicyInput) =>
+  request<TGetMfaPolicyResponse, TGetMfaPolicyBody, never, never, never>({
+    uri: "/public/v1/query/get_mfa_policy",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `GetMfaPolicy` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link GetMfaPolicy}
+ */
+export const signGetMfaPolicy = (
+  input: TGetMfaPolicyInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TGetMfaPolicyBody, never, never>({
+    uri: "/public/v1/query/get_mfa_policy",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/query/get_mfa_status`
+ */
+export type TGetMfaStatusResponse =
+  operations["PublicApiService_GetMfaStatus"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/get_mfa_status`
+ */
+export type TGetMfaStatusInput = { body: TGetMfaStatusBody };
+
+/**
+ * `POST /public/v1/query/get_mfa_status`
+ */
+export type TGetMfaStatusBody =
+  operations["PublicApiService_GetMfaStatus"]["parameters"]["body"]["body"];
+
+/**
+ * Get MFA status
+ *
+ * Get the MFA status of an activity for one user or all voting users.
+ *
+ * `POST /public/v1/query/get_mfa_status`
+ */
+export const getMfaStatus = (input: TGetMfaStatusInput) =>
+  request<TGetMfaStatusResponse, TGetMfaStatusBody, never, never, never>({
+    uri: "/public/v1/query/get_mfa_status",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `GetMfaStatus` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link GetMfaStatus}
+ */
+export const signGetMfaStatus = (
+  input: TGetMfaStatusInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TGetMfaStatusBody, never, never>({
+    uri: "/public/v1/query/get_mfa_status",
+    body: input.body,
+    options,
+  });
+
+/**
  * `POST /public/v1/query/get_nonces`
  */
 export type TGetNoncesResponse =
@@ -465,7 +632,7 @@ export type TGetNoncesBody =
   operations["PublicApiService_GetNonces"]["parameters"]["body"]["body"];
 
 /**
- * Get nonces
+ * Get nonces for an address.
  *
  * Get nonce values for an address on a given network. Can fetch the standard on-chain nonce and/or the gas station nonce used for sponsored transactions.
  *
@@ -903,6 +1070,110 @@ export const signGetSendTransactionStatus = (
 ) =>
   signedRequest<TGetSendTransactionStatusBody, never, never>({
     uri: "/public/v1/query/get_send_transaction_status",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/query/get_session_profile`
+ */
+export type TGetSessionProfileResponse =
+  operations["PublicApiService_GetSessionProfile"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/get_session_profile`
+ */
+export type TGetSessionProfileInput = { body: TGetSessionProfileBody };
+
+/**
+ * `POST /public/v1/query/get_session_profile`
+ */
+export type TGetSessionProfileBody =
+  operations["PublicApiService_GetSessionProfile"]["parameters"]["body"]["body"];
+
+/**
+ * Get session profile
+ *
+ * Get one session profile for an organization.
+ *
+ * `POST /public/v1/query/get_session_profile`
+ */
+export const getSessionProfile = (input: TGetSessionProfileInput) =>
+  request<
+    TGetSessionProfileResponse,
+    TGetSessionProfileBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/query/get_session_profile",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `GetSessionProfile` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link GetSessionProfile}
+ */
+export const signGetSessionProfile = (
+  input: TGetSessionProfileInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TGetSessionProfileBody, never, never>({
+    uri: "/public/v1/query/get_session_profile",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/query/get_session_profiles`
+ */
+export type TGetSessionProfilesResponse =
+  operations["PublicApiService_GetSessionProfiles"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/get_session_profiles`
+ */
+export type TGetSessionProfilesInput = { body: TGetSessionProfilesBody };
+
+/**
+ * `POST /public/v1/query/get_session_profiles`
+ */
+export type TGetSessionProfilesBody =
+  operations["PublicApiService_GetSessionProfiles"]["parameters"]["body"]["body"];
+
+/**
+ * Get session profiles
+ *
+ * Get all session profiles for an organization.
+ *
+ * `POST /public/v1/query/get_session_profiles`
+ */
+export const getSessionProfiles = (input: TGetSessionProfilesInput) =>
+  request<
+    TGetSessionProfilesResponse,
+    TGetSessionProfilesBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/query/get_session_profiles",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `GetSessionProfiles` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link GetSessionProfiles}
+ */
+export const signGetSessionProfiles = (
+  input: TGetSessionProfilesInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TGetSessionProfilesBody, never, never>({
+    uri: "/public/v1/query/get_session_profiles",
     body: input.body,
     options,
   });
@@ -1813,7 +2084,7 @@ export type TGetWhoamiBody =
   operations["PublicApiService_GetWhoami"]["parameters"]["body"]["body"];
 
 /**
- * Who am I?
+ * Who am I
  *
  * Get basic information about your current API or WebAuthN user and their organization. Affords sub-organization look ups via parent organization for WebAuthN or API key users.
  *
@@ -1953,7 +2224,7 @@ export type TCreateAuthenticatorsBody =
 /**
  * Create authenticators
  *
- * Create authenticators to authenticate requests to ZeroXKey.
+ * Create authenticators to authenticate requests to 0xkey.
  *
  * `POST /public/v1/submit/create_authenticators`
  */
@@ -2089,6 +2360,52 @@ export const signCreateInvitations = (
 ) =>
   signedRequest<TCreateInvitationsBody, never, never>({
     uri: "/public/v1/submit/create_invitations",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/submit/create_mfa_policy`
+ */
+export type TCreateMfaPolicyResponse =
+  operations["PublicApiService_CreateMfaPolicy"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/create_mfa_policy`
+ */
+export type TCreateMfaPolicyInput = { body: TCreateMfaPolicyBody };
+
+/**
+ * `POST /public/v1/submit/create_mfa_policy`
+ */
+export type TCreateMfaPolicyBody =
+  operations["PublicApiService_CreateMfaPolicy"]["parameters"]["body"]["body"];
+
+/**
+ * Create MFA policy
+ *
+ * Create a new MFA policy for a user.
+ *
+ * `POST /public/v1/submit/create_mfa_policy`
+ */
+export const createMfaPolicy = (input: TCreateMfaPolicyInput) =>
+  request<TCreateMfaPolicyResponse, TCreateMfaPolicyBody, never, never, never>({
+    uri: "/public/v1/submit/create_mfa_policy",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `CreateMfaPolicy` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link CreateMfaPolicy}
+ */
+export const signCreateMfaPolicy = (
+  input: TCreateMfaPolicyInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TCreateMfaPolicyBody, never, never>({
+    uri: "/public/v1/submit/create_mfa_policy",
     body: input.body,
     options,
   });
@@ -2497,6 +2814,58 @@ export const signCreateReadWriteSession = (
 ) =>
   signedRequest<TCreateReadWriteSessionBody, never, never>({
     uri: "/public/v1/submit/create_read_write_session",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/submit/create_session_profile`
+ */
+export type TCreateSessionProfileResponse =
+  operations["PublicApiService_CreateSessionProfile"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/create_session_profile`
+ */
+export type TCreateSessionProfileInput = { body: TCreateSessionProfileBody };
+
+/**
+ * `POST /public/v1/submit/create_session_profile`
+ */
+export type TCreateSessionProfileBody =
+  operations["PublicApiService_CreateSessionProfile"]["parameters"]["body"]["body"];
+
+/**
+ * Create session profile
+ *
+ * Create a new session profile for an organization.
+ *
+ * `POST /public/v1/submit/create_session_profile`
+ */
+export const createSessionProfile = (input: TCreateSessionProfileInput) =>
+  request<
+    TCreateSessionProfileResponse,
+    TCreateSessionProfileBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/submit/create_session_profile",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `CreateSessionProfile` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link CreateSessionProfile}
+ */
+export const signCreateSessionProfile = (
+  input: TCreateSessionProfileInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TCreateSessionProfileBody, never, never>({
+    uri: "/public/v1/submit/create_session_profile",
     body: input.body,
     options,
   });
@@ -3001,6 +3370,52 @@ export const signDeleteInvitation = (
 ) =>
   signedRequest<TDeleteInvitationBody, never, never>({
     uri: "/public/v1/submit/delete_invitation",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/submit/delete_mfa_policy`
+ */
+export type TDeleteMfaPolicyResponse =
+  operations["PublicApiService_DeleteMfaPolicy"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/delete_mfa_policy`
+ */
+export type TDeleteMfaPolicyInput = { body: TDeleteMfaPolicyBody };
+
+/**
+ * `POST /public/v1/submit/delete_mfa_policy`
+ */
+export type TDeleteMfaPolicyBody =
+  operations["PublicApiService_DeleteMfaPolicy"]["parameters"]["body"]["body"];
+
+/**
+ * Delete MFA policy
+ *
+ * Delete an MFA policy for a user.
+ *
+ * `POST /public/v1/submit/delete_mfa_policy`
+ */
+export const deleteMfaPolicy = (input: TDeleteMfaPolicyInput) =>
+  request<TDeleteMfaPolicyResponse, TDeleteMfaPolicyBody, never, never, never>({
+    uri: "/public/v1/submit/delete_mfa_policy",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `DeleteMfaPolicy` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link DeleteMfaPolicy}
+ */
+export const signDeleteMfaPolicy = (
+  input: TDeleteMfaPolicyInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TDeleteMfaPolicyBody, never, never>({
+    uri: "/public/v1/submit/delete_mfa_policy",
     body: input.body,
     options,
   });
@@ -3669,9 +4084,9 @@ export type TEthSendTransactionBody =
   operations["PublicApiService_EthSendTransaction"]["parameters"]["body"]["body"];
 
 /**
- * Broadcast EVM transaction
+ * Submit a transaction intent for broadcasting.
  *
- * Submit a transaction intent describing an EVM transaction you would like to broadcast.
+ * Submit a transaction intent describing a transaction you would like to broadcast.
  *
  * `POST /public/v1/submit/eth_send_transaction`
  */
@@ -4822,58 +5237,6 @@ export const signSignTransaction = (
   });
 
 /**
- * `POST /public/v1/submit/tron_send_transaction`
- */
-export type TTronSendTransactionResponse =
-  operations["PublicApiService_TronSendTransaction"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/submit/tron_send_transaction`
- */
-export type TTronSendTransactionInput = { body: TTronSendTransactionBody };
-
-/**
- * `POST /public/v1/submit/tron_send_transaction`
- */
-export type TTronSendTransactionBody =
-  operations["PublicApiService_TronSendTransaction"]["parameters"]["body"]["body"];
-
-/**
- * Submit a transaction intent for broadcasting.
- *
- * Submit a native TRX transfer intent describing a transaction you would like to broadcast.
- *
- * `POST /public/v1/submit/tron_send_transaction`
- */
-export const tronSendTransaction = (input: TTronSendTransactionInput) =>
-  request<
-    TTronSendTransactionResponse,
-    TTronSendTransactionBody,
-    never,
-    never,
-    never
-  >({
-    uri: "/public/v1/submit/tron_send_transaction",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `TronSendTransaction` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link TronSendTransaction}
- */
-export const signTronSendTransaction = (
-  input: TTronSendTransactionInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TTronSendTransactionBody, never, never>({
-    uri: "/public/v1/submit/tron_send_transaction",
-    body: input.body,
-    options,
-  });
-
-/**
  * `POST /public/v1/submit/sol_send_transaction`
  */
 export type TSolSendTransactionResponse =
@@ -4891,9 +5254,9 @@ export type TSolSendTransactionBody =
   operations["PublicApiService_SolSendTransaction"]["parameters"]["body"]["body"];
 
 /**
- * Broadcast SVM transaction
+ * Submit a transaction intent for broadcasting.
  *
- * Submit a transaction intent describing an SVM transaction you would like to broadcast.
+ * Submit a transaction intent describing a transaction you would like to broadcast.
  *
  * `POST /public/v1/submit/sol_send_transaction`
  */
@@ -4972,6 +5335,58 @@ export const signStampLogin = (
   });
 
 /**
+ * `POST /public/v1/submit/tron_send_transaction`
+ */
+export type TTronSendTransactionResponse =
+  operations["PublicApiService_TronSendTransaction"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/tron_send_transaction`
+ */
+export type TTronSendTransactionInput = { body: TTronSendTransactionBody };
+
+/**
+ * `POST /public/v1/submit/tron_send_transaction`
+ */
+export type TTronSendTransactionBody =
+  operations["PublicApiService_TronSendTransaction"]["parameters"]["body"]["body"];
+
+/**
+ * Submit a transaction intent for broadcasting.
+ *
+ * Submit a native TRX transfer intent describing a transaction you would like to broadcast.
+ *
+ * `POST /public/v1/submit/tron_send_transaction`
+ */
+export const tronSendTransaction = (input: TTronSendTransactionInput) =>
+  request<
+    TTronSendTransactionResponse,
+    TTronSendTransactionBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/submit/tron_send_transaction",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `TronSendTransaction` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link TronSendTransaction}
+ */
+export const signTronSendTransaction = (
+  input: TTronSendTransactionInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TTronSendTransactionBody, never, never>({
+    uri: "/public/v1/submit/tron_send_transaction",
+    body: input.body,
+    options,
+  });
+
+/**
  * `POST /public/v1/submit/update_fiat_on_ramp_credential`
  */
 export type TUpdateFiatOnRampCredentialResponse =
@@ -5023,6 +5438,52 @@ export const signUpdateFiatOnRampCredential = (
 ) =>
   signedRequest<TUpdateFiatOnRampCredentialBody, never, never>({
     uri: "/public/v1/submit/update_fiat_on_ramp_credential",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/submit/update_mfa_policy`
+ */
+export type TUpdateMfaPolicyResponse =
+  operations["PublicApiService_UpdateMfaPolicy"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/update_mfa_policy`
+ */
+export type TUpdateMfaPolicyInput = { body: TUpdateMfaPolicyBody };
+
+/**
+ * `POST /public/v1/submit/update_mfa_policy`
+ */
+export type TUpdateMfaPolicyBody =
+  operations["PublicApiService_UpdateMfaPolicy"]["parameters"]["body"]["body"];
+
+/**
+ * Update MFA policy
+ *
+ * Update an MFA policy for a user.
+ *
+ * `POST /public/v1/submit/update_mfa_policy`
+ */
+export const updateMfaPolicy = (input: TUpdateMfaPolicyInput) =>
+  request<TUpdateMfaPolicyResponse, TUpdateMfaPolicyBody, never, never, never>({
+    uri: "/public/v1/submit/update_mfa_policy",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `UpdateMfaPolicy` request, ready to be POSTed to ZeroXKey.
+ *
+ * See {@link UpdateMfaPolicy}
+ */
+export const signUpdateMfaPolicy = (
+  input: TUpdateMfaPolicyInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TUpdateMfaPolicyBody, never, never>({
+    uri: "/public/v1/submit/update_mfa_policy",
     body: input.body,
     options,
   });
@@ -5587,7 +6048,7 @@ export type TVerifyOtpBody =
 /**
  * Verify generic OTP
  *
- * Verify a generic OTP.
+ * Verify a generic OTP (legacy, plaintext otpCode).
  *
  * `POST /public/v1/submit/verify_otp`
  */
@@ -5609,467 +6070,6 @@ export const signVerifyOtp = (
 ) =>
   signedRequest<TVerifyOtpBody, never, never>({
     uri: "/public/v1/submit/verify_otp",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /api/v1/noop-codegen-anchor`
- */
-export type TNOOPCodegenAnchorResponse =
-  operations["PublicApiService_NOOPCodegenAnchor"]["responses"]["200"]["schema"];
-
-/**
- * NOOPCodegenAnchor
- *
- *
- *
- * `POST /api/v1/noop-codegen-anchor`
- */
-export const nOOPCodegenAnchor = () =>
-  request<TNOOPCodegenAnchorResponse, never, never, never, never>({
-    uri: "/api/v1/noop-codegen-anchor",
-    method: "POST",
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `NOOPCodegenAnchor` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link NOOPCodegenAnchor}
- */
-export const signNOOPCodegenAnchor = () =>
-  signedRequest<never, never, never>({
-    uri: "/api/v1/noop-codegen-anchor",
-  });
-
-/**
- * `POST /public/v1/query/get_mfa_status`
- */
-export type TGetMfaStatusResponse =
-  operations["PublicApiService_GetMfaStatus"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/query/get_mfa_status`
- */
-export type TGetMfaStatusInput = { body: TGetMfaStatusBody };
-
-/**
- * `POST /public/v1/query/get_mfa_status`
- */
-export type TGetMfaStatusBody =
-  operations["PublicApiService_GetMfaStatus"]["parameters"]["body"]["body"];
-
-/**
- * Get MFA status
- *
- * Get the MFA status of an activity for one user or all voting users.
- *
- * `POST /public/v1/query/get_mfa_status`
- */
-export const getMfaStatus = (input: TGetMfaStatusInput) =>
-  request<TGetMfaStatusResponse, TGetMfaStatusBody, never, never, never>({
-    uri: "/public/v1/query/get_mfa_status",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `GetMfaStatus` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link GetMfaStatus}
- */
-export const signGetMfaStatus = (
-  input: TGetMfaStatusInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TGetMfaStatusBody, never, never>({
-    uri: "/public/v1/query/get_mfa_status",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/query/get_mfa_policies`
- */
-export type TGetMfaPoliciesResponse =
-  operations["PublicApiService_GetMfaPolicies"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/query/get_mfa_policies`
- */
-export type TGetMfaPoliciesInput = { body: TGetMfaPoliciesBody };
-
-/**
- * `POST /public/v1/query/get_mfa_policies`
- */
-export type TGetMfaPoliciesBody =
-  operations["PublicApiService_GetMfaPolicies"]["parameters"]["body"]["body"];
-
-/**
- * Get MFA policies
- *
- * Get all MFA policies for a user.
- *
- * `POST /public/v1/query/get_mfa_policies`
- */
-export const getMfaPolicies = (input: TGetMfaPoliciesInput) =>
-  request<TGetMfaPoliciesResponse, TGetMfaPoliciesBody, never, never, never>({
-    uri: "/public/v1/query/get_mfa_policies",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `GetMfaPolicies` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link GetMfaPolicies}
- */
-export const signGetMfaPolicies = (
-  input: TGetMfaPoliciesInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TGetMfaPoliciesBody, never, never>({
-    uri: "/public/v1/query/get_mfa_policies",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/query/get_mfa_policy`
- */
-export type TGetMfaPolicyResponse =
-  operations["PublicApiService_GetMfaPolicy"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/query/get_mfa_policy`
- */
-export type TGetMfaPolicyInput = { body: TGetMfaPolicyBody };
-
-/**
- * `POST /public/v1/query/get_mfa_policy`
- */
-export type TGetMfaPolicyBody =
-  operations["PublicApiService_GetMfaPolicy"]["parameters"]["body"]["body"];
-
-/**
- * Get MFA policy
- *
- * Get a single MFA policy for a user.
- *
- * `POST /public/v1/query/get_mfa_policy`
- */
-export const getMfaPolicy = (input: TGetMfaPolicyInput) =>
-  request<TGetMfaPolicyResponse, TGetMfaPolicyBody, never, never, never>({
-    uri: "/public/v1/query/get_mfa_policy",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `GetMfaPolicy` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link GetMfaPolicy}
- */
-export const signGetMfaPolicy = (
-  input: TGetMfaPolicyInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TGetMfaPolicyBody, never, never>({
-    uri: "/public/v1/query/get_mfa_policy",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/query/get_session_profile`
- */
-export type TGetSessionProfileResponse =
-  operations["PublicApiService_GetSessionProfile"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/query/get_session_profile`
- */
-export type TGetSessionProfileInput = { body: TGetSessionProfileBody };
-
-/**
- * `POST /public/v1/query/get_session_profile`
- */
-export type TGetSessionProfileBody =
-  operations["PublicApiService_GetSessionProfile"]["parameters"]["body"]["body"];
-
-/**
- * Get session profile
- *
- * Get one session profile for an organization.
- *
- * `POST /public/v1/query/get_session_profile`
- */
-export const getSessionProfile = (input: TGetSessionProfileInput) =>
-  request<
-    TGetSessionProfileResponse,
-    TGetSessionProfileBody,
-    never,
-    never,
-    never
-  >({
-    uri: "/public/v1/query/get_session_profile",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `GetSessionProfile` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link GetSessionProfile}
- */
-export const signGetSessionProfile = (
-  input: TGetSessionProfileInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TGetSessionProfileBody, never, never>({
-    uri: "/public/v1/query/get_session_profile",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/query/get_session_profiles`
- */
-export type TGetSessionProfilesResponse =
-  operations["PublicApiService_GetSessionProfiles"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/query/get_session_profiles`
- */
-export type TGetSessionProfilesInput = { body: TGetSessionProfilesBody };
-
-/**
- * `POST /public/v1/query/get_session_profiles`
- */
-export type TGetSessionProfilesBody =
-  operations["PublicApiService_GetSessionProfiles"]["parameters"]["body"]["body"];
-
-/**
- * Get session profiles
- *
- * Get all session profiles for an organization.
- *
- * `POST /public/v1/query/get_session_profiles`
- */
-export const getSessionProfiles = (input: TGetSessionProfilesInput) =>
-  request<
-    TGetSessionProfilesResponse,
-    TGetSessionProfilesBody,
-    never,
-    never,
-    never
-  >({
-    uri: "/public/v1/query/get_session_profiles",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `GetSessionProfiles` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link GetSessionProfiles}
- */
-export const signGetSessionProfiles = (
-  input: TGetSessionProfilesInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TGetSessionProfilesBody, never, never>({
-    uri: "/public/v1/query/get_session_profiles",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/submit/create_mfa_policy`
- */
-export type TCreateMfaPolicyResponse =
-  operations["PublicApiService_CreateMfaPolicy"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/submit/create_mfa_policy`
- */
-export type TCreateMfaPolicyInput = { body: TCreateMfaPolicyBody };
-
-/**
- * `POST /public/v1/submit/create_mfa_policy`
- */
-export type TCreateMfaPolicyBody =
-  operations["PublicApiService_CreateMfaPolicy"]["parameters"]["body"]["body"];
-
-/**
- * Create MFA policy
- *
- * Create a new MFA policy for a user.
- *
- * `POST /public/v1/submit/create_mfa_policy`
- */
-export const createMfaPolicy = (input: TCreateMfaPolicyInput) =>
-  request<TCreateMfaPolicyResponse, TCreateMfaPolicyBody, never, never, never>({
-    uri: "/public/v1/submit/create_mfa_policy",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `CreateMfaPolicy` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link CreateMfaPolicy}
- */
-export const signCreateMfaPolicy = (
-  input: TCreateMfaPolicyInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TCreateMfaPolicyBody, never, never>({
-    uri: "/public/v1/submit/create_mfa_policy",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/submit/update_mfa_policy`
- */
-export type TUpdateMfaPolicyResponse =
-  operations["PublicApiService_UpdateMfaPolicy"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/submit/update_mfa_policy`
- */
-export type TUpdateMfaPolicyInput = { body: TUpdateMfaPolicyBody };
-
-/**
- * `POST /public/v1/submit/update_mfa_policy`
- */
-export type TUpdateMfaPolicyBody =
-  operations["PublicApiService_UpdateMfaPolicy"]["parameters"]["body"]["body"];
-
-/**
- * Update MFA policy
- *
- * Update an MFA policy for a user.
- *
- * `POST /public/v1/submit/update_mfa_policy`
- */
-export const updateMfaPolicy = (input: TUpdateMfaPolicyInput) =>
-  request<TUpdateMfaPolicyResponse, TUpdateMfaPolicyBody, never, never, never>({
-    uri: "/public/v1/submit/update_mfa_policy",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `UpdateMfaPolicy` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link UpdateMfaPolicy}
- */
-export const signUpdateMfaPolicy = (
-  input: TUpdateMfaPolicyInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TUpdateMfaPolicyBody, never, never>({
-    uri: "/public/v1/submit/update_mfa_policy",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/submit/delete_mfa_policy`
- */
-export type TDeleteMfaPolicyResponse =
-  operations["PublicApiService_DeleteMfaPolicy"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/submit/delete_mfa_policy`
- */
-export type TDeleteMfaPolicyInput = { body: TDeleteMfaPolicyBody };
-
-/**
- * `POST /public/v1/submit/delete_mfa_policy`
- */
-export type TDeleteMfaPolicyBody =
-  operations["PublicApiService_DeleteMfaPolicy"]["parameters"]["body"]["body"];
-
-/**
- * Delete MFA policy
- *
- * Delete an MFA policy for a user.
- *
- * `POST /public/v1/submit/delete_mfa_policy`
- */
-export const deleteMfaPolicy = (input: TDeleteMfaPolicyInput) =>
-  request<TDeleteMfaPolicyResponse, TDeleteMfaPolicyBody, never, never, never>({
-    uri: "/public/v1/submit/delete_mfa_policy",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `DeleteMfaPolicy` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link DeleteMfaPolicy}
- */
-export const signDeleteMfaPolicy = (
-  input: TDeleteMfaPolicyInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TDeleteMfaPolicyBody, never, never>({
-    uri: "/public/v1/submit/delete_mfa_policy",
-    body: input.body,
-    options,
-  });
-
-/**
- * `POST /public/v1/submit/create_session_profile`
- */
-export type TCreateSessionProfileResponse =
-  operations["PublicApiService_CreateSessionProfile"]["responses"]["200"]["schema"];
-
-/**
- * `POST /public/v1/submit/create_session_profile`
- */
-export type TCreateSessionProfileInput = { body: TCreateSessionProfileBody };
-
-/**
- * `POST /public/v1/submit/create_session_profile`
- */
-export type TCreateSessionProfileBody =
-  operations["PublicApiService_CreateSessionProfile"]["parameters"]["body"]["body"];
-
-/**
- * Create session profile
- *
- * Create a new session profile for an organization.
- *
- * `POST /public/v1/submit/create_session_profile`
- */
-export const createSessionProfile = (input: TCreateSessionProfileInput) =>
-  request<
-    TCreateSessionProfileResponse,
-    TCreateSessionProfileBody,
-    never,
-    never,
-    never
-  >({
-    uri: "/public/v1/submit/create_session_profile",
-    method: "POST",
-    body: input.body,
-  });
-
-/**
- * Request a WebAuthn assertion and return a signed `CreateSessionProfile` request, ready to be POSTed to ZeroXKey.
- *
- * See {@link CreateSessionProfile}
- */
-export const signCreateSessionProfile = (
-  input: TCreateSessionProfileInput,
-  options?: ZeroXKeyCredentialRequestOptions,
-) =>
-  signedRequest<TCreateSessionProfileBody, never, never>({
-    uri: "/public/v1/submit/create_session_profile",
     body: input.body,
     options,
   });

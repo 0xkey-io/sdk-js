@@ -312,7 +312,7 @@ function generateApiTypes(swagger, prefix = "") {
     const operationId = operation && operation.operationId;
 
     const operationNameWithoutNamespace = operationId.replace(
-      new RegExp(`${namespace}_`),
+      /^PublicApiService_/,
       `${prefix}T`,
     );
     const methodName =

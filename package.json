@@ -19,7 +19,7 @@
     "prettier-codegen:write": "prettier --write \"packages/{core,sdk-browser,sdk-server,sdk-types}/src/**/*.{css,html,js,json,md,ts,tsx,yaml,yml,mjs}\"",
     "test-all": "pnpm run -r --no-bail test",
     "typecheck-all": "pnpm run -r typecheck",
-    "codegen-all": "pnpm run -r codegen",
+    "codegen-all": "node scripts/sync-services-openapi.js && pnpm run -r codegen && pnpm exec prettier --write \"packages/{core,http,sdk-browser,sdk-server,sdk-types}/src/__generated__/**/*.ts\"",
     "contract-guard": "pnpm --filter @0xkey-io/contract-guard run audit:all",
     "contract-guard:update": "pnpm run build-all && node internal/contract-guard/scripts/update-baselines.mjs",
     "pack-smoke": "node internal/contract-guard/scripts/pack-smoke.mjs"

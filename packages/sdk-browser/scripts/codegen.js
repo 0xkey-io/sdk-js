@@ -151,7 +151,7 @@ const generateApiTypesFromSwagger = async (swaggerSpec, targetPath) => {
     const operationId = operation.operationId;
 
     const operationNameWithoutNamespace = operationId.replace(
-      new RegExp(`${namespace}_`),
+      /^PublicApiService_/,
       "",
     );
 
@@ -415,7 +415,7 @@ export class ZeroXKeySDKClientBase {
     const operationId = operation.operationId;
 
     const operationNameWithoutNamespace = operationId.replace(
-      new RegExp(`${namespace}_`),
+      /^PublicApiService_/,
       "",
     );
 
