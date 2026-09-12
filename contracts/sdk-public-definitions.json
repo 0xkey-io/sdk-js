@@ -454,6 +454,7 @@
   "v1SolSendTransactionResult",
   "v1SolanaConfig",
   "v1SolanaFailureDetails",
+  "v1SolSendTransactionStatus",
   "v1SolanaSendTransactionStatus",
   "v1StampLoginIntent",
   "v1StampLoginRequest",

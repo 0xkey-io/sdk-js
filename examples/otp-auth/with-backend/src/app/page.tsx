@@ -9,7 +9,6 @@ import {
   createSuborgAction,
   initOtpAction,
   verifyOtpAction,
-  otpLoginAction,
 } from "@/server/actions/0xkey";
 
 export default function AuthPage() {
@@ -24,7 +23,7 @@ export default function AuthPage() {
   // The exact session public key tied to this OTP attempt
   const pubKeyRef = useRef<string | null>(null);
 
-  const { storeSession, createApiKeyPair, authState } = useZeroXKey();
+  const { loginWithOtp, createApiKeyPair, authState } = useZeroXKey();
 
   // If already authenticated, go to dashboard.
   useEffect(() => {
@@ -88,14 +87,13 @@ export default function AuthPage() {
       }
 
       // 3) Complete login using the same public key generated before initOtp
-      const { session } = await otpLoginAction({
-        suborgID: suborgId!,
+      await loginWithOtp({
+        organizationId: suborgId!,
         verificationToken,
         publicKey: pubKeyRef.current!,
       });
 
-      // 4) Store session & go
-      await storeSession({ sessionToken: session });
+      // 4) loginWithOtp signs the key binding and stores the returned session.
       router.replace("/dashboard");
     } catch (e: any) {
       console.error(e);

@@ -25,6 +25,7 @@ type MethodLike = {
   type?: string;
   authenticationType?: string;
   any?: MethodLike[];
+  [key: string]: unknown;
 };
 
 /** Factor type names only. Tokens, contacts, stamps, and bodies are dropped. */
@@ -35,7 +36,11 @@ export function missingFactorTypes(requiredMethods?: MethodLike[]): string[] {
     const nested = group.any ?? [group];
     for (const method of nested) {
       const name = method.authenticationType ?? method.type;
-      if (typeof name === "string" && name.length > 0 && !types.includes(name)) {
+      if (
+        typeof name === "string" &&
+        name.length > 0 &&
+        !types.includes(name)
+      ) {
         types.push(name);
       }
     }
@@ -48,7 +53,9 @@ export function missingFactorTypes(requiredMethods?: MethodLike[]): string[] {
  * channels. Dashboard and recovery copy must warn; this helper never
  * claims they are independent.
  */
-export function recoveryIndependenceWarning(factorTypes: string[]): string | null {
+export function recoveryIndependenceWarning(
+  factorTypes: string[],
+): string | null {
   const normalized = factorTypes.map((value) => value.toUpperCase());
   const hasEmail = normalized.some((value) => value.includes("EMAIL"));
   const hasOauth = normalized.some(
@@ -66,8 +73,14 @@ export function redactMfaDebugValue(value: unknown): unknown {
   }
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
-    for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-      if (SENSITIVE_KEYS.some((name) => key.toLowerCase().includes(name.toLowerCase()))) {
+    for (const [key, nested] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
+      if (
+        SENSITIVE_KEYS.some((name) =>
+          key.toLowerCase().includes(name.toLowerCase()),
+        )
+      ) {
         continue;
       }
       out[key] = redactMfaDebugValue(nested);

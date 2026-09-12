@@ -11,6 +11,10 @@
     },
     {
       "kind": "re-export",
+      "name": "AUTHENTICATORS_NEEDED"
+    },
+    {
+      "kind": "re-export",
       "name": "browserInit"
     },
     {
@@ -43,11 +47,31 @@
     },
     {
       "kind": "re-export",
+      "name": "isAuthenticatorsNeededStatus"
+    },
+    {
+      "kind": "re-export",
       "name": "isHttpClient"
     },
     {
       "kind": "re-export",
+      "name": "missingFactorTypes"
+    },
+    {
+      "kind": "re-export",
       "name": "RateLimitError"
+    },
+    {
+      "kind": "re-export",
+      "name": "RECOVERY_SCOPE"
+    },
+    {
+      "kind": "re-export",
+      "name": "RECOVERY_TTL_SECONDS"
+    },
+    {
+      "kind": "re-export",
+      "name": "recoveryIndependenceWarning"
     },
     {
       "kind": "re-export",
@@ -88,6 +112,10 @@
     {
       "kind": "re-export",
       "name": "withAsyncPolling"
+    },
+    {
+      "kind": "re-export",
+      "name": "ZeroXKeyActivityAuthenticatorsNeededError"
     },
     {
       "kind": "re-export",

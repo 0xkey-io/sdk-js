@@ -19,7 +19,7 @@
     "prettier-codegen:write": "prettier --write \"packages/{core,sdk-browser,sdk-server,sdk-types}/src/**/*.{css,html,js,json,md,ts,tsx,yaml,yml,mjs}\"",
     "test-all": "pnpm run -r --no-bail test",
     "typecheck-all": "pnpm run -r typecheck",
-    "codegen-all": "node scripts/sync-services-openapi.js && pnpm run -r codegen && pnpm exec prettier --write \"packages/{core,http,sdk-browser,sdk-server,sdk-types}/src/__generated__/**/*.ts\"",
+    "codegen-all": "node scripts/sync-services-openapi.js && node scripts/generate-openapi-input-types.js && pnpm run -r codegen && pnpm exec prettier --write \"packages/{core,http,sdk-browser,sdk-server,sdk-types}/src/{__generated__,__inputs__}/**/*.ts\"",
     "contract-guard": "pnpm --filter @0xkey-io/contract-guard run audit:all",
     "contract-guard:update": "pnpm run build-all && node internal/contract-guard/scripts/update-baselines.mjs",
     "pack-smoke": "node internal/contract-guard/scripts/pack-smoke.mjs"
@@ -73,6 +73,8 @@
       "@confio/ics23@0.6.8>protobufjs": ">=7.2.5",
       "protobufjs@>=6.10.0 <7.2.5": ">=7.2.5",
       "@babel/traverse": ">=7.23.2",
+      "@types/react": "18.3.24",
+      "@types/react-dom": "18.3.7",
       "follow-redirects": ">=1.15.4",
       "web3": ">=4.2.1",
       "web3-core": ">=4.2.1",

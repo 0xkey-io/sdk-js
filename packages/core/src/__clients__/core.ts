@@ -1345,7 +1345,7 @@ export class ZeroXKeyClient {
   initOtp = async (params: InitOtpParams): Promise<InitOtpResult> => {
     return withZeroXKeyErrorHandling(
       async () => {
-        const initOtpRes = await this.httpClient.proxyInitOtp(params);
+        const initOtpRes = await this.httpClient.proxyInitOtpV2(params);
 
         if (
           !initOtpRes ||
@@ -1408,7 +1408,7 @@ export class ZeroXKeyClient {
           publicKey: resolvedPublicKey!,
           otpEncryptionTargetBundle,
         });
-        const verifyOtpRes = await this.httpClient.proxyVerifyOtp({
+        const verifyOtpRes = await this.httpClient.proxyVerifyOtpV2({
           otpId,
           encryptedOtpBundle,
         });

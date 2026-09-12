@@ -78,22 +78,3 @@ export async function verifyOtpAction(params: {
   }
   return { verificationToken: res.verificationToken };
 }
-
-/**
- * Step 3: Login with verified token (creates session)
- * - Pass suborgID you resolved/created after verifyOtp
- * - publicKey must match the session key you created client-side for this OTP attempt
- */
-export async function otpLoginAction(params: {
-  suborgID: string;
-  verificationToken: string;
-  publicKey: string;
-}) {
-  const res = await zeroXKey.apiClient().otpLogin({
-    organizationId: params.suborgID || process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
-    verificationToken: params.verificationToken,
-    publicKey: params.publicKey,
-  });
-  if (!res.session) throw new Error("No session returned from otpLogin");
-  return { session: res.session };
-}

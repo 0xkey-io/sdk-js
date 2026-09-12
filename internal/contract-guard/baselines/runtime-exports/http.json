@@ -3,9 +3,21 @@
   "skipped": false,
   "exports": [
     {
+      "name": "AUTHENTICATORS_NEEDED",
+      "kind": "string"
+    },
+    {
       "name": "InvalidArgumentError",
       "kind": "class",
       "arity": 1
+    },
+    {
+      "name": "RECOVERY_SCOPE",
+      "kind": "string"
+    },
+    {
+      "name": "RECOVERY_TTL_SECONDS",
+      "kind": "number"
     },
     {
       "name": "RateLimitError",
@@ -20,6 +32,11 @@
     {
       "name": "VERSION",
       "kind": "string"
+    },
+    {
+      "name": "ZeroXKeyActivityAuthenticatorsNeededError",
+      "kind": "class",
+      "arity": 1
     },
     {
       "name": "ZeroXKeyActivityConsensusNeededError",
@@ -91,7 +108,22 @@
       "arity": 1
     },
     {
+      "name": "isAuthenticatorsNeededStatus",
+      "kind": "class",
+      "arity": 1
+    },
+    {
       "name": "isHttpClient",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "missingFactorTypes",
+      "kind": "class",
+      "arity": 1
+    },
+    {
+      "name": "recoveryIndependenceWarning",
       "kind": "class",
       "arity": 1
     },

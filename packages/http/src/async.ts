@@ -72,18 +72,23 @@ export function withAsyncPolling<
             activityType: activity.type,
           });
         }
+        case "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED": {
+          throw new ZeroXKeyActivityAuthenticatorsNeededError({
+            message: `Authenticators needed for activity ${activity.id}`,
+            activityId: activity.id,
+            activityStatus: activity.status,
+            activityType: activity.type,
+          });
+        }
+        case "ACTIVITY_STATUS_UNSPECIFIED": {
+          throw new ZeroXKeyActivityError({
+            message: `Unexpected unspecified status for activity ${activity.id}`,
+            activityId: activity.id,
+            activityStatus: activity.status,
+            activityType: activity.type,
+          });
+        }
         default: {
-          if (
-            (activity.status as string) ===
-            "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED"
-          ) {
-            throw new ZeroXKeyActivityAuthenticatorsNeededError({
-              message: `Authenticators needed for activity ${activity.id}`,
-              activityId: activity.id,
-              activityStatus: activity.status,
-              activityType: activity.type,
-            });
-          }
           // Make sure the switch block is exhaustive
           assertNever(activity.status);
         }
@@ -176,18 +181,23 @@ export function createActivityPoller<
             activityType: activity.type,
           });
         }
+        case "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED": {
+          throw new ZeroXKeyActivityAuthenticatorsNeededError({
+            message: `Authenticators needed for activity ${activity.id}`,
+            activityId: activity.id,
+            activityStatus: activity.status,
+            activityType: activity.type,
+          });
+        }
+        case "ACTIVITY_STATUS_UNSPECIFIED": {
+          throw new ZeroXKeyActivityError({
+            message: `Unexpected unspecified status for activity ${activity.id}`,
+            activityId: activity.id,
+            activityStatus: activity.status,
+            activityType: activity.type,
+          });
+        }
         default: {
-          if (
-            (activity.status as string) ===
-            "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED"
-          ) {
-            throw new ZeroXKeyActivityAuthenticatorsNeededError({
-              message: `Authenticators needed for activity ${activity.id}`,
-              activityId: activity.id,
-              activityStatus: activity.status,
-              activityType: activity.type,
-            });
-          }
           // Make sure the switch block is exhaustive
           assertNever(activity.status);
         }

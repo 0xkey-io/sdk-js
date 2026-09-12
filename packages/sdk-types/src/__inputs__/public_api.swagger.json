@@ -8168,10 +8168,11 @@
       "enum": [
         "CURVE_UNSPECIFIED",
         "CURVE_SECP256K1",
-        "CURVE_ED25519"
+        "CURVE_ED25519",
+        "CURVE_P256"
       ],
       "default": "CURVE_UNSPECIFIED",
-      "description": "Cryptographic Curve used to generate a given Private Key."
+      "description": "Cryptographic Curve used to generate a given Private Key. CURVE_P256 is retained for the disaster-recovery encryption-key workflow."
     },
     "v1CustomRevertError": {
       "type": "object",
@@ -15400,6 +15401,24 @@
         "sendTransactionStatusId"
       ]
     },
+    "v1SolSendTransactionStatus": {
+      "type": "object",
+      "properties": {
+        "signature": {
+          "type": "string",
+          "description": "The Solana transaction signature."
+        },
+        "slot": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The slot the transaction was confirmed in, if available."
+        },
+        "confirmationStatus": {
+          "type": "string",
+          "description": "The Solana confirmation status (processed | confirmed | finalized), if available."
+        }
+      }
+    },
     "v1StampLoginIntent": {
       "type": "object",
       "properties": {
@@ -15662,16 +15681,20 @@
       "type": "object",
       "properties": {
         "message": {
-          "type": "string",
-          "description": "Human-readable error message describing what went wrong."
+          "type": "string"
         },
         "revertChain": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1RevertChainEntry"
-          },
-          "description": "Chain of revert errors from nested contract calls, ordered from outermost to innermost."
+          }
+        },
+        "solana": {
+          "$ref": "#/definitions/v1SolanaFailureDetails"
+        },
+        "eth": {
+          "$ref": "#/definitions/v1EthFailureDetails"
         }
       }
     },
@@ -17594,6 +17617,186 @@
       },
       "required": [
         "eventType"
+      ]
+    },
+    "v1EthFailureDetails": {
+      "type": "object",
+      "properties": {
+        "revertChain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RevertChainEntry"
+          },
+          "description": "Ethereum revert chain, ordered from outermost to innermost."
+        }
+      }
+    },
+    "v1LoginUsage": {
+      "type": "object",
+      "properties": {
+        "publicKey": {
+          "type": "string",
+          "description": "Public key for authentication"
+        }
+      },
+      "required": [
+        "publicKey"
+      ]
+    },
+    "v1SignupUsage": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "phoneNumber": {
+          "type": "string"
+        },
+        "apiKeys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ApiKeyParamsV2"
+          }
+        },
+        "authenticators": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthenticatorParamsV2"
+          }
+        },
+        "oauthProviders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OauthProviderParams"
+          }
+        }
+      }
+    },
+    "v1SignupUsageV2": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "phoneNumber": {
+          "type": "string"
+        },
+        "apiKeys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ApiKeyParamsV2"
+          }
+        },
+        "authenticators": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthenticatorParamsV2"
+          }
+        },
+        "oauthProviders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OauthProviderParamsV2"
+          }
+        }
+      }
+    },
+    "v1SolanaFailureDetails": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "rpcCode": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "rpcMessage": {
+          "type": "string"
+        },
+        "transactionErrorJson": {
+          "type": "string"
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unitsConsumed": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "innerInstructionsJson": {
+          "type": "string"
+        }
+      }
+    },
+    "v1TokenUsage": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1UsageType",
+          "description": "Type of token usage"
+        },
+        "tokenId": {
+          "type": "string",
+          "description": "Unique identifier for the verification token"
+        },
+        "signup": {
+          "$ref": "#/definitions/v1SignupUsage"
+        },
+        "login": {
+          "$ref": "#/definitions/v1LoginUsage"
+        },
+        "signupV2": {
+          "$ref": "#/definitions/v1SignupUsageV2"
+        }
+      },
+      "required": [
+        "type",
+        "tokenId"
+      ]
+    },
+    "v1UsageType": {
+      "type": "string",
+      "enum": [
+        "USAGE_TYPE_SIGNUP",
+        "USAGE_TYPE_LOGIN"
+      ]
+    },
+    "v1WebAuthnStamp": {
+      "type": "object",
+      "properties": {
+        "credentialId": {
+          "type": "string",
+          "description": "A base64 url encoded Unique identifier for a given credential."
+        },
+        "clientDataJson": {
+          "type": "string",
+          "description": "A base64 encoded payload containing metadata about the signing context and the challenge."
+        },
+        "authenticatorData": {
+          "type": "string",
+          "description": "A base64 encoded payload containing metadata about the authenticator."
+        },
+        "signature": {
+          "type": "string",
+          "description": "The base64 url encoded signature bytes contained within the WebAuthn assertion response."
+        }
+      },
+      "required": [
+        "credentialId",
+        "clientDataJson",
+        "authenticatorData",
+        "signature"
       ]
     },
     "v1NOOPCodegenAnchorResponse": {

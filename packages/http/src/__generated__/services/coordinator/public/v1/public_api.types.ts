@@ -2525,11 +2525,15 @@ export interface definitions {
     | "CREDENTIAL_TYPE_OAUTH_KEY_P256"
     | "CREDENTIAL_TYPE_LOGIN";
   /**
-   * @description Cryptographic Curve used to generate a given Private Key.
+   * @description Cryptographic Curve used to generate a given Private Key. CURVE_P256 is retained for the disaster-recovery encryption-key workflow.
    * @default CURVE_UNSPECIFIED
    * @enum {string}
    */
-  v1Curve: "CURVE_UNSPECIFIED" | "CURVE_SECP256K1" | "CURVE_ED25519";
+  v1Curve:
+    | "CURVE_UNSPECIFIED"
+    | "CURVE_SECP256K1"
+    | "CURVE_ED25519"
+    | "CURVE_P256";
   v1CustomRevertError: {
     /** @description The name of the custom error. */
     errorName?: string;
@@ -5771,6 +5775,17 @@ export interface definitions {
     /** @description The send_transaction_status ID associated with the transaction submission */
     sendTransactionStatusId: string;
   };
+  v1SolSendTransactionStatus: {
+    /** @description The Solana transaction signature. */
+    signature?: string;
+    /**
+     * Format: uint64
+     * @description The slot the transaction was confirmed in, if available.
+     */
+    slot?: string;
+    /** @description The Solana confirmation status (processed | confirmed | finalized), if available. */
+    confirmationStatus?: string;
+  };
   v1StampLoginIntent: {
     /**
      * @inject_tag: validate:"omitempty,hexadecimal"
@@ -5909,10 +5924,10 @@ export interface definitions {
     threshold: number;
   };
   v1TxError: {
-    /** @description Human-readable error message describing what went wrong. */
     message?: string;
-    /** @description Chain of revert errors from nested contract calls, ordered from outermost to innermost. */
     revertChain?: definitions["v1RevertChainEntry"][];
+    solana?: definitions["v1SolanaFailureDetails"];
+    eth?: definitions["v1EthFailureDetails"];
   };
   v1UnknownRevertError: {
     /** @description The 4-byte error selector, if available. */
@@ -6855,6 +6870,60 @@ export interface definitions {
     filtersJson?: string;
     /** @description Whether this subscription is active. Defaults to true. */
     isActive?: boolean;
+  };
+  v1EthFailureDetails: {
+    /** @description Ethereum revert chain, ordered from outermost to innermost. */
+    revertChain?: definitions["v1RevertChainEntry"][];
+  };
+  v1LoginUsage: {
+    /** @description Public key for authentication */
+    publicKey: string;
+  };
+  v1SignupUsage: {
+    email?: string;
+    phoneNumber?: string;
+    apiKeys?: definitions["v1ApiKeyParamsV2"][];
+    authenticators?: definitions["v1AuthenticatorParamsV2"][];
+    oauthProviders?: definitions["v1OauthProviderParams"][];
+  };
+  v1SignupUsageV2: {
+    email?: string;
+    phoneNumber?: string;
+    apiKeys?: definitions["v1ApiKeyParamsV2"][];
+    authenticators?: definitions["v1AuthenticatorParamsV2"][];
+    oauthProviders?: definitions["v1OauthProviderParamsV2"][];
+  };
+  v1SolanaFailureDetails: {
+    source?: string;
+    /** Format: int32 */
+    rpcCode?: number;
+    rpcMessage?: string;
+    transactionErrorJson?: string;
+    logs?: string[];
+    /** Format: uint64 */
+    unitsConsumed?: string;
+    innerInstructionsJson?: string;
+  };
+  v1TokenUsage: {
+    /** @description Type of token usage */
+    type: definitions["v1UsageType"];
+    /** @description Unique identifier for the verification token */
+    tokenId: string;
+    signup?: definitions["v1SignupUsage"];
+    login?: definitions["v1LoginUsage"];
+    signupV2?: definitions["v1SignupUsageV2"];
+  };
+  /** @enum {string} */
+  v1UsageType: "USAGE_TYPE_SIGNUP" | "USAGE_TYPE_LOGIN";
+  v1WebAuthnStamp: {
+    /** @description A base64 url encoded Unique identifier for a given credential. */
+    credentialId: string;
+    /** @description A base64 encoded payload containing metadata about the signing context and the challenge. */
+    clientDataJson: string;
+    /** @description A base64 encoded payload containing metadata about the authenticator. */
+    authenticatorData: string;
+    /** @description The base64 url encoded signature bytes contained within the WebAuthn assertion response. */
+    signature: string;
   };
   v1NOOPCodegenAnchorResponse: {
     stamp: definitions["v1WebAuthnStamp"];

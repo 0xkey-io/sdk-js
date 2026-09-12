@@ -301,7 +301,6 @@ function generateInlineProperties(def, isAllOptional = false) {
 }
 
 function generateApiTypes(swagger, prefix = "") {
-  const namespace = swagger.tags?.find((item) => item.name != null)?.name;
   let output = "";
   const latestVersions = extractLatestVersions(swagger.definitions);
   const definitions = swagger.definitions;
@@ -311,8 +310,9 @@ function generateApiTypes(swagger, prefix = "") {
     const operation = methodMap.post;
     const operationId = operation && operation.operationId;
 
+    const namespace = operationId.split("_", 1)[0];
     const operationNameWithoutNamespace = operationId.replace(
-      /^PublicApiService_/,
+      new RegExp(`^${namespace}_`),
       `${prefix}T`,
     );
     const methodName =

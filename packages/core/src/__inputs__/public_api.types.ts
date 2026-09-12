@@ -4,13 +4,14 @@
  */
 
 export interface paths {
+  "/api/v1/noop-codegen-anchor": {
+    post: operations["PublicApiService_NOOPCodegenAnchor"];
+  };
   "/public/v1/query/get_activity": {
     /** Get details about an activity. */
+    get: operations["PublicApiService_GetActivity2"];
+    /** Get details about an activity. */
     post: operations["PublicApiService_GetActivity"];
-  };
-  "/public/v1/query/get_attestation": {
-    /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
-    post: operations["PublicApiService_GetAttestationDocument"];
   };
   "/public/v1/query/get_api_key": {
     /** Get details about an API key. */
@@ -19,6 +20,10 @@ export interface paths {
   "/public/v1/query/get_api_keys": {
     /** Get details about API keys for a user. */
     post: operations["PublicApiService_GetApiKeys"];
+  };
+  "/public/v1/query/get_attestation": {
+    /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
+    post: operations["PublicApiService_GetAttestationDocument"];
   };
   "/public/v1/query/get_authenticator": {
     /** Get details about an authenticator. */
@@ -39,6 +44,18 @@ export interface paths {
   "/public/v1/query/get_latest_boot_proof": {
     /** Get the latest boot proof for a given enclave app name. */
     post: operations["PublicApiService_GetLatestBootProof"];
+  };
+  "/public/v1/query/get_mfa_policies": {
+    /** Get all MFA policies for a user. */
+    post: operations["PublicApiService_GetMfaPolicies"];
+  };
+  "/public/v1/query/get_mfa_policy": {
+    /** Get a single MFA policy for a user. */
+    post: operations["PublicApiService_GetMfaPolicy"];
+  };
+  "/public/v1/query/get_mfa_status": {
+    /** Get the MFA status of an activity for one user or all voting users. */
+    post: operations["PublicApiService_GetMfaStatus"];
   };
   "/public/v1/query/get_nonces": {
     /** Get nonce values for an address on a given network. Can fetch the standard on-chain nonce and/or the gas station nonce used for sponsored transactions. */
@@ -75,6 +92,14 @@ export interface paths {
   "/public/v1/query/get_send_transaction_status": {
     /** Get the status of a send transaction request. */
     post: operations["PublicApiService_GetSendTransactionStatus"];
+  };
+  "/public/v1/query/get_session_profile": {
+    /** Get one session profile for an organization. */
+    post: operations["PublicApiService_GetSessionProfile"];
+  };
+  "/public/v1/query/get_session_profiles": {
+    /** Get all session profiles for an organization. */
+    post: operations["PublicApiService_GetSessionProfiles"];
   };
   "/public/v1/query/get_smart_contract_interface": {
     /** Get details about a smart contract interface. */
@@ -161,7 +186,7 @@ export interface paths {
     post: operations["PublicApiService_CreateApiKeys"];
   };
   "/public/v1/submit/create_authenticators": {
-    /** Create authenticators to authenticate requests to ZeroXKey. */
+    /** Create authenticators to authenticate requests to 0xkey. */
     post: operations["PublicApiService_CreateAuthenticators"];
   };
   "/public/v1/submit/create_fiat_on_ramp_credential": {
@@ -171,6 +196,10 @@ export interface paths {
   "/public/v1/submit/create_invitations": {
     /** Create invitations to join an existing organization. */
     post: operations["PublicApiService_CreateInvitations"];
+  };
+  "/public/v1/submit/create_mfa_policy": {
+    /** Create a new MFA policy for a user. */
+    post: operations["PublicApiService_CreateMfaPolicy"];
   };
   "/public/v1/submit/create_oauth2_credential": {
     /** Enable authentication for end users with an OAuth 2.0 provider */
@@ -203,6 +232,10 @@ export interface paths {
   "/public/v1/submit/create_read_write_session": {
     /** Create a read write session for a user. */
     post: operations["PublicApiService_CreateReadWriteSession"];
+  };
+  "/public/v1/submit/create_session_profile": {
+    /** Create a new session profile for an organization. */
+    post: operations["PublicApiService_CreateSessionProfile"];
   };
   "/public/v1/submit/create_smart_contract_interface": {
     /** Create an ABI/IDL in JSON. */
@@ -243,6 +276,10 @@ export interface paths {
   "/public/v1/submit/delete_invitation": {
     /** Delete an existing invitation. */
     post: operations["PublicApiService_DeleteInvitation"];
+  };
+  "/public/v1/submit/delete_mfa_policy": {
+    /** Delete an MFA policy for a user. */
+    post: operations["PublicApiService_DeleteMfaPolicy"];
   };
   "/public/v1/submit/delete_oauth2_credential": {
     /** Disable authentication for end users with an OAuth 2.0 provider */
@@ -297,7 +334,7 @@ export interface paths {
     post: operations["PublicApiService_EmailAuth"];
   };
   "/public/v1/submit/eth_send_transaction": {
-    /** Submit a transaction intent describing an EVM transaction you would like to broadcast. */
+    /** Submit a transaction intent describing a transaction you would like to broadcast. */
     post: operations["PublicApiService_EthSendTransaction"];
   };
   "/public/v1/submit/export_private_key": {
@@ -392,21 +429,25 @@ export interface paths {
     /** Sign a transaction. */
     post: operations["PublicApiService_SignTransaction"];
   };
-  "/public/v1/submit/tron_send_transaction": {
-    /** Submit a native TRX transfer intent describing a transaction you would like to broadcast. */
-    post: operations["PublicApiService_TronSendTransaction"];
-  };
   "/public/v1/submit/sol_send_transaction": {
-    /** Submit a transaction intent describing an SVM transaction you would like to broadcast. */
+    /** Submit a transaction intent describing a transaction you would like to broadcast. */
     post: operations["PublicApiService_SolSendTransaction"];
   };
   "/public/v1/submit/stamp_login": {
     /** Create a session for a user through stamping client side (API key, wallet client, or passkey client). */
     post: operations["PublicApiService_StampLogin"];
   };
+  "/public/v1/submit/tron_send_transaction": {
+    /** Submit a native TRX transfer intent describing a transaction you would like to broadcast. */
+    post: operations["PublicApiService_TronSendTransaction"];
+  };
   "/public/v1/submit/update_fiat_on_ramp_credential": {
     /** Update a fiat on ramp provider credential */
     post: operations["PublicApiService_UpdateFiatOnRampCredential"];
+  };
+  "/public/v1/submit/update_mfa_policy": {
+    /** Update an MFA policy for a user. */
+    post: operations["PublicApiService_UpdateMfaPolicy"];
   };
   "/public/v1/submit/update_oauth2_credential": {
     /** Update an OAuth 2.0 provider credential */
@@ -453,115 +494,12 @@ export interface paths {
     post: operations["PublicApiService_UpdateWallet"];
   };
   "/public/v1/submit/verify_otp": {
-    /** Verify a generic OTP. */
+    /** Verify a generic OTP (legacy, plaintext otpCode). */
     post: operations["PublicApiService_VerifyOtp"];
-  };
-  "/api/v1/noop-codegen-anchor": {
-    post: operations["PublicApiService_NOOPCodegenAnchor"];
-  };
-  "/public/v1/query/get_mfa_status": {
-    /** Get the MFA status of an activity for one user or all voting users. */
-    post: operations["PublicApiService_GetMfaStatus"];
-  };
-  "/public/v1/query/get_mfa_policies": {
-    /** Get all MFA policies for a user. */
-    post: operations["PublicApiService_GetMfaPolicies"];
-  };
-  "/public/v1/query/get_mfa_policy": {
-    /** Get a single MFA policy for a user. */
-    post: operations["PublicApiService_GetMfaPolicy"];
-  };
-  "/public/v1/query/get_session_profile": {
-    /** Get one session profile for an organization. */
-    post: operations["PublicApiService_GetSessionProfile"];
-  };
-  "/public/v1/query/get_session_profiles": {
-    /** Get all session profiles for an organization. */
-    post: operations["PublicApiService_GetSessionProfiles"];
-  };
-  "/public/v1/submit/create_mfa_policy": {
-    /** Create a new MFA policy for a user. */
-    post: operations["PublicApiService_CreateMfaPolicy"];
-  };
-  "/public/v1/submit/update_mfa_policy": {
-    /** Update an MFA policy for a user. */
-    post: operations["PublicApiService_UpdateMfaPolicy"];
-  };
-  "/public/v1/submit/delete_mfa_policy": {
-    /** Delete an MFA policy for a user. */
-    post: operations["PublicApiService_DeleteMfaPolicy"];
-  };
-  "/public/v1/submit/create_session_profile": {
-    /** Create a new session profile for an organization. */
-    post: operations["PublicApiService_CreateSessionProfile"];
   };
 }
 
 export interface definitions {
-  v1TronSendTransactionIntent: {
-    /**
-     * @inject_tag: validate:"required"
-     * @description A wallet or private key address to sign with (base58 T... form). This does not support private key IDs.
-     */
-    from: string;
-    /**
-     * @inject_tag: validate:"required"
-     * @description CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet).
-     * @enum {string}
-     */
-    caip2: "tron:0x2b6653dc" | "tron:0xcd8690dc" | "tron:0x94a9059e";
-    /**
-     * @inject_tag: validate:"required"
-     * @description Recipient address (base58 T... form).
-     */
-    to: string;
-    /**
-     * @inject_tag: validate:"omitempty"
-     * @description Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contract_address is set.
-     */
-    value?: string;
-    /**
-     * @inject_tag: validate:"omitempty"
-     * @description TRC-20 contract address (base58 T... form). When set, this is a token transfer(address,uint256) to `to` instead of a native TRX transfer, ABI-encoded server-side.
-     */
-    contractAddress?: string;
-    /**
-     * @inject_tag: validate:"omitempty"
-     * @description TRC-20 transfer amount in the token's atomic (smallest) unit. Required when contract_address is set.
-     */
-    tokenAmount?: string;
-  };
-  v1TronSendTransactionRequest: {
-    /** @enum {string} */
-    type: "ACTIVITY_TYPE_TRON_SEND_TRANSACTION";
-    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
-    timestampMs: string;
-    /** @description Unique identifier for a given Organization. */
-    organizationId: string;
-    parameters: definitions["v1TronSendTransactionIntent"];
-    generateAppProofs?: boolean;
-  };
-  v1TronSendTransactionResult: {
-    /** @description The send_transaction_status ID associated with the transaction submission */
-    sendTransactionStatusId: string;
-  };
-  v1TronSendTransactionStatus: {
-    /** @description The Tron transaction id (sha256(raw_data), hex), if available. */
-    txHash?: string;
-  };
-  v1GetAttestationDocumentRequest: {
-    /** @description Unique identifier for a given organization. */
-    organizationId: string;
-    /** @description Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
-    enclaveType: string;
-  };
-  v1GetAttestationDocumentResponse: {
-    /**
-     * Format: byte
-     * @description Raw (CBOR-encoded) attestation document.
-     */
-    attestationDocument: string;
-  };
   apiApiKeyParams: {
     /**
      * @inject_tag: validate:"required,tk_label_length,tk_label"
@@ -661,6 +599,7 @@ export interface definitions {
     createdAt: definitions["externaldatav1Timestamp"];
     updatedAt: definitions["externaldatav1Timestamp"];
   };
+  /** @description Represents a PolicyEvaluation which contains a set of policy evaluations for a given activity. */
   externalactivityv1PolicyEvaluation: {
     /** @description Unique identifier for a given policy evaluation. */
     id: string;
@@ -672,7 +611,8 @@ export interface definitions {
     voteId: string;
     /** @description Detailed evaluation result for each Policy that was run. */
     policyEvaluations: definitions["immutablecommonv1PolicyEvaluation"][];
-    createdAt: definitions["externaldatav1Timestamp"];
+    /** @description An ISO 8601 timestamp indicating when the PolicyEvaluation was created. */
+    createdAt: string;
   };
   externaldatav1Address: {
     format?: definitions["v1AddressFormat"];
@@ -1246,14 +1186,6 @@ export interface definitions {
     /** @description Signature over hashed proof_payload. */
     signature: string;
   };
-  v1AppStatus: {
-    /** @description Unique identifier for this TVC App */
-    appId: string;
-    /** @description List of deployment statuses for this app */
-    deployments: definitions["v1DeploymentStatus"][];
-    /** @description The deployment ID currently serving traffic for this app */
-    targetedDeploymentId: string;
-  };
   v1ApproveActivityIntent: {
     /**
      * @inject_tag: validate:"required"
@@ -1270,44 +1202,6 @@ export interface definitions {
     organizationId: string;
     parameters: definitions["v1ApproveActivityIntent"];
     generateAppProofs?: boolean;
-  };
-  v1AssetBalance: {
-    /** @description The caip-19 asset identifier */
-    caip19?: string;
-    /** @description The asset symbol */
-    symbol?: string;
-    /** @description The balance in atomic units */
-    balance?: string;
-    /**
-     * Format: int32
-     * @description The number of decimals this asset uses
-     */
-    decimals?: number;
-    /** @description Normalized balance values for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. Use the balance field instead. */
-    display?: definitions["v1AssetBalanceDisplay"];
-    /** @description The asset name */
-    name?: string;
-  };
-  v1AssetBalanceDisplay: {
-    /** @description USD value for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. */
-    usd?: string;
-    /** @description Normalized crypto value for display purposes only. Do not do any arithmetic or calculations with these, as the results could be imprecise. */
-    crypto?: string;
-  };
-  v1AssetMetadata: {
-    /** @description The caip-19 asset identifier */
-    caip19?: string;
-    /** @description The asset symbol */
-    symbol?: string;
-    /**
-     * Format: int32
-     * @description The number of decimals this asset uses
-     */
-    decimals?: number;
-    /** @description The url of the asset logo */
-    logoUrl?: string;
-    /** @description The asset name */
-    name?: string;
   };
   v1Attestation: {
     /**
@@ -1331,6 +1225,26 @@ export interface definitions {
      */
     transports: definitions["v1AuthenticatorTransport"][];
   };
+  v1AuthenticationMethod: {
+    type: definitions["v1AuthenticationType"];
+    id?: string;
+  };
+  v1AuthenticationMethodParams: {
+    type: definitions["v1AuthenticationType"];
+    id?: string;
+  };
+  /**
+   * @default AUTHENTICATION_TYPE_UNSPECIFIED
+   * @enum {string}
+   */
+  v1AuthenticationType:
+    | "AUTHENTICATION_TYPE_UNSPECIFIED"
+    | "AUTHENTICATION_TYPE_EMAIL_OTP"
+    | "AUTHENTICATION_TYPE_SMS_OTP"
+    | "AUTHENTICATION_TYPE_PASSKEY"
+    | "AUTHENTICATION_TYPE_API_KEY"
+    | "AUTHENTICATION_TYPE_OAUTH"
+    | "AUTHENTICATION_TYPE_SESSION";
   v1Authenticator: {
     /** @description Types of transports that may be used by an Authenticator (e.g., USB, NFC, BLE). */
     transports: definitions["v1AuthenticatorTransport"][];
@@ -1481,6 +1395,17 @@ export interface definitions {
     /** @description A list of API Key IDs. */
     apiKeyIds: string[];
   };
+  v1CreateApiOnlyUsersIntent: {
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description A list of API-only Users to create.
+     */
+    apiOnlyUsers: definitions["v1ApiOnlyUserParams"][];
+  };
+  v1CreateApiOnlyUsersResult: {
+    /** @description A list of API-only User IDs. */
+    userIds: string[];
+  };
   v1CreateAuthenticatorsIntent: {
     /**
      * @inject_tag: validate:"dive,required"
@@ -1586,6 +1511,25 @@ export interface definitions {
     /** @description A list of Invitation IDs */
     invitationIds: string[];
   };
+  v1CreateMfaPolicyIntent: {
+    userId: string;
+    mfaPolicyName: string;
+    condition: string;
+    requiredAuthenticationMethods: definitions["v1RequiredAuthenticationMethodParams"][];
+    /** Format: int64 */
+    order: number;
+    notes?: string;
+  };
+  v1CreateMfaPolicyRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_CREATE_MFA_POLICY";
+    timestampMs: string;
+    organizationId: string;
+    parameters: definitions["v1CreateMfaPolicyIntent"];
+  };
+  v1CreateMfaPolicyResult: {
+    mfaPolicyId: string;
+  };
   v1CreateOauth2CredentialIntent: {
     /**
      * @inject_tag: validate:"required"
@@ -1658,6 +1602,10 @@ export interface definitions {
   v1CreateOauthProvidersResultV2: {
     /** @description A list of unique identifiers for Oauth Providers */
     providerIds: string[];
+  };
+  v1CreateOidcProviderResult: {
+    /** @description Unique identifier for the newly registered OIDC provider. */
+    providerId: string;
   };
   v1CreateOrganizationIntent: {
     /**
@@ -1955,6 +1903,22 @@ export interface definitions {
     apiKeyId: string;
     /** @description HPKE encrypted credential bundle */
     credentialBundle: string;
+  };
+  v1CreateSessionProfileIntent: {
+    sessionProfileName: string;
+    scope: string;
+    expirationSeconds?: string;
+    notes?: string;
+  };
+  v1CreateSessionProfileRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_CREATE_SESSION_PROFILE";
+    timestampMs: string;
+    organizationId: string;
+    parameters: definitions["v1CreateSessionProfileIntent"];
+  };
+  v1CreateSessionProfileResult: {
+    sessionProfileId: string;
   };
   v1CreateSmartContractInterfaceIntent: {
     /**
@@ -2518,6 +2482,29 @@ export interface definitions {
     /** @description A list of account addresses. */
     addresses: string[];
   };
+  v1CreateWebhookEndpointIntent: {
+    /**
+     * @inject_tag: validate:"required,url"
+     * @description The destination URL for webhook deliveries.
+     */
+    url: string;
+    /**
+     * @inject_tag: validate:"required,tk_label_length"
+     * @description Human-readable name for the webhook endpoint.
+     */
+    name: string;
+    /**
+     * @inject_tag: validate:"dive"
+     * @description Event subscriptions. If empty, the endpoint receives all event types.
+     */
+    subscriptions?: definitions["v1WebhookSubscriptionParams"][];
+  };
+  v1CreateWebhookEndpointResult: {
+    /** @description Unique identifier for the created Webhook Endpoint. */
+    endpointId: string;
+    /** @description The created webhook endpoint data, including the signing public key. */
+    webhookEndpoint: definitions["v1WebhookEndpointData"];
+  };
   v1CredPropsAuthenticationExtensionsClientOutputs: {
     rk: boolean;
   };
@@ -2538,11 +2525,15 @@ export interface definitions {
     | "CREDENTIAL_TYPE_OAUTH_KEY_P256"
     | "CREDENTIAL_TYPE_LOGIN";
   /**
-   * @description Cryptographic Curve used to generate a given Private Key.
+   * @description Cryptographic Curve used to generate a given Private Key. CURVE_P256 is retained for the disaster-recovery encryption-key workflow.
    * @default CURVE_UNSPECIFIED
    * @enum {string}
    */
-  v1Curve: "CURVE_UNSPECIFIED" | "CURVE_SECP256K1" | "CURVE_ED25519";
+  v1Curve:
+    | "CURVE_UNSPECIFIED"
+    | "CURVE_SECP256K1"
+    | "CURVE_ED25519"
+    | "CURVE_P256";
   v1CustomRevertError: {
     /** @description The name of the custom error. */
     errorName?: string;
@@ -2643,6 +2634,20 @@ export interface definitions {
     /** @description Unique identifier for a given Invitation. */
     invitationId: string;
   };
+  v1DeleteMfaPolicyIntent: {
+    userId: string;
+    mfaPolicyId: string;
+  };
+  v1DeleteMfaPolicyRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_DELETE_MFA_POLICY";
+    timestampMs: string;
+    organizationId: string;
+    parameters: definitions["v1DeleteMfaPolicyIntent"];
+  };
+  v1DeleteMfaPolicyResult: {
+    mfaPolicyId: string;
+  };
   v1DeleteOauth2CredentialIntent: {
     /**
      * @inject_tag: validate:"required"
@@ -2688,6 +2693,10 @@ export interface definitions {
   };
   v1DeleteOauthProvidersResult: {
     /** @description A list of unique identifiers for Oauth Providers */
+    providerIds: string[];
+  };
+  v1DeleteOidcProviderResult: {
+    /** @description A list of unique identifiers for OIDC providers that were removed. */
     providerIds: string[];
   };
   v1DeleteOrganizationIntent: {
@@ -2918,21 +2927,16 @@ export interface definitions {
     /** @description A list of wallet unique identifiers that were removed */
     walletIds: string[];
   };
-  v1DeploymentStatus: {
-    /** @description Unique identifier for this deployment (corresponds to k8s deployment label) */
-    deploymentId: string;
+  v1DeleteWebhookEndpointIntent: {
     /**
-     * Format: int32
-     * @description Number of ready replicas
+     * @inject_tag: validate:"required,uuid4"
+     * @description Unique identifier of the webhook endpoint to delete.
      */
-    readyReplicas: number;
-    /**
-     * Format: int32
-     * @description Desired number of replicas
-     */
-    desiredReplicas: number;
-    /** @description Last time this deployment was updated */
-    lastUpdatedTime: definitions["externaldatav1Timestamp"];
+    endpointId: string;
+  };
+  v1DeleteWebhookEndpointResult: {
+    /** @description Unique identifier for the deleted Webhook Endpoint. */
+    endpointId: string;
   };
   v1DisableAuthProxyIntent: { [key: string]: unknown };
   v1DisableAuthProxyResult: { [key: string]: unknown };
@@ -3141,10 +3145,6 @@ export interface definitions {
      * @description The proxy signing key generated by the Notarizer (dev: plaintext hex, prod: HPKE-encrypted).
      */
     encryptedApiKey: string;
-  };
-  v1EthFailureDetails: {
-    /** @description Ethereum revert chain, ordered from outermost to innermost. */
-    revertChain?: definitions["v1RevertChainEntry"][];
   };
   v1EthSendRawTransactionIntent: {
     /**
@@ -3379,15 +3379,30 @@ export interface definitions {
     organizationId: string;
     /** @description The fiat on-ramp provider. */
     onrampProvider: definitions["v1FiatOnRampProvider"];
-    /** @description Project ID for the on-ramp provider. Some providers, like Coinbase, require this additional identifier. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Project ID for the on-ramp provider. Some providers, like Coinbase, require this additional identifier.
+     */
     projectId?: string;
-    /** @description Publishable API key for the on-ramp provider. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Publishable API key for the on-ramp provider.
+     */
     publishableApiKey: string;
-    /** @description Secret API key for the on-ramp provider encrypted to our on-ramp encryption public key. */
+    /**
+     * @inject_tag: validate:"required"
+     * @description Secret API key for the on-ramp provider encrypted to our on-ramp encryption public key.
+     */
     encryptedSecretApiKey: string;
-    /** @description Private API key for the on-ramp provider encrypted to our on-ramp encryption public key. Some providers, like Coinbase, require this additional key. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Private API key for the on-ramp provider encrypted to our on-ramp encryption public key. Some providers, like Coinbase, require this additional key.
+     */
     encryptedPrivateApiKey?: string;
-    /** @description If the on-ramp credential is a sandbox credential. */
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description If the on-ramp credential is a sandbox credential.
+     */
     sandboxMode?: boolean;
     createdAt: definitions["externaldatav1Timestamp"];
     updatedAt: definitions["externaldatav1Timestamp"];
@@ -3578,6 +3593,19 @@ export interface definitions {
   v1GetAppProofsResponse: {
     appProofs: definitions["v1AppProof"][];
   };
+  v1GetAttestationDocumentRequest: {
+    /** @description Unique identifier for a given organization. */
+    organizationId: string;
+    /** @description Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+    enclaveType: string;
+  };
+  v1GetAttestationDocumentResponse: {
+    /**
+     * Format: byte
+     * @description Raw (CBOR-encoded) attestation document.
+     */
+    attestationDocument: string;
+  };
   v1GetAuthenticatorRequest: {
     /** @description Unique identifier for a given organization. */
     organizationId: string;
@@ -3618,6 +3646,16 @@ export interface definitions {
     windowLimitUsd: string;
     /** @description The total gas usage (in USD) of all sponsored transactions processed over the last `window_duration_minutes` */
     usageUsd: string;
+    /** @description The native-currency spend cap per window in wei. '0' = uncapped. This is the ENFORCED cap (no price oracle required). */
+    windowLimitNative?: string;
+    /** @description Total native-currency gas spent (wei) over the window, from confirmed on-chain fees. */
+    usageNative?: string;
+    /** @description Whether the native spend cap is enforced. False (or no config) = uncapped. */
+    enabled?: boolean;
+    /** @description The Solana native-currency spend cap per window in lamports. '0' = uncapped. Parallel ENFORCED cap to window_limit_native, scoped to Solana (solana:*) usage. */
+    windowLimitLamports?: string;
+    /** @description Total Solana native-currency gas spent (lamports) over the window, from confirmed on-chain fees. */
+    usageLamports?: string;
   };
   v1GetLatestBootProofRequest: {
     /** @description Unique identifier for a given Organization. */
@@ -3625,22 +3663,36 @@ export interface definitions {
     /** @description Name of enclave app. */
     appName: string;
   };
+  v1GetMfaPoliciesRequest: {
+    organizationId: string;
+    userId: string;
+  };
+  v1GetMfaPoliciesResponse: {
+    mfaPolicies: definitions["v1MfaPolicy"][];
+  };
+  v1GetMfaPolicyRequest: {
+    organizationId: string;
+    userId: string;
+    mfaPolicyId: string;
+  };
+  v1GetMfaPolicyResponse: {
+    mfaPolicy: definitions["v1MfaPolicy"];
+  };
+  v1GetMfaStatusRequest: {
+    organizationId: string;
+    activityId: string;
+    userId?: string;
+  };
+  v1GetMfaStatusResponse: {
+    mfaStatuses: definitions["v1MfaStatus"][];
+  };
   v1GetNoncesRequest: {
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
     /** @description The Ethereum address to query nonces for. */
     address: string;
-    /**
-     * @description CAIP-2 chain ID (e.g., 'eip155:1' for Ethereum mainnet).
-     * @enum {string}
-     */
-    caip2:
-      | "eip155:1"
-      | "eip155:11155111"
-      | "eip155:8453"
-      | "eip155:84532"
-      | "eip155:137"
-      | "eip155:80002";
+    /** @description The network identifier in CAIP-2 format (e.g., 'eip155:1' for Ethereum mainnet). */
+    caip2: string;
     /** @description Whether to fetch the standard on-chain nonce. */
     nonce?: boolean;
     /** @description Whether to fetch the gas station nonce used for sponsored transactions. */
@@ -3754,12 +3806,26 @@ export interface definitions {
     /** @description Ethereum-specific transaction status. */
     eth?: definitions["v1EthSendTransactionStatus"];
     /** @description Solana-specific transaction status. */
-    solana?: definitions["v1SolanaSendTransactionStatus"];
+    sol?: definitions["v1SolSendTransactionStatus"];
+    /** @description Tron-specific transaction status. */
     tron?: definitions["v1TronSendTransactionStatus"];
     /** @description The error encountered when broadcasting or confirming the transaction, if any. */
     txError?: string;
     /** @description Structured error information including revert details, if available. */
     error?: definitions["v1TxError"];
+  };
+  v1GetSessionProfileRequest: {
+    organizationId: string;
+    sessionProfileId: string;
+  };
+  v1GetSessionProfileResponse: {
+    sessionProfile: definitions["v1SessionProfile"];
+  };
+  v1GetSessionProfilesRequest: {
+    organizationId: string;
+  };
+  v1GetSessionProfilesResponse: {
+    sessionProfiles: definitions["v1SessionProfile"][];
   };
   v1GetSmartContractInterfaceRequest: {
     /** @description Unique identifier for a given organization. */
@@ -3975,6 +4041,24 @@ export interface definitions {
     walletId: string;
     /** @description A list of account addresses. */
     addresses: string[];
+  };
+  /**
+   * @description See `CreateOrganizationIntentV2.imported_root_authenticator`. The public
+   * key / aaguid / transports MUST be resolved server-side from Coordinator's
+   * own authenticator store (never trusted verbatim from an HTTP client).
+   */
+  v1ImportedRootAuthenticatorParams: {
+    /** @inject_tag: validate:"required,tk_label,tk_label_length" */
+    authenticatorName: string;
+    /** @inject_tag: validate:"required,max=256" */
+    credentialId: string;
+    /**
+     * Uncompressed P-256 public key, hex-encoded (with or without "0x" prefix).
+     * @inject_tag: validate:"required"
+     */
+    publicKey: string;
+    aaguid?: string;
+    transports?: definitions["v1AuthenticatorTransport"][];
   };
   v1InitFiatOnRampIntent: {
     /**
@@ -4341,7 +4425,7 @@ export interface definitions {
   };
   v1InitOtpRequest: {
     /** @enum {string} */
-    type: "ACTIVITY_TYPE_INIT_OTP_V3";
+    type: "ACTIVITY_TYPE_INIT_OTP_V2" | "ACTIVITY_TYPE_INIT_OTP_V3";
     /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
     timestampMs: string;
     /** @description Unique identifier for a given Organization. */
@@ -4628,9 +4712,23 @@ export interface definitions {
     /** @description A list of user tags. */
     userTags: definitions["datav1Tag"][];
   };
-  v1LoginUsage: {
-    /** @description Public key for authentication */
-    publicKey: string;
+  v1MfaPolicy: {
+    mfaPolicyId: string;
+    mfaPolicyName: string;
+    condition: string;
+    requiredAuthenticationMethods: definitions["v1RequiredAuthenticationMethod"][];
+    /** Format: int64 */
+    order: number;
+    notes?: string;
+    createdAt: definitions["externaldatav1Timestamp"];
+    updatedAt: definitions["externaldatav1Timestamp"];
+  };
+  v1MfaStatus: {
+    mfaPolicyId: string;
+    userId: string;
+    satisfied: boolean;
+    satisfiedMethods: definitions["v1AuthenticationMethod"][];
+    requiredMethods: definitions["v1RequiredAuthenticationMethod"][];
   };
   /**
    * @default MNEMONIC_LANGUAGE_UNSPECIFIED
@@ -4647,10 +4745,6 @@ export interface definitions {
     | "MNEMONIC_LANGUAGE_JAPANESE"
     | "MNEMONIC_LANGUAGE_KOREAN"
     | "MNEMONIC_LANGUAGE_SPANISH";
-  v1NOOPCodegenAnchorResponse: {
-    stamp: definitions["v1WebAuthnStamp"];
-    tokenUsage?: definitions["v1TokenUsage"];
-  };
   v1NativeRevertError: {
     /** @description The type of native error: 'error_string', 'panic', or 'execution_reverted'. */
     nativeType?: string;
@@ -4748,6 +4842,8 @@ export interface definitions {
     expirationSeconds?: string;
     /** @description Invalidate all other previously generated Oauth API keys */
     invalidateExisting?: boolean;
+    /** @description Optional immutable Session Profile applied to the OAuth Auth session. */
+    sessionProfileId?: string;
   };
   v1OauthLoginIntent: {
     /**
@@ -4860,6 +4956,15 @@ export interface definitions {
     | "OPERATOR_NOT_IN"
     | "OPERATOR_CONTAINS_ONE"
     | "OPERATOR_CONTAINS_ALL";
+  v1OrganizationProtectionProfileRequest: {
+    /** @description Must be ORGANIZATION_PROTECTION_PROFILE_TYPE_PROTECTED_SPONSORED for F0. */
+    profileType: string;
+    /**
+     * Format: int64
+     * @description Protection profile protocol version. F0 supports version 1.
+     */
+    version: number;
+  };
   v1OtpAuthIntent: {
     /**
      * @inject_tag: validate:"required"
@@ -4947,8 +5052,12 @@ export interface definitions {
     /** @description Signed JWT containing an expiry, public key, session type, user id, and organization id */
     session: string;
   };
-  /** @enum {string} */
+  /**
+   * @default OUTCOME_UNSPECIFIED
+   * @enum {string}
+   */
   v1Outcome:
+    | "OUTCOME_UNSPECIFIED"
     | "OUTCOME_ALLOW"
     | "OUTCOME_DENY_EXPLICIT"
     | "OUTCOME_DENY_IMPLICIT"
@@ -5123,6 +5232,12 @@ export interface definitions {
   v1RemoveOrganizationFeatureResult: {
     /** @description Resulting list of organization features. */
     features: definitions["v1Feature"][];
+  };
+  v1RequiredAuthenticationMethod: {
+    any: definitions["v1AuthenticationMethod"][];
+  };
+  v1RequiredAuthenticationMethodParams: {
+    any: definitions["v1AuthenticationMethodParams"][];
   };
   /** @description Result of the intended action. */
   v1Result: {
@@ -5405,6 +5520,15 @@ export interface definitions {
     operator?: definitions["v1Operator"];
     targets?: string[];
   };
+  v1SessionProfile: {
+    sessionProfileId: string;
+    sessionProfileName: string;
+    scope: string;
+    expirationSeconds?: string;
+    notes?: string;
+    createdAt: definitions["externaldatav1Timestamp"];
+    updatedAt: definitions["externaldatav1Timestamp"];
+  };
   v1SetOrganizationFeatureIntent: {
     /** @description Name of the feature to set */
     name: definitions["v1FeatureName"];
@@ -5554,20 +5678,6 @@ export interface definitions {
   v1SignTransactionResult: {
     signedTransaction: string;
   };
-  v1SignupUsage: {
-    email?: string;
-    phoneNumber?: string;
-    apiKeys?: definitions["v1ApiKeyParamsV2"][];
-    authenticators?: definitions["v1AuthenticatorParamsV2"][];
-    oauthProviders?: definitions["v1OauthProviderParams"][];
-  };
-  v1SignupUsageV2: {
-    email?: string;
-    phoneNumber?: string;
-    apiKeys?: definitions["v1ApiKeyParamsV2"][];
-    authenticators?: definitions["v1AuthenticatorParamsV2"][];
-    oauthProviders?: definitions["v1OauthProviderParamsV2"][];
-  };
   v1SimpleClientExtensionResults: {
     appid?: boolean;
     appidExclude?: boolean;
@@ -5585,6 +5695,32 @@ export interface definitions {
   v1SmsCustomizationParams: {
     /** @description Template containing references to .OtpCode i.e Your OTP is {{.OtpCode}} */
     template?: string;
+  };
+  v1SolSendRawTransactionIntent: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description The raw, signed Solana transaction to be sent (hex- or base64-encoded wire bytes).
+     */
+    signedTransaction: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description CAIP-2 chain ID (e.g., 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG' for devnet).
+     * @enum {string}
+     */
+    caip2:
+      | "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+      | "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+      | "solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY";
+    /**
+     * @inject_tag: validate:"omitempty"
+     * Format: uint64
+     * @description Optional lastValidBlockHeight returned by prepare_sol_transaction for the pinned blockhash; persisted so the confirmation worker can detect blockhash-expiry drops precisely.
+     */
+    lastValidBlockHeight?: string;
+  };
+  v1SolSendRawTransactionResult: {
+    /** @description The transaction signature (base58) of the sent Solana transaction. */
+    transactionHash: string;
   };
   v1SolSendTransactionIntent: {
     /**
@@ -5639,35 +5775,16 @@ export interface definitions {
     /** @description The send_transaction_status ID associated with the transaction submission */
     sendTransactionStatusId: string;
   };
-  v1SolanaConfig: {
-    /** @description Whether Solana rent prefunding is enabled for the organization. When omitted, the existing rent-prefund state is left unchanged. */
-    rentPrefundEnabled?: boolean;
-  };
-  v1SolanaFailureDetails: {
-    /** @description Where the Solana failure occurred, such as simulation or preflight. */
-    source?: string;
-    /**
-     * Format: int32
-     * @description The Solana JSON-RPC error code, if available.
-     */
-    rpcCode?: number;
-    /** @description The Solana JSON-RPC error message, if available. */
-    rpcMessage?: string;
-    /** @description The raw Solana transaction error object serialized as JSON, if available. */
-    transactionErrorJson?: string;
-    /** @description Program logs returned by Solana simulation or preflight, if available. */
-    logs?: string[];
+  v1SolSendTransactionStatus: {
+    /** @description The Solana transaction signature. */
+    signature?: string;
     /**
      * Format: uint64
-     * @description Compute units consumed during simulation or preflight, if available.
+     * @description The slot the transaction was confirmed in, if available.
      */
-    unitsConsumed?: string;
-    /** @description The raw Solana inner instructions payload serialized as JSON, if available. */
-    innerInstructionsJson?: string;
-  };
-  v1SolanaSendTransactionStatus: {
-    /** @description The Solana transaction signature, if available. */
-    signature?: string;
+    slot?: string;
+    /** @description The Solana confirmation status (processed | confirmed | finalized), if available. */
+    confirmationStatus?: string;
   };
   v1StampLoginIntent: {
     /**
@@ -5695,17 +5812,11 @@ export interface definitions {
     /** @description Signed JWT containing an expiry, public key, session type, user id, and organization id */
     session: string;
   };
-  /** @enum {string} */
-  v1TagType: "TAG_TYPE_USER" | "TAG_TYPE_PRIVATE_KEY";
-  v1TokenUsage: {
-    /** @description Type of token usage */
-    type: definitions["v1UsageType"];
-    /** @description Unique identifier for the verification token */
-    tokenId: string;
-    signup?: definitions["v1SignupUsage"];
-    login?: definitions["v1LoginUsage"];
-    signupV2?: definitions["v1SignupUsageV2"];
-  };
+  /**
+   * @default TAG_TYPE_UNSPECIFIED
+   * @enum {string}
+   */
+  v1TagType: "TAG_TYPE_UNSPECIFIED" | "TAG_TYPE_USER" | "TAG_TYPE_PRIVATE_KEY";
   /**
    * - TRANSACTION_TYPE_ETHEREUM: Unsigned Ethereum transaction, RLP-encoded and hex-encoded
    *  - TRANSACTION_TYPE_SOLANA: Unsigned Solana transaction in hex bytes
@@ -5720,10 +5831,57 @@ export interface definitions {
     | "TRANSACTION_TYPE_SOLANA"
     | "TRANSACTION_TYPE_TRON"
     | "TRANSACTION_TYPE_BITCOIN";
-  /** @enum {string} */
-  v1TvcHealthCheckType:
-    | "TVC_HEALTH_CHECK_TYPE_HTTP"
-    | "TVC_HEALTH_CHECK_TYPE_GRPC";
+  v1TronSendTransactionIntent: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description A wallet or private key address to sign with (base58 T... form). This does not support private key IDs.
+     */
+    from: string;
+    /**
+     * @inject_tag: validate:"required"
+     * @description CAIP-2 chain ID (e.g., 'tron:0x2b6653dc' for Tron mainnet).
+     * @enum {string}
+     */
+    caip2: "tron:0x2b6653dc" | "tron:0xcd8690dc" | "tron:0x94a9059e";
+    /**
+     * @inject_tag: validate:"required"
+     * @description Recipient address (base58 T... form).
+     */
+    to: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description Native TRX amount to transfer, in sun (1 TRX = 1_000_000 sun). Ignored when contract_address is set.
+     */
+    value?: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description TRC-20 contract address (base58 T... form). When set, this is a token transfer(address,uint256) to `to` instead of a native TRX transfer, ABI-encoded server-side.
+     */
+    contractAddress?: string;
+    /**
+     * @inject_tag: validate:"omitempty"
+     * @description TRC-20 transfer amount in the token's atomic (smallest) unit. Required when contract_address is set.
+     */
+    tokenAmount?: string;
+  };
+  v1TronSendTransactionRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_TRON_SEND_TRANSACTION";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1TronSendTransactionIntent"];
+    generateAppProofs?: boolean;
+  };
+  v1TronSendTransactionResult: {
+    /** @description The send_transaction_status ID associated with the transaction submission */
+    sendTransactionStatusId: string;
+  };
+  v1TronSendTransactionStatus: {
+    /** @description The Tron transaction id (sha256(raw_data), hex), if available. */
+    txHash?: string;
+  };
   v1TvcManifestApproval: {
     /**
      * @inject_tag: validate:"required,uuid"
@@ -5766,13 +5924,9 @@ export interface definitions {
     threshold: number;
   };
   v1TxError: {
-    /** @description Human-readable error message describing what went wrong. */
     message?: string;
-    /** @description Chain of revert errors from nested contract calls, ordered from outermost to innermost. */
     revertChain?: definitions["v1RevertChainEntry"][];
-    /** @description Solana-specific failure details for simulation or preflight errors, if available. */
     solana?: definitions["v1SolanaFailureDetails"];
-    /** @description Ethereum-specific failure details, if available. */
     eth?: definitions["v1EthFailureDetails"];
   };
   v1UnknownRevertError: {
@@ -5924,6 +6078,30 @@ export interface definitions {
     /** @description Unique identifier of the Fiat On-Ramp credential that was updated */
     fiatOnRampCredentialId: string;
   };
+  v1UpdateMfaPolicyIntent: {
+    userId: string;
+    mfaPolicyId: string;
+    mfaPolicyName?: string;
+    condition?: string;
+    /**
+     * @description Proto3 repeated cannot encode omitted vs []. HTTP JSON raw_body is the
+     * presence source: omitted → leave unchanged; [] → reject; null → invalid.
+     */
+    requiredAuthenticationMethods?: definitions["v1RequiredAuthenticationMethodParams"][];
+    /** Format: int64 */
+    order?: number;
+    notes?: string;
+  };
+  v1UpdateMfaPolicyRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_UPDATE_MFA_POLICY";
+    timestampMs: string;
+    organizationId: string;
+    parameters: definitions["v1UpdateMfaPolicyIntent"];
+  };
+  v1UpdateMfaPolicyResult: {
+    mfaPolicyId: string;
+  };
   v1UpdateOauth2CredentialIntent: {
     /**
      * @inject_tag: validate:"required"
@@ -5959,6 +6137,10 @@ export interface definitions {
   v1UpdateOauth2CredentialResult: {
     /** @description Unique identifier of the OAuth 2.0 credential that was updated */
     oauth2CredentialId: string;
+  };
+  v1UpdateOidcProviderResult: {
+    /** @description Unique identifier for the updated OIDC provider. */
+    providerId: string;
   };
   v1UpdateOrganizationNameIntent: {
     /**
@@ -6286,6 +6468,23 @@ export interface definitions {
     /** @description A Wallet ID. */
     walletId: string;
   };
+  v1UpdateWebhookEndpointIntent: {
+    /**
+     * @inject_tag: validate:"required,uuid4"
+     * @description Unique identifier of the webhook endpoint to update.
+     */
+    endpointId: string;
+    /** @description Updated destination URL. */
+    url?: string;
+    /** @description Updated human-readable name. */
+    name?: string;
+    /** @description Updated active status. */
+    isActive?: boolean;
+  };
+  v1UpdateWebhookEndpointResult: {
+    /** @description Unique identifier for the updated Webhook Endpoint. */
+    endpointId: string;
+  };
   v1UpsertGasUsageConfigIntent: {
     /**
      * @inject_tag: validate:"required,numeric"
@@ -6310,8 +6509,6 @@ export interface definitions {
      */
     gasUsageConfigId: string;
   };
-  /** @enum {string} */
-  v1UsageType: "USAGE_TYPE_SIGNUP" | "USAGE_TYPE_LOGIN";
   v1User: {
     /** @description Unique identifier for a given User. */
     userId: string;
@@ -6503,12 +6700,12 @@ export interface definitions {
   };
   v1VerifyOtpRequest: {
     /** @enum {string} */
-    type: "ACTIVITY_TYPE_VERIFY_OTP_V2";
+    type: "ACTIVITY_TYPE_VERIFY_OTP";
     /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
     timestampMs: string;
     /** @description Unique identifier for a given Organization. */
     organizationId: string;
-    parameters: definitions["v1VerifyOtpIntentV2"];
+    parameters: definitions["v1VerifyOtpIntent"];
     generateAppProofs?: boolean;
   };
   v1VerifyOtpResult: {
@@ -6550,6 +6747,7 @@ export interface definitions {
     /** @description True when a given Wallet is imported, false otherwise. */
     imported: boolean;
   };
+  /** An account derived from a Wallet */
   v1WalletAccount: {
     /** @description Unique identifier for a given Wallet Account. */
     walletAccountId: string;
@@ -6571,7 +6769,14 @@ export interface definitions {
     updatedAt: definitions["externaldatav1Timestamp"];
     /** @description The public component of this wallet account's underlying cryptographic key pair. */
     publicKey?: string;
-    /** @description Wallet details for this account. This is only present when include_wallet_details=true. */
+    /**
+     * TODO(tim): temporarily removing this since it's always "false"
+     * bool exported = 12 [
+     *   (google.api.field_behavior) = REQUIRED,
+     *   (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "True when a given Account is exported, false otherwise."}
+     * ];
+     * @description Wallet details for this account. This is only present when include_wallet_details=true.
+     */
     walletDetails?: definitions["v1Wallet"];
   };
   v1WalletAccountParams: {
@@ -6642,85 +6847,6 @@ export interface definitions {
     /** @description A list of account addresses. */
     addresses: string[];
   };
-  v1WebAuthnStamp: {
-    /** @description A base64 url encoded Unique identifier for a given credential. */
-    credentialId: string;
-    /** @description A base64 encoded payload containing metadata about the signing context and the challenge. */
-    clientDataJson: string;
-    /** @description A base64 encoded payload containing metadata about the authenticator. */
-    authenticatorData: string;
-    /** @description The base64 url encoded signature bytes contained within the WebAuthn assertion response. */
-    signature: string;
-  };
-  v1WebhookSubscriptionParams: {
-    /** @description The event type to subscribe to, e.g. ACTIVITY_UPDATES, BALANCE_CONFIRMED_UPDATES. */
-    eventType: string;
-    /** @description JSON-encoded filter criteria for this subscription. Reserved for future use. */
-    filtersJson?: string;
-    /** @description Whether this subscription is active. Defaults to true. */
-    isActive?: boolean;
-  };
-  v1GetMfaPoliciesRequest: {
-    organizationId: string;
-    userId: string;
-  };
-  v1GetSessionProfilesRequest: {
-    organizationId: string;
-  };
-  v1GetSessionProfileRequest: {
-    organizationId: string;
-    sessionProfileId: string;
-  };
-  v1GetMfaPoliciesResponse: {
-    mfaPolicies: definitions["v1MfaPolicy"][];
-  };
-  v1MfaPolicy: {
-    mfaPolicyId: string;
-    mfaPolicyName: string;
-    condition: string;
-    requiredAuthenticationMethods: definitions["v1RequiredAuthenticationMethod"][];
-    /** Format: int64 */
-    order: number;
-    notes?: string;
-    createdAt: definitions["externaldatav1Timestamp"];
-    updatedAt: definitions["externaldatav1Timestamp"];
-  };
-  v1RequiredAuthenticationMethod: {
-    any: definitions["v1AuthenticationMethod"][];
-  };
-  v1AuthenticationMethod: {
-    type: definitions["v1AuthenticationType"];
-    id?: string;
-  };
-  /**
-   * @default AUTHENTICATION_TYPE_UNSPECIFIED
-   * @enum {string}
-   */
-  v1AuthenticationType:
-    | "AUTHENTICATION_TYPE_UNSPECIFIED"
-    | "AUTHENTICATION_TYPE_EMAIL_OTP"
-    | "AUTHENTICATION_TYPE_SMS_OTP"
-    | "AUTHENTICATION_TYPE_PASSKEY"
-    | "AUTHENTICATION_TYPE_API_KEY"
-    | "AUTHENTICATION_TYPE_OAUTH"
-    | "AUTHENTICATION_TYPE_SESSION";
-  v1DeleteMfaPolicyRequest: {
-    /** @enum {string} */
-    type: "ACTIVITY_TYPE_DELETE_MFA_POLICY";
-    timestampMs: string;
-    organizationId: string;
-    parameters: definitions["v1DeleteMfaPolicyIntent"];
-  };
-  v1DeleteMfaPolicyIntent: {
-    userId: string;
-    mfaPolicyId: string;
-  };
-  v1CreateWebhookEndpointResult: {
-    /** @description Unique identifier for the created Webhook Endpoint. */
-    endpointId: string;
-    /** @description The created webhook endpoint data, including the signing public key. */
-    webhookEndpoint: definitions["v1WebhookEndpointData"];
-  };
   v1WebhookEndpointData: {
     /** @description Unique identifier for a given Webhook Endpoint. */
     endpointId: string;
@@ -6737,238 +6863,95 @@ export interface definitions {
     /** @description Ed25519 public key (whpk_ prefixed) for verifying webhook signatures. Only returned on creation. */
     signingPublicKey?: string;
   };
-  v1CreateSessionProfileResult: {
-    sessionProfileId: string;
-  };
-  v1SolSendRawTransactionResult: {
-    /** @description The transaction signature (base58) of the sent Solana transaction. */
-    transactionHash: string;
-  };
-  v1CreateApiOnlyUsersResult: {
-    /** @description A list of API-only User IDs. */
-    userIds: string[];
-  };
-  v1UpdateOidcProviderResult: {
-    /** @description Unique identifier for the updated OIDC provider. */
-    providerId: string;
-  };
-  v1CreateOidcProviderResult: {
-    /** @description Unique identifier for the newly registered OIDC provider. */
-    providerId: string;
-  };
-  v1UpdateMfaPolicyResult: {
-    mfaPolicyId: string;
-  };
-  v1DeleteWebhookEndpointResult: {
-    /** @description Unique identifier for the deleted Webhook Endpoint. */
-    endpointId: string;
-  };
-  v1CreateMfaPolicyResult: {
-    mfaPolicyId: string;
-  };
-  v1DeleteOidcProviderResult: {
-    /** @description A list of unique identifiers for OIDC providers that were removed. */
-    providerIds: string[];
-  };
-  v1UpdateWebhookEndpointResult: {
-    /** @description Unique identifier for the updated Webhook Endpoint. */
-    endpointId: string;
-  };
-  v1DeleteMfaPolicyResult: {
-    mfaPolicyId: string;
-  };
-  v1SolSendRawTransactionIntent: {
-    /**
-     * @inject_tag: validate:"required"
-     * @description The raw, signed Solana transaction to be sent (hex- or base64-encoded wire bytes).
-     */
-    signedTransaction: string;
-    /**
-     * @inject_tag: validate:"required"
-     * @description CAIP-2 chain ID (e.g., 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG' for devnet).
-     * @enum {string}
-     */
-    caip2:
-      | "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
-      | "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
-      | "solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY";
-    /**
-     * @inject_tag: validate:"omitempty"
-     * Format: uint64
-     * @description Optional lastValidBlockHeight returned by prepare_sol_transaction for the pinned blockhash; persisted so the confirmation worker can detect blockhash-expiry drops precisely.
-     */
-    lastValidBlockHeight?: string;
-  };
-  v1CreateWebhookEndpointIntent: {
-    /**
-     * @inject_tag: validate:"required,url"
-     * @description The destination URL for webhook deliveries.
-     */
-    url: string;
-    /**
-     * @inject_tag: validate:"required,tk_label_length"
-     * @description Human-readable name for the webhook endpoint.
-     */
-    name: string;
-    /**
-     * @inject_tag: validate:"dive"
-     * @description Event subscriptions. If empty, the endpoint receives all event types.
-     */
-    subscriptions?: definitions["v1WebhookSubscriptionParams"][];
-  };
-  v1CreateMfaPolicyIntent: {
-    userId: string;
-    mfaPolicyName: string;
-    condition: string;
-    requiredAuthenticationMethods: definitions["v1RequiredAuthenticationMethodParams"][];
-    /** Format: int64 */
-    order: number;
-    notes?: string;
-  };
-  v1RequiredAuthenticationMethodParams: {
-    any: definitions["v1AuthenticationMethodParams"][];
-  };
-  v1AuthenticationMethodParams: {
-    type: definitions["v1AuthenticationType"];
-    id?: string;
-  };
-  v1DeleteWebhookEndpointIntent: {
-    /**
-     * @inject_tag: validate:"required,uuid4"
-     * @description Unique identifier of the webhook endpoint to delete.
-     */
-    endpointId: string;
-  };
-  v1OrganizationProtectionProfileRequest: {
-    /** @description Must be ORGANIZATION_PROTECTION_PROFILE_TYPE_PROTECTED_SPONSORED for F0. */
-    profileType: string;
-    /**
-     * Format: int64
-     * @description Protection profile protocol version. F0 supports version 1.
-     */
-    version: number;
-  };
-  v1UpdateMfaPolicyIntent: {
-    userId: string;
-    mfaPolicyId: string;
-    mfaPolicyName?: string;
-    condition?: string;
-    requiredAuthenticationMethods?: definitions["v1RequiredAuthenticationMethodParams"][];
-    /** Format: int64 */
-    order?: number;
-    notes?: string;
-  };
-  v1CreateApiOnlyUsersIntent: {
-    /**
-     * @inject_tag: validate:"required,dive,required"
-     * @description A list of API-only Users to create.
-     */
-    apiOnlyUsers: definitions["v1ApiOnlyUserParams"][];
-  };
-  v1UpdateWebhookEndpointIntent: {
-    /**
-     * @inject_tag: validate:"required,uuid4"
-     * @description Unique identifier of the webhook endpoint to update.
-     */
-    endpointId: string;
-    /** @description Updated destination URL. */
-    url?: string;
-    /** @description Updated human-readable name. */
-    name?: string;
-    /** @description Updated active status. */
+  v1WebhookSubscriptionParams: {
+    /** @description The event type to subscribe to, e.g. ACTIVITY_UPDATES, BALANCE_CONFIRMED_UPDATES. */
+    eventType: string;
+    /** @description JSON-encoded filter criteria for this subscription. Reserved for future use. */
+    filtersJson?: string;
+    /** @description Whether this subscription is active. Defaults to true. */
     isActive?: boolean;
   };
-  /**
-   * @description See `CreateOrganizationIntentV2.imported_root_authenticator`. The public
-   * key / aaguid / transports MUST be resolved server-side from Coordinator's
-   * own authenticator store (never trusted verbatim from an HTTP client).
-   */
-  v1ImportedRootAuthenticatorParams: {
-    /** @inject_tag: validate:"required,tk_label,tk_label_length" */
-    authenticatorName: string;
-    /** @inject_tag: validate:"required,max=256" */
-    credentialId: string;
-    /**
-     * Uncompressed P-256 public key, hex-encoded (with or without "0x" prefix).
-     * @inject_tag: validate:"required"
-     */
+  v1EthFailureDetails: {
+    /** @description Ethereum revert chain, ordered from outermost to innermost. */
+    revertChain?: definitions["v1RevertChainEntry"][];
+  };
+  v1LoginUsage: {
+    /** @description Public key for authentication */
     publicKey: string;
-    aaguid?: string;
-    transports?: definitions["v1AuthenticatorTransport"][];
   };
-  v1CreateSessionProfileIntent: {
-    sessionProfileName: string;
-    scope: string;
-    expirationSeconds?: string;
-    notes?: string;
+  v1SignupUsage: {
+    email?: string;
+    phoneNumber?: string;
+    apiKeys?: definitions["v1ApiKeyParamsV2"][];
+    authenticators?: definitions["v1AuthenticatorParamsV2"][];
+    oauthProviders?: definitions["v1OauthProviderParams"][];
   };
-  v1GetMfaPolicyResponse: {
-    mfaPolicy: definitions["v1MfaPolicy"];
+  v1SignupUsageV2: {
+    email?: string;
+    phoneNumber?: string;
+    apiKeys?: definitions["v1ApiKeyParamsV2"][];
+    authenticators?: definitions["v1AuthenticatorParamsV2"][];
+    oauthProviders?: definitions["v1OauthProviderParamsV2"][];
   };
-  v1GetMfaPolicyRequest: {
-    organizationId: string;
-    userId: string;
-    mfaPolicyId: string;
+  v1SolanaFailureDetails: {
+    source?: string;
+    /** Format: int32 */
+    rpcCode?: number;
+    rpcMessage?: string;
+    transactionErrorJson?: string;
+    logs?: string[];
+    /** Format: uint64 */
+    unitsConsumed?: string;
+    innerInstructionsJson?: string;
   };
-  v1UpdateMfaPolicyRequest: {
-    /** @enum {string} */
-    type: "ACTIVITY_TYPE_UPDATE_MFA_POLICY";
-    timestampMs: string;
-    organizationId: string;
-    parameters: definitions["v1UpdateMfaPolicyIntent"];
+  v1TokenUsage: {
+    /** @description Type of token usage */
+    type: definitions["v1UsageType"];
+    /** @description Unique identifier for the verification token */
+    tokenId: string;
+    signup?: definitions["v1SignupUsage"];
+    login?: definitions["v1LoginUsage"];
+    signupV2?: definitions["v1SignupUsageV2"];
   };
-  v1GetMfaStatusResponse: {
-    mfaStatuses: definitions["v1MfaStatus"][];
+  /** @enum {string} */
+  v1UsageType: "USAGE_TYPE_SIGNUP" | "USAGE_TYPE_LOGIN";
+  v1WebAuthnStamp: {
+    /** @description A base64 url encoded Unique identifier for a given credential. */
+    credentialId: string;
+    /** @description A base64 encoded payload containing metadata about the signing context and the challenge. */
+    clientDataJson: string;
+    /** @description A base64 encoded payload containing metadata about the authenticator. */
+    authenticatorData: string;
+    /** @description The base64 url encoded signature bytes contained within the WebAuthn assertion response. */
+    signature: string;
   };
-  v1MfaStatus: {
-    mfaPolicyId: string;
-    userId: string;
-    satisfied: boolean;
-    satisfiedMethods: definitions["v1AuthenticationMethod"][];
-    requiredMethods: definitions["v1RequiredAuthenticationMethod"][];
-  };
-  v1CreateMfaPolicyRequest: {
-    /** @enum {string} */
-    type: "ACTIVITY_TYPE_CREATE_MFA_POLICY";
-    timestampMs: string;
-    organizationId: string;
-    parameters: definitions["v1CreateMfaPolicyIntent"];
-  };
-  v1GetSessionProfileResponse: {
-    sessionProfile: definitions["v1SessionProfile"];
-  };
-  v1SessionProfile: {
-    sessionProfileId: string;
-    sessionProfileName: string;
-    scope: string;
-    expirationSeconds?: string;
-    notes?: string;
-    createdAt: definitions["externaldatav1Timestamp"];
-    updatedAt: definitions["externaldatav1Timestamp"];
-  };
-  v1GetMfaStatusRequest: {
-    organizationId: string;
-    activityId: string;
-    userId?: string;
-  };
-  v1GetSessionProfilesResponse: {
-    sessionProfiles: definitions["v1SessionProfile"][];
-  };
-  v1CreateSessionProfileRequest: {
-    /** @enum {string} */
-    type: "ACTIVITY_TYPE_CREATE_SESSION_PROFILE";
-    timestampMs: string;
-    organizationId: string;
-    parameters: definitions["v1CreateSessionProfileIntent"];
+  v1NOOPCodegenAnchorResponse: {
+    stamp: definitions["v1WebAuthnStamp"];
+    tokenUsage?: definitions["v1TokenUsage"];
   };
 }
 
 export interface operations {
+  PublicApiService_NOOPCodegenAnchor: {
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1NOOPCodegenAnchorResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   /** Get details about an activity. */
-  PublicApiService_GetActivity: {
+  PublicApiService_GetActivity2: {
     parameters: {
-      body: {
-        body: definitions["v1GetActivityRequest"];
+      query: {
+        /** Unique identifier for a given organization. */
+        organizationId: string;
+        /** Unique identifier for a given activity object. */
+        activityId: string;
       };
     };
     responses: {
@@ -6982,17 +6965,17 @@ export interface operations {
       };
     };
   };
-  /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
-  PublicApiService_GetAttestationDocument: {
+  /** Get details about an activity. */
+  PublicApiService_GetActivity: {
     parameters: {
       body: {
-        body: definitions["v1GetAttestationDocumentRequest"];
+        body: definitions["v1GetActivityRequest"];
       };
     };
     responses: {
       /** A successful response. */
       200: {
-        schema: definitions["v1GetAttestationDocumentResponse"];
+        schema: definitions["v1ActivityResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -7029,6 +7012,24 @@ export interface operations {
       /** A successful response. */
       200: {
         schema: definitions["v1GetApiKeysResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
+  PublicApiService_GetAttestationDocument: {
+    parameters: {
+      body: {
+        body: definitions["v1GetAttestationDocumentRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetAttestationDocumentResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -7119,6 +7120,60 @@ export interface operations {
       /** A successful response. */
       200: {
         schema: definitions["v1BootProofResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get all MFA policies for a user. */
+  PublicApiService_GetMfaPolicies: {
+    parameters: {
+      body: {
+        body: definitions["v1GetMfaPoliciesRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetMfaPoliciesResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get a single MFA policy for a user. */
+  PublicApiService_GetMfaPolicy: {
+    parameters: {
+      body: {
+        body: definitions["v1GetMfaPolicyRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetMfaPolicyResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get the MFA status of an activity for one user or all voting users. */
+  PublicApiService_GetMfaStatus: {
+    parameters: {
+      body: {
+        body: definitions["v1GetMfaStatusRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetMfaStatusResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -7281,6 +7336,42 @@ export interface operations {
       /** A successful response. */
       200: {
         schema: definitions["v1GetSendTransactionStatusResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get one session profile for an organization. */
+  PublicApiService_GetSessionProfile: {
+    parameters: {
+      body: {
+        body: definitions["v1GetSessionProfileRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetSessionProfileResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Get all session profiles for an organization. */
+  PublicApiService_GetSessionProfiles: {
+    parameters: {
+      body: {
+        body: definitions["v1GetSessionProfilesRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetSessionProfilesResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -7666,7 +7757,7 @@ export interface operations {
       };
     };
   };
-  /** Create authenticators to authenticate requests to ZeroXKey. */
+  /** Create authenticators to authenticate requests to 0xkey. */
   PublicApiService_CreateAuthenticators: {
     parameters: {
       body: {
@@ -7707,6 +7798,24 @@ export interface operations {
     parameters: {
       body: {
         body: definitions["v1CreateInvitationsRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Create a new MFA policy for a user. */
+  PublicApiService_CreateMfaPolicy: {
+    parameters: {
+      body: {
+        body: definitions["v1CreateMfaPolicyRequest"];
       };
     };
     responses: {
@@ -7851,6 +7960,24 @@ export interface operations {
     parameters: {
       body: {
         body: definitions["v1CreateReadWriteSessionRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Create a new session profile for an organization. */
+  PublicApiService_CreateSessionProfile: {
+    parameters: {
+      body: {
+        body: definitions["v1CreateSessionProfileRequest"];
       };
     };
     responses: {
@@ -8031,6 +8158,24 @@ export interface operations {
     parameters: {
       body: {
         body: definitions["v1DeleteInvitationRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Delete an MFA policy for a user. */
+  PublicApiService_DeleteMfaPolicy: {
+    parameters: {
+      body: {
+        body: definitions["v1DeleteMfaPolicyRequest"];
       };
     };
     responses: {
@@ -8278,7 +8423,7 @@ export interface operations {
       };
     };
   };
-  /** Submit a transaction intent describing an EVM transaction you would like to broadcast. */
+  /** Submit a transaction intent describing a transaction you would like to broadcast. */
   PublicApiService_EthSendTransaction: {
     parameters: {
       body: {
@@ -8710,25 +8855,7 @@ export interface operations {
       };
     };
   };
-  /** Submit a native TRX transfer intent describing a transaction you would like to broadcast. */
-  PublicApiService_TronSendTransaction: {
-    parameters: {
-      body: {
-        body: definitions["v1TronSendTransactionRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1ActivityResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Submit a transaction intent describing an SVM transaction you would like to broadcast. */
+  /** Submit a transaction intent describing a transaction you would like to broadcast. */
   PublicApiService_SolSendTransaction: {
     parameters: {
       body: {
@@ -8764,11 +8891,47 @@ export interface operations {
       };
     };
   };
+  /** Submit a native TRX transfer intent describing a transaction you would like to broadcast. */
+  PublicApiService_TronSendTransaction: {
+    parameters: {
+      body: {
+        body: definitions["v1TronSendTransactionRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   /** Update a fiat on ramp provider credential */
   PublicApiService_UpdateFiatOnRampCredential: {
     parameters: {
       body: {
         body: definitions["v1UpdateFiatOnRampCredentialRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Update an MFA policy for a user. */
+  PublicApiService_UpdateMfaPolicy: {
+    parameters: {
+      body: {
+        body: definitions["v1UpdateMfaPolicyRequest"];
       };
     };
     responses: {
@@ -8980,185 +9143,11 @@ export interface operations {
       };
     };
   };
-  /** Verify a generic OTP. */
+  /** Verify a generic OTP (legacy, plaintext otpCode). */
   PublicApiService_VerifyOtp: {
     parameters: {
       body: {
         body: definitions["v1VerifyOtpRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1ActivityResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  PublicApiService_NOOPCodegenAnchor: {
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1NOOPCodegenAnchorResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Get the MFA status of an activity for one user or all voting users. */
-  PublicApiService_GetMfaStatus: {
-    parameters: {
-      body: {
-        body: definitions["v1GetMfaStatusRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1GetMfaStatusResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Get all MFA policies for a user. */
-  PublicApiService_GetMfaPolicies: {
-    parameters: {
-      body: {
-        body: definitions["v1GetMfaPoliciesRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1GetMfaPoliciesResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Get a single MFA policy for a user. */
-  PublicApiService_GetMfaPolicy: {
-    parameters: {
-      body: {
-        body: definitions["v1GetMfaPolicyRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1GetMfaPolicyResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Get one session profile for an organization. */
-  PublicApiService_GetSessionProfile: {
-    parameters: {
-      body: {
-        body: definitions["v1GetSessionProfileRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1GetSessionProfileResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Get all session profiles for an organization. */
-  PublicApiService_GetSessionProfiles: {
-    parameters: {
-      body: {
-        body: definitions["v1GetSessionProfilesRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1GetSessionProfilesResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Create a new MFA policy for a user. */
-  PublicApiService_CreateMfaPolicy: {
-    parameters: {
-      body: {
-        body: definitions["v1CreateMfaPolicyRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1ActivityResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Update an MFA policy for a user. */
-  PublicApiService_UpdateMfaPolicy: {
-    parameters: {
-      body: {
-        body: definitions["v1UpdateMfaPolicyRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1ActivityResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Delete an MFA policy for a user. */
-  PublicApiService_DeleteMfaPolicy: {
-    parameters: {
-      body: {
-        body: definitions["v1DeleteMfaPolicyRequest"];
-      };
-    };
-    responses: {
-      /** A successful response. */
-      200: {
-        schema: definitions["v1ActivityResponse"];
-      };
-      /** An unexpected error response. */
-      default: {
-        schema: definitions["rpcStatus"];
-      };
-    };
-  };
-  /** Create a new session profile for an organization. */
-  PublicApiService_CreateSessionProfile: {
-    parameters: {
-      body: {
-        body: definitions["v1CreateSessionProfileRequest"];
       };
     };
     responses: {
