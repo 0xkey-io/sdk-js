@@ -2575,6 +2575,8 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           additionalState: additionalParameters,
           useOauthProxyOrigin: false,
         });
+        const expectedState =
+          new URL(discordAuthUrl).searchParams.get("state") ?? "";
 
         if (!(await InAppBrowser.isAvailable())) {
           throw new ZeroXKeyError(
@@ -2603,7 +2605,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         }
 
         // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
+        const parsed = parseInAppBrowserResult(result.url, expectedState);
         if (!parsed.authCode) {
           throw new ZeroXKeyError(
             "Missing authorization code from Discord OAuth",
@@ -2707,6 +2709,8 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           additionalState: additionalParameters,
           useOauthProxyOrigin: false,
         });
+        const expectedState =
+          new URL(twitterAuthUrl).searchParams.get("state") ?? "";
 
         if (!(await InAppBrowser.isAvailable())) {
           throw new ZeroXKeyError(
@@ -2735,7 +2739,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         }
 
         // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
+        const parsed = parseInAppBrowserResult(result.url, expectedState);
         if (!parsed.authCode) {
           throw new ZeroXKeyError(
             "Missing authorization code from Twitter OAuth",
@@ -2837,6 +2841,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           nonce,
           useOauthProxyOrigin: true,
         });
+        const expectedState = new URL(oauthUrl).searchParams.get("state") ?? "";
 
         if (!(await InAppBrowser.isAvailable())) {
           throw new ZeroXKeyError(
@@ -2865,7 +2870,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         }
 
         // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
+        const parsed = parseInAppBrowserResult(result.url, expectedState);
         if (!parsed.idToken) {
           throw new ZeroXKeyError(
             "oidcToken not found in the response",
@@ -2950,6 +2955,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           additionalState: additionalParameters,
           useOauthProxyOrigin: true,
         });
+        const expectedState = new URL(oauthUrl).searchParams.get("state") ?? "";
 
         if (!(await InAppBrowser.isAvailable())) {
           throw new ZeroXKeyError(
@@ -2978,7 +2984,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         }
 
         // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
+        const parsed = parseInAppBrowserResult(result.url, expectedState);
         if (!parsed.idToken) {
           throw new ZeroXKeyError(
             "oidcToken not found in the response",
@@ -3068,6 +3074,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           additionalState: additionalParameters,
           useOauthProxyOrigin: true,
         });
+        const expectedState = new URL(oauthUrl).searchParams.get("state") ?? "";
 
         if (!(await InAppBrowser.isAvailable())) {
           throw new ZeroXKeyError(
@@ -3096,7 +3103,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         }
 
         // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
+        const parsed = parseInAppBrowserResult(result.url, expectedState);
         if (!parsed.authCode) {
           throw new ZeroXKeyError(
             "Missing authorization code from Facebook OAuth",

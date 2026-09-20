@@ -487,18 +487,37 @@ export interface ParsedInAppBrowserResult {
 /**
  * Parses the deep link URL returned from InAppBrowser after OAuth redirect
  * @param deepLinkUrl - The URL from InAppBrowser result (e.g., "myapp://?id_token=...&state=...")
+ * @param expectedState - The state value from the authorization URL that was opened
  * @returns Parsed OAuth response data
  */
 export function parseInAppBrowserResult(
   deepLinkUrl: string,
+  expectedState?: string,
 ): ParsedInAppBrowserResult {
-  const qsIndex = deepLinkUrl.indexOf("?");
-  const queryString = qsIndex >= 0 ? deepLinkUrl.substring(qsIndex + 1) : "";
-  const urlParams = new URLSearchParams(queryString);
+  let urlParams: URLSearchParams;
+  try {
+    urlParams = new URL(deepLinkUrl).searchParams;
+  } catch {
+    throw new Error("Invalid OAuth callback URL");
+  }
+
+  if (urlParams.has("error")) {
+    throw new Error("OAuth callback returned an error");
+  }
+
+  const returnedStates = urlParams.getAll("state");
+  if (
+    expectedState !== undefined &&
+    (returnedStates.length !== 1 ||
+      returnedStates[0] === "" ||
+      returnedStates[0] !== expectedState)
+  ) {
+    throw new Error("Invalid OAuth callback state");
+  }
 
   const idToken = urlParams.get("id_token");
   const authCode = urlParams.get("code");
-  const stateParam = urlParams.get("state");
+  const stateParam = returnedStates[0] ?? null;
 
   // Parse state parameter
   const stateData = parseStateParam(stateParam);
