@@ -116,6 +116,25 @@ by this configuration layer and must not be treated as enabled capabilities.
 The per-handler `onOauthSuccess` field is also retained for source compatibility
 but is not currently forwarded by the browser handlers.
 
+Pending browser OAuth flows for enabled, fully configured providers are kept in
+secure storage and can resume from the app's initial deep link or a later
+Linking event after the matching client has finished initialization. Recovery
+is deliberately exact: the organization, effective endpoints, client ID,
+redirect route, and selected global completion path must still match. A flow
+started with a per-call client ID that is not reproduced by current provider
+configuration must be restarted; its stored key and transaction are not
+silently redirected to configured defaults. Likewise, the per-handler
+`onOauthSuccess` closure is not activated during either warm completion or
+recovery—use the Provider's existing global redirect callback when the result
+must be delivered outside the internal completion path.
+
+Once a callback has been consumed and handed to the selected completion path,
+the temporary key is retained conservatively even if later callback, session,
+or MFA work rejects or remains pending. Updating Provider configuration does
+not switch an already initialized core client to new organization or endpoint
+settings; remount with a matching initialized client before starting or
+recovering OAuth under those settings.
+
 ## Development
 
 This package is part of the ZeroXKey SDK monorepo. To build:
