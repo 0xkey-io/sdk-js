@@ -3,7 +3,11 @@ import {
   stringToBase64urlString,
   pointEncode,
 } from "@0xkey-io/encoding";
-import type { TStamp, ApiKeyStamperBase } from "../../../__types__";
+import type {
+  TStamp,
+  ApiKeyStamperBase,
+  DeleteKeyPairOptions,
+} from "../../../__types__";
 import { assertValidP256ECDSAKeyPair } from "@utils";
 import { SignatureFormat } from "@0xkey-io/api-key-stamper";
 
@@ -176,7 +180,10 @@ export class IndexedDbStamper implements ApiKeyStamperBase {
     return compressedHex;
   }
 
-  async deleteKeyPair(publicKeyHex: string): Promise<void> {
+  async deleteKeyPair(
+    publicKeyHex: string,
+    _options?: DeleteKeyPairOptions,
+  ): Promise<void> {
     const db = await this.openDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(DB_STORE, "readwrite");
@@ -186,7 +193,14 @@ export class IndexedDbStamper implements ApiKeyStamperBase {
         db.close();
         resolve();
       };
-      tx.onerror = () => reject(tx.error);
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+      tx.onabort = () => {
+        db.close();
+        reject(tx.error);
+      };
     });
   }
 

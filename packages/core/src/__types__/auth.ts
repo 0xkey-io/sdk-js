@@ -21,12 +21,20 @@ export interface TStamper {
 }
 
 /** @internal */
+export type DeleteKeyPairOptions = {
+  legacyFallback?: boolean;
+};
+
+/** @internal */
 export interface ApiKeyStamperBase {
   listKeyPairs(): Promise<string[]>;
   createKeyPair(
     externalKeyPair?: CryptoKeyPair | { publicKey: string; privateKey: string },
   ): Promise<string>;
-  deleteKeyPair(publicKeyHex: string): Promise<void>;
+  deleteKeyPair(
+    publicKeyHex: string,
+    options?: DeleteKeyPairOptions,
+  ): Promise<void>;
   stamp(payload: string, publicKeyHex: string): Promise<TStamp>;
   sign(
     payload: string,

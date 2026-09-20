@@ -5,6 +5,7 @@ import type {
   TStamper,
   StorageBase,
   ApiKeyStamperBase,
+  DeleteKeyPairOptions,
 } from "../../__types__";
 import { ZeroXKeyError, ZeroXKeyErrorCodes } from "@0xkey-io/sdk-types";
 import { SignatureFormat } from "@0xkey-io/api-key-stamper";
@@ -67,18 +68,23 @@ export class CrossPlatformApiKeyStamper implements TStamper {
     return this.stamper.createKeyPair(externalKeyPair);
   }
 
-  deleteKeyPair(publicKeyHex: string): Promise<void> {
+  async deleteKeyPair(
+    publicKeyHex: string,
+    options?: DeleteKeyPairOptions,
+  ): Promise<void> {
     if (!this.stamper) {
       throw new ZeroXKeyError(
         "Stamper is not initialized. Please call .init() before calling this method.",
         ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
       );
     }
-    // If the deleted key pair is the temporary one, clear it.
+
+    await this.stamper.deleteKeyPair(publicKeyHex, options);
+
+    // Preserve the override when deletion fails so an exact retry remains possible.
     if (this.temporaryPublicKey === publicKeyHex) {
       this.temporaryPublicKey = undefined;
     }
-    return this.stamper.deleteKeyPair(publicKeyHex);
   }
 
   // This allows forcing a specific public key to find the key pair for stamping. The key pair must already exist in indexedDB / Keychain.

@@ -1,6 +1,10 @@
 import { ApiKeyStamper, SignatureFormat } from "@0xkey-io/api-key-stamper";
 import { generateP256KeyPair } from "@0xkey-io/crypto";
-import type { TStamp, ApiKeyStamperBase } from "../../../__types__";
+import type {
+  TStamp,
+  ApiKeyStamperBase,
+  DeleteKeyPairOptions,
+} from "../../../__types__";
 
 let Keychain: typeof import("react-native-keychain");
 
@@ -59,7 +63,25 @@ export class ReactNativeKeychainStamper implements ApiKeyStamperBase {
     return publicKey;
   }
 
-  async deleteKeyPair(publicKeyHex: string): Promise<void> {
+  async deleteKeyPair(
+    publicKeyHex: string,
+    options?: DeleteKeyPairOptions,
+  ): Promise<void> {
+    if (options?.legacyFallback === false) {
+      const service = this.serviceName(publicKeyHex);
+      const deleted = await Keychain.resetGenericPassword({ service });
+      if (deleted) return;
+
+      const remaining = await Keychain.getGenericPassword({ service });
+      if (remaining) {
+        throw new Error(`Failed to delete exact key pair: ${publicKeyHex}`);
+      }
+
+      // A missing exact entry is an idempotent success. Never fall back to the
+      // unprefixed legacy service from this path.
+      return;
+    }
+
     // we check if the key exists under the prefixed service name
     // - if it exists, we delete that
     // - otherwise, we assume it's a legacy (unprefixed) key and try to delete that

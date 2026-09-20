@@ -180,7 +180,11 @@ type PublicMethods<T> = {
 
 export type ZeroXKeyClientMethods = Omit<
   PublicMethods<ZeroXKeyClient>,
-  "init" | "config" | "httpClient" | "constructor"
+  | "init"
+  | "config"
+  | "httpClient"
+  | "constructor"
+  | "discardUncommittedApiKeyPair"
 >;
 
 const ERC20_TRANSFER_ABI = [
@@ -1882,7 +1886,7 @@ export class ZeroXKeyClient {
    * - This function logs in a user using the provided OIDC token and public key.
    * - Optionally invalidates any existing sessions for the user if `invalidateExisting` is set to true.
    * - Stores the resulting session token under the specified session key, or the default session key if not provided.
-   * - Handles cleanup of unused key pairs if login fails.
+   * - Retains the caller-supplied public key if login fails; its lifecycle remains the caller's responsibility.
    *
    * @param params.oidcToken - OIDC token received after successful authentication with the OAuth provider.
    * @param params.publicKey - The public key bound to the login session. This key is required because it is directly
@@ -1893,7 +1897,7 @@ export class ZeroXKeyClient {
    * @param params.sessionKey - session key to use for session creation (defaults to the default session key).
    * @returns A promise that resolves to a {@link BaseAuthResult}, which includes:
    *          - `sessionToken`: the signed JWT session token.
-   * @throws {ZeroXKeyError} If there is an error during the OAuth login process or if key pair cleanup fails.
+   * @throws {ZeroXKeyError} If there is an error during the OAuth login process.
    */
   loginWithOauth = async (
     params: LoginWithOauthParams,
@@ -1952,20 +1956,6 @@ export class ZeroXKeyClient {
               "OAuth is disabled on the dashboard for this organization.",
             code: ZeroXKeyErrorCodes.AUTH_METHOD_NOT_ENABLED,
           },
-        },
-        catchFn: async () => {
-          // Clean up the generated key pair if it wasn't successfully used
-          if (publicKey) {
-            try {
-              await this.apiKeyStamper?.deleteKeyPair(publicKey);
-            } catch (cleanupError) {
-              throw new ZeroXKeyError(
-                `Failed to clean up generated key pair`,
-                ZeroXKeyErrorCodes.KEY_PAIR_CLEANUP_ERROR,
-                cleanupError,
-              );
-            }
-          }
         },
       },
     );
@@ -4881,14 +4871,12 @@ export class ZeroXKeyClient {
    *
    * - This function parses and stores a signed JWT session token in local storage, associating it with the given session key.
    * - If a sessionKey is provided, the session will be stored under that key; otherwise, it will use the default session key.
-   * - If a session already exists for the session key, its associated key pair will be deleted before storing the new session.
-   * - After storing the session, any unused key pairs are automatically cleared from storage.
-   * - Ensures that session management is consistent and prevents orphaned key pairs.
+   * - Does not infer API key ownership or remove API key pairs. Keys can be pending or owned by an in-flight callback even when absent from the session index.
    *
    * @param params.sessionToken - JWT session token to store.
    * @param params.sessionKey - session key to store the session under (defaults to the default session key).
    * @returns A promise that resolves when the session is successfully stored.
-   * @throws {ZeroXKeyError} If there is an error storing the session or cleaning up key pairs.
+   * @throws {ZeroXKeyError} If there is an error storing the session.
    */
   storeSession = async (params: StoreSessionParams): Promise<void> => {
     const { sessionToken, sessionKey = SessionKey.DefaultSessionkey } = params;
@@ -4901,9 +4889,6 @@ export class ZeroXKeyClient {
       {
         errorMessage: "Failed to store session",
         errorCode: ZeroXKeyErrorCodes.STORE_SESSION_ERROR,
-      },
-      {
-        finallyFn: async () => await this.clearUnusedKeyPairs(),
       },
     );
   };
@@ -5171,52 +5156,43 @@ export class ZeroXKeyClient {
   };
 
   /**
-   * Clears any unused API key pairs from persistent storage.
+   * @deprecated This method is a conservative no-op. Absence from the session index does not prove that a key is unused: it may be pending or owned by an in-flight callback.
    *
-   * - This function scans all API key pairs stored in indexedDB and removes any key pairs that are not associated with a session in persistent storage.
-   * - Ensures that only key pairs referenced by existing sessions are retained, preventing orphaned or stale key pairs from accumulating.
-   * - Iterates through all stored session keys and builds a map of in-use public keys, then deletes any key pairs not present in this map.
-   * - Intended to be called after session changes (e.g., login, logout, session replacement) to keep key storage clean and secure.
-   *
-   * @returns A promise that resolves when all unused key pairs are successfully cleared.
-   * @throws {ZeroXKeyError} If there is an error listing, checking, or deleting unused key pairs.
+   * This compatibility method does not perform the separately delivered one-time
+   * upgrade migration and is not a future garbage-collection mechanism.
    */
   clearUnusedKeyPairs = async (): Promise<void> => {
-    return withZeroXKeyErrorHandling(
-      async () => {
-        const publicKeys = await this.apiKeyStamper?.listKeyPairs();
-        if (!publicKeys || publicKeys.length === 0) {
-          return;
-        }
-        const sessionKeys = await this.storageManager?.listSessionKeys();
+    return Promise.resolve();
+  };
 
-        const sessionTokensMap: Record<string, string> = {};
-        for (const sessionKey of sessionKeys) {
-          const session = await this.storageManager.getSession(sessionKey);
-          if (session) {
-            sessionTokensMap[session.publicKey!] = sessionKey;
-          }
-        }
+  /**
+   * Discards one freshly created API key pair that is still exclusively owned by
+   * the calling internal lifecycle. Do not call this after handing the key to
+   * completion, a callback, or MFA processing.
+   *
+   * This performs exact current-namespace deletion only. It does not scan keys or
+   * infer ownership from session-index absence.
+   *
+   * @internal
+   */
+  discardUncommittedApiKeyPair = async (publicKey: string): Promise<void> => {
+    if (!publicKey.trim()) {
+      throw new ZeroXKeyError(
+        "Public key must be provided to discard an uncommitted API key pair.",
+        ZeroXKeyErrorCodes.MISSING_PARAMS,
+      );
+    }
 
-        for (const publicKey of publicKeys) {
-          if (!sessionTokensMap[publicKey]) {
-            try {
-              await this.apiKeyStamper?.deleteKeyPair(publicKey);
-            } catch (error) {
-              throw new ZeroXKeyError(
-                `Failed to delete unused key pair ${publicKey}`,
-                ZeroXKeyErrorCodes.INTERNAL_ERROR,
-                error,
-              );
-            }
-          }
-        }
-      },
-      {
-        errorMessage: "Failed to clear unused key pairs",
-        errorCode: ZeroXKeyErrorCodes.CLEAR_UNUSED_KEY_PAIRS_ERROR,
-      },
-    );
+    if (!this.apiKeyStamper) {
+      throw new ZeroXKeyError(
+        "API Key Stamper is not initialized.",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
+    }
+
+    await this.apiKeyStamper.deleteKeyPair(publicKey, {
+      legacyFallback: false,
+    });
   };
 
   /**
