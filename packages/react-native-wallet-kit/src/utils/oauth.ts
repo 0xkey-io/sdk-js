@@ -39,6 +39,16 @@ export function buildOAuthState(params: {
   additionalState?: Record<string, string> | undefined;
 }): string {
   const { provider, flow, publicKey, nonce, additionalState } = params;
+
+  if (
+    additionalState &&
+    ["provider", "flow", "publicKey", "nonce"].some((key) =>
+      Object.prototype.hasOwnProperty.call(additionalState, key),
+    )
+  ) {
+    throw new Error("additionalState contains a reserved OAuth state key");
+  }
+
   let state = `provider=${provider}&flow=${flow}&publicKey=${encodeURIComponent(publicKey)}`;
 
   if (nonce) {
