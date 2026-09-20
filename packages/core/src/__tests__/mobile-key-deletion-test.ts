@@ -20,7 +20,7 @@ const Keychain = jest.requireMock("react-native-keychain") as {
   >;
 };
 
-const MODERN_PREFIX = "com.0xkey.keypair:";
+const MODERN_PREFIX = "com.0xkey.auth.v2.keypair:";
 
 describe("ReactNativeKeychainStamper key deletion", () => {
   const services = new Set<string>();
@@ -61,7 +61,7 @@ describe("ReactNativeKeychainStamper key deletion", () => {
 
     await expect(
       stamper.deleteKeyPair("public-key", { legacyFallback: false }),
-    ).rejects.toThrow("Failed to delete exact key pair: public-key");
+    ).rejects.toThrow("Failed to delete exact key pair");
 
     expect(services).toEqual(new Set([`${MODERN_PREFIX}public-key`]));
   });
@@ -78,12 +78,12 @@ describe("ReactNativeKeychainStamper key deletion", () => {
     expect(services).toEqual(new Set(["public-key"]));
   });
 
-  it("retains legacy fallback by default for existing callers", async () => {
+  it("never falls back to a legacy service, including default callers", async () => {
     services.add("legacy-public-key");
     const stamper = new ReactNativeKeychainStamper();
 
     await stamper.deleteKeyPair("legacy-public-key");
 
-    expect(services).toEqual(new Set());
+    expect(services).toEqual(new Set(["legacy-public-key"]));
   });
 });

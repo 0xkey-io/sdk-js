@@ -11,7 +11,7 @@ import type {
 import { assertValidP256ECDSAKeyPair } from "@utils";
 import { SignatureFormat } from "@0xkey-io/api-key-stamper";
 
-const DB_NAME = "ZeroXKeyStamperDB";
+const DB_NAME = "ZeroXKeyAuthV2";
 const DB_STORE = "KeyStore";
 const stampHeaderName = "X-Stamp";
 

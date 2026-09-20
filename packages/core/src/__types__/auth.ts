@@ -22,6 +22,7 @@ export interface TStamper {
 
 /** @internal */
 export type DeleteKeyPairOptions = {
+  /** Compatibility option for custom stampers. Default v2 stampers never fall back. */
   legacyFallback?: boolean;
 };
 

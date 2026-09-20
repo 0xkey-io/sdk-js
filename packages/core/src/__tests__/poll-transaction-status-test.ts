@@ -36,6 +36,7 @@ function createClientWithStatusResponse(
   const client = new ZeroXKeyClient({
     organizationId: "org-id",
   });
+  (client as any).authReady = true;
 
   (client as any).storageManager = {
     getActiveSession: async () => undefined,

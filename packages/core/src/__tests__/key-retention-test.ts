@@ -139,6 +139,7 @@ function createHarness() {
 
   const client = new ZeroXKeyClient({ organizationId: "org-id" }, stamper);
   (client as any).storageManager = storage;
+  (client as any).authReady = true;
 
   return { client, keyStore, stamper, storage };
 }

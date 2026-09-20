@@ -247,15 +247,77 @@ const encryptOtpAttemptBundle = ({
   return formatHpkeBuf(encrypted);
 };
 
+interface AuthDependencies {
+  apiKeyStamper?: CrossPlatformApiKeyStamper | undefined;
+  passkeyStamper?: CrossPlatformPasskeyStamper | undefined;
+  attestedStamper?: AttestedStamper | undefined;
+  walletManager?: WalletManagerBase | undefined;
+  storageManager?: StorageBase | undefined;
+  httpClient?: ZeroXKeySDKClientBase | undefined;
+}
+
 export class ZeroXKeyClient {
   config: ZeroXKeySDKClientConfig;
-  httpClient!: ZeroXKeySDKClientBase;
+  private authDependencies: AuthDependencies = {};
+  private authReady = false;
+  private initPromise?: Promise<void> | undefined;
 
-  private apiKeyStamper?: CrossPlatformApiKeyStamper | undefined;
-  private passkeyStamper?: CrossPlatformPasskeyStamper | undefined;
-  private attestedStamper?: AttestedStamper | undefined;
-  private walletManager?: WalletManagerBase | undefined;
-  private storageManager!: StorageBase;
+  private assertAuthReady(): void {
+    if (!this.authReady) {
+      throw new ZeroXKeyError(
+        "Client is not initialized",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
+    }
+  }
+
+  get httpClient(): ZeroXKeySDKClientBase {
+    this.assertAuthReady();
+    return this.authDependencies.httpClient!;
+  }
+  set httpClient(value: ZeroXKeySDKClientBase) {
+    this.authDependencies.httpClient = value;
+  }
+
+  private get apiKeyStamper(): CrossPlatformApiKeyStamper | undefined {
+    this.assertAuthReady();
+    return this.authDependencies.apiKeyStamper;
+  }
+  private set apiKeyStamper(value: CrossPlatformApiKeyStamper | undefined) {
+    this.authDependencies.apiKeyStamper = value;
+  }
+
+  private get passkeyStamper(): CrossPlatformPasskeyStamper | undefined {
+    this.assertAuthReady();
+    return this.authDependencies.passkeyStamper;
+  }
+  private set passkeyStamper(value: CrossPlatformPasskeyStamper | undefined) {
+    this.authDependencies.passkeyStamper = value;
+  }
+
+  private get attestedStamper(): AttestedStamper | undefined {
+    this.assertAuthReady();
+    return this.authDependencies.attestedStamper;
+  }
+  private set attestedStamper(value: AttestedStamper | undefined) {
+    this.authDependencies.attestedStamper = value;
+  }
+
+  private get walletManager(): WalletManagerBase | undefined {
+    this.assertAuthReady();
+    return this.authDependencies.walletManager;
+  }
+  private set walletManager(value: WalletManagerBase | undefined) {
+    this.authDependencies.walletManager = value;
+  }
+
+  private get storageManager(): StorageBase {
+    this.assertAuthReady();
+    return this.authDependencies.storageManager!;
+  }
+  private set storageManager(value: StorageBase) {
+    this.authDependencies.storageManager = value;
+  }
 
   constructor(
     config: ZeroXKeySDKClientConfig,
@@ -277,48 +339,51 @@ export class ZeroXKeyClient {
     // Actual initialization will happen in init()
   }
 
-  async init() {
-    // Initialize storage manager
-    // TODO (Amir): StorageManager should be a class that extends StorageBase and has an init method
-    this.storageManager = await createStorageManager();
-
-    // Initialize the API key stamper
-    this.apiKeyStamper = new CrossPlatformApiKeyStamper(this.storageManager);
-    this.attestedStamper = new AttestedStamper(this.apiKeyStamper);
-
-    // we parallelize independent initializations:
-    // - API key stamper init
-    // - Passkey stamper creation and init (if configured)
-    // - Wallet manager creation (if configured)
-    const initTasks: Promise<void>[] = [this.apiKeyStamper.init()];
-
-    if (this.config.passkeyConfig) {
-      const passkeyStamper = new CrossPlatformPasskeyStamper(
-        this.config.passkeyConfig,
-      );
-      initTasks.push(
-        passkeyStamper.init().then(() => {
-          this.passkeyStamper = passkeyStamper;
-        }),
-      );
-    }
-
-    if (
-      this.config.walletConfig?.features?.auth ||
-      this.config.walletConfig?.features?.connecting
-    ) {
-      initTasks.push(
-        createWalletManager(this.config.walletConfig).then((manager) => {
-          this.walletManager = manager;
-        }),
-      );
-    }
-
-    await Promise.all(initTasks);
-
-    // Initialize the HTTP client with the appropriate stampers
-    // Note: not passing anything here since we want to use the configured stampers and this.config
-    this.httpClient = this.createHttpClient();
+  init(): Promise<void> {
+    if (this.initPromise) return this.initPromise;
+    if (this.authReady) return Promise.resolve();
+    this.authReady = false;
+    const attempt = Promise.resolve()
+      .then(async () => {
+        const storageManager = await createStorageManager();
+        const apiKeyStamper = new CrossPlatformApiKeyStamper(storageManager);
+        const dependencies: AuthDependencies = {
+          ...this.authDependencies,
+          storageManager,
+          apiKeyStamper,
+          attestedStamper: new AttestedStamper(apiKeyStamper),
+        };
+        const tasks: Promise<void>[] = [apiKeyStamper.init()];
+        if (this.config.passkeyConfig) {
+          const passkeyStamper = new CrossPlatformPasskeyStamper(
+            this.config.passkeyConfig,
+          );
+          tasks.push(
+            passkeyStamper.init().then(() => {
+              dependencies.passkeyStamper = passkeyStamper;
+            }),
+          );
+        }
+        if (
+          this.config.walletConfig?.features?.auth ||
+          this.config.walletConfig?.features?.connecting
+        ) {
+          tasks.push(
+            createWalletManager(this.config.walletConfig).then((manager) => {
+              dependencies.walletManager = manager;
+            }),
+          );
+        }
+        await Promise.all(tasks);
+        dependencies.httpClient = this.buildHttpClient(dependencies);
+        this.authDependencies = dependencies;
+        this.authReady = true;
+      })
+      .finally(() => {
+        this.initPromise = undefined;
+      });
+    this.initPromise = attempt;
+    return attempt;
   }
 
   /**
@@ -340,6 +405,14 @@ export class ZeroXKeyClient {
   createHttpClient = (
     params?: CreateHttpClientParams,
   ): ZeroXKeySDKClientBase => {
+    this.assertAuthReady();
+    return this.buildHttpClient(this.authDependencies, params);
+  };
+
+  private buildHttpClient = (
+    dependencies: AuthDependencies,
+    params?: CreateHttpClientParams,
+  ): ZeroXKeySDKClientBase => {
     // We can comfortably default to the prod urls here
     const apiBaseUrl =
       params?.apiBaseUrl || this.config.apiBaseUrl || "https://api.0xkey.com";
@@ -357,11 +430,11 @@ export class ZeroXKeyClient {
       apiBaseUrl,
       authProxyUrl,
       organizationId,
-      apiKeyStamper: this.apiKeyStamper,
-      passkeyStamper: this.passkeyStamper,
-      walletStamper: this.walletManager?.stamper,
-      attestedStamper: this.attestedStamper,
-      storageManager: this.storageManager,
+      apiKeyStamper: dependencies.apiKeyStamper,
+      passkeyStamper: dependencies.passkeyStamper,
+      walletStamper: dependencies.walletManager?.stamper,
+      attestedStamper: dependencies.attestedStamper,
+      storageManager: dependencies.storageManager,
     });
   };
 
@@ -415,9 +488,10 @@ export class ZeroXKeyClient {
   setMfaHandler = (handler: ZeroXKeySDKClientConfig["onMfaRequired"]): void => {
     if (handler) this.config.onMfaRequired = handler;
     else delete this.config.onMfaRequired;
-    if (this.httpClient) {
-      if (handler) this.httpClient.config.onMfaRequired = handler;
-      else delete this.httpClient.config.onMfaRequired;
+    const httpClient = this.authDependencies.httpClient;
+    if (httpClient) {
+      if (handler) httpClient.config.onMfaRequired = handler;
+      else delete httpClient.config.onMfaRequired;
     }
   };
 

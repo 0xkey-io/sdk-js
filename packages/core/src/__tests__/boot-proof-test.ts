@@ -51,6 +51,7 @@ function createClientWithGetLatestBootProof(
   impl: (...args: any[]) => Promise<any>,
 ): ZeroXKeyClient {
   const client = new ZeroXKeyClient({ organizationId: "org-id" });
+  (client as any).authReady = true;
 
   (client as any).storageManager = {
     getActiveSession: async () => undefined,
