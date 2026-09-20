@@ -280,7 +280,7 @@ function mockMakeClient(
   const httpClient = {
     config: {
       organizationId: config.organizationId,
-      apiBaseUrl: config.apiBaseUrl || "https://api.0xkey.com",
+      apiBaseUrl: config.apiBaseUrl || "https://api.0xkey.io",
       authProxyUrl: config.authProxyUrl || "https://authproxy.0xkey.io",
       ...(config.authProxyConfigId
         ? { authProxyConfigId: config.authProxyConfigId }
@@ -437,7 +437,7 @@ async function seedCold(input: {
 }) {
   const snapshot = createOauthRoutingSnapshot({
     organizationId: input.organizationId ?? "organization-id",
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     authProxyUrl: "https://authproxy.0xkey.io",
     ...(input.authProxyConfigId
       ? { authProxyConfigId: input.authProxyConfigId }

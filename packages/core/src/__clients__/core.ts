@@ -393,7 +393,7 @@ export class ZeroXKeyClient {
    * By default, it uses the configuration provided during the ZeroXKeyClient initialization.
    *
    * @param params - Optional configuration parameters to override the default client configuration.
-   * @param params.apiBaseUrl - The base URL of the ZeroXKey API (defaults to `https://api.0xkey.com` if not provided).
+   * @param params.apiBaseUrl - The base URL of the ZeroXKey API (defaults to `https://api.0xkey.io` if not provided).
    * @param params.organizationId - The organization ID to associate requests with.
    * @param params.authProxyUrl - The base URL of the Auth Proxy (defaults to `https://authproxy.0xkey.io` if not provided).
    * @param params.authProxyConfigId - The configuration ID to use when making Auth Proxy requests.
@@ -415,7 +415,7 @@ export class ZeroXKeyClient {
   ): ZeroXKeySDKClientBase => {
     // We can comfortably default to the prod urls here
     const apiBaseUrl =
-      params?.apiBaseUrl || this.config.apiBaseUrl || "https://api.0xkey.com";
+      params?.apiBaseUrl || this.config.apiBaseUrl || "https://api.0xkey.io";
     const authProxyUrl =
       params?.authProxyUrl ||
       this.config.authProxyUrl ||
