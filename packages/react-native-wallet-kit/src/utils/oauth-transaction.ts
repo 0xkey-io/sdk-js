@@ -27,6 +27,8 @@ export interface OAuthTransactionDependencies {
 export interface OAuthTransactionContext {
   configId: string;
   provider: OAuthProviders;
+  /** Opaque non-secret routing snapshot supplied by trusted orchestration. */
+  binding: string;
 }
 
 interface CleanupDescriptor extends OAuthTransactionContext {
@@ -44,10 +46,8 @@ export type BeginOAuthTransactionInput = CleanupDescriptor & {
       }
   );
 
-export interface OAuthTransactionMetadata {
+export interface OAuthTransactionMetadata extends OAuthTransactionContext {
   id: string;
-  configId: string;
-  provider: OAuthProviders;
   publicKey: string;
   expiresAt: number;
 }
@@ -107,7 +107,24 @@ function isProvider(value: unknown): value is OAuthProviders {
 function hasContext(value: unknown): value is OAuthTransactionContext {
   if (!value || typeof value !== "object") return false;
   const context = value as OAuthTransactionContext;
-  return isNonEmptyString(context.configId) && isProvider(context.provider);
+  return (
+    isNonEmptyString(context.configId) &&
+    isProvider(context.provider) &&
+    isNonEmptyString(context.binding)
+  );
+}
+
+function snapshotContext(
+  value: OAuthTransactionContext,
+): OAuthTransactionContext {
+  if (!value || typeof value !== "object") throw error(INVALID_ERROR);
+  const context = {
+    configId: value.configId,
+    provider: value.provider,
+    binding: value.binding,
+  };
+  if (!hasContext(context)) throw error(INVALID_ERROR);
+  return context;
 }
 
 function assertContextMatches(
@@ -116,7 +133,8 @@ function assertContextMatches(
 ): void {
   if (
     stored.configId !== trusted.configId ||
-    stored.provider !== trusted.provider
+    stored.provider !== trusted.provider ||
+    stored.binding !== trusted.binding
   ) {
     throw error(UNAVAILABLE_ERROR);
   }
@@ -132,6 +150,7 @@ function cleanupDescriptor(owner: CleanupDescriptor): CleanupDescriptor {
     publicKey: owner.publicKey,
     configId: owner.configId,
     provider: owner.provider,
+    binding: owner.binding,
   };
 }
 
@@ -157,8 +176,7 @@ function parseStoredRecord(
   if (
     record.kind === "transaction" &&
     record.id === expectedId &&
-    isNonEmptyString(record.configId) &&
-    isProvider(record.provider) &&
+    hasContext(record) &&
     isNonEmptyString(record.publicKey) &&
     isNonEmptyString(record.expectedState) &&
     typeof record.expiresAt === "number" &&
@@ -216,6 +234,10 @@ export function createOAuthTransactionStore(
     /** From trusted configuration/provider routing, never callback fields. */
     context: OAuthTransactionContext,
   ): Promise<ConsumedOAuthTransaction>;
+  /** Routing metadata only; consume must recheck trusted context and state. */
+  getOAuthTransactionContext(
+    id: string,
+  ): Promise<OAuthTransactionContext | null>;
   /** Exact-owner operation; never cancel an untrusted cold-start lookup hint. */
   cancelOAuthTransaction(id: string): Promise<void>;
 } {
@@ -314,16 +336,20 @@ export function createOAuthTransactionStore(
 
   return {
     async beginOAuthTransaction(input) {
+      const context = snapshotContext(input);
+      const {
+        publicKey,
+        codeVerifier,
+        expectedState: directState,
+        createExpectedState,
+      } = input;
+      const owner = { ...context, publicKey };
       if (
-        !isNonEmptyString(input.configId) ||
-        !isProvider(input.provider) ||
-        !isNonEmptyString(input.publicKey) ||
-        (input.expectedState !== undefined
-          ? !isNonEmptyString(input.expectedState) ||
-            input.createExpectedState !== undefined
-          : typeof input.createExpectedState !== "function") ||
-        (input.codeVerifier !== undefined &&
-          !isNonEmptyString(input.codeVerifier))
+        !isNonEmptyString(publicKey) ||
+        (directState !== undefined
+          ? !isNonEmptyString(directState) || createExpectedState !== undefined
+          : typeof createExpectedState !== "function") ||
+        (codeVerifier !== undefined && !isNonEmptyString(codeVerifier))
       ) {
         throw error(INVALID_ERROR);
       }
@@ -339,9 +365,9 @@ export function createOAuthTransactionStore(
             existing = await secureStorage.get(key);
           } catch {
             try {
-              await cleanup(input.publicKey);
+              await cleanup(publicKey);
             } catch {
-              const cleanupRetryId = allocateCleanupRetryId(input);
+              const cleanupRetryId = allocateCleanupRetryId(owner);
               throw error(PERSISTENCE_ERROR, undefined, cleanupRetryId);
             }
             throw error(PERSISTENCE_ERROR);
@@ -349,9 +375,9 @@ export function createOAuthTransactionStore(
           if (existing !== null) return null;
           let expectedState: unknown;
           try {
-            expectedState = input.createExpectedState
-              ? input.createExpectedState(id)
-              : input.expectedState;
+            expectedState = createExpectedState
+              ? createExpectedState(id)
+              : directState;
           } catch {
             throw error(INVALID_ERROR);
           }
@@ -375,14 +401,10 @@ export function createOAuthTransactionStore(
           const transaction: StoredOAuthTransaction = {
             kind: "transaction",
             id,
-            configId: input.configId,
-            provider: input.provider,
-            publicKey: input.publicKey,
+            ...owner,
             expectedState,
             expiresAt: startedAt + TRANSACTION_TTL_MS,
-            ...(input.codeVerifier === undefined
-              ? {}
-              : { codeVerifier: input.codeVerifier }),
+            ...(codeVerifier === undefined ? {} : { codeVerifier }),
           };
           try {
             await secureStorage.set(key, JSON.stringify(transaction));
@@ -411,12 +433,12 @@ export function createOAuthTransactionStore(
 
     async consumeOAuthTransaction(id, returnedState, context) {
       assertId(id);
-      if (!hasContext(context)) throw error(INVALID_ERROR);
+      const trusted = snapshotContext(context);
       return withStorageLock(secureStorage, id, async () => {
         const key = storageKey(id);
         const pendingOwner = cleanupIntents!.get(id);
         if (pendingOwner !== undefined) {
-          assertContextMatches(pendingOwner, context);
+          assertContextMatches(pendingOwner, trusted);
           await retryCleanupIntent(key, id, pendingOwner);
           throw error(UNAVAILABLE_ERROR);
         }
@@ -424,7 +446,7 @@ export function createOAuthTransactionStore(
         if (!transaction) {
           throw error(UNAVAILABLE_ERROR);
         }
-        assertContextMatches(transaction, context);
+        assertContextMatches(transaction, trusted);
 
         if (transaction.kind === "cleanup-pending") {
           await retryCleanupIntent(key, id, transaction);
@@ -450,6 +472,31 @@ export function createOAuthTransactionStore(
           ...consumed
         } = transaction;
         return consumed;
+      });
+    },
+
+    async getOAuthTransactionContext(id) {
+      assertId(id);
+      return withStorageLock(secureStorage, id, async () => {
+        if (cleanupIntents!.has(id)) return null;
+        const transaction = await load(id);
+        if (!transaction || transaction.kind !== "transaction") return null;
+        let currentTime: number;
+        try {
+          currentTime = now();
+        } catch {
+          return null;
+        }
+        if (
+          !Number.isFinite(currentTime) ||
+          transaction.expiresAt <= currentTime
+        )
+          return null;
+        return {
+          configId: transaction.configId,
+          provider: transaction.provider,
+          binding: transaction.binding,
+        };
       });
     },
 

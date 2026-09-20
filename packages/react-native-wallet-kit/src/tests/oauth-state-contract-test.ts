@@ -214,6 +214,7 @@ describe("OAuth state contract", () => {
     }).beginOAuthTransaction({
       configId: "test-config",
       provider: OAuthProviders.GOOGLE,
+      binding: "routing-1",
       publicKey: "trusted-public-key",
       codeVerifier: "test-verifier",
       createExpectedState: (id) => {
@@ -242,6 +243,7 @@ describe("OAuth state contract", () => {
     const context = {
       configId: "test-config",
       provider: OAuthProviders.GOOGLE,
+      binding: "routing-1",
     };
     await expect(
       resumed.consumeOAuthTransaction(

@@ -45,6 +45,7 @@ function makeStore() {
 const input = {
   configId: "config-1",
   provider: OAuthProviders.GOOGLE,
+  binding: "routing-1",
   publicKey: "public-key-1",
   codeVerifier: "verifier-secret-1",
 };

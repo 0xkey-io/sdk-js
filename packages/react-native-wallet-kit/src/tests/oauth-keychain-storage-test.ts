@@ -83,6 +83,7 @@ function transactionInput(overrides: Record<string, unknown> = {}) {
   return {
     configId: "config-1",
     provider: OAuthProviders.GOOGLE,
+    binding: "routing-1",
     publicKey: "public-key-1",
     expectedState: "provider=google&state=one",
     codeVerifier: "verifier-secret-1",
@@ -439,7 +440,11 @@ describe("OAuth transaction Keychain storage", () => {
     const consuming = secondStore.consumeOAuthTransaction(
       first.id,
       "provider=google&state=one",
-      { configId: "config-1", provider: OAuthProviders.GOOGLE },
+      {
+        configId: "config-1",
+        provider: OAuthProviders.GOOGLE,
+        binding: "routing-1",
+      },
     );
     void consuming.then(
       () => {
@@ -481,7 +486,11 @@ describe("OAuth transaction Keychain storage", () => {
       firstStore.consumeOAuthTransaction(
         second.id,
         "provider=google&state=two",
-        { configId: "config-1", provider: OAuthProviders.GOOGLE },
+        {
+          configId: "config-1",
+          provider: OAuthProviders.GOOGLE,
+          binding: "routing-1",
+        },
       ),
     ).resolves.toMatchObject({ codeVerifier: "verifier-secret-2" });
   });
@@ -506,12 +515,20 @@ describe("OAuth transaction Keychain storage", () => {
       firstStore.consumeOAuthTransaction(
         begun.id,
         transactionInput().expectedState,
-        { configId: "config-1", provider: OAuthProviders.GOOGLE },
+        {
+          configId: "config-1",
+          provider: OAuthProviders.GOOGLE,
+          binding: "routing-1",
+        },
       ),
       secondStore.consumeOAuthTransaction(
         begun.id,
         transactionInput().expectedState,
-        { configId: "config-1", provider: OAuthProviders.GOOGLE },
+        {
+          configId: "config-1",
+          provider: OAuthProviders.GOOGLE,
+          binding: "routing-1",
+        },
       ),
     ]);
 
@@ -538,7 +555,11 @@ describe("OAuth transaction Keychain storage", () => {
       firstStore.consumeOAuthTransaction(
         begun.id,
         transactionInput().expectedState,
-        { configId: "config-1", provider: OAuthProviders.GOOGLE },
+        {
+          configId: "config-1",
+          provider: OAuthProviders.GOOGLE,
+          binding: "routing-1",
+        },
       ),
     ).rejects.toThrow("OAuth transaction unavailable");
   });

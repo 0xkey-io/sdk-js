@@ -67,6 +67,7 @@ function fixture(overrides: Record<string, unknown> = {}) {
   return {
     configId: "config-1",
     provider: OAuthProviders.GOOGLE,
+    binding: "routing-1",
     publicKey: "public-key-1",
     expectedState: "provider=google&nonce=state-1",
     codeVerifier: "verifier-secret-1",
@@ -322,6 +323,7 @@ describe("OAuth transaction store", () => {
       store.consumeOAuthTransaction(calls[0]!, "created-state", {
         configId: "other",
         provider: OAuthProviders.GOOGLE,
+        binding: "routing-1",
       }),
     ).rejects.toThrow("OAuth transaction unavailable");
     expect([...storage.values]).toEqual(original);
@@ -373,8 +375,16 @@ describe("OAuth transaction store", () => {
       const resumed = makeStore(resumedStorage, options);
       const original = [...resumedStorage.values];
       for (const context of [
-        { configId: "other-config", provider: OAuthProviders.GOOGLE },
-        { configId: "config-1", provider: OAuthProviders.X },
+        {
+          configId: "other-config",
+          provider: OAuthProviders.GOOGLE,
+          binding: "routing-1",
+        },
+        {
+          configId: "config-1",
+          provider: OAuthProviders.X,
+          binding: "routing-1",
+        },
       ]) {
         await expect(
           resumed.consumeOAuthTransaction(
@@ -443,8 +453,16 @@ describe("OAuth transaction store", () => {
       });
       for (const context of [
         fixture(),
-        { configId: "other", provider: OAuthProviders.GOOGLE },
-        { configId: "config-1", provider: OAuthProviders.X },
+        {
+          configId: "other",
+          provider: OAuthProviders.GOOGLE,
+          binding: "routing-1",
+        },
+        {
+          configId: "config-1",
+          provider: OAuthProviders.X,
+          binding: "routing-1",
+        },
       ]) {
         await expect(
           store.consumeOAuthTransaction(id, fixture().expectedState, context),
@@ -460,8 +478,8 @@ describe("OAuth transaction store", () => {
     undefined,
     null,
     {},
-    { configId: "", provider: OAuthProviders.GOOGLE },
-    { configId: "config-1", provider: "unknown" },
+    { configId: "", provider: OAuthProviders.GOOGLE, binding: "routing-1" },
+    { configId: "config-1", provider: "unknown", binding: "routing-1" },
   ])(
     "rejects invalid trusted context before accessing storage (%s)",
     async (context) => {
@@ -495,6 +513,7 @@ describe("OAuth transaction store", () => {
       id: "01010101010101010101010101010101",
       configId: "config-1",
       provider: OAuthProviders.GOOGLE,
+      binding: "routing-1",
       publicKey: "public-key-1",
       expiresAt: 1_300_000,
     });
@@ -658,7 +677,7 @@ describe("OAuth transaction store", () => {
         store.consumeOAuthTransaction(
           begun.id,
           "provider=google&nonce=state-1",
-          { configId: "config-1", provider },
+          { configId: "config-1", provider, binding: "routing-1" },
         ),
       ).resolves.toMatchObject({ provider, codeVerifier: "verifier-secret-1" });
     },
