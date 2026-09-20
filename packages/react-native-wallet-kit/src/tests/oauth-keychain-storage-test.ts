@@ -220,6 +220,43 @@ describe("OAuth transaction Keychain storage", () => {
     );
   });
 
+  it.each(
+    ["array", "coercible object", "throwing object"].flatMap((shape) =>
+      (["get", "set", "remove"] as const).map(
+        (operation) => [shape, operation] as const,
+      ),
+    ),
+  )(
+    "rejects a runtime %s key on %s without coercion or native I/O",
+    async (shape, operation) => {
+      const keychain = createSyntheticKeychain();
+      const storage = loadModule().createOAuthKeychainStorage(keychain);
+      const validKey =
+        "0xkey.oauth.transaction.v1.11111111111111111111111111111111";
+      let coercions = 0;
+      const invalidKey = shape === "array" ? [validKey] : {};
+      Object.assign(invalidKey, {
+        toString() {
+          coercions++;
+          if (shape === "throwing object") throw new Error("coercion-secret");
+          return validKey;
+        },
+      });
+      const failure = await (
+        operation === "set"
+          ? storage.set(invalidKey as unknown as string, "record-secret")
+          : storage[operation](invalidKey as unknown as string)
+      ).catch((error: unknown) => error);
+      expect(failure).toMatchObject({
+        message: "OAuth transaction secure storage failed",
+      });
+      expect(String(failure)).not.toContain("coercion-secret");
+      expect(coercions).toBe(0);
+      expect(keychain.calls).toEqual([]);
+      expect(keychain.values.size).toBe(0);
+    },
+  );
+
   it("rejects invalid keys and non-string values before native I/O", async () => {
     const keychain = createSyntheticKeychain();
     const storage = loadModule().createOAuthKeychainStorage(keychain);

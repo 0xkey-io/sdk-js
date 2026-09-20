@@ -44,6 +44,7 @@ function isKeychainModule(value: unknown): value is OAuthKeychainModule {
 }
 
 function serviceForKey(key: string): string {
+  if (typeof key !== "string") throw storageFailure();
   const match = VALID_TRANSACTION_KEY.exec(key);
   if (!match) throw storageFailure();
   return `${TRANSACTION_SERVICE_PREFIX}${match[1]}`;

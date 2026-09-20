@@ -357,14 +357,16 @@ export function createOAuthTransactionStore(
           }
           if (!isNonEmptyString(expectedState)) {
             try {
-              // The intrinsic brand-checks genuine Promises without reading a
-              // thenable's `then`. Observe rejection without awaiting a result
-              // or accepting either outcome as state.
-              void Promise.prototype.then.call(
-                expectedState,
-                () => undefined,
-                () => undefined,
-              );
+              // Observe only current-runtime Promises: the RN fallback's
+              // `then` does not brand-check arbitrary receivers. Discard both
+              // outcomes without awaiting or accepting either as state.
+              if (expectedState instanceof Promise) {
+                void Promise.prototype.then.call(
+                  expectedState,
+                  () => undefined,
+                  () => undefined,
+                );
+              }
             } catch {
               // Non-Promise values remain invalid; never invoke their `then`.
             }
