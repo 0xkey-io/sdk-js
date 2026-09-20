@@ -1,38 +1,23 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { ZeroXKeyErrorCodes } from "@0xkey-io/sdk-types";
 import type { v1BootProof } from "@0xkey-io/sdk-types";
 import type { ParsedManifestEnvelope } from "@0xkey-io/crypto";
-
-jest.mock(
-  "@polyfills/window",
-  () => ({
-    __esModule: true,
-    default: {
-      localStorage: {
-        getItem: jest.fn(),
-        setItem: jest.fn(),
-        removeItem: jest.fn(),
-      },
-    },
-  }),
-  { virtual: true },
-);
-jest.mock(
-  "@utils",
-  () => ({
-    __esModule: true,
-    parseSession: jest.fn(),
-  }),
-  { virtual: true },
-);
 
 jest.mock("@0xkey-io/crypto", () => ({
   verifyBootProof: jest.fn(),
 }));
 
-import { ZeroXKeyClient } from "../__clients__/core";
+import type { ZeroXKeyClient } from "../__clients__/core";
 import { StamperType } from "../__types__";
 import { verifyBootProof } from "@0xkey-io/crypto";
+import { createReadyClient } from "./test-support/ready-client";
 
 const mockVerifyBootProof = jest.mocked(verifyBootProof);
 
@@ -47,28 +32,27 @@ const fakeBootProof: v1BootProof = {
   createdAt: { seconds: "1758057949", nanos: "436158000" },
 };
 
-function createClientWithGetLatestBootProof(
+async function createClientWithGetLatestBootProof(
   impl: (...args: any[]) => Promise<any>,
-): ZeroXKeyClient {
-  const client = new ZeroXKeyClient({ organizationId: "org-id" });
-  (client as any).authReady = true;
-
-  (client as any).storageManager = {
-    getActiveSession: async () => undefined,
-  };
-  (client as any).httpClient = {
-    getLatestBootProof: impl,
-  };
+): Promise<ZeroXKeyClient> {
+  const client = await createReadyClient();
+  jest.spyOn(client.httpClient, "getLatestBootProof").mockImplementation(impl);
 
   return client;
 }
+
+afterEach(() => {
+  jest.restoreAllMocks();
+  delete (globalThis as any).document;
+  delete (globalThis as any).window;
+});
 
 describe("fetchLatestBootProof", () => {
   it("returns the boot proof for a valid app name", async () => {
     const getLatestBootProof = jest.fn(async () => ({
       bootProof: fakeBootProof,
     }));
-    const client = createClientWithGetLatestBootProof(getLatestBootProof);
+    const client = await createClientWithGetLatestBootProof(getLatestBootProof);
 
     const result = await client.fetchLatestBootProof({
       appName: "signer",
@@ -84,7 +68,7 @@ describe("fetchLatestBootProof", () => {
   });
 
   it("throws a ZeroXKeyError when appName is missing", async () => {
-    const client = createClientWithGetLatestBootProof(async () => ({
+    const client = await createClientWithGetLatestBootProof(async () => ({
       bootProof: fakeBootProof,
     }));
 
@@ -101,7 +85,7 @@ describe("fetchLatestBootProof", () => {
   });
 
   it("throws a ZeroXKeyError when the response has no boot proof", async () => {
-    const client = createClientWithGetLatestBootProof(async () => ({}));
+    const client = await createClientWithGetLatestBootProof(async () => ({}));
 
     await expect(
       client.fetchLatestBootProof({
@@ -144,7 +128,7 @@ describe("verifyLatestBootProof", () => {
     const getLatestBootProof = jest.fn(async () => ({
       bootProof: fakeBootProof,
     }));
-    const client = createClientWithGetLatestBootProof(getLatestBootProof);
+    const client = await createClientWithGetLatestBootProof(getLatestBootProof);
 
     const anchor = {
       threshold: 1,
@@ -170,7 +154,7 @@ describe("verifyLatestBootProof", () => {
     const getLatestBootProof = jest.fn(async () => ({
       bootProof: fakeBootProof,
     }));
-    const client = createClientWithGetLatestBootProof(getLatestBootProof);
+    const client = await createClientWithGetLatestBootProof(getLatestBootProof);
 
     await expect(
       client.verifyLatestBootProof({
@@ -188,7 +172,7 @@ describe("verifyLatestBootProof", () => {
     // withZeroXKeyErrorHandling preserves an already-ZeroXKeyError's own
     // code/message rather than re-wrapping it, so a missing-boot-proof fetch
     // failure surfaces as BAD_RESPONSE, not VERIFY_LATEST_BOOT_PROOF_ERROR.
-    const client = createClientWithGetLatestBootProof(async () => ({}));
+    const client = await createClientWithGetLatestBootProof(async () => ({}));
 
     await expect(
       client.verifyLatestBootProof({
