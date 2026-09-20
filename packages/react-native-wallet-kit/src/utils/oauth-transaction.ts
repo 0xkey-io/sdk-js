@@ -359,6 +359,7 @@ export function createOAuthTransactionStore(
       for (let attempt = 0; attempt < 16; attempt += 1) {
         const id = encodeId(randomBytes(TRANSACTION_ID_BYTES));
         const stored = await withStorageLock(secureStorage, id, async () => {
+          if (cleanupIntents!.has(id)) return null;
           const key = storageKey(id);
           let existing: string | null;
           try {
@@ -414,8 +415,9 @@ export function createOAuthTransactionStore(
               await invalidateAndCleanup(key, id, transaction);
             } catch {
               // Preserve the cleanup intent for cancel(transactionId) retry.
+              throw error(PERSISTENCE_ERROR, id);
             }
-            throw error(PERSISTENCE_ERROR, id);
+            throw error(PERSISTENCE_ERROR);
           }
         });
         if (stored) {

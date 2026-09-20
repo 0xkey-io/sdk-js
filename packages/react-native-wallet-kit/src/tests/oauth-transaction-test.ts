@@ -335,6 +335,162 @@ describe("OAuth transaction store", () => {
     expect(storage.values.size).toBe(0);
   });
 
+  it.each(["before-write", "after-write"])(
+    "omits cleanup handles when a %s persistence failure is fully cleaned",
+    async (failureTiming) => {
+      const storage = new MemoryStorage();
+      const keys = new Set(["key-a", "key-b"]);
+      const cleaned: string[] = [];
+      const store = makeStore(storage, {
+        randomBytes: randomSource(new Array(16).fill(1), new Array(16).fill(1)),
+        cleanup: async (publicKey) => {
+          cleaned.push(publicKey);
+          keys.delete(publicKey);
+        },
+      });
+      if (failureTiming === "before-write") storage.failSet = true;
+      else storage.failSetAfterWrite = true;
+
+      const failure = await store
+        .beginOAuthTransaction(
+          fixture({ publicKey: "key-a", expectedState: "state-a" }),
+        )
+        .catch((caught: unknown) => caught);
+
+      expect(failure).toMatchObject({
+        message: "OAuth transaction persistence failed",
+      });
+      expect(failure).not.toHaveProperty("transactionId");
+      expect(failure).not.toHaveProperty("cleanupRetryId");
+      expect(cleaned).toEqual(["key-a"]);
+      expect(keys).toEqual(new Set(["key-b"]));
+      expect(storage.values.size).toBe(0);
+
+      // The caller may repeat exact disposal after a handle-free failure.
+      keys.delete("key-a");
+      storage.failSet = false;
+      storage.failSetAfterWrite = false;
+      const next = await store.beginOAuthTransaction(
+        fixture({ publicKey: "key-b", expectedState: "state-b" }),
+      );
+      expect(next.id).toBe("01010101010101010101010101010101");
+      await expect(
+        store.consumeOAuthTransaction(next.id, "state-b", fixture()),
+      ).resolves.toMatchObject({ publicKey: "key-b" });
+      expect(keys).toEqual(new Set(["key-b"]));
+    },
+  );
+
+  it("reserves a volatile cleanup intent until its owner cancels it", async () => {
+    const storage = new MemoryStorage();
+    const keys = new Set(["key-a", "key-b"]);
+    let cleanupFails = true;
+    const store = makeStore(storage, {
+      randomBytes: randomSource(
+        new Array(16).fill(1),
+        new Array(16).fill(1),
+        new Array(16).fill(2),
+      ),
+      cleanup: async (publicKey) => {
+        if (cleanupFails) throw new Error("cleanup failed");
+        keys.delete(publicKey);
+      },
+    });
+    storage.failSet = true;
+    const firstFailure = await store
+      .beginOAuthTransaction(
+        fixture({ publicKey: "key-a", expectedState: "state-a" }),
+      )
+      .catch((caught: unknown) => caught);
+    expect(firstFailure).toMatchObject({
+      message: "OAuth transaction persistence failed",
+      transactionId: "01010101010101010101010101010101",
+    });
+    expect(storage.values.size).toBe(0);
+
+    cleanupFails = false;
+    storage.failSet = false;
+    const stateFactoryIds: string[] = [];
+    const { expectedState: _, ...secondInput } = fixture({
+      publicKey: "key-b",
+    });
+    const second = await store.beginOAuthTransaction({
+      ...secondInput,
+      createExpectedState: (id) => {
+        stateFactoryIds.push(id);
+        return `state-${id}`;
+      },
+    });
+    expect(stateFactoryIds).toEqual(["02020202020202020202020202020202"]);
+    expect(second.id).toBe("02020202020202020202020202020202");
+
+    await expect(
+      store.cancelOAuthTransaction(
+        (firstFailure as { transactionId: string }).transactionId,
+      ),
+    ).resolves.toBeUndefined();
+    expect(keys).toEqual(new Set(["key-b"]));
+    await expect(
+      store.consumeOAuthTransaction(second.id, `state-${second.id}`, fixture()),
+    ).resolves.toMatchObject({ publicKey: "key-b" });
+  });
+
+  it("fails after 16 volatile-intent collisions without stealing ownership", async () => {
+    const storage = new MemoryStorage();
+    const keys = new Set(["key-a", "key-b"]);
+    let cleanupFails = true;
+    const store = makeStore(storage, {
+      randomBytes: randomSource(new Array(16).fill(1)),
+      cleanup: async (publicKey) => {
+        if (cleanupFails) throw new Error("cleanup failed");
+        keys.delete(publicKey);
+      },
+    });
+    storage.failSet = true;
+    const firstFailure = await store
+      .beginOAuthTransaction(
+        fixture({ publicKey: "key-a", expectedState: "state-a" }),
+      )
+      .catch((caught: unknown) => caught);
+    expect(firstFailure).toMatchObject({
+      transactionId: "01010101010101010101010101010101",
+    });
+
+    cleanupFails = false;
+    storage.failSet = false;
+    let factoryCalls = 0;
+    const { expectedState: _, ...secondInput } = fixture({
+      publicKey: "key-b",
+    });
+    const secondFailure = await store
+      .beginOAuthTransaction({
+        ...secondInput,
+        createExpectedState: () => {
+          factoryCalls += 1;
+          return "state-b";
+        },
+      })
+      .catch((caught: unknown) => caught);
+    expect(secondFailure).toMatchObject({
+      message: "OAuth transaction persistence failed",
+    });
+    expect(secondFailure).not.toHaveProperty("transactionId");
+    expect(secondFailure).not.toHaveProperty("cleanupRetryId");
+    expect(factoryCalls).toBe(0);
+    expect(storage.values.size).toBe(0);
+    expect(keys).toEqual(new Set(["key-a", "key-b"]));
+
+    // Handle-free failure leaves the strictly fresh second key caller-owned.
+    keys.delete("key-b");
+    expect(keys).toEqual(new Set(["key-a"]));
+    await expect(
+      store.cancelOAuthTransaction(
+        (firstFailure as { transactionId: string }).transactionId,
+      ),
+    ).resolves.toBeUndefined();
+    expect(keys).toEqual(new Set());
+  });
+
   it.each(["live", "expired", "tombstone", "intent", "contextless-intent"])(
     "preserves %s bytes and keys across wrong config/provider and permits the rightful context",
     async (kind) => {
