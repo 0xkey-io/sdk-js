@@ -49,9 +49,12 @@ export class ReactNativeKeychainStamper implements ApiKeyStamperBase {
 
     // we store in Keychain with a
     // ZeroXKey-specific service prefix
-    await Keychain.setGenericPassword(publicKey, privateKey, {
+    const stored = await Keychain.setGenericPassword(publicKey, privateKey, {
       service: this.serviceName(publicKey),
     });
+    if (!stored) {
+      throw new Error("Failed to store key pair");
+    }
 
     return publicKey;
   }
