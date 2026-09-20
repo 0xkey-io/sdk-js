@@ -116,6 +116,15 @@ by this configuration layer and must not be treated as enabled capabilities.
 The per-handler `onOauthSuccess` field is also retained for source compatibility
 but is not currently forwarded by the browser handlers.
 
+The candidate default hosted HTTPS callback and the customer App scheme are
+separate routes. With `appScheme: "example"` and no configured `redirectUri`,
+the browser handlers generate the provider callback
+`https://oauth-redirect.0xkey.io/?scheme=example` and return to the app through
+`example://`. Provider registration must match the generated callback bytes
+exactly, including the trailing slash and query. This hosted default is a
+release candidate, not a claim of current availability: DNS, TLS, health, and
+exact provider-callback acceptance remain release gates.
+
 Pending browser OAuth flows for enabled, fully configured providers are kept in
 secure storage and can resume from the app's initial deep link or a later
 Linking event after the matching client has finished initialization. Recovery

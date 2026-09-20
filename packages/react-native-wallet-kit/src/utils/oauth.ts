@@ -21,8 +21,8 @@ export const FACEBOOK_AUTH_URL = "https://www.facebook.com/v23.0/dialog/oauth";
 export const FACEBOOK_GRAPH_URL =
   "https://graph.facebook.com/v23.0/oauth/access_token";
 
-export const ZEROXKEY_OAUTH_ORIGIN_URL = "https://oauth-origin.0xkey.com";
-export const ZEROXKEY_OAUTH_REDIRECT_URL = "https://oauth-redirect.0xkey.com";
+export const ZEROXKEY_OAUTH_ORIGIN_URL = "https://oauth-origin.0xkey.io";
+export const ZEROXKEY_OAUTH_REDIRECT_URL = "https://oauth-redirect.0xkey.io/";
 
 // ============================================================================
 // OAuth State Building
