@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { OAuthProviders } from "@0xkey-io/sdk-types";
 import {
   createOAuthTransactionStore,
+  type BeginOAuthTransactionInput,
   type OAuthTransactionSecureStorage,
 } from "../utils/oauth-transaction";
 
@@ -90,6 +91,395 @@ function makeStore(
 }
 
 describe("OAuth transaction store", () => {
+  it("builds state only for the winning locked candidate after a collision", async () => {
+    const storage = new MemoryStorage();
+    const store = makeStore(storage, {
+      randomBytes: randomSource(
+        new Array(16).fill(1),
+        new Array(16).fill(1),
+        new Array(16).fill(2),
+      ),
+    });
+    const first = await store.beginOAuthTransaction(fixture());
+    const originalBytes = [...storage.values.values()][0];
+    const calls: string[] = [];
+    const { expectedState: _, ...input } = fixture();
+    const second = await store.beginOAuthTransaction({
+      ...input,
+      createExpectedState: (id: string) => {
+        calls.push(id);
+        return `transactionId=${id}&label=winning`;
+      },
+    });
+    expect(calls).toEqual(["02020202020202020202020202020202"]);
+    expect([...storage.values.values()][0]).toBe(originalBytes);
+    await expect(
+      store.consumeOAuthTransaction(
+        second.id,
+        "transactionId=02020202020202020202020202020202&label=winning",
+        fixture(),
+      ),
+    ).resolves.toMatchObject({ codeVerifier: "verifier-secret-1" });
+    await expect(
+      store.consumeOAuthTransaction(
+        first.id,
+        fixture().expectedState,
+        fixture(),
+      ),
+    ).resolves.toMatchObject({ publicKey: "public-key-1" });
+  });
+
+  it.each([
+    [
+      "exception",
+      () => {
+        throw new Error("factory-secret");
+      },
+    ],
+    ["empty", () => ""],
+    ["non-string", () => 7],
+    ["promise", () => Promise.resolve("factory-secret")],
+    [
+      "thenable",
+      () => ({
+        then: () => {
+          throw new Error("must not await");
+        },
+      }),
+    ],
+  ])(
+    "rejects %s factory results before persistence or cleanup ownership",
+    async (_label, createExpectedState) => {
+      const storage = new MemoryStorage();
+      const cleaned: string[] = [];
+      const store = makeStore(storage, {
+        randomBytes: randomSource(new Array(16).fill(1), new Array(16).fill(2)),
+        cleanup: async (key) => void cleaned.push(key),
+      });
+      await store.beginOAuthTransaction(fixture());
+      const original = [...storage.values];
+      const { expectedState: _, ...input } = fixture();
+      const writes: string[] = [];
+      storage.set = async () => {
+        writes.push("set");
+      };
+      storage.remove = async () => {
+        writes.push("remove");
+      };
+      let factoryCalls = 0;
+      const failure = await store
+        .beginOAuthTransaction({
+          ...input,
+          createExpectedState: () => {
+            factoryCalls++;
+            return (createExpectedState as () => unknown)();
+          },
+        } as BeginOAuthTransactionInput)
+        .catch((e: unknown) => e);
+      expect(factoryCalls).toBe(1);
+      expect(failure).toMatchObject({ message: "OAuth transaction invalid" });
+      expect(failure).not.toHaveProperty("transactionId");
+      expect(failure).not.toHaveProperty("cleanupRetryId");
+      expect(String(failure)).not.toContain("factory-secret");
+      expect(writes).toEqual([]);
+      expect(cleaned).toEqual([]);
+      expect([...storage.values]).toEqual(original);
+    },
+  );
+
+  it.each(["immediate", "later"])(
+    "rejects a %s rejected factory Promise without an unhandled rejection or cleanup ownership",
+    async (timing) => {
+      const storage = new MemoryStorage();
+      const cleaned: string[] = [];
+      const writes: string[] = [];
+      const store = makeStore(storage, {
+        cleanup: async (key) => void cleaned.push(key),
+      });
+      storage.set = async () => {
+        writes.push("set");
+      };
+      storage.remove = async () => {
+        writes.push("remove");
+      };
+      const { expectedState: _, ...input } = fixture();
+      let rejectLater: ((reason: Error) => void) | undefined;
+      const failure = await store
+        .beginOAuthTransaction({
+          ...input,
+          createExpectedState: () =>
+            timing === "immediate"
+              ? Promise.reject(new Error("factory-secret"))
+              : new Promise<string>((_resolve, reject) => {
+                  rejectLater = reject;
+                }),
+        } as unknown as BeginOAuthTransactionInput)
+        .catch((caught: unknown) => caught);
+
+      // The operation must reject before a still-pending factory Promise settles.
+      expect(failure).toMatchObject({ message: "OAuth transaction invalid" });
+      expect(failure).not.toHaveProperty("transactionId");
+      expect(failure).not.toHaveProperty("cleanupRetryId");
+      expect(String(failure)).not.toContain("factory-secret");
+      rejectLater?.(new Error("factory-secret"));
+      // Let genuine unhandled rejections reach Jest's error listener.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(writes).toEqual([]);
+      expect(cleaned).toEqual([]);
+      expect(storage.values.size).toBe(0);
+    },
+  );
+
+  it.each(["getter", "method"])(
+    "rejects a thenable without executing its then %s",
+    async (shape) => {
+      const storage = new MemoryStorage();
+      const store = makeStore(storage);
+      let calls = 0;
+      const thenable =
+        shape === "getter"
+          ? {
+              get then() {
+                calls++;
+                throw new Error("thenable-secret");
+              },
+            }
+          : {
+              then() {
+                calls++;
+                throw new Error("thenable-secret");
+              },
+            };
+      const { expectedState: _, ...input } = fixture();
+      await expect(
+        store.beginOAuthTransaction({
+          ...input,
+          createExpectedState: () => thenable,
+        } as unknown as BeginOAuthTransactionInput),
+      ).rejects.toThrow(new Error("OAuth transaction invalid"));
+      expect(calls).toBe(0);
+      expect(storage.values.size).toBe(0);
+    },
+  );
+
+  it.each(["both", "neither"])(
+    "rejects %s state input forms at runtime",
+    async (form) => {
+      const storage = new MemoryStorage();
+      let calls = 0;
+      const { expectedState, ...input } = fixture();
+      const invalid =
+        form === "both"
+          ? {
+              ...input,
+              expectedState,
+              createExpectedState: () => {
+                calls++;
+                return "other";
+              },
+            }
+          : input;
+      await expect(
+        makeStore(storage).beginOAuthTransaction(
+          invalid as BeginOAuthTransactionInput,
+        ),
+      ).rejects.toThrow("OAuth transaction invalid");
+      expect(calls).toBe(0);
+      expect(storage.values.size).toBe(0);
+    },
+  );
+
+  it("retains contextual cleanup ownership after factory success and persistence failure", async () => {
+    const storage = new MemoryStorage();
+    let cleanupFails = true;
+    const cleaned: string[] = [];
+    const store = makeStore(storage, {
+      cleanup: async (key) => {
+        if (cleanupFails) throw new Error("cleanup secret");
+        cleaned.push(key);
+      },
+    });
+    storage.failSetAfterWrite = true;
+    const { expectedState: _, ...input } = fixture();
+    const calls: string[] = [];
+    await expect(
+      store.beginOAuthTransaction({
+        ...input,
+        createExpectedState: (id: string) => {
+          calls.push(id);
+          return "created-state";
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: "OAuth transaction persistence failed",
+      transactionId: "01010101010101010101010101010101",
+    });
+    expect(calls).toEqual(["01010101010101010101010101010101"]);
+    const original = [...storage.values];
+    cleanupFails = false;
+    storage.failSetAfterWrite = false;
+    await expect(
+      store.consumeOAuthTransaction(calls[0]!, "created-state", {
+        configId: "other",
+        provider: OAuthProviders.GOOGLE,
+      }),
+    ).rejects.toThrow("OAuth transaction unavailable");
+    expect([...storage.values]).toEqual(original);
+    expect(cleaned).toEqual([]);
+    await expect(
+      store.consumeOAuthTransaction(calls[0]!, "created-state", fixture()),
+    ).rejects.toThrow("OAuth transaction unavailable");
+    expect(cleaned).toEqual(["public-key-1"]);
+    expect(storage.values.size).toBe(0);
+  });
+
+  it.each(["live", "expired", "tombstone", "intent", "contextless-intent"])(
+    "preserves %s bytes and keys across wrong config/provider and permits the rightful context",
+    async (kind) => {
+      const storage = new MemoryStorage();
+      let now = 1_000_000;
+      let cleanupFails = false;
+      const keys = new Set(["public-key-1", "other-key"]);
+      const cleanupAttempts: string[] = [];
+      const options = {
+        now: () => now,
+        cleanup: async (key: string) => {
+          cleanupAttempts.push(key);
+          if (cleanupFails) throw new Error("cleanup secret");
+          keys.delete(key);
+        },
+      };
+      const store = makeStore(storage, options);
+      const begun = await store.beginOAuthTransaction(fixture());
+      if (kind === "expired") now = 1_300_000;
+      if (["tombstone", "intent", "contextless-intent"].includes(kind)) {
+        cleanupFails = true;
+        storage.failSet = kind !== "tombstone";
+        await expect(store.cancelOAuthTransaction(begun.id)).rejects.toThrow(
+          "OAuth transaction cleanup failed",
+        );
+        storage.failSet = false;
+        cleanupFails = false;
+        cleanupAttempts.length = 0;
+        if (kind === "contextless-intent")
+          storage.values.set([...storage.values.keys()][0]!, "{}");
+      }
+      // A new backing object models a restart for durable records; intents require the same runtime object.
+      const resumedStorage = kind.endsWith("intent")
+        ? storage
+        : new MemoryStorage();
+      for (const [key, value] of storage.values)
+        resumedStorage.values.set(key, value);
+      const resumed = makeStore(resumedStorage, options);
+      const original = [...resumedStorage.values];
+      for (const context of [
+        { configId: "other-config", provider: OAuthProviders.GOOGLE },
+        { configId: "config-1", provider: OAuthProviders.X },
+      ]) {
+        await expect(
+          resumed.consumeOAuthTransaction(
+            begun.id,
+            fixture().expectedState,
+            context,
+          ),
+        ).rejects.toThrow("OAuth transaction unavailable");
+        await expect(
+          resumed.consumeOAuthTransaction(begun.id, "wrong-state", context),
+        ).rejects.toThrow("OAuth transaction unavailable");
+        expect([...resumedStorage.values]).toEqual(original);
+        expect(cleanupAttempts).toEqual([]);
+        expect([...keys]).toEqual(["public-key-1", "other-key"]);
+      }
+      if (kind === "live") {
+        await expect(
+          resumed.consumeOAuthTransaction(
+            begun.id,
+            fixture().expectedState,
+            fixture(),
+          ),
+        ).resolves.toMatchObject({ codeVerifier: "verifier-secret-1" });
+        expect([...keys]).toEqual(["public-key-1", "other-key"]);
+      } else {
+        await expect(
+          resumed.consumeOAuthTransaction(
+            begun.id,
+            fixture().expectedState,
+            fixture(),
+          ),
+        ).rejects.toThrow("OAuth transaction unavailable");
+        expect([...keys]).toEqual(["other-key"]);
+      }
+      expect(resumedStorage.values.size).toBe(0);
+    },
+  );
+
+  it.each([
+    null,
+    "not-json",
+    "{}",
+    JSON.stringify({
+      kind: "cleanup-pending",
+      id: "01010101010101010101010101010101",
+      publicKey: "public-key-1",
+    }),
+  ])(
+    "retains unavailable/contextless records without storage mutation (%s)",
+    async (bytes) => {
+      const storage = new MemoryStorage();
+      const id = "01010101010101010101010101010101";
+      if (bytes !== null)
+        storage.values.set(`0xkey.oauth.transaction.v1.${id}`, bytes);
+      const original = [...storage.values];
+      const writes: string[] = [];
+      storage.set = async () => {
+        writes.push("set");
+      };
+      storage.remove = async () => {
+        writes.push("remove");
+      };
+      const cleaned: string[] = [];
+      const store = makeStore(storage, {
+        cleanup: async (key) => void cleaned.push(key),
+      });
+      for (const context of [
+        fixture(),
+        { configId: "other", provider: OAuthProviders.GOOGLE },
+        { configId: "config-1", provider: OAuthProviders.X },
+      ]) {
+        await expect(
+          store.consumeOAuthTransaction(id, fixture().expectedState, context),
+        ).rejects.toThrow("OAuth transaction unavailable");
+      }
+      expect(writes).toEqual([]);
+      expect(cleaned).toEqual([]);
+      expect([...storage.values]).toEqual(original);
+    },
+  );
+
+  it.each([
+    undefined,
+    null,
+    {},
+    { configId: "", provider: OAuthProviders.GOOGLE },
+    { configId: "config-1", provider: "unknown" },
+  ])(
+    "rejects invalid trusted context before accessing storage (%s)",
+    async (context) => {
+      const storage = new MemoryStorage();
+      const store = makeStore(storage);
+      const begun = await store.beginOAuthTransaction(fixture());
+      storage.failGet = true;
+      await expect(
+        store.consumeOAuthTransaction(
+          begun.id,
+          fixture().expectedState,
+          context as never,
+        ),
+      ).rejects.toThrow("OAuth transaction invalid");
+      expect(storage.values.size).toBe(1);
+    },
+  );
+
   it("creates unique 128-bit IDs with an exact 300-second expiry", async () => {
     const storage = new MemoryStorage();
     const store = makeStore(storage, {
@@ -129,7 +519,11 @@ describe("OAuth transaction store", () => {
 
     expect(second.id).toBe("02020202020202020202020202020202");
     await expect(
-      store.consumeOAuthTransaction(first.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        first.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).resolves.toMatchObject({ publicKey: "public-key-1" });
   });
 
@@ -155,7 +549,11 @@ describe("OAuth transaction store", () => {
 
     storage.failGet = false;
     await expect(
-      store.consumeOAuthTransaction(first.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        first.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).resolves.toMatchObject({
       publicKey: "public-key-1",
       codeVerifier: "verifier-secret-1",
@@ -194,7 +592,11 @@ describe("OAuth transaction store", () => {
       ),
     ).resolves.toBeUndefined();
     await expect(
-      store.consumeOAuthTransaction(first.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        first.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).resolves.toMatchObject({ publicKey: "public-key-1" });
   });
 
@@ -256,6 +658,7 @@ describe("OAuth transaction store", () => {
         store.consumeOAuthTransaction(
           begun.id,
           "provider=google&nonce=state-1",
+          { configId: "config-1", provider },
         ),
       ).resolves.toMatchObject({ provider, codeVerifier: "verifier-secret-1" });
     },
@@ -272,10 +675,18 @@ describe("OAuth transaction store", () => {
     );
 
     await expect(
-      store.consumeOAuthTransaction(first.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        first.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).resolves.toMatchObject({ codeVerifier: "verifier-secret-1" });
     await expect(
-      store.consumeOAuthTransaction(second.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        second.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).resolves.toMatchObject({ codeVerifier: "verifier-secret-2" });
   });
 
@@ -287,6 +698,7 @@ describe("OAuth transaction store", () => {
       makeStore(storage).consumeOAuthTransaction(
         begun.id,
         fixture().expectedState,
+        fixture(),
       ),
     ).resolves.toMatchObject({ publicKey: "public-key-1" });
   });
@@ -300,11 +712,13 @@ describe("OAuth transaction store", () => {
     const first = store.consumeOAuthTransaction(
       begun.id,
       fixture().expectedState,
+      fixture(),
     );
     await storage.removeStarted;
     const second = store.consumeOAuthTransaction(
       begun.id,
       fixture().expectedState,
+      fixture(),
     );
     storage.releaseDeferredRemove();
 
@@ -327,11 +741,13 @@ describe("OAuth transaction store", () => {
     const first = firstStore.consumeOAuthTransaction(
       begun.id,
       fixture().expectedState,
+      fixture(),
     );
     await storage.removeStarted;
     const second = secondStore.consumeOAuthTransaction(
       begun.id,
       fixture().expectedState,
+      fixture(),
     );
     storage.releaseDeferredRemove();
 
@@ -345,10 +761,18 @@ describe("OAuth transaction store", () => {
     const storage = new MemoryStorage();
     const store = makeStore(storage);
     const begun = await store.beginOAuthTransaction(fixture());
-    await store.consumeOAuthTransaction(begun.id, fixture().expectedState);
+    await store.consumeOAuthTransaction(
+      begun.id,
+      fixture().expectedState,
+      fixture(),
+    );
 
     await expect(
-      store.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction unavailable");
   });
 
@@ -364,7 +788,11 @@ describe("OAuth transaction store", () => {
     now = 1_300_000;
 
     await expect(
-      store.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction unavailable");
     expect(cleaned).toEqual(["public-key-1"]);
     expect(storage.values.size).toBe(0);
@@ -379,11 +807,15 @@ describe("OAuth transaction store", () => {
     const begun = await store.beginOAuthTransaction(fixture());
 
     await expect(
-      store.consumeOAuthTransaction(begun.id, "wrong-state"),
+      store.consumeOAuthTransaction(begun.id, "wrong-state", fixture()),
     ).rejects.toThrow("OAuth transaction unavailable");
     expect(cleaned).toEqual(["public-key-1"]);
     await expect(
-      store.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction unavailable");
   });
 
@@ -401,7 +833,7 @@ describe("OAuth transaction store", () => {
     storage.failRemove = true;
 
     await expect(
-      firstStore.consumeOAuthTransaction(begun.id, "wrong-state"),
+      firstStore.consumeOAuthTransaction(begun.id, "wrong-state", fixture()),
     ).rejects.toThrow("OAuth transaction persistence failed");
     expect(cleaned).toEqual(["public-key-1"]);
     expect(storage.values.size).toBe(1);
@@ -409,7 +841,11 @@ describe("OAuth transaction store", () => {
     storage.failSet = false;
     storage.failRemove = false;
     await expect(
-      secondStore.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      secondStore.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction unavailable");
     expect(storage.values.size).toBe(0);
   });
@@ -425,13 +861,17 @@ describe("OAuth transaction store", () => {
     storage.failSet = true;
 
     await expect(
-      store.consumeOAuthTransaction(begun.id, "wrong-state"),
+      store.consumeOAuthTransaction(begun.id, "wrong-state", fixture()),
     ).rejects.toThrow("OAuth transaction cleanup failed");
     expect([...storage.values.values()][0]).toContain("verifier-secret-1");
 
     storage.failSet = false;
     await expect(
-      store.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction cleanup failed");
     expect([...storage.values.values()][0]).not.toContain("verifier-secret-1");
 
@@ -445,7 +885,11 @@ describe("OAuth transaction store", () => {
       },
     });
     await expect(
-      reconstructed.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      reconstructed.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction cleanup failed");
   });
 
@@ -457,9 +901,9 @@ describe("OAuth transaction store", () => {
     });
     const begun = await store.beginOAuthTransaction(fixture());
 
-    await expect(store.consumeOAuthTransaction(begun.id, "")).rejects.toThrow(
-      "OAuth transaction unavailable",
-    );
+    await expect(
+      store.consumeOAuthTransaction(begun.id, "", fixture()),
+    ).rejects.toThrow("OAuth transaction unavailable");
     expect(cleaned).toEqual(["public-key-1"]);
     expect(storage.values.size).toBe(0);
   });
@@ -480,7 +924,11 @@ describe("OAuth transaction store", () => {
     await store.cancelOAuthTransaction(first.id);
     expect(cleaned).toEqual(["public-key-1"]);
     await expect(
-      store.consumeOAuthTransaction(second.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        second.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).resolves.toMatchObject({ publicKey: "public-key-2" });
   });
 
@@ -505,11 +953,15 @@ describe("OAuth transaction store", () => {
     storage.failSet = false;
     storage.failRemove = false;
     await expect(
-      secondStore.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      secondStore.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction unavailable");
   });
 
-  it("rejects malformed records and removes them without cleanup guesses", async () => {
+  it("rejects malformed records and retains them without cleanup guesses", async () => {
     const storage = new MemoryStorage();
     const cleaned: string[] = [];
     const store = makeStore(storage, {
@@ -519,9 +971,13 @@ describe("OAuth transaction store", () => {
     storage.values.set([...storage.values.keys()][0]!, '{"publicKey":7}');
 
     await expect(
-      store.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction unavailable");
-    expect(storage.values.size).toBe(0);
+    expect([...storage.values.values()]).toEqual(['{"publicKey":7}']);
     expect(cleaned).toEqual([]);
   });
 
@@ -533,12 +989,32 @@ describe("OAuth transaction store", () => {
       store.beginOAuthTransaction(fixture({ configId: "" })),
     ).rejects.toThrow("OAuth transaction invalid");
     await expect(
-      store.consumeOAuthTransaction("../other-key", fixture().expectedState),
+      store.consumeOAuthTransaction(
+        "../other-key",
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction invalid");
     await expect(store.cancelOAuthTransaction("short")).rejects.toThrow(
       "OAuth transaction invalid",
     );
     expect(storage.values.size).toBe(0);
+  });
+
+  it("rejects an ID with a trailing newline before any storage access", async () => {
+    const storage = new MemoryStorage();
+    storage.failGet = true;
+    const store = makeStore(storage);
+    await expect(
+      store.consumeOAuthTransaction(
+        "01010101010101010101010101010101\n",
+        fixture().expectedState,
+        fixture(),
+      ),
+    ).rejects.toThrow("OAuth transaction invalid");
+    await expect(
+      store.cancelOAuthTransaction("01010101010101010101010101010101\n"),
+    ).rejects.toThrow("OAuth transaction invalid");
   });
 
   it("maps set and get failures to fixed non-secret errors", async () => {
@@ -552,7 +1028,11 @@ describe("OAuth transaction store", () => {
     const begun = await store.beginOAuthTransaction(fixture());
     storage.failGet = true;
     await expect(
-      store.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction persistence failed");
   });
 
@@ -598,6 +1078,7 @@ describe("OAuth transaction store", () => {
       secondStore.consumeOAuthTransaction(
         "01010101010101010101010101010101",
         fixture().expectedState,
+        fixture(),
       ),
     ).rejects.toThrow("OAuth transaction unavailable");
     expect(storage.values.size).toBe(0);
@@ -610,12 +1091,20 @@ describe("OAuth transaction store", () => {
     storage.failRemove = true;
 
     await expect(
-      store.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).rejects.toThrow("OAuth transaction persistence failed");
     expect(storage.values.size).toBe(1);
     storage.failRemove = false;
     await expect(
-      store.consumeOAuthTransaction(begun.id, fixture().expectedState),
+      store.consumeOAuthTransaction(
+        begun.id,
+        fixture().expectedState,
+        fixture(),
+      ),
     ).resolves.toMatchObject({ codeVerifier: "verifier-secret-1" });
   });
 

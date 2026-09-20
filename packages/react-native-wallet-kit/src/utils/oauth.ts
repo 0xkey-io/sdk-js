@@ -28,6 +28,24 @@ export const ZEROXKEY_OAUTH_REDIRECT_URL = "https://oauth-redirect.0xkey.com";
 // OAuth State Building
 // ============================================================================
 
+const TRANSACTION_ID_PATTERN = /^[0-9a-f]{32}$/;
+const STATE_SECURITY_FIELDS = [
+  "transactionId",
+  "provider",
+  "flow",
+  "publicKey",
+  "nonce",
+];
+const CALLBACK_SECURITY_FIELDS = ["state", "code", "id_token", "error"];
+
+function isTransactionId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length === 32 &&
+    TRANSACTION_ID_PATTERN.test(value)
+  );
+}
+
 /**
  * Builds the OAuth state parameter string
  */
@@ -36,13 +54,19 @@ export function buildOAuthState(params: {
   flow: "redirect";
   publicKey: string;
   nonce?: string;
+  transactionId?: string;
   additionalState?: Record<string, string> | undefined;
 }): string {
-  const { provider, flow, publicKey, nonce, additionalState } = params;
+  const { provider, flow, publicKey, nonce, transactionId, additionalState } =
+    params;
+
+  if (transactionId !== undefined && !isTransactionId(transactionId)) {
+    throw new Error("Invalid OAuth transaction ID");
+  }
 
   if (
     additionalState &&
-    ["provider", "flow", "publicKey", "nonce"].some((key) =>
+    STATE_SECURITY_FIELDS.some((key) =>
       Object.prototype.hasOwnProperty.call(additionalState, key),
     )
   ) {
@@ -53,6 +77,10 @@ export function buildOAuthState(params: {
 
   if (nonce) {
     state += `&nonce=${nonce}`;
+  }
+
+  if (transactionId !== undefined) {
+    state += `&transactionId=${transactionId}`;
   }
 
   if (additionalState) {
@@ -144,6 +172,66 @@ export const OAUTH_PROVIDER_CONFIGS: Record<
 // ============================================================================
 // OAuth State Parsing
 // ============================================================================
+
+/** Decode each form component once; URLSearchParams accepts malformed escapes. */
+function parseStrictForm(
+  form: string,
+  securityFields: readonly string[],
+): Map<string, string> {
+  const fields = new Map<string, string>();
+  for (const pair of form.split("&")) {
+    if (!pair) continue;
+    const separator = pair.indexOf("=");
+    const rawName = separator < 0 ? pair : pair.slice(0, separator);
+    const rawValue = separator < 0 ? "" : pair.slice(separator + 1);
+    const name = decodeURIComponent(rawName.replace(/\+/g, " "));
+    const value = decodeURIComponent(rawValue.replace(/\+/g, " "));
+    if (securityFields.includes(name) && fields.has(name)) {
+      throw new Error("Invalid OAuth transaction callback");
+    }
+    fields.set(name, value);
+  }
+  return fields;
+}
+
+/**
+ * Extract an untrusted correlation hint from a single query envelope.
+ * This does not authorize the callback: callers must first validate the trusted
+ * scheme/host/path, then consume using trusted config/provider and this exact
+ * returned state before using any code/token. Extraction failure never cancels.
+ */
+export function extractOAuthTransactionCallback(deepLinkUrl: string): {
+  transactionId: string;
+  returnedState: string;
+} {
+  try {
+    const url = new URL(deepLinkUrl);
+    const outer = parseStrictForm(
+      url.search.slice(1),
+      CALLBACK_SECURITY_FIELDS,
+    );
+    const fragment = parseStrictForm(
+      url.hash.slice(1),
+      CALLBACK_SECURITY_FIELDS,
+    );
+    if (
+      outer.has("error") ||
+      CALLBACK_SECURITY_FIELDS.some((field) => fragment.has(field))
+    ) {
+      throw new Error("Invalid OAuth transaction callback");
+    }
+    const returnedState = outer.get("state");
+    if (!returnedState) throw new Error("Invalid OAuth transaction callback");
+    const inner = parseStrictForm(returnedState, STATE_SECURITY_FIELDS);
+    const transactionId = inner.get("transactionId");
+    if (!isTransactionId(transactionId))
+      throw new Error("Invalid OAuth transaction callback");
+    return { transactionId, returnedState };
+  } catch {
+    // Never include callback URLs, provider error strings, codes or tokens.
+    throw new Error("Invalid OAuth transaction callback");
+  }
+}
 
 /**
  * Parses the OAuth state parameter string into an object
@@ -388,6 +476,7 @@ export interface BuildOAuthUrlParams {
   redirectUri: string;
   publicKey: string;
   nonce: string;
+  transactionId?: string;
   codeChallenge?: string | undefined;
   additionalState?: Record<string, string> | undefined;
   /** If true, uses direct provider URLs; if false, uses ZeroXKey OAuth proxy */
@@ -407,6 +496,7 @@ export function buildOAuthUrl(params: BuildOAuthUrlParams): string {
     redirectUri,
     publicKey,
     nonce,
+    transactionId,
     codeChallenge,
     additionalState,
     useOauthProxyOrigin = false,
@@ -422,6 +512,9 @@ export function buildOAuthUrl(params: BuildOAuthUrlParams): string {
   };
   if (!config.nonceInParams && nonce) {
     stateParams.nonce = nonce;
+  }
+  if (transactionId !== undefined) {
+    stateParams.transactionId = transactionId;
   }
   if (additionalState) {
     stateParams.additionalState = additionalState;

@@ -24,13 +24,25 @@ export interface OAuthTransactionDependencies {
   cleanupTemporaryKey(publicKey: string): Promise<void>;
 }
 
-export interface BeginOAuthTransactionInput {
+export interface OAuthTransactionContext {
   configId: string;
   provider: OAuthProviders;
-  publicKey: string;
-  expectedState: string;
-  codeVerifier?: string;
 }
+
+interface CleanupDescriptor extends OAuthTransactionContext {
+  publicKey: string;
+}
+
+export type BeginOAuthTransactionInput = CleanupDescriptor & {
+  codeVerifier?: string;
+} & (
+    | { expectedState: string; createExpectedState?: never }
+    | {
+        expectedState?: never;
+        /** Synchronous and pure; invoked only after a candidate ID is free. */
+        createExpectedState(transactionId: string): string;
+      }
+  );
 
 export interface OAuthTransactionMetadata {
   id: string;
@@ -50,18 +62,23 @@ interface StoredOAuthTransaction extends OAuthTransactionMetadata {
   codeVerifier?: string;
 }
 
-interface CleanupPendingTransaction {
+interface CleanupPendingTransaction extends CleanupDescriptor {
   kind: "cleanup-pending";
   id: string;
-  publicKey: string;
 }
 
 type StoredRecord = StoredOAuthTransaction | CleanupPendingTransaction;
 
 type StoreLocks = Map<string, Promise<void>>;
 const locksByStorage = new WeakMap<object, StoreLocks>();
-const cleanupIntentsByStorage = new WeakMap<object, Map<string, string>>();
-const cleanupOnlyIntentsByStorage = new WeakMap<object, Map<string, string>>();
+const cleanupIntentsByStorage = new WeakMap<
+  object,
+  Map<string, CleanupDescriptor>
+>();
+const cleanupOnlyIntentsByStorage = new WeakMap<
+  object,
+  Map<string, CleanupDescriptor>
+>();
 
 export interface OAuthTransactionError extends Error {
   transactionId?: string;
@@ -87,8 +104,35 @@ function isProvider(value: unknown): value is OAuthProviders {
   return Object.values(OAuthProviders).includes(value as OAuthProviders);
 }
 
+function hasContext(value: unknown): value is OAuthTransactionContext {
+  if (!value || typeof value !== "object") return false;
+  const context = value as OAuthTransactionContext;
+  return isNonEmptyString(context.configId) && isProvider(context.provider);
+}
+
+function assertContextMatches(
+  stored: OAuthTransactionContext,
+  trusted: OAuthTransactionContext,
+): void {
+  if (
+    stored.configId !== trusted.configId ||
+    stored.provider !== trusted.provider
+  ) {
+    throw error(UNAVAILABLE_ERROR);
+  }
+}
+
 function assertId(id: string): void {
   if (!VALID_ID.test(id)) throw error(INVALID_ERROR);
+}
+
+function cleanupDescriptor(owner: CleanupDescriptor): CleanupDescriptor {
+  // Do not retain verifier/state fields from a live record or begin input.
+  return {
+    publicKey: owner.publicKey,
+    configId: owner.configId,
+    provider: owner.provider,
+  };
 }
 
 function storageKey(id: string): string {
@@ -105,6 +149,7 @@ function parseStoredRecord(
   if (
     record.kind === "cleanup-pending" &&
     record.id === expectedId &&
+    hasContext(record) &&
     isNonEmptyString(record.publicKey)
   ) {
     return record as unknown as CleanupPendingTransaction;
@@ -168,7 +213,10 @@ export function createOAuthTransactionStore(
   consumeOAuthTransaction(
     id: string,
     returnedState: string,
+    /** From trusted configuration/provider routing, never callback fields. */
+    context: OAuthTransactionContext,
   ): Promise<ConsumedOAuthTransaction>;
+  /** Exact-owner operation; never cancel an untrusted cold-start lookup hint. */
   cancelOAuthTransaction(id: string): Promise<void>;
 } {
   const { secureStorage, randomBytes, now, cleanupTemporaryKey } = dependencies;
@@ -199,7 +247,7 @@ export function createOAuthTransactionStore(
     }
   }
 
-  function allocateCleanupRetryId(publicKey: string): string {
+  function allocateCleanupRetryId(owner: CleanupDescriptor): string {
     for (let attempt = 0; attempt < 16; attempt += 1) {
       let cleanupRetryId: string;
       try {
@@ -210,7 +258,7 @@ export function createOAuthTransactionStore(
         throw error(PERSISTENCE_ERROR);
       }
       if (!cleanupOnlyIntents!.has(cleanupRetryId)) {
-        cleanupOnlyIntents!.set(cleanupRetryId, publicKey);
+        cleanupOnlyIntents!.set(cleanupRetryId, cleanupDescriptor(owner));
         return cleanupRetryId;
       }
     }
@@ -236,13 +284,14 @@ export function createOAuthTransactionStore(
   async function invalidateAndCleanup(
     key: string,
     id: string,
-    publicKey: string,
+    owner: CleanupDescriptor,
   ): Promise<void> {
-    cleanupIntents!.set(id, publicKey);
+    const descriptor = cleanupDescriptor(owner);
+    cleanupIntents!.set(id, descriptor);
     const tombstone: CleanupPendingTransaction = {
       kind: "cleanup-pending",
       id,
-      publicKey,
+      ...descriptor,
     };
     try {
       await secureStorage.set(key, JSON.stringify(tombstone));
@@ -250,7 +299,7 @@ export function createOAuthTransactionStore(
       // The in-memory intent still blocks redemption across store instances
       // sharing this storage object. Continue exact-key cleanup and removal.
     }
-    await cleanup(publicKey);
+    await cleanup(descriptor.publicKey);
     await remove(key);
     cleanupIntents!.delete(id);
   }
@@ -258,9 +307,9 @@ export function createOAuthTransactionStore(
   async function retryCleanupIntent(
     key: string,
     id: string,
-    publicKey: string,
+    owner: CleanupDescriptor,
   ): Promise<void> {
-    await invalidateAndCleanup(key, id, publicKey);
+    await invalidateAndCleanup(key, id, owner);
   }
 
   return {
@@ -269,7 +318,10 @@ export function createOAuthTransactionStore(
         !isNonEmptyString(input.configId) ||
         !isProvider(input.provider) ||
         !isNonEmptyString(input.publicKey) ||
-        !isNonEmptyString(input.expectedState) ||
+        (input.expectedState !== undefined
+          ? !isNonEmptyString(input.expectedState) ||
+            input.createExpectedState !== undefined
+          : typeof input.createExpectedState !== "function") ||
         (input.codeVerifier !== undefined &&
           !isNonEmptyString(input.codeVerifier))
       ) {
@@ -280,18 +332,6 @@ export function createOAuthTransactionStore(
       if (!Number.isFinite(startedAt)) throw error(INVALID_ERROR);
       for (let attempt = 0; attempt < 16; attempt += 1) {
         const id = encodeId(randomBytes(TRANSACTION_ID_BYTES));
-        const transaction: StoredOAuthTransaction = {
-          kind: "transaction",
-          id,
-          configId: input.configId,
-          provider: input.provider,
-          publicKey: input.publicKey,
-          expectedState: input.expectedState,
-          expiresAt: startedAt + TRANSACTION_TTL_MS,
-          ...(input.codeVerifier === undefined
-            ? {}
-            : { codeVerifier: input.codeVerifier }),
-        };
         const stored = await withStorageLock(secureStorage, id, async () => {
           const key = storageKey(id);
           let existing: string | null;
@@ -301,18 +341,53 @@ export function createOAuthTransactionStore(
             try {
               await cleanup(input.publicKey);
             } catch {
-              const cleanupRetryId = allocateCleanupRetryId(input.publicKey);
+              const cleanupRetryId = allocateCleanupRetryId(input);
               throw error(PERSISTENCE_ERROR, undefined, cleanupRetryId);
             }
             throw error(PERSISTENCE_ERROR);
           }
-          if (existing !== null) return false;
+          if (existing !== null) return null;
+          let expectedState: unknown;
+          try {
+            expectedState = input.createExpectedState
+              ? input.createExpectedState(id)
+              : input.expectedState;
+          } catch {
+            throw error(INVALID_ERROR);
+          }
+          if (!isNonEmptyString(expectedState)) {
+            try {
+              // The intrinsic brand-checks genuine Promises without reading a
+              // thenable's `then`. Observe rejection without awaiting a result
+              // or accepting either outcome as state.
+              void Promise.prototype.then.call(
+                expectedState,
+                () => undefined,
+                () => undefined,
+              );
+            } catch {
+              // Non-Promise values remain invalid; never invoke their `then`.
+            }
+            throw error(INVALID_ERROR);
+          }
+          const transaction: StoredOAuthTransaction = {
+            kind: "transaction",
+            id,
+            configId: input.configId,
+            provider: input.provider,
+            publicKey: input.publicKey,
+            expectedState,
+            expiresAt: startedAt + TRANSACTION_TTL_MS,
+            ...(input.codeVerifier === undefined
+              ? {}
+              : { codeVerifier: input.codeVerifier }),
+          };
           try {
             await secureStorage.set(key, JSON.stringify(transaction));
-            return true;
+            return transaction;
           } catch {
             try {
-              await invalidateAndCleanup(key, id, input.publicKey);
+              await invalidateAndCleanup(key, id, transaction);
             } catch {
               // Preserve the cleanup intent for cancel(transactionId) retry.
             }
@@ -325,34 +400,32 @@ export function createOAuthTransactionStore(
             codeVerifier: _codeVerifier,
             kind: _kind,
             ...metadata
-          } = transaction;
+          } = stored;
           return metadata;
         }
       }
       throw error(PERSISTENCE_ERROR);
     },
 
-    async consumeOAuthTransaction(id, returnedState) {
+    async consumeOAuthTransaction(id, returnedState, context) {
       assertId(id);
+      if (!hasContext(context)) throw error(INVALID_ERROR);
       return withStorageLock(secureStorage, id, async () => {
         const key = storageKey(id);
-        const pendingPublicKey = cleanupIntents!.get(id);
-        if (pendingPublicKey !== undefined) {
-          await retryCleanupIntent(key, id, pendingPublicKey);
+        const pendingOwner = cleanupIntents!.get(id);
+        if (pendingOwner !== undefined) {
+          assertContextMatches(pendingOwner, context);
+          await retryCleanupIntent(key, id, pendingOwner);
           throw error(UNAVAILABLE_ERROR);
         }
         const transaction = await load(id);
         if (!transaction) {
-          try {
-            await secureStorage.remove(key);
-          } catch {
-            throw error(PERSISTENCE_ERROR);
-          }
           throw error(UNAVAILABLE_ERROR);
         }
+        assertContextMatches(transaction, context);
 
         if (transaction.kind === "cleanup-pending") {
-          await retryCleanupIntent(key, id, transaction.publicKey);
+          await retryCleanupIntent(key, id, transaction);
           throw error(UNAVAILABLE_ERROR);
         }
 
@@ -362,7 +435,7 @@ export function createOAuthTransactionStore(
           transaction.expiresAt <= currentTime ||
           transaction.expectedState !== returnedState
         ) {
-          await invalidateAndCleanup(key, id, transaction.publicKey);
+          await invalidateAndCleanup(key, id, transaction);
           throw error(UNAVAILABLE_ERROR);
         }
 
@@ -381,9 +454,9 @@ export function createOAuthTransactionStore(
     async cancelOAuthTransaction(id) {
       if (VALID_CLEANUP_RETRY_ID.test(id)) {
         await withStorageLock(secureStorage, id, async () => {
-          const publicKey = cleanupOnlyIntents!.get(id);
-          if (publicKey === undefined) return;
-          await cleanup(publicKey);
+          const owner = cleanupOnlyIntents!.get(id);
+          if (owner === undefined) return;
+          await cleanup(owner.publicKey);
           cleanupOnlyIntents!.delete(id);
         });
         return;
@@ -391,9 +464,9 @@ export function createOAuthTransactionStore(
       assertId(id);
       await withStorageLock(secureStorage, id, async () => {
         const key = storageKey(id);
-        const pendingPublicKey = cleanupIntents!.get(id);
-        if (pendingPublicKey !== undefined) {
-          await retryCleanupIntent(key, id, pendingPublicKey);
+        const pendingOwner = cleanupIntents!.get(id);
+        if (pendingOwner !== undefined) {
+          await retryCleanupIntent(key, id, pendingOwner);
           return;
         }
         const transaction = await load(id);
@@ -406,10 +479,10 @@ export function createOAuthTransactionStore(
           return;
         }
         if (transaction.kind === "cleanup-pending") {
-          await retryCleanupIntent(key, id, transaction.publicKey);
+          await retryCleanupIntent(key, id, transaction);
           return;
         }
-        await invalidateAndCleanup(key, id, transaction.publicKey);
+        await invalidateAndCleanup(key, id, transaction);
       });
     },
   };
