@@ -74,6 +74,48 @@ function LoginButton() {
 }
 ```
 
+## OAuth client configuration
+
+OAuth providers accept Turnkey-compatible primary and secondary client ID
+shapes. Google uses a browser client ID, while Apple's browser Services ID and
+native iOS bundle ID remain separate:
+
+```tsx
+<ZeroXKeyProvider
+  config={{
+    organizationId: "your-organization-id",
+    auth: {
+      oauth: {
+        appScheme: "myapp",
+        google: {
+          primaryClientId: { webClientId: "google-web-client-id" },
+          secondaryClientIds: ["another-google-client-id"],
+        },
+        apple: {
+          primaryClientId: {
+            serviceId: "apple-services-id",
+            iosBundleId: "com.example.myapp",
+          },
+          secondaryClientIds: ["another-apple-client-id"],
+        },
+      },
+    },
+  }}
+>
+  {/* Your app content */}
+</ZeroXKeyProvider>
+```
+
+The existing `clientId` provider and handler field remains available as a
+deprecated alias for the browser client ID. A per-handler canonical
+`primaryClientId` takes priority over that alias and provider configuration.
+
+These fields only configure the current browser OAuth handlers. Native Apple
+sign-in and registration or linking of `secondaryClientIds` are not implemented
+by this configuration layer and must not be treated as enabled capabilities.
+The per-handler `onOauthSuccess` field is also retained for source compatibility
+but is not currently forwarded by the browser handlers.
+
 ## Development
 
 This package is part of the ZeroXKey SDK monorepo. To build:

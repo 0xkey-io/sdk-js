@@ -209,12 +209,12 @@ export interface ClientContextType
    * - The `state` parameter encodes the provider name, flow type, ephemeral public key, and any additional key-value pairs provided in `additionalState`.
    * - The flow resolves when the app is deep-linked back; it rejects if the in-app browser is closed or times out.
    * - On receiving an authorization code, the function exchanges it for an OIDC token via the ZeroXKey proxy (`proxyOAuth2Authenticate`) using the PKCE verifier, redirect URI, and nonce.
-   * - On successful authentication, the function either calls the provided `onOauthSuccess` callback, triggers the `onOauthRedirect` callback from provider callbacks, or completes the OAuth flow internally by calling `completeOauth`.
+   * - On successful authentication, the function uses the provider callbacks or completes the OAuth flow internally by calling `completeOauth`; the per-call `onOauthSuccess` field is retained for source compatibility but is not forwarded.
    * - Handles error cases such as missing configuration, in-app browser failures, missing PKCE verifier, or ZeroXKey proxy failures, throwing a `ZeroXKeyError` with appropriate error codes.
    *
    * @param params.clientId - The Discord Client ID to use (defaults to the client ID from configuration).
    * @param params.additionalState - Additional key-value pairs to include in the OAuth state parameter for tracking or custom logic.
-   * @param params.onOauthSuccess - Callback function to handle the successful OAuth response (receives `{ oidcToken, providerName, publicKey }`).
+   * @param params.onOauthSuccess - Retained for source compatibility; this handler does not currently forward it.
    *
    * onOauthSuccess params:
    * - oidcToken: The OIDC token issued by ZeroXKey after exchanging the auth code.
@@ -237,12 +237,12 @@ export interface ClientContextType
    * - The `state` parameter encodes the provider name, flow type, ephemeral public key, and any additional key-value pairs provided in `additionalState`.
    * - The flow resolves when the app is deep-linked back; it rejects if the in-app browser is closed or times out.
    * - On receiving an authorization code, the function exchanges it for an OIDC token via the ZeroXKey proxy (`proxyOAuth2Authenticate`) using the PKCE verifier, redirect URI, and nonce.
-   * - On successful authentication, the function either calls the provided `onOauthSuccess` callback, triggers the `onOauthRedirect` callback from provider callbacks, or completes the OAuth flow internally by calling `completeOauth`.
+   * - On successful authentication, the function uses the provider callbacks or completes the OAuth flow internally by calling `completeOauth`; the per-call `onOauthSuccess` field is retained for source compatibility but is not forwarded.
    * - Handles error cases such as missing configuration, in-app browser failures, missing PKCE verifier, or ZeroXKey proxy failures, throwing a `ZeroXKeyError` with appropriate error codes.
    *
    * @param params.clientId - The Twitter (X) Client ID to use (defaults to the client ID from configuration).
    * @param params.additionalState - Additional key-value pairs to include in the OAuth state parameter for tracking or custom logic.
-   * @param params.onOauthSuccess - Callback function to handle the successful OAuth response (receives `{ oidcToken, providerName, publicKey }`).
+   * @param params.onOauthSuccess - Retained for source compatibility; this handler does not currently forward it.
    *
    * onOauthSuccess params:
    * - oidcToken: The OIDC token issued by ZeroXKey after exchanging the auth code.
@@ -263,12 +263,12 @@ export interface ClientContextType
    * - Constructs the Google OAuth URL with all required parameters, including client ID, redirect URI, response type, scope, nonce, and state.
    * - The `state` parameter includes the provider, flow type, public key, and any additional state parameters for tracking or custom logic.
    * - The flow resolves when the app is deep-linked back; it rejects if the in-app browser is closed or times out.
-   * - On successful authentication, the function either calls the provided `onOauthSuccess` callback, triggers the `onOauthRedirect` callback from provider callbacks, or completes the OAuth flow internally by calling `completeOauth`.
+   * - On successful authentication, the function uses the provider callbacks or completes the OAuth flow internally by calling `completeOauth`; the per-call `onOauthSuccess` field is retained for source compatibility but is not forwarded.
    * - Handles all error cases, including missing configuration, in-app browser failures, and timeouts, and throws a `ZeroXKeyError` with appropriate error codes.
    *
    * @param params.clientId - The Google Client ID to use (defaults to the client ID from configuration).
    * @param params.additionalState - Additional key-value pairs to include in the OAuth state parameter for custom tracking or logic.
-   * @param params.onOauthSuccess - Callback function to handle the successful OAuth response (receives `{ oidcToken, providerName, publicKey }`).
+   * @param params.onOauthSuccess - Retained for source compatibility; this handler does not currently forward it.
    *
    * onOauthSuccess params:
    * - oidcToken: The OIDC token received from the OAuth flow.
@@ -289,12 +289,12 @@ export interface ClientContextType
    * - Constructs the Apple OAuth URL with all required parameters, including client ID, redirect URI, response type, response mode, nonce, and state.
    * - The `state` parameter includes the provider, flow type, public key, and any additional state parameters for tracking or custom logic.
    * - The flow resolves when the app is deep-linked back; it rejects if the in-app browser is closed or times out.
-   * - On successful authentication, the function either calls the provided `onOauthSuccess` callback, triggers the `onOauthRedirect` callback from provider callbacks, or completes the OAuth flow internally by calling `completeOauth`.
+   * - On successful authentication, the function uses the provider callbacks or completes the OAuth flow internally by calling `completeOauth`; the per-call `onOauthSuccess` field is retained for source compatibility but is not forwarded.
    * - Handles all error cases, including missing configuration, in-app browser failures, and timeouts, and throws a `ZeroXKeyError` with appropriate error codes.
    *
    * @param params.clientId - The Apple Client ID to use (defaults to the client ID from configuration).
    * @param params.additionalState - Additional key-value pairs to include in the OAuth state parameter for custom tracking or logic.
-   * @param params.onOauthSuccess - Callback function to handle the successful OAuth response (receives `{ oidcToken, providerName, publicKey }`).
+   * @param params.onOauthSuccess - Retained for source compatibility; this handler does not currently forward it.
    *
    * onOauthSuccess params:
    * - oidcToken: The OIDC token received from the OAuth flow.
@@ -316,12 +316,12 @@ export interface ClientContextType
    * - Constructs the Facebook OAuth URL with all required parameters, including client ID, redirect URI, response type, code challenge, nonce, and state.
    * - The `state` parameter includes the provider, flow type, public key, and any additional state parameters for tracking or custom logic.
    * - The flow resolves when the app is deep-linked back; it rejects if the in-app browser is closed or times out.
-   * - On successful authentication, the function either calls the provided `onOauthSuccess` callback, triggers the `onOauthRedirect` callback from provider callbacks, or completes the OAuth flow internally by calling `completeOauth`.
+   * - On successful authentication, the function uses the provider callbacks or completes the OAuth flow internally by calling `completeOauth`; the per-call `onOauthSuccess` field is retained for source compatibility but is not forwarded.
    * - Handles all error cases, including missing configuration, in-app browser failures, and timeouts, and throws a `ZeroXKeyError` with appropriate error codes.
    *
    * @param params.clientId - The Facebook Client ID to use (defaults to the client ID from configuration).
    * @param params.additionalState - Additional key-value pairs to include in the OAuth state parameter for custom tracking or logic.
-   * @param params.onOauthSuccess - Callback function to handle the successful OAuth response (receives `{ oidcToken, providerName, publicKey }`).
+   * @param params.onOauthSuccess - Retained for source compatibility; this handler does not currently forward it.
    *
    * onOauthSuccess params:
    * - oidcToken: The OIDC token received from the OAuth flow.

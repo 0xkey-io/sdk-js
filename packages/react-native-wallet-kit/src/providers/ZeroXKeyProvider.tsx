@@ -16,6 +16,8 @@ import {
   setCappedTimeoutInMap,
   setTimeoutInMap,
   clearKeys,
+  resolveOauthProviderSettings,
+  type OauthHandlerOverrides,
 } from "../utils";
 
 import {
@@ -302,35 +304,18 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
     } as ZeroXKeyProviderConfig;
   };
 
-  const getOauthProviderSettings = (provider: OAuthProviders) => {
-    const oauth = masterConfig?.auth?.oauth;
-    const providerConfig = oauth ? (oauth as any)[provider] : undefined;
-    const providerObjectConfig =
-      providerConfig && typeof providerConfig === "object"
-        ? (providerConfig as { clientId?: string; redirectUri?: string })
-        : undefined;
-
-    const proxyClientIds = proxyAuthConfigRef.current?.oauthClientIds as
-      | Record<string, string | undefined>
-      | undefined;
-
-    const clientId =
-      providerObjectConfig?.clientId ??
-      (proxyClientIds ? proxyClientIds[provider] : undefined);
-
-    const appScheme = oauth?.appScheme;
-
-    // For Discord and X, default to scheme-based deep link if not explicitly provided.
-    const redirectUri =
-      providerObjectConfig?.redirectUri ??
-      ((provider === "discord" || provider === "x") && appScheme
-        ? `${appScheme}://`
-        : (oauth?.redirectUri ??
-          proxyAuthConfigRef.current?.oauthRedirectUrl ??
-          ZEROXKEY_OAUTH_REDIRECT_URL));
-
-    return { clientId, redirectUri, appScheme } as const;
-  };
+  const getOauthProviderSettings = (
+    provider: OAuthProviders,
+    invocation?: OauthHandlerOverrides,
+  ) =>
+    resolveOauthProviderSettings({
+      provider,
+      oauth: masterConfig?.auth?.oauth,
+      invocation,
+      proxyClientIds: proxyAuthConfigRef.current?.oauthClientIds,
+      proxyRedirectUri: proxyAuthConfigRef.current?.oauthRedirectUrl,
+      defaultRedirectUri: ZEROXKEY_OAUTH_REDIRECT_URL,
+    });
 
   /**
    * Initializes the ZeroXKey client with the provided configuration.
@@ -2520,7 +2505,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         clientId,
         redirectUri,
         appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.DISCORD);
+      } = getOauthProviderSettings(OAuthProviders.DISCORD, params);
       try {
         if (!masterConfig) {
           throw new ZeroXKeyError(
@@ -2655,7 +2640,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         clientId,
         redirectUri,
         appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.X);
+      } = getOauthProviderSettings(OAuthProviders.X, params);
       try {
         if (!masterConfig) {
           throw new ZeroXKeyError(
@@ -2784,12 +2769,12 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
 
   const handleGoogleOauth = useCallback(
     async (params?: HandleGoogleOauthParams): Promise<void> => {
-      const {} = params || {};
+      const { additionalState: additionalParameters } = params || {};
       const {
         clientId,
         redirectUri,
         appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.GOOGLE);
+      } = getOauthProviderSettings(OAuthProviders.GOOGLE, params);
 
       try {
         if (!masterConfig) {
@@ -2839,6 +2824,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           redirectUri: finalRedirectUri,
           publicKey,
           nonce,
+          additionalState: additionalParameters,
           useOauthProxyOrigin: true,
         });
         const expectedState = new URL(oauthUrl).searchParams.get("state") ?? "";
@@ -2902,7 +2888,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         clientId,
         redirectUri,
         appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.APPLE);
+      } = getOauthProviderSettings(OAuthProviders.APPLE, params);
 
       try {
         if (!masterConfig) {
@@ -3016,7 +3002,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         clientId,
         redirectUri,
         appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.FACEBOOK);
+      } = getOauthProviderSettings(OAuthProviders.FACEBOOK, params);
 
       try {
         if (!masterConfig) {

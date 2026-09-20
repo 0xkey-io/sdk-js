@@ -10,13 +10,56 @@ import type {
   ZeroXKeyNetworkError,
 } from "@0xkey-io/sdk-types";
 
-// New OAuth provider config union: boolean enables; object configures and enables
+/**
+ * Legacy OAuth provider configuration. Provider-specific configuration types
+ * should be preferred for new integrations.
+ */
 export type OauthProviderConfig =
   | boolean
   | {
+      /** @deprecated Use the provider-specific `primaryClientId` field. */
       clientId?: string;
       redirectUri?: string;
     };
+
+type OauthProviderConfigBase = {
+  /** @deprecated Use `primaryClientId`. */
+  clientId?: string;
+  /** Additional client IDs retained for provider registration by later flows. */
+  secondaryClientIds?: string[];
+  /** Redirect URI override for this provider. */
+  redirectUri?: string;
+};
+
+export type GoogleOauthProviderConfig = OauthProviderConfigBase & {
+  /** Google client identifiers. */
+  primaryClientId?: {
+    /** Client ID for the browser OAuth flow. */
+    webClientId?: string;
+  };
+};
+
+export type AppleOauthProviderConfig = OauthProviderConfigBase & {
+  /** Apple browser and native client identifiers. */
+  primaryClientId?: {
+    /** Apple Services ID used by the browser OAuth flow. */
+    serviceId?: string;
+    /** Apple bundle ID retained for a future native iOS flow. */
+    iosBundleId?: string;
+  };
+};
+
+export type FacebookOauthProviderConfig = OauthProviderConfigBase & {
+  primaryClientId?: string;
+};
+
+export type XOauthProviderConfig = OauthProviderConfigBase & {
+  primaryClientId?: string;
+};
+
+export type DiscordOauthProviderConfig = OauthProviderConfigBase & {
+  primaryClientId?: string;
+};
 
 export interface ZeroXKeyCallbacks {
   onOauthRedirect?: (response: {
@@ -65,11 +108,11 @@ export interface ZeroXKeyProviderConfig
       /** application deep link scheme used to complete OAuth in React Native (e.g., "myapp"). */
       appScheme?: string;
       /** provider enablement/configuration (boolean enables; object configures and enables) */
-      google?: OauthProviderConfig;
-      apple?: OauthProviderConfig;
-      facebook?: OauthProviderConfig;
-      x?: OauthProviderConfig;
-      discord?: OauthProviderConfig;
+      google?: boolean | GoogleOauthProviderConfig;
+      apple?: boolean | AppleOauthProviderConfig;
+      facebook?: boolean | FacebookOauthProviderConfig;
+      x?: boolean | XOauthProviderConfig;
+      discord?: boolean | DiscordOauthProviderConfig;
     };
     /** passkey enablement and options */
     passkey?: boolean | { passkeyName?: string };
