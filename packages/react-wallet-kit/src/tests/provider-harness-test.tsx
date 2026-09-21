@@ -3,14 +3,16 @@
  * @jest-environment-options {"url":"https://app.example.test/"}
  */
 import { describe, expect, it, jest } from "@jest/globals";
-import { act, type ReactNode } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import { TextDecoder, TextEncoder } from "node:util";
+import { act } from "react";
 import type {
   ClientContextType,
   ZeroXKeyClient,
   ZeroXKeyProviderConfig,
 } from "../index";
+import {
+  setupProviderDom,
+  type MountedProvider,
+} from "./fixtures/provider-dom";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -76,45 +78,8 @@ const config: ZeroXKeyProviderConfig = {
   },
 };
 
-let latestContext: ClientContextType | undefined;
-let AuthState: (typeof import("../index"))["AuthState"];
-let ClientState: (typeof import("../index"))["ClientState"];
-let ZeroXKeyProvider: (typeof import("../index"))["ZeroXKeyProvider"];
-let useZeroXKey: (typeof import("../index"))["useZeroXKey"];
-
-function Probe(): ReactNode {
-  const context = useZeroXKey();
-  latestContext = context;
-  return (
-    <output data-testid="provider-state">
-      {context.clientState ?? "unset"}|{context.authState}
-    </output>
-  );
-}
-
 describe("ZeroXKeyProvider harness", () => {
   it("initializes through Loading and unmounts after becoming Ready", async () => {
-    const textEncoderDescriptor = Object.getOwnPropertyDescriptor(
-      globalThis,
-      "TextEncoder",
-    );
-    const textDecoderDescriptor = Object.getOwnPropertyDescriptor(
-      globalThis,
-      "TextDecoder",
-    );
-    Object.defineProperty(globalThis, "TextEncoder", {
-      configurable: true,
-      writable: true,
-      value: TextEncoder,
-    });
-    Object.defineProperty(globalThis, "TextDecoder", {
-      configurable: true,
-      writable: true,
-      value: TextDecoder,
-    });
-
-    jest.useFakeTimers();
-    localStorage.clear();
     mockInitDeferred = deferred<void>();
     mockActiveSessionDeferred = deferred<string | undefined>();
     mockConstructedConfigs.length = 0;
@@ -122,71 +87,20 @@ describe("ZeroXKeyProvider harness", () => {
     mockGetAllSessions.mockClear();
     mockGetActiveSessionKey.mockClear();
     mockZeroXKeyClient.mockClear();
-    latestContext = undefined;
 
-    const actEnvironment = globalThis as typeof globalThis & {
-      IS_REACT_ACT_ENVIRONMENT?: boolean;
-    };
-    const actEnvironmentDescriptor = Object.getOwnPropertyDescriptor(
-      actEnvironment,
-      "IS_REACT_ACT_ENVIRONMENT",
-    );
-    Object.defineProperty(actEnvironment, "IS_REACT_ACT_ENVIRONMENT", {
-      configurable: true,
-      writable: true,
-      value: true,
-    });
-
-    let container: HTMLDivElement | undefined;
-    let root: Root | undefined;
-    let unmounted = false;
-
+    const dom = setupProviderDom();
+    let mounted: MountedProvider | undefined;
     try {
-      const originalConsoleError = console.error;
-      const originalConsoleWarn = console.warn;
-      const consoleError = jest
-        .spyOn(console, "error")
-        .mockImplementation((...args: Parameters<typeof console.error>) =>
-          originalConsoleError(...args),
-        );
-      const consoleWarn = jest
-        .spyOn(console, "warn")
-        .mockImplementation((...args: Parameters<typeof console.warn>) =>
-          originalConsoleWarn(...args),
-        );
-      const addEventListener = jest.spyOn(window, "addEventListener");
-      const removeEventListener = jest.spyOn(window, "removeEventListener");
-      const xhrSend = jest.spyOn(window.XMLHttpRequest.prototype, "send");
-      const fetchSpy =
-        typeof globalThis.fetch === "function"
-          ? jest.spyOn(globalThis, "fetch")
-          : undefined;
-      const core =
-        jest.requireMock<typeof import("@0xkey-io/core")>("@0xkey-io/core");
-      const getAuthProxyConfig = jest.spyOn(core, "getAuthProxyConfig");
-      const actualIndex =
-        jest.requireActual<typeof import("../index")>("../index");
-      ({ AuthState, ClientState, ZeroXKeyProvider, useZeroXKey } = actualIndex);
-
+      const { AuthState, ClientState } = dom.loadPublicExports();
       const callbacks = {
         onError: jest.fn(),
         onOauthRedirect: jest.fn(),
         onAuthenticationSuccess: jest.fn(),
       };
-      container = document.createElement("div");
-      document.body.appendChild(container);
-      root = createRoot(container);
 
       expect(window.location.search).toBe("");
       expect(window.location.hash).toBe("");
-
-      await act(async () => {
-        root!.render(
-          <ZeroXKeyProvider config={config} callbacks={callbacks}>
-            <Probe />
-          </ZeroXKeyProvider>,
-        );
-      });
+      mounted = await dom.mount(config, callbacks);
 
       expect(mockZeroXKeyClient).toHaveBeenCalledTimes(1);
       expect(mockConstructedConfigs).toEqual([
@@ -206,7 +120,8 @@ describe("ZeroXKeyProvider harness", () => {
       ]);
       expect(mockInit).toHaveBeenCalledTimes(1);
       expect(
-        container.querySelector('[data-testid="provider-state"]')?.textContent,
+        mounted.container.querySelector('[data-testid="provider-state"]')
+          ?.textContent,
       ).toBe(`${ClientState.Loading}|${AuthState.Unauthenticated}`);
       expect(mockGetAllSessions).not.toHaveBeenCalled();
       expect(mockGetActiveSessionKey).not.toHaveBeenCalled();
@@ -219,7 +134,8 @@ describe("ZeroXKeyProvider harness", () => {
       expect(mockGetAllSessions).toHaveBeenCalledTimes(1);
       expect(mockGetActiveSessionKey).toHaveBeenCalledTimes(1);
       expect(
-        container.querySelector('[data-testid="provider-state"]')?.textContent,
+        mounted.container.querySelector('[data-testid="provider-state"]')
+          ?.textContent,
       ).toBe(`${ClientState.Loading}|${AuthState.Unauthenticated}`);
 
       await act(async () => {
@@ -228,68 +144,36 @@ describe("ZeroXKeyProvider harness", () => {
       });
 
       expect(
-        container.querySelector('[data-testid="provider-state"]')?.textContent,
+        mounted.container.querySelector('[data-testid="provider-state"]')
+          ?.textContent,
       ).toBe(`${ClientState.Ready}|${AuthState.Unauthenticated}`);
-      const readyContext = latestContext as ClientContextType | undefined;
+      const readyContext = mounted.context() as ClientContextType | undefined;
       expect(readyContext?.session).toBeUndefined();
       expect(readyContext?.allSessions).toEqual({});
       expect(callbacks.onError).not.toHaveBeenCalled();
       expect(callbacks.onOauthRedirect).not.toHaveBeenCalled();
       expect(callbacks.onAuthenticationSuccess).not.toHaveBeenCalled();
-      expect(getAuthProxyConfig).not.toHaveBeenCalled();
-      expect(fetchSpy?.mock.calls ?? []).toHaveLength(0);
-      expect(xhrSend).not.toHaveBeenCalled();
+      expect(dom.observations.getAuthProxyConfig).not.toHaveBeenCalled();
+      expect(dom.observations.fetch?.mock.calls ?? []).toHaveLength(0);
+      expect(dom.observations.xhrSend).not.toHaveBeenCalled();
 
-      const resizeHandlers = addEventListener.mock.calls
+      const resizeHandlers = dom.observations.addEventListener.mock.calls
         .filter(([type]) => type === "resize")
         .map(([, handler]) => handler);
       expect(resizeHandlers).toHaveLength(1);
 
-      await act(async () => {
-        root!.unmount();
-        await Promise.resolve();
-      });
-      unmounted = true;
-
-      expect(container.firstChild).toBeNull();
-      expect(removeEventListener).toHaveBeenCalledWith(
+      await dom.unmount(mounted);
+      expect(mounted.container.firstChild).toBeNull();
+      expect(dom.observations.removeEventListener).toHaveBeenCalledWith(
         "resize",
         resizeHandlers[0],
       );
       expect(jest.getTimerCount()).toBe(0);
-      expect(consoleError).not.toHaveBeenCalled();
-      expect(consoleWarn).not.toHaveBeenCalled();
+      expect(dom.observations.consoleError).not.toHaveBeenCalled();
+      expect(dom.observations.consoleWarn).not.toHaveBeenCalled();
     } finally {
-      if (root && !unmounted) {
-        const mountedRoot = root;
-        await act(async () => {
-          mountedRoot.unmount();
-          await Promise.resolve();
-        });
-      }
-      container?.remove();
-      if (actEnvironmentDescriptor) {
-        Object.defineProperty(
-          actEnvironment,
-          "IS_REACT_ACT_ENVIRONMENT",
-          actEnvironmentDescriptor,
-        );
-      } else {
-        Reflect.deleteProperty(actEnvironment, "IS_REACT_ACT_ENVIRONMENT");
-      }
-      jest.useRealTimers();
-      jest.restoreAllMocks();
-      localStorage.clear();
-      if (textEncoderDescriptor) {
-        Object.defineProperty(globalThis, "TextEncoder", textEncoderDescriptor);
-      } else {
-        Reflect.deleteProperty(globalThis, "TextEncoder");
-      }
-      if (textDecoderDescriptor) {
-        Object.defineProperty(globalThis, "TextDecoder", textDecoderDescriptor);
-      } else {
-        Reflect.deleteProperty(globalThis, "TextDecoder");
-      }
+      if (mounted) await dom.unmount(mounted);
+      await dom.restore();
     }
   });
 });
