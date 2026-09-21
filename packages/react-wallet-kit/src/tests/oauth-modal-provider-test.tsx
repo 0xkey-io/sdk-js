@@ -706,6 +706,7 @@ describe("mounted OAuth add-provider modal behavior", () => {
         provider: "google",
         flow: "popup",
         publicKey: "popup-explicit-public-key",
+        transactionId: expect.stringMatching(/^[0-9a-f]{32}$/),
       });
 
       await deliverGooglePopup(

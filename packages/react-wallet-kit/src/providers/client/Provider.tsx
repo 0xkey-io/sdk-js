@@ -9,7 +9,6 @@ import {
   cleanupOAuthUrlPreserveSearch,
   clearAllOAuthData,
   completeOAuthFlow,
-  completeOAuthPopup,
   exchangeFacebookCodeForToken,
   generateChallengePair,
   getOAuthAddProviderMetadata,
@@ -24,6 +23,7 @@ import {
   storeOAuthAddProviderMetadata,
   storePKCEVerifier,
 } from "../../utils/oauth";
+import { runOAuthPopup } from "../../utils/oauth/popup-flow";
 import {
   isValidSession,
   mergeWalletsWithoutDuplicates,
@@ -225,6 +225,30 @@ interface ClientProviderProps {
   children: ReactNode;
   config: ZeroXKeyProviderConfig;
   callbacks?: ZeroXKeyCallbacks | undefined;
+}
+
+function createOAuthPopupDependencies(client: ZeroXKeyClient) {
+  const createApiKeyPairCapability = client.createApiKeyPair;
+  const discardUncommittedApiKeyPairCapability =
+    client.discardUncommittedApiKeyPair;
+  return {
+    createApiKeyPair: () => createApiKeyPairCapability.call(client),
+    discardUncommittedApiKeyPair: (publicKey: string) =>
+      discardUncommittedApiKeyPairCapability.call(client, publicKey),
+    generatePkce: generateChallengePair,
+    randomBytes(length: number) {
+      const bytes = new Uint8Array(length);
+      window.crypto.getRandomValues(bytes);
+      return bytes;
+    },
+    now: Date.now,
+    openPopup: openOAuthPopup,
+  };
+}
+
+function snapshotOAuthCallbacks(callbacks?: ZeroXKeyCallbacks) {
+  const onOauthRedirect = callbacks?.onOauthRedirect;
+  return onOauthRedirect ? { onOauthRedirect } : undefined;
 }
 
 /**
@@ -3308,6 +3332,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.discordClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.DISCORD;
@@ -3331,8 +3356,52 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       const redirectUri = masterConfig.auth?.oauthConfig.oauthRedirectUri;
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const httpClient = client.httpClient;
+        const proxyOAuth2Authenticate =
+          httpClient.proxyOAuth2Authenticate.bind(httpClient);
+        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        return runOAuthPopup(
+          {
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            exchange: async ({ authCode, codeVerifier, nonce }) => {
+              const response = await proxyOAuth2Authenticate({
+                provider: "OAUTH2_PROVIDER_DISCORD",
+                authCode,
+                redirectUri,
+                codeVerifier,
+                clientId,
+                nonce,
+              });
+              return response?.oidcToken ?? "";
+            },
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popupCallbacks,
+                completeOauth,
+                onOauthSuccess,
+              }),
+          },
+          createOAuthPopupDependencies(client),
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3357,69 +3426,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         additionalState: additionalParameters,
       });
 
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
-        );
-      }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                  exchangeCodeForToken: async (codeVerifier) => {
-                    const resp =
-                      await client?.httpClient.proxyOAuth2Authenticate({
-                        provider: "OAUTH2_PROVIDER_DISCORD",
-                        authCode: result.authCode!,
-                        redirectUri,
-                        codeVerifier,
-                        clientId,
-                        nonce,
-                      });
-                    return resp?.oidcToken ?? "";
-                  },
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // ignore cross-origin
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
-      });
+      return redirectToOAuthProvider(authUrl);
     },
     [client, callbacks, completeOauth, createApiKeyPair, masterConfig],
   );
@@ -3430,6 +3437,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.xClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.X;
@@ -3453,8 +3461,52 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       const redirectUri = masterConfig.auth?.oauthConfig.oauthRedirectUri;
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const httpClient = client.httpClient;
+        const proxyOAuth2Authenticate =
+          httpClient.proxyOAuth2Authenticate.bind(httpClient);
+        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        return runOAuthPopup(
+          {
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            exchange: async ({ authCode, codeVerifier, nonce }) => {
+              const response = await proxyOAuth2Authenticate({
+                provider: "OAUTH2_PROVIDER_X",
+                authCode,
+                redirectUri,
+                codeVerifier,
+                clientId,
+                nonce,
+              });
+              return response?.oidcToken ?? "";
+            },
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popupCallbacks,
+                completeOauth,
+                onOauthSuccess,
+              }),
+          },
+          createOAuthPopupDependencies(client),
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3479,69 +3531,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         additionalState: additionalParameters,
       });
 
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
-        );
-      }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                  exchangeCodeForToken: async (codeVerifier) => {
-                    const resp =
-                      await client?.httpClient.proxyOAuth2Authenticate({
-                        provider: "OAUTH2_PROVIDER_X",
-                        authCode: result.authCode!,
-                        redirectUri,
-                        codeVerifier,
-                        clientId,
-                        nonce,
-                      });
-                    return resp?.oidcToken ?? "";
-                  },
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // ignore cross-origin
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
-      });
+      return redirectToOAuthProvider(authUrl);
     },
     [client, callbacks, completeOauth, createApiKeyPair, masterConfig],
   );
@@ -3552,6 +3542,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.googleClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.GOOGLE;
@@ -3575,10 +3566,40 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       // Google requires no trailing slash
       const redirectUri =
         masterConfig.auth?.oauthConfig.oauthRedirectUri.replace(/\/$/, "");
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        return runOAuthPopup(
+          {
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popupCallbacks,
+                completeOauth,
+                onOauthSuccess,
+              }),
+          },
+          createOAuthPopupDependencies(client),
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3598,59 +3619,9 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         additionalState: additionalParameters,
       });
 
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
-        );
-      }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // Ignore cross-origin errors
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
-      });
+      return redirectToOAuthProvider(authUrl);
     },
-    [callbacks, completeOauth, createApiKeyPair, masterConfig],
+    [client, callbacks, completeOauth, createApiKeyPair, masterConfig],
   );
 
   const handleAppleOauth = useCallback(
@@ -3659,6 +3630,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.appleClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.APPLE;
@@ -3682,9 +3654,39 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       // TODO (Amir): Apple needs the '/' at the end. Maybe we should add it if not there?
       const redirectUri = masterConfig.auth?.oauthConfig.oauthRedirectUri;
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        return runOAuthPopup(
+          {
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popupCallbacks,
+                completeOauth,
+                onOauthSuccess,
+              }),
+          },
+          createOAuthPopupDependencies(client),
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3704,59 +3706,9 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         additionalState: additionalParameters,
       });
 
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
-        );
-      }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // Ignore cross-origin errors
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
-      });
+      return redirectToOAuthProvider(authUrl);
     },
-    [callbacks, completeOauth, createApiKeyPair, masterConfig],
+    [client, callbacks, completeOauth, createApiKeyPair, masterConfig],
   );
 
   const handleFacebookOauth = useCallback(
@@ -3765,6 +3717,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.facebookClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.FACEBOOK;
@@ -3788,8 +3741,47 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       const redirectUri = masterConfig.auth?.oauthConfig.oauthRedirectUri;
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        return runOAuthPopup(
+          {
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            exchange: async ({ authCode, codeVerifier }) => {
+              const tokenData = await exchangeFacebookCodeForToken(
+                clientId,
+                redirectUri,
+                authCode,
+                codeVerifier,
+              );
+              return tokenData.id_token;
+            },
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popupCallbacks,
+                completeOauth,
+                onOauthSuccess,
+              }),
+          },
+          createOAuthPopupDependencies(client),
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3814,68 +3806,9 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         additionalState: additionalParameters,
       });
 
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
-        );
-      }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                  exchangeCodeForToken: async (codeVerifier) => {
-                    const tokenData = await exchangeFacebookCodeForToken(
-                      clientId,
-                      redirectUri,
-                      result.authCode!,
-                      codeVerifier,
-                    );
-                    return tokenData.id_token;
-                  },
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // Ignore cross-origin errors
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
-      });
+      return redirectToOAuthProvider(authUrl);
     },
-    [callbacks, completeOauth, createApiKeyPair, masterConfig],
+    [client, callbacks, completeOauth, createApiKeyPair, masterConfig],
   );
 
   const handleLogin = useCallback(

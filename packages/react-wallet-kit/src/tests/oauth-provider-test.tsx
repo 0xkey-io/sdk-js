@@ -30,6 +30,7 @@ type CoreClient = Pick<
   | "getAllSessions"
   | "getActiveSessionKey"
   | "createApiKeyPair"
+  | "discardUncommittedApiKeyPair"
   | "completeOauth"
   | "getSession"
   | "addOauthProvider"
@@ -90,20 +91,27 @@ type ClientSpec = {
 };
 
 let mockSpec: ClientSpec;
+const mockClientSpecs: ClientSpec[] = [];
+const mockClientInstances: ZeroXKeyClient[] = [];
 const mockConstructedConfigs: unknown[] = [];
 const mockCreatedKeys: Array<{ client: number; publicKey: string }> = [];
+const mockDiscardedKeys: Array<{ client: number; publicKey: string }> = [];
 const mockProxyCalls: Array<{ client: number; params: ProxyOauthParams }> = [];
-const mockCompleteOauth =
-  jest.fn<
-    (params: CompleteOauthParams) => ReturnType<CoreClient["completeOauth"]>
-  >();
-const mockGetSession = jest.fn<CoreClient["getSession"]>();
-const mockAddOauthProvider = jest.fn<CoreClient["addOauthProvider"]>();
+const mockCompleteOauth = jest.fn<(params: CompleteOauthParams) => void>();
+const mockGetSession =
+  jest.fn<(...params: Parameters<CoreClient["getSession"]>) => void>();
+const mockAddOauthProvider =
+  jest.fn<(params: AddOauthProviderParams) => void>();
 const mockInit = jest.fn(async () => undefined);
 const mockGetAllSessions = jest.fn(async () => ({}));
 const mockGetActiveSessionKey = jest.fn(async () => undefined);
 const mockZeroXKeyClient = jest.fn((config: unknown) => {
   const client = mockConstructedConfigs.length;
+  const selectedSpec = mockClientSpecs[client] ?? mockSpec;
+  const clientSpec = {
+    ...selectedSpec,
+    keys: [...selectedSpec.keys],
+  };
   mockConstructedConfigs.push(config);
   const base = {
     init: mockInit,
@@ -115,35 +123,46 @@ const mockZeroXKeyClient = jest.fn((config: unknown) => {
   >;
   const instance: Record<string, unknown> = { ...base };
 
-  if (mockSpec.keys.length > 0) {
+  if (clientSpec.keys.length > 0) {
     instance.createApiKeyPair = async () => {
-      const publicKey = mockSpec.keys.shift();
+      const publicKey = clientSpec.keys.shift();
       if (!publicKey) throw new Error("No synthetic public key remains");
       mockCreatedKeys.push({ client, publicKey });
       return publicKey;
     };
   }
-  if (mockSpec.proxy) {
+  instance.discardUncommittedApiKeyPair = async (publicKey: string) => {
+    mockDiscardedKeys.push({ client, publicKey });
+  };
+  if (clientSpec.proxy) {
     instance.httpClient = {
       proxyOAuth2Authenticate: async (params: ProxyOauthParams) => {
         mockProxyCalls.push({ client, params });
-        return mockSpec.proxy!(params);
+        return clientSpec.proxy!(params);
       },
     } satisfies Pick<ZeroXKeyClient["httpClient"], "proxyOAuth2Authenticate">;
   }
-  if (mockSpec.completeOauth) {
-    mockCompleteOauth.mockImplementation(mockSpec.completeOauth);
-    instance.completeOauth = mockCompleteOauth;
+  if (clientSpec.completeOauth) {
+    instance.completeOauth = (params: CompleteOauthParams) => {
+      mockCompleteOauth(params);
+      return clientSpec.completeOauth!(params);
+    };
   }
-  if (mockSpec.getSession) {
-    mockGetSession.mockImplementation(mockSpec.getSession);
-    instance.getSession = mockGetSession;
+  if (clientSpec.getSession) {
+    instance.getSession = (...params: Parameters<CoreClient["getSession"]>) => {
+      mockGetSession(...params);
+      return clientSpec.getSession!(...params);
+    };
   }
-  if (mockSpec.addOauthProvider) {
-    mockAddOauthProvider.mockImplementation(mockSpec.addOauthProvider);
-    instance.addOauthProvider = mockAddOauthProvider;
+  if (clientSpec.addOauthProvider) {
+    instance.addOauthProvider = (params: AddOauthProviderParams) => {
+      mockAddOauthProvider(params);
+      return clientSpec.addOauthProvider!(params);
+    };
   }
-  return instance as unknown as ZeroXKeyClient;
+  const clientInstance = instance as unknown as ZeroXKeyClient;
+  mockClientInstances.push(clientInstance);
+  return clientInstance;
 });
 
 jest.mock("@0xkey-io/core", () => {
@@ -271,6 +290,7 @@ function callbackUrl(params: {
   state?: string;
   token?: string;
   code?: string;
+  fragmentCode?: string;
 }): string {
   if (params.code) {
     const query = new URLSearchParams({ code: params.code });
@@ -279,6 +299,9 @@ function callbackUrl(params: {
   }
   const hash = new URLSearchParams({ id_token: params.token! });
   if (params.state !== undefined) hash.set("state", params.state);
+  if (params.fragmentCode !== undefined) {
+    hash.set("code", params.fragmentCode);
+  }
   return `${redirectUri}#${hash.toString()}`;
 }
 
@@ -292,8 +315,11 @@ function stateFrom(url: URL): URLSearchParams {
 
 beforeEach(() => {
   mockSpec = { keys: [] };
+  mockClientSpecs.length = 0;
+  mockClientInstances.length = 0;
   mockConstructedConfigs.length = 0;
   mockCreatedKeys.length = 0;
+  mockDiscardedKeys.length = 0;
   mockProxyCalls.length = 0;
   mockCompleteOauth.mockReset();
   mockGetSession.mockReset();
@@ -390,7 +416,7 @@ describe("mounted public OAuth handlers", () => {
         throw new Error("internal completion must not run");
       };
       mockSpec.proxy = async () => ({ oidcToken });
-      let expectedFacebookVerifier: string | undefined;
+      let facebookVerifier: string | undefined;
       if (provider === "facebook") {
         expectedFetchCalls = 1;
         activeFetch = async (input, init) => {
@@ -401,15 +427,17 @@ describe("mounted public OAuth handlers", () => {
           expect(init?.headers).toEqual({
             "Content-Type": "application/x-www-form-urlencoded",
           });
-          expect(
-            Object.fromEntries(new URLSearchParams(String(init?.body))),
-          ).toEqual({
+          const body = Object.fromEntries(
+            new URLSearchParams(String(init?.body)),
+          );
+          expect(body).toEqual({
             client_id: "override-facebook",
             redirect_uri: redirectUri,
-            code_verifier: expectedFacebookVerifier,
+            code_verifier: expect.any(String),
             code: authCode,
             grant_type: "authorization_code",
           });
+          facebookVerifier = body.code_verifier;
           return { ok: true, json: async () => ({ id_token: oidcToken }) };
         };
       }
@@ -456,6 +484,7 @@ describe("mounted public OAuth handlers", () => {
         provider,
         flow: "popup",
         publicKey,
+        transactionId: expect.stringMatching(/^[0-9a-f]{32}$/),
         ...(provider === "x" || provider === "discord"
           ? {
               nonce: createHash("sha256").update(publicKey).digest("hex"),
@@ -465,15 +494,11 @@ describe("mounted public OAuth handlers", () => {
       });
       expect(mockCreatedKeys).toEqual([{ client: 0, publicKey }]);
 
-      let capturedVerifier: string | undefined;
       if (pkce) {
-        const verifier = localStorage.getItem(`${provider}_verifier`);
-        expect(verifier).toBeTruthy();
-        capturedVerifier = verifier!;
-        if (provider === "facebook") expectedFacebookVerifier = verifier!;
-        expect(authorizationUrl.searchParams.get("code_challenge")).toBe(
-          expectedChallenge(verifier!),
-        );
+        expect(localStorage.getItem(`${provider}_verifier`)).toBeNull();
+        expect(
+          authorizationUrl.searchParams.get("code_challenge"),
+        ).toBeTruthy();
         expect(authorizationUrl.searchParams.get("code_challenge_method")).toBe(
           "S256",
         );
@@ -495,6 +520,7 @@ describe("mounted public OAuth handlers", () => {
           provider,
           state,
           ...(pkce ? { code: authCode } : { token: oidcToken }),
+          ...(provider === "apple" ? { fragmentCode: authCode } : {}),
         }),
       );
       await observed.settled;
@@ -529,17 +555,144 @@ describe("mounted public OAuth handlers", () => {
                   : "OAUTH2_PROVIDER_DISCORD",
               authCode,
               redirectUri,
-              codeVerifier: capturedVerifier,
+              codeVerifier: expect.any(String),
               clientId: `override-${provider}`,
               nonce: stateFields.get("nonce"),
             },
           },
         ]);
+        expect(expectedChallenge(mockProxyCalls[0]!.params.codeVerifier)).toBe(
+          authorizationUrl.searchParams.get("code_challenge"),
+        );
+      } else if (provider === "facebook") {
+        expect(facebookVerifier).toBeTruthy();
+        expect(expectedChallenge(facebookVerifier!)).toBe(
+          authorizationUrl.searchParams.get("code_challenge"),
+        );
       } else {
         expect(mockProxyCalls).toHaveLength(0);
       }
     },
   );
+
+  it("[I1] binds key creation before asynchronous popup preparation", async () => {
+    mockSpec.keys = ["original-public-key"];
+    mockSpec.proxy = async () => ({ oidcToken: "original-token" });
+    const onOauthSuccess = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const context = mounted.context()!;
+    const observed = observe(
+      context.handleDiscordOauth({ openInPage: false, onOauthSuccess }),
+    );
+    const replacementCreate = jest.fn(async () => "replacement-public-key");
+    mockClientInstances[0]!.createApiKeyPair = replacementCreate;
+
+    await waitFor(
+      () =>
+        popups.handles.length === 1 &&
+        popups.handles[0]!.assignedUrls.length === 1,
+      "OAuth authorization URL assignment",
+    );
+    const popup = popups.handles[0]!;
+    const authorizationUrl = new URL(popup.assignedUrls[0]!);
+
+    expect(mockCreatedKeys).toEqual([
+      { client: 0, publicKey: "original-public-key" },
+    ]);
+    expect(replacementCreate).not.toHaveBeenCalled();
+    expect(stateFrom(authorizationUrl).get("publicKey")).toBe(
+      "original-public-key",
+    );
+
+    await deliver(
+      popup,
+      callbackUrl({
+        provider: "discord",
+        code: "original-code",
+        state: authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await observed.settled;
+    expect(onOauthSuccess).toHaveBeenCalledWith({
+      publicKey: "original-public-key",
+      oidcToken: "original-token",
+      providerName: "discord",
+    });
+  });
+
+  it("[I1] binds the initiating transport before popup delivery", async () => {
+    mockSpec.keys = ["transport-public-key"];
+    mockSpec.proxy = async () => ({ oidcToken: "initiating-token" });
+    const onOauthSuccess = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const started = await startPopup(() =>
+      mounted.context()!.handleDiscordOauth({
+        openInPage: false,
+        onOauthSuccess,
+      }),
+    );
+    const replacementExchange = jest.fn(async () => ({
+      oidcToken: "replacement-token",
+    }));
+    mockClientInstances[0]!.httpClient = {
+      proxyOAuth2Authenticate: replacementExchange,
+    } as unknown as ZeroXKeyClient["httpClient"];
+
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "discord",
+        code: "transport-code",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await started.observed.settled;
+
+    expect(replacementExchange).not.toHaveBeenCalled();
+    expect(mockProxyCalls).toEqual([
+      {
+        client: 0,
+        params: expect.objectContaining({
+          authCode: "transport-code",
+          clientId: "discord-A",
+        }),
+      },
+    ]);
+    expect(onOauthSuccess).toHaveBeenCalledWith({
+      publicKey: "transport-public-key",
+      oidcToken: "initiating-token",
+      providerName: "discord",
+    });
+  });
+
+  it("[I1] binds exact discard before popup delivery", async () => {
+    mockSpec.keys = ["discard-public-key"];
+    const mounted = await mountReady({ onError: jest.fn() });
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    const replacementDiscard = jest.fn(async () => undefined);
+    mockClientInstances[0]!.discardUncommittedApiKeyPair = replacementDiscard;
+
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "untrusted-token",
+        state: `${started.authorizationUrl.searchParams.get("state")!}-wrong`,
+      }),
+    );
+    await started.observed.settled;
+
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.any(Error),
+    });
+    expect(replacementDiscard).not.toHaveBeenCalled();
+    expect(mockDiscardedKeys).toEqual([
+      { client: 0, publicKey: "discard-public-key" },
+    ]);
+  });
 
   it("[P1] Google popup uses the global callback shape when no per-call callback is supplied", async () => {
     mockSpec.keys = ["public-google-global"];
@@ -573,6 +726,69 @@ describe("mounted public OAuth handlers", () => {
     expect(mockCompleteOauth).not.toHaveBeenCalled();
   });
 
+  it("snapshots the global OAuth callback before popup preparation", async () => {
+    mockSpec.keys = ["public-global-snapshot"];
+    const originalCallback = jest.fn();
+    const replacementCallback = jest.fn();
+    const callbacks: ZeroXKeyCallbacks = {
+      onOauthRedirect: originalCallback,
+      onError: jest.fn(),
+    };
+    const mounted = await mountReady(callbacks);
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    callbacks.onOauthRedirect = replacementCallback;
+
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        state: started.authorizationUrl.searchParams.get("state")!,
+        token: "global-snapshot-token",
+      }),
+    );
+    await started.observed.settled;
+
+    expect(originalCallback).toHaveBeenCalledWith({
+      idToken: "global-snapshot-token",
+      publicKey: "public-global-snapshot",
+    });
+    expect(replacementCallback).not.toHaveBeenCalled();
+  });
+
+  it("snapshots the per-call OAuth callback before popup preparation", async () => {
+    mockSpec.keys = ["public-per-call-snapshot"];
+    const originalCallback = jest.fn();
+    const replacementCallback = jest.fn();
+    const params = {
+      openInPage: false,
+      onOauthSuccess: originalCallback,
+    };
+    const mounted = await mountReady({ onError: jest.fn() });
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth(params),
+    );
+    params.onOauthSuccess = replacementCallback;
+
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        state: started.authorizationUrl.searchParams.get("state")!,
+        token: "per-call-snapshot-token",
+      }),
+    );
+    await started.observed.settled;
+
+    expect(originalCallback).toHaveBeenCalledWith({
+      oidcToken: "per-call-snapshot-token",
+      providerName: "google",
+      publicKey: "public-per-call-snapshot",
+    });
+    expect(replacementCallback).not.toHaveBeenCalled();
+  });
+
   it("[P2] a pending per-call callback does not delay the public handler", async () => {
     mockSpec.keys = ["public-pending-callback"];
     const callback = deferred<void>();
@@ -599,6 +815,7 @@ describe("mounted public OAuth handlers", () => {
       status: "fulfilled",
       value: undefined,
     });
+    expect(mockDiscardedKeys).toHaveLength(0);
     callback.resolve();
     await callback.promise;
   });
@@ -639,9 +856,10 @@ describe("mounted public OAuth handlers", () => {
     expect(onError).toHaveBeenCalledWith(
       expect.objectContaining({ message: "Failed to complete OAuth" }),
     );
+    expect(mockDiscardedKeys).toHaveLength(0);
   });
 
-  it("[P2] a synchronous per-call callback throw rejects without a key-disposal path", async () => {
+  it("[P2] a synchronous per-call callback throw rejects after irreversible handoff", async () => {
     mockSpec.keys = ["public-sync-throw"];
     const thrown = new Error("synthetic callback throw");
     const onOauthSuccess = jest.fn(() => {
@@ -668,6 +886,7 @@ describe("mounted public OAuth handlers", () => {
     expect(mockCreatedKeys).toEqual([
       { client: 0, publicKey: "public-sync-throw" },
     ]);
+    expect(mockDiscardedKeys).toHaveLength(0);
   });
 
   it("[P3] Google seeded redirect return dispatches URL-derived state and preserves unrelated search", async () => {
@@ -819,7 +1038,7 @@ describe("mounted public OAuth handlers", () => {
   });
 
   it.each(["A-then-B", "B-then-A"] as const)(
-    "[S1 baseline deficiency] shared Discord verifier interferes in %s order",
+    "[S1 safety] Discord popup operations retain distinct verifiers in %s order",
     async (order) => {
       mockSpec.keys = ["public-A", "public-B"];
       mockSpec.proxy = async (params) => ({
@@ -835,15 +1054,14 @@ describe("mounted public OAuth handlers", () => {
           onOauthSuccess: callbackA,
         }),
       );
-      const verifierA = localStorage.getItem("discord_verifier")!;
+      const verifierSlotAfterA = localStorage.getItem("discord_verifier");
       const startedB = await startPopup(() =>
         context.handleDiscordOauth({
           openInPage: false,
           onOauthSuccess: callbackB,
         }),
       );
-      const verifierB = localStorage.getItem("discord_verifier")!;
-      expect(verifierA).not.toBe(verifierB);
+      const verifierSlotAfterB = localStorage.getItem("discord_verifier");
 
       const records = {
         A: {
@@ -872,49 +1090,183 @@ describe("mounted public OAuth handlers", () => {
       }
       await Promise.all([startedA.observed.settled, startedB.observed.settled]);
 
-      const first = records[delivery[0]];
-      const second = records[delivery[1]];
-      // Baseline oracle: replace this block with the preserved safety RED patch.
-      expect(mockProxyCalls).toEqual([
-        {
+      expect(mockProxyCalls).toHaveLength(2);
+      for (const label of ["A", "B"] as const) {
+        const record = records[label];
+        const exchange = mockProxyCalls.find(
+          ({ params }) => params.authCode === record.code,
+        );
+        expect(exchange).toEqual({
           client: 0,
-          params: {
+          params: expect.objectContaining({
             provider: "OAUTH2_PROVIDER_DISCORD",
-            authCode: first.code,
+            authCode: record.code,
             redirectUri,
-            codeVerifier: verifierB,
             clientId: "discord-A",
-            nonce: stateFrom(first.authorizationUrl).get("nonce"),
-          },
-        },
-      ]);
-      expect(first.callback).toHaveBeenCalledTimes(1);
-      expect(first.callback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          publicKey: `public-${delivery[0]}`,
+            nonce: stateFrom(record.authorizationUrl).get("nonce"),
+          }),
+        });
+        expect(expectedChallenge(exchange!.params.codeVerifier)).toBe(
+          record.authorizationUrl.searchParams.get("code_challenge"),
+        );
+        expect(record.callback).toHaveBeenCalledTimes(1);
+        expect(record.callback).toHaveBeenCalledWith({
+          publicKey: `public-${label}`,
           providerName: "discord",
-          oidcToken: `token-for-${first.code}`,
-        }),
-      );
-      expect(first.observed.outcome()).toEqual({
-        status: "fulfilled",
-        value: undefined,
-      });
-      expect(second.callback).not.toHaveBeenCalled();
-      expect(second.observed.outcome()).toEqual({
-        status: "rejected",
-        reason: expect.objectContaining({
-          code: "NO_PKCE_VERIFIER_FOUND",
-        }),
-      });
-      if (order === "A-then-B") {
-        expect(mockProxyCalls[0]?.params.codeVerifier).toBe(verifierB);
-        expect(mockProxyCalls[0]?.params.codeVerifier).not.toBe(verifierA);
+          oidcToken: `token-for-${record.code}`,
+        });
+        expect(record.observed.outcome()).toEqual({
+          status: "fulfilled",
+          value: undefined,
+        });
       }
+      expect(verifierSlotAfterA).toBeNull();
+      expect(verifierSlotAfterB).toBeNull();
+      expect(mockDiscardedKeys).toHaveLength(0);
+      expect(jest.getTimerCount()).toBe(0);
     },
   );
 
-  it("[S2 baseline deficiency] a second Provider clears another Provider's pending verifier", async () => {
+  it("[S1 safety] same-provider popups retain their initiating client and callback capabilities", async () => {
+    mockClientSpecs.push(
+      {
+        keys: ["public-owner-A"],
+        proxy: async (params) => ({
+          oidcToken: `client-A-token-for-${params.authCode}`,
+        }),
+      },
+      {
+        keys: ["public-owner-B"],
+        proxy: async (params) => ({
+          oidcToken: `client-B-token-for-${params.authCode}`,
+        }),
+      },
+    );
+    const callbackA = jest.fn();
+    const callbackB = jest.fn();
+    const providerA = await mountReady({ onError: jest.fn() });
+    const startedA = await startPopup(() =>
+      providerA.context()!.handleDiscordOauth({
+        openInPage: false,
+        onOauthSuccess: callbackA,
+      }),
+    );
+    const providerB = await mountReady({ onError: jest.fn() });
+    const startedB = await startPopup(() =>
+      providerB.context()!.handleDiscordOauth({
+        openInPage: false,
+        onOauthSuccess: callbackB,
+      }),
+    );
+
+    await deliver(
+      startedB.popup,
+      callbackUrl({
+        provider: "discord",
+        code: "code-owner-B",
+        state: startedB.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await deliver(
+      startedA.popup,
+      callbackUrl({
+        provider: "discord",
+        code: "code-owner-A",
+        state: startedA.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await Promise.all([startedA.observed.settled, startedB.observed.settled]);
+
+    expect(mockProxyCalls).toHaveLength(2);
+    const exchangeA = mockProxyCalls.find(
+      ({ params }) => params.authCode === "code-owner-A",
+    );
+    const exchangeB = mockProxyCalls.find(
+      ({ params }) => params.authCode === "code-owner-B",
+    );
+    expect(exchangeA?.client).toBe(0);
+    expect(exchangeB?.client).toBe(1);
+    expect(expectedChallenge(exchangeA!.params.codeVerifier)).toBe(
+      startedA.authorizationUrl.searchParams.get("code_challenge"),
+    );
+    expect(expectedChallenge(exchangeB!.params.codeVerifier)).toBe(
+      startedB.authorizationUrl.searchParams.get("code_challenge"),
+    );
+    expect(callbackA).toHaveBeenCalledWith({
+      publicKey: "public-owner-A",
+      oidcToken: "client-A-token-for-code-owner-A",
+      providerName: "discord",
+    });
+    expect(callbackB).toHaveBeenCalledWith({
+      publicKey: "public-owner-B",
+      oidcToken: "client-B-token-for-code-owner-B",
+      providerName: "discord",
+    });
+    expect(mockDiscardedKeys).toHaveLength(0);
+    expect(localStorage.getItem("discord_verifier")).toBeNull();
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it("attributes a rejected owner's cleanup to its initiating client only", async () => {
+    mockClientSpecs.push(
+      { keys: ["public-rejected-owner"] },
+      { keys: ["public-successful-owner"] },
+    );
+    const callbackA = jest.fn();
+    const callbackB = jest.fn();
+    const providerA = await mountReady({ onError: jest.fn() });
+    const startedA = await startPopup(() =>
+      providerA.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: callbackA,
+      }),
+    );
+    const providerB = await mountReady({ onError: jest.fn() });
+    const startedB = await startPopup(() =>
+      providerB.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: callbackB,
+      }),
+    );
+
+    await deliver(
+      startedA.popup,
+      callbackUrl({
+        provider: "google",
+        token: "rejected-owner-token",
+        state: `${startedA.authorizationUrl.searchParams.get("state")!}-wrong`,
+      }),
+    );
+    await deliver(
+      startedB.popup,
+      callbackUrl({
+        provider: "google",
+        token: "successful-owner-token",
+        state: startedB.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await Promise.all([startedA.observed.settled, startedB.observed.settled]);
+
+    expect(startedA.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.any(Error),
+    });
+    expect(startedB.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(mockDiscardedKeys).toEqual([
+      { client: 0, publicKey: "public-rejected-owner" },
+    ]);
+    expect(callbackA).not.toHaveBeenCalled();
+    expect(callbackB).toHaveBeenCalledWith({
+      publicKey: "public-successful-owner",
+      oidcToken: "successful-owner-token",
+      providerName: "google",
+    });
+  });
+
+  it("[S2 safety] a second Provider cannot erase another Provider's pending verifier", async () => {
     mockSpec.keys = ["public-provider-A"];
     mockSpec.proxy = async () => ({ oidcToken: "token-provider-A" });
     const callbackA = jest.fn();
@@ -925,7 +1277,9 @@ describe("mounted public OAuth handlers", () => {
         onOauthSuccess: callbackA,
       }),
     );
-    const verifierA = localStorage.getItem("discord_verifier")!;
+    const challengeA =
+      startedA.authorizationUrl.searchParams.get("code_challenge");
+    const verifierSlotAfterA = localStorage.getItem("discord_verifier");
     localStorage.setItem("unrelated-sentinel", "keep-me");
 
     const providerB = await mountReady({ onError: jest.fn() });
@@ -935,6 +1289,9 @@ describe("mounted public OAuth handlers", () => {
     );
     const verifierAfterProviderBReady =
       localStorage.getItem("discord_verifier");
+    expect(startedA.observed.outcome()).toEqual({ status: "pending" });
+    expect(mockProxyCalls).toHaveLength(0);
+    expect(callbackA).not.toHaveBeenCalled();
 
     await deliver(
       startedA.popup,
@@ -946,16 +1303,30 @@ describe("mounted public OAuth handlers", () => {
     );
     await startedA.observed.settled;
 
-    expect(verifierA).toBeTruthy();
-    // Baseline oracle: replace this block with the preserved safety RED patch.
+    expect(verifierSlotAfterA).toBeNull();
     expect(verifierAfterProviderBReady).toBeNull();
     expect(localStorage.getItem("discord_verifier")).toBeNull();
-    expect(mockProxyCalls).toHaveLength(0);
-    expect(callbackA).not.toHaveBeenCalled();
-    expect(startedA.observed.outcome()).toEqual({
-      status: "rejected",
-      reason: expect.objectContaining({ code: "NO_PKCE_VERIFIER_FOUND" }),
+    expect(mockProxyCalls).toHaveLength(1);
+    expect(expectedChallenge(mockProxyCalls[0]!.params.codeVerifier)).toBe(
+      challengeA,
+    );
+    expect(mockProxyCalls[0]).toEqual({
+      client: 0,
+      params: expect.objectContaining({
+        authCode: "code-provider-A",
+        clientId: "discord-A",
+      }),
     });
+    expect(callbackA).toHaveBeenCalledWith({
+      publicKey: "public-provider-A",
+      oidcToken: "token-provider-A",
+      providerName: "discord",
+    });
+    expect(startedA.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(mockDiscardedKeys).toHaveLength(0);
     expect(localStorage.getItem("unrelated-sentinel")).toBe("keep-me");
   });
 
@@ -972,8 +1343,8 @@ describe("mounted public OAuth handlers", () => {
       forwardedSession: "attacker-session",
     },
   ])(
-    "[S3 baseline deficiency] Google popup accepts $label",
-    async ({ state, forwardedSession }) => {
+    "[S3 safety] Google popup rejects $label before dispatch",
+    async ({ state }) => {
       mockSpec.keys = ["initiating-google-key"];
       mockSpec.completeOauth = async () => {
         throw new Error("internal completion must not run");
@@ -995,19 +1366,80 @@ describe("mounted public OAuth handlers", () => {
         }),
       );
 
-      // Baseline oracle: replace this block with the preserved safety RED patch.
-      expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith({
-        publicKey: "initiating-google-key",
-        oidcToken: "synthetic-untrusted-token",
-        providerName: "google",
-        ...(forwardedSession ? { sessionKey: forwardedSession } : {}),
-      });
+      await started.observed.settled;
+
+      expect(callback).not.toHaveBeenCalled();
       expect(mockCompleteOauth).not.toHaveBeenCalled();
       expect(started.observed.outcome()).toEqual({
-        status: "fulfilled",
-        value: undefined,
+        status: "rejected",
+        reason: expect.objectContaining({
+          message: expect.stringContaining("OAuth popup response"),
+        }),
       });
+      expect(mockDiscardedKeys).toEqual([
+        { client: 0, publicKey: "initiating-google-key" },
+      ]);
     },
   );
+
+  it("[S3 safety] swapped operation state disposes only the rejected operation's key", async () => {
+    mockSpec.keys = ["google-key-A", "google-key-B"];
+    const callbackA = jest.fn();
+    const callbackB = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const startedA = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: callbackA,
+      }),
+    );
+    const startedB = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: callbackB,
+      }),
+    );
+
+    await deliver(
+      startedA.popup,
+      callbackUrl({
+        provider: "google",
+        token: "token-A",
+        state: startedB.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await startedA.observed.settled;
+    expect(startedA.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.any(Error),
+    });
+    expect(startedB.observed.outcome()).toEqual({ status: "pending" });
+    expect(callbackA).not.toHaveBeenCalled();
+    expect(callbackB).not.toHaveBeenCalled();
+    expect(mockDiscardedKeys).toEqual([
+      { client: 0, publicKey: "google-key-A" },
+    ]);
+
+    await deliver(
+      startedB.popup,
+      callbackUrl({
+        provider: "google",
+        token: "token-B",
+        state: startedB.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await startedB.observed.settled;
+    expect(startedB.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(callbackB).toHaveBeenCalledWith({
+      publicKey: "google-key-B",
+      oidcToken: "token-B",
+      providerName: "google",
+    });
+    expect(mockDiscardedKeys).toEqual([
+      { client: 0, publicKey: "google-key-A" },
+    ]);
+  });
 });

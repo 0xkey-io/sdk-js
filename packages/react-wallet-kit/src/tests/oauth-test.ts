@@ -165,6 +165,34 @@ describe("OAuth utils", () => {
       expect(parsed.sessionKey).toBe("sess_1");
     });
 
+    it("includes a dedicated transaction ID without changing additional state", () => {
+      const state = buildOAuthState({
+        provider: OAuthProviders.GOOGLE,
+        flow: "popup",
+        publicKey: "pk_transaction",
+        transactionId: "00112233445566778899aabbccddeeff",
+        additionalState: { sessionKey: "sess_transaction" },
+      });
+
+      expect(state).toBe(
+        "provider=google&flow=popup&publicKey=pk_transaction&transactionId=00112233445566778899aabbccddeeff&sessionKey=sess_transaction",
+      );
+    });
+
+    it("leaves legacy redirect state unchanged when no transaction ID is supplied", () => {
+      expect(
+        buildOAuthState({
+          provider: OAuthProviders.DISCORD,
+          flow: "redirect",
+          publicKey: "pk_redirect",
+          nonce: "nonce_redirect",
+          additionalState: { sessionKey: "sess_redirect" },
+        }),
+      ).toBe(
+        "provider=discord&flow=redirect&publicKey=pk_redirect&nonce=nonce_redirect&sessionKey=sess_redirect",
+      );
+    });
+
     it("returns empty object for null/undefined state", () => {
       expect(parseStateParam(null)).toEqual({});
       expect(parseStateParam(undefined)).toEqual({});
