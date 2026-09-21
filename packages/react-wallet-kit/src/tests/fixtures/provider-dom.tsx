@@ -134,6 +134,7 @@ export function setupProviderDom(options: ProviderDomOptions = {}) {
   const mount = async (
     config: ZeroXKeyProviderConfig,
     callbacks?: ZeroXKeyCallbacks,
+    children?: ReactNode,
   ): Promise<MountedProvider> => {
     const { ZeroXKeyProvider, useZeroXKey } = loadPublicExports();
     let latestContext: ClientContextType | undefined;
@@ -162,6 +163,7 @@ export function setupProviderDom(options: ProviderDomOptions = {}) {
           {...(callbacks !== undefined && { callbacks })}
         >
           <Probe />
+          {children}
         </ZeroXKeyProvider>,
       );
     });
