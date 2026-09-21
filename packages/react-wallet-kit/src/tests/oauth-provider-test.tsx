@@ -11,7 +11,8 @@ import {
   jest,
 } from "@jest/globals";
 import { createHash } from "node:crypto";
-import { act } from "react";
+import { AuthAction } from "@0xkey-io/sdk-types";
+import { act, useLayoutEffect } from "react";
 import type {
   StamperType,
   ZeroXKeyCallbacks,
@@ -113,15 +114,48 @@ const mockZeroXKeyClient = jest.fn((config: unknown) => {
     keys: [...selectedSpec.keys],
   };
   mockConstructedConfigs.push(config);
+  const constructorConfig = config as ZeroXKeyProviderConfig;
+  let initialized = false;
+  let currentHttpClient = {
+    config: {
+      organizationId: constructorConfig.organizationId,
+      apiBaseUrl: constructorConfig.apiBaseUrl ?? "https://api.0xkey.io",
+      authProxyUrl:
+        constructorConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+      authProxyConfigId: constructorConfig.authProxyConfigId,
+    },
+    proxyOAuth2Authenticate: async (params: ProxyOauthParams) => {
+      mockProxyCalls.push({ client, params });
+      if (!clientSpec.proxy) throw new Error("Unexpected OAuth exchange call");
+      return clientSpec.proxy(params);
+    },
+  } as unknown as ZeroXKeyClient["httpClient"];
   const base = {
-    init: mockInit,
+    async init() {
+      await mockInit();
+      initialized = true;
+    },
     getAllSessions: mockGetAllSessions,
     getActiveSessionKey: mockGetActiveSessionKey,
   } satisfies Pick<
     ZeroXKeyClient,
     "init" | "getAllSessions" | "getActiveSessionKey"
   >;
-  const instance: Record<string, unknown> = { ...base };
+  const instance: Record<string, unknown> = {
+    ...base,
+    config: constructorConfig,
+  };
+  Object.defineProperty(instance, "httpClient", {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (!initialized) throw new Error("Synthetic client is not initialized");
+      return currentHttpClient;
+    },
+    set(value: ZeroXKeyClient["httpClient"]) {
+      currentHttpClient = value;
+    },
+  });
 
   if (clientSpec.keys.length > 0) {
     instance.createApiKeyPair = async () => {
@@ -134,14 +168,6 @@ const mockZeroXKeyClient = jest.fn((config: unknown) => {
   instance.discardUncommittedApiKeyPair = async (publicKey: string) => {
     mockDiscardedKeys.push({ client, publicKey });
   };
-  if (clientSpec.proxy) {
-    instance.httpClient = {
-      proxyOAuth2Authenticate: async (params: ProxyOauthParams) => {
-        mockProxyCalls.push({ client, params });
-        return clientSpec.proxy!(params);
-      },
-    } satisfies Pick<ZeroXKeyClient["httpClient"], "proxyOAuth2Authenticate">;
-  }
   if (clientSpec.completeOauth) {
     instance.completeOauth = (params: CompleteOauthParams) => {
       mockCompleteOauth(params);
@@ -214,6 +240,7 @@ let popups: ReturnType<typeof installOAuthPopups>;
 let publicExports: typeof import("../index");
 let mounts: MountedProvider[];
 let expectedFetchCalls: number;
+let expectedAuthProxyConfigCalls: number;
 
 async function flush(rounds = 12): Promise<void> {
   await act(async () => {
@@ -237,8 +264,11 @@ async function waitFor(
   throw new Error(`Timed out waiting for ${description}`);
 }
 
-async function mountReady(callbacks?: ZeroXKeyCallbacks) {
-  const mounted = await dom.mount(baseConfig, callbacks);
+async function mountReady(
+  callbacks?: ZeroXKeyCallbacks,
+  config: ZeroXKeyProviderConfig = baseConfig,
+) {
+  const mounted = await dom.mount(config, callbacks);
   mounts.push(mounted);
   await waitFor(
     () => mounted.context()?.clientState === publicExports.ClientState.Ready,
@@ -249,6 +279,27 @@ async function mountReady(callbacks?: ZeroXKeyCallbacks) {
     publicExports.AuthState.Unauthenticated,
   );
   return mounted;
+}
+
+function LayoutInvoker(props: {
+  invoke(): Promise<void>;
+  onInvoked(observed: ReturnType<typeof observe<void>>): void;
+  onLayout(): void;
+}) {
+  useLayoutEffect(() => {
+    props.onInvoked(observe(props.invoke()));
+    props.onLayout();
+  }, []);
+  return null;
+}
+
+function LayoutResponseDeliverer(props: { deliver(): void; onLayout(): void }) {
+  useLayoutEffect(() => {
+    props.deliver();
+    jest.advanceTimersByTime(500);
+    props.onLayout();
+  }, []);
+  return null;
 }
 
 async function startPopup(action: () => Promise<void>): Promise<{
@@ -332,6 +383,7 @@ beforeEach(() => {
     throw new Error(`Unexpected fetch: ${String(input)}`);
   };
   expectedFetchCalls = 0;
+  expectedAuthProxyConfigCalls = 0;
   mounts = [];
   dom = setupProviderDom({ fetchImpl: fetchBoundary as typeof fetch });
   popups = installOAuthPopups();
@@ -349,7 +401,9 @@ afterEach(async () => {
     expect(jest.getTimerCount()).toBe(0);
     expect(dom.observations.consoleError).not.toHaveBeenCalled();
     expect(dom.observations.consoleWarn).not.toHaveBeenCalled();
-    expect(dom.observations.getAuthProxyConfig).not.toHaveBeenCalled();
+    expect(dom.observations.getAuthProxyConfig).toHaveBeenCalledTimes(
+      expectedAuthProxyConfigCalls,
+    );
     expect(dom.observations.xhrSend).not.toHaveBeenCalled();
     expect(dom.observations.fetch).toHaveBeenCalledTimes(expectedFetchCalls);
   } finally {
@@ -634,9 +688,8 @@ describe("mounted public OAuth handlers", () => {
     const replacementExchange = jest.fn(async () => ({
       oidcToken: "replacement-token",
     }));
-    mockClientInstances[0]!.httpClient = {
-      proxyOAuth2Authenticate: replacementExchange,
-    } as unknown as ZeroXKeyClient["httpClient"];
+    mockClientInstances[0]!.httpClient.proxyOAuth2Authenticate =
+      replacementExchange;
 
     await deliver(
       started.popup,
@@ -692,6 +745,51 @@ describe("mounted public OAuth handlers", () => {
     expect(mockDiscardedKeys).toEqual([
       { client: 0, publicKey: "discard-public-key" },
     ]);
+  });
+
+  it("[I3] preserves initiating capability receivers and downstream error identity", async () => {
+    const downstream = new Error("downstream exchange sentinel");
+    const mounted = await mountReady({ onError: jest.fn() });
+    const client = mockClientInstances[0]!;
+    const httpClient = client.httpClient;
+    let createReceiver: unknown;
+    let exchangeReceiver: unknown;
+    let discardReceiver: unknown;
+    client.createApiKeyPair = async function () {
+      createReceiver = this;
+      return "receiver-public-key";
+    };
+    client.discardUncommittedApiKeyPair = async function () {
+      discardReceiver = this;
+    };
+    httpClient.proxyOAuth2Authenticate = async function () {
+      exchangeReceiver = this;
+      throw downstream;
+    };
+
+    const started = await startPopup(() =>
+      mounted.context()!.handleDiscordOauth({
+        openInPage: false,
+        onOauthSuccess: jest.fn(),
+      }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "discord",
+        code: "receiver-code",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await started.observed.settled;
+
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: downstream,
+    });
+    expect(createReceiver).toBe(client);
+    expect(exchangeReceiver).toBe(httpClient);
+    expect(discardReceiver).toBe(client);
   });
 
   it("[P1] Google popup uses the global callback shape when no per-call callback is supplied", async () => {
@@ -1441,5 +1539,919 @@ describe("mounted public OAuth handlers", () => {
     expect(mockDiscardedKeys).toEqual([
       { client: 0, publicKey: "google-key-A" },
     ]);
+  });
+
+  it.each([
+    {
+      label: "wrong same-origin path",
+      callback: (state: string) =>
+        `https://app.example.test/other?tenant=one&code=code&state=${encodeURIComponent(state)}`,
+    },
+    {
+      label: "missing configured static query",
+      callback: (state: string) =>
+        `${redirectUri}?code=code&state=${encodeURIComponent(state)}`,
+    },
+    {
+      label: "changed configured static query",
+      callback: (state: string) =>
+        `${redirectUri}?tenant=two&code=code&state=${encodeURIComponent(state)}`,
+    },
+    {
+      label: "duplicated configured static query",
+      callback: (state: string) =>
+        `${redirectUri}?tenant=one&tenant=one&code=code&state=${encodeURIComponent(state)}`,
+    },
+  ])(
+    "[B1 mounted] rejects $label before exchange or completion",
+    async ({ callback }) => {
+      mockSpec.keys = ["route-key"];
+      mockSpec.proxy = async () => ({ oidcToken: "must-not-exchange" });
+      const completion = jest.fn();
+      const config: ZeroXKeyProviderConfig = {
+        ...baseConfig,
+        auth: {
+          ...baseConfig.auth,
+          oauthConfig: {
+            ...baseConfig.auth?.oauthConfig,
+            oauthRedirectUri: `${redirectUri}?tenant=one`,
+          },
+        },
+      };
+      const mounted = await mountReady({ onError: jest.fn() }, config);
+      const started = await startPopup(() =>
+        mounted.context()!.handleDiscordOauth({
+          openInPage: false,
+          onOauthSuccess: completion,
+        }),
+      );
+      expect(started.authorizationUrl.searchParams.get("redirect_uri")).toBe(
+        `${redirectUri}?tenant=one`,
+      );
+
+      await deliver(
+        started.popup,
+        callback(started.authorizationUrl.searchParams.get("state")!),
+      );
+      await started.observed.settled;
+
+      expect(started.observed.outcome()).toEqual({
+        status: "rejected",
+        reason: expect.objectContaining({
+          reason: "callback-route-mismatch",
+        }),
+      });
+      expect(mockProxyCalls).toHaveLength(0);
+      expect(completion).not.toHaveBeenCalled();
+      expect(mockDiscardedKeys).toEqual([
+        { client: 0, publicKey: "route-key" },
+      ]);
+    },
+  );
+
+  it("[B1 mounted] admits Google's origin-only emitted route after root serialization", async () => {
+    mockSpec.keys = ["google-root-key"];
+    const completion = jest.fn();
+    const config: ZeroXKeyProviderConfig = {
+      ...baseConfig,
+      auth: {
+        ...baseConfig.auth,
+        oauthConfig: {
+          ...baseConfig.auth?.oauthConfig,
+          oauthRedirectUri: "https://app.example.test/",
+        },
+      },
+    };
+    const mounted = await mountReady({ onError: jest.fn() }, config);
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: completion,
+      }),
+    );
+    expect(started.authorizationUrl.searchParams.get("redirect_uri")).toBe(
+      "https://app.example.test",
+    );
+    const response = new URL("https://app.example.test");
+    response.hash = new URLSearchParams({
+      id_token: "google-root-token",
+      state: started.authorizationUrl.searchParams.get("state")!,
+    }).toString();
+    await deliver(started.popup, response.href);
+    await started.observed.settled;
+
+    expect(started.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(completion).toHaveBeenCalledTimes(1);
+    expect(mockDiscardedKeys).toHaveLength(0);
+  });
+
+  it("[B1 mounted] admits a reordered root static-query multiset and preserves emitted bytes", async () => {
+    mockSpec.keys = ["discord-root-static-key"];
+    mockSpec.proxy = async () => ({ oidcToken: "discord-root-static-token" });
+    const completion = jest.fn();
+    const emittedRedirectUri = "https://app.example.test?tenant=one&tenant=two";
+    const config: ZeroXKeyProviderConfig = {
+      ...baseConfig,
+      auth: {
+        ...baseConfig.auth,
+        oauthConfig: {
+          ...baseConfig.auth?.oauthConfig,
+          oauthRedirectUri: emittedRedirectUri,
+        },
+      },
+    };
+    const mounted = await mountReady({ onError: jest.fn() }, config);
+    const started = await startPopup(() =>
+      mounted.context()!.handleDiscordOauth({
+        openInPage: false,
+        onOauthSuccess: completion,
+      }),
+    );
+    expect(started.authorizationUrl.searchParams.get("redirect_uri")).toBe(
+      emittedRedirectUri,
+    );
+    const response = new URL("https://app.example.test/?tenant=two&tenant=one");
+    response.searchParams.set("code", "discord-root-static-code");
+    response.searchParams.set(
+      "state",
+      started.authorizationUrl.searchParams.get("state")!,
+    );
+    response.searchParams.set("scope", "identify email");
+    await deliver(started.popup, response.href);
+    await started.observed.settled;
+
+    expect(started.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(mockProxyCalls).toEqual([
+      {
+        client: 0,
+        params: expect.objectContaining({
+          redirectUri: emittedRedirectUri,
+          authCode: "discord-root-static-code",
+        }),
+      },
+    ]);
+    expect(completion).toHaveBeenCalledTimes(1);
+    expect(mockDiscardedKeys).toHaveLength(0);
+  });
+
+  it("[B2 mounted] rejects an actual HTTP scalar mutation before exchange", async () => {
+    mockSpec.keys = ["http-key"];
+    mockSpec.proxy = async () => ({ oidcToken: "must-not-exchange" });
+    const completion = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const started = await startPopup(() =>
+      mounted.context()!.handleDiscordOauth({
+        openInPage: false,
+        onOauthSuccess: completion,
+      }),
+    );
+    mockClientInstances[0]!.httpClient.config.apiBaseUrl =
+      "https://sensitive-new-api.example.test";
+
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "discord",
+        code: "code",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await started.observed.settled;
+
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(mockProxyCalls).toHaveLength(0);
+    expect(completion).not.toHaveBeenCalled();
+    expect(mockDiscardedKeys).toEqual([{ client: 0, publicKey: "http-key" }]);
+  });
+
+  it.each([
+    {
+      label: "organization ID",
+      oldValue: "org-oauth",
+      change: (config: ZeroXKeyProviderConfig) => ({
+        ...config,
+        organizationId: "org-changed-before-passive",
+      }),
+      observe: (config: ZeroXKeyProviderConfig) => config.organizationId,
+    },
+    {
+      label: "auth proxy config ID",
+      oldValue: undefined,
+      change: (config: ZeroXKeyProviderConfig) => ({
+        ...config,
+        authProxyConfigId: "proxy-changed-before-passive",
+      }),
+      observe: (config: ZeroXKeyProviderConfig) => config.authProxyConfigId,
+    },
+    {
+      label: "API endpoint",
+      oldValue: "https://api.example.test",
+      change: (config: ZeroXKeyProviderConfig) => ({
+        ...config,
+        apiBaseUrl: "https://api-changed.example.test",
+      }),
+      observe: (config: ZeroXKeyProviderConfig) => config.apiBaseUrl,
+    },
+    {
+      label: "auth proxy endpoint",
+      oldValue: "https://auth.example.test",
+      change: (config: ZeroXKeyProviderConfig) => ({
+        ...config,
+        authProxyUrl: "https://auth-changed.example.test",
+      }),
+      observe: (config: ZeroXKeyProviderConfig) => config.authProxyUrl,
+    },
+    {
+      label: "selected client ID",
+      oldValue: "discord-A",
+      change: (config: ZeroXKeyProviderConfig) => ({
+        ...config,
+        auth: {
+          ...config.auth,
+          oauthConfig: {
+            ...config.auth?.oauthConfig,
+            discordClientId: "discord-changed-before-passive",
+          },
+        },
+      }),
+      observe: (config: ZeroXKeyProviderConfig) =>
+        config.auth?.oauthConfig?.discordClientId,
+    },
+    {
+      label: "redirect URI",
+      oldValue: redirectUri,
+      change: (config: ZeroXKeyProviderConfig) => ({
+        ...config,
+        auth: {
+          ...config.auth,
+          oauthConfig: {
+            ...config.auth?.oauthConfig,
+            oauthRedirectUri: "https://app.example.test/changed-before-passive",
+          },
+        },
+      }),
+      observe: (config: ZeroXKeyProviderConfig) =>
+        config.auth?.oauthConfig?.oauthRedirectUri,
+    },
+  ])(
+    "[B3 mounted] rejects stale $label in the layout-before-passive window",
+    async ({ oldValue, change, observe: observeConfig }) => {
+      mockSpec.keys = ["must-not-allocate"];
+      const digest = jest.spyOn(window.crypto.subtle, "digest");
+      const mounted = await mountReady({ onError: jest.fn() });
+      const retainedHandler = mounted.context()!.handleDiscordOauth;
+      const changedConfig = change(baseConfig);
+      let observed: ReturnType<typeof observe<void>> | undefined;
+      let layoutSnapshot:
+        | {
+            oldMasterValue: unknown;
+            keys: number;
+            pkceEntries: number;
+            popups: number;
+          }
+        | undefined;
+
+      await mounted.rerender(
+        changedConfig,
+        { onError: jest.fn() },
+        <LayoutInvoker
+          invoke={() => retainedHandler({ openInPage: false })}
+          onInvoked={(value) => {
+            observed = value;
+          }}
+          onLayout={() => {
+            layoutSnapshot = {
+              oldMasterValue: observeConfig(mounted.context()!.config!),
+              keys: mockCreatedKeys.length,
+              pkceEntries: digest.mock.calls.length,
+              popups: popups.handles.length,
+            };
+          }}
+        />,
+      );
+
+      expect(layoutSnapshot).toEqual({
+        oldMasterValue: oldValue,
+        keys: 0,
+        pkceEntries: 0,
+        popups: 0,
+      });
+      await observed!.settled;
+      expect(observed!.outcome()).toEqual({
+        status: "rejected",
+        reason: expect.objectContaining({ reason: "context-changed" }),
+      });
+      expect(mockCreatedKeys).toHaveLength(0);
+      expect(digest).not.toHaveBeenCalled();
+      expect(popups.handles).toHaveLength(0);
+    },
+  );
+
+  it.each([
+    {
+      label: "client ID",
+      changedConfig: {
+        ...baseConfig,
+        auth: {
+          ...baseConfig.auth,
+          oauthConfig: {
+            ...baseConfig.auth?.oauthConfig,
+            discordClientId: "discord-B",
+          },
+        },
+      },
+    },
+    {
+      label: "redirect URI",
+      changedConfig: {
+        ...baseConfig,
+        auth: {
+          ...baseConfig.auth,
+          oauthConfig: {
+            ...baseConfig.auth?.oauthConfig,
+            oauthRedirectUri: "https://app.example.test/oauth/new-callback",
+          },
+        },
+      },
+    },
+  ])(
+    "[I1 mounted] rejects a retained handler's stale actual $label after effects settle",
+    async ({ changedConfig }) => {
+      mockSpec.keys = ["must-not-allocate-stale-operation"];
+      const digest = jest.spyOn(window.crypto.subtle, "digest");
+      const mounted = await mountReady({ onError: jest.fn() });
+      const retainedHandler = mounted.context()!.handleDiscordOauth;
+      await mounted.rerender(changedConfig, { onError: jest.fn() });
+      await waitFor(
+        () =>
+          mounted.context()?.config?.auth?.oauthConfig?.discordClientId ===
+            changedConfig.auth?.oauthConfig?.discordClientId &&
+          mounted.context()?.config?.auth?.oauthConfig?.oauthRedirectUri ===
+            changedConfig.auth?.oauthConfig?.oauthRedirectUri,
+        "changed master config after passive effects",
+      );
+
+      const observed = observe(retainedHandler({ openInPage: false }));
+      await flush();
+
+      expect(observed.outcome()).toEqual({
+        status: "rejected",
+        reason: expect.objectContaining({ reason: "context-changed" }),
+      });
+      expect(mockCreatedKeys).toHaveLength(0);
+      expect(digest).not.toHaveBeenCalled();
+      expect(popups.handles).toHaveLength(0);
+    },
+  );
+
+  it("[I1 mounted] permits a retained handler's explicit launch tuple after effects settle", async () => {
+    mockSpec.keys = ["explicit-retained-key"];
+    mockSpec.proxy = async () => ({ oidcToken: "explicit-retained-token" });
+    const completion = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const retainedHandler = mounted.context()!.handleDiscordOauth;
+    const changedConfig: ZeroXKeyProviderConfig = {
+      ...baseConfig,
+      auth: {
+        ...baseConfig.auth,
+        oauthConfig: {
+          ...baseConfig.auth?.oauthConfig,
+          discordClientId: "discord-B",
+          openOauthInPage: true,
+        },
+      },
+    };
+    await mounted.rerender(changedConfig, { onError: jest.fn() });
+    await waitFor(
+      () =>
+        mounted.context()?.config?.auth?.oauthConfig?.discordClientId ===
+          "discord-B" &&
+        mounted.context()?.config?.auth?.oauthConfig?.openOauthInPage === true,
+      "changed master config after passive effects",
+    );
+
+    const started = await startPopup(() =>
+      retainedHandler({
+        clientId: "immutable-explicit-client",
+        openInPage: false,
+        onOauthSuccess: completion,
+      }),
+    );
+    expect(started.authorizationUrl.searchParams.get("client_id")).toBe(
+      "immutable-explicit-client",
+    );
+    expect(started.authorizationUrl.searchParams.get("redirect_uri")).toBe(
+      redirectUri,
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "discord",
+        code: "explicit-retained-code",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await started.observed.settled;
+    expect(started.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(completion).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    "key creation capability",
+    "key discard capability",
+    "http client",
+    "exchange capability",
+  ] as const)(
+    "[I3 mounted] bounds a throwing initiating $label getter",
+    async (target) => {
+      mockSpec.keys = ["must-not-allocate-getter"];
+      const sentinel = `sensitive ${target} getter`;
+      const mounted = await mountReady({ onError: jest.fn() });
+      const client = mockClientInstances[0]!;
+      if (target === "key creation capability") {
+        Object.defineProperty(client, "createApiKeyPair", {
+          configurable: true,
+          get() {
+            throw new Error(sentinel);
+          },
+        });
+      } else if (target === "key discard capability") {
+        Object.defineProperty(client, "discardUncommittedApiKeyPair", {
+          configurable: true,
+          get() {
+            throw new Error(sentinel);
+          },
+        });
+      } else if (target === "http client") {
+        Object.defineProperty(client, "httpClient", {
+          configurable: true,
+          get() {
+            throw new Error(sentinel);
+          },
+        });
+      } else {
+        const httpClient = client.httpClient;
+        Object.defineProperty(httpClient, "proxyOAuth2Authenticate", {
+          configurable: true,
+          get() {
+            throw new Error(sentinel);
+          },
+        });
+      }
+
+      const observed = observe(
+        mounted.context()!.handleDiscordOauth({ openInPage: false }),
+      );
+      await observed.settled;
+
+      expect(observed.outcome()).toEqual({
+        status: "rejected",
+        reason: expect.objectContaining({
+          reason: "context-unavailable",
+          message: "OAuth popup context is unavailable.",
+        }),
+      });
+      expect(
+        String((observed.outcome() as { reason: unknown }).reason),
+      ).not.toContain(sentinel);
+      expect(mockCreatedKeys).toHaveLength(0);
+      expect(popups.handles).toHaveLength(0);
+    },
+  );
+
+  it("[B3 mounted] rejects a terminal response in the layout-before-passive window", async () => {
+    mockSpec.keys = ["layout-response-key"];
+    mockSpec.proxy = async () => ({ oidcToken: "must-not-exchange" });
+    const completion = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const started = await startPopup(() =>
+      mounted.context()!.handleDiscordOauth({
+        openInPage: false,
+        onOauthSuccess: completion,
+      }),
+    );
+    let layoutSnapshot:
+      | { organizationId: string | undefined; exchanges: number }
+      | undefined;
+
+    await mounted.rerender(
+      { ...baseConfig, organizationId: "org-response-before-passive" },
+      { onError: jest.fn() },
+      <LayoutResponseDeliverer
+        deliver={() =>
+          started.popup.deliver(
+            callbackUrl({
+              provider: "discord",
+              code: "layout-response-code",
+              state: started.authorizationUrl.searchParams.get("state")!,
+            }),
+          )
+        }
+        onLayout={() => {
+          layoutSnapshot = {
+            organizationId: mounted.context()?.config?.organizationId,
+            exchanges: mockProxyCalls.length,
+          };
+        }}
+      />,
+    );
+
+    expect(layoutSnapshot).toEqual({
+      organizationId: "org-oauth",
+      exchanges: 0,
+    });
+    await started.observed.settled;
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(mockProxyCalls).toHaveLength(0);
+    expect(completion).not.toHaveBeenCalled();
+    expect(mockDiscardedKeys).toEqual([
+      { client: 0, publicKey: "layout-response-key" },
+    ]);
+  });
+
+  it("[B3 mounted] rejects a client whose delayed init completed for old props", async () => {
+    const initGate = deferred<undefined>();
+    mockInit.mockImplementationOnce(() => initGate.promise);
+    mockSpec.keys = ["must-not-allocate-after-init"];
+    const mounted = await dom.mount(baseConfig, { onError: jest.fn() });
+    mounts.push(mounted);
+    await waitFor(
+      () => mockInit.mock.calls.length === 1,
+      "pending client init",
+    );
+
+    await mounted.rerender(
+      { ...baseConfig, organizationId: "org-after-init-start" },
+      { onError: jest.fn() },
+    );
+    initGate.resolve(undefined);
+    await waitFor(
+      () => mounted.context()?.clientState === publicExports.ClientState.Ready,
+      "old client ready after changed props",
+    );
+    const observed = observe(
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await observed.settled;
+
+    expect(mockConstructedConfigs[0]).toEqual(
+      expect.objectContaining({ organizationId: "org-oauth" }),
+    );
+    expect(observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(mockCreatedKeys).toHaveLength(0);
+    expect(popups.handles).toHaveLength(0);
+  });
+
+  it("[B3 mounted] rejects delayed proxy payload provenance after config ID changes", async () => {
+    const fetchGate = deferred<Response>();
+    activeFetch = () => fetchGate.promise;
+    expectedFetchCalls = 1;
+    expectedAuthProxyConfigCalls = 1;
+    mockSpec.keys = ["must-not-allocate-after-proxy"];
+    const proxyConfig: ZeroXKeyProviderConfig = {
+      ...baseConfig,
+      authProxyConfigId: "proxy-A",
+      autoFetchWalletKitConfig: true,
+      auth: {
+        ...baseConfig.auth,
+        methods: { walletAuthEnabled: false },
+        oauthConfig: { openOauthInPage: false },
+      },
+    };
+    const mounted = await dom.mount(proxyConfig, { onError: jest.fn() });
+    mounts.push(mounted);
+    await waitFor(
+      () => dom.observations.fetch!.mock.calls.length === 1,
+      "pending proxy fetch",
+    );
+
+    await mounted.rerender(
+      { ...proxyConfig, authProxyConfigId: "proxy-B" },
+      { onError: jest.fn() },
+    );
+    fetchGate.resolve({
+      ok: true,
+      json: async () => ({
+        enabledProviders: ["google"],
+        sessionExpirationSeconds: "900",
+        organizationId: "org-oauth",
+        oauthClientIds: { google: "proxy-google" },
+        oauthRedirectUrl: redirectUri,
+      }),
+    } as Response);
+    await waitFor(
+      () => mounted.context()?.clientState === publicExports.ClientState.Ready,
+      "old proxy client ready after config ID change",
+    );
+    const observed = observe(
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await observed.settled;
+
+    expect(mockConstructedConfigs[0]).toEqual(
+      expect.objectContaining({ authProxyConfigId: "proxy-A" }),
+    );
+    expect(observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(mockCreatedKeys).toHaveLength(0);
+    expect(popups.handles).toHaveLength(0);
+  });
+
+  it.each(["replacement", "stable-new-object", "removal"] as const)(
+    "[B4 mounted] keeps the original global callback across a same-root %s rerender",
+    async (change) => {
+      mockSpec.keys = [`callback-key-${change}`];
+      const original = jest.fn();
+      const replacement = jest.fn();
+      const mounted = await mountReady({
+        onOauthRedirect: original,
+        onError: jest.fn(),
+      });
+      const started = await startPopup(() =>
+        mounted.context()!.handleGoogleOauth({ openInPage: false }),
+      );
+
+      await mounted.rerender(
+        {
+          ...baseConfig,
+          auth: {
+            ...baseConfig.auth,
+            oauthConfig: { ...baseConfig.auth?.oauthConfig },
+          },
+        },
+        change === "removal"
+          ? undefined
+          : {
+              onOauthRedirect:
+                change === "stable-new-object" ? original : replacement,
+              onError: jest.fn(),
+            },
+      );
+      await deliver(
+        started.popup,
+        callbackUrl({
+          provider: "google",
+          token: `callback-token-${change}`,
+          state: started.authorizationUrl.searchParams.get("state")!,
+        }),
+      );
+      await started.observed.settled;
+
+      expect(original).toHaveBeenCalledTimes(1);
+      expect(original).toHaveBeenCalledWith({
+        idToken: `callback-token-${change}`,
+        publicKey: `callback-key-${change}`,
+      });
+      expect(replacement).not.toHaveBeenCalled();
+      expect(mockDiscardedKeys).toHaveLength(0);
+    },
+  );
+
+  it("[B4 mounted] keeps an originally internal completion when a global callback arrives", async () => {
+    mockSpec.keys = ["internal-arrival-key"];
+    mockSpec.completeOauth = async () => ({
+      action: AuthAction.LOGIN,
+      sessionToken: "internal-arrival-session",
+    });
+    mockSpec.getSession = async () => undefined;
+    const arrived = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+
+    await mounted.rerender(
+      { ...baseConfig },
+      { onOauthRedirect: arrived, onError: jest.fn() },
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "internal-arrival-token",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await started.observed.settled;
+
+    expect(started.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(mockCompleteOauth).toHaveBeenCalledTimes(1);
+    expect(mockCompleteOauth).toHaveBeenCalledWith({
+      oidcToken: "internal-arrival-token",
+      providerName: "google",
+      publicKey: "internal-arrival-key",
+    });
+    expect(arrived).not.toHaveBeenCalled();
+    expect(mockDiscardedKeys).toHaveLength(0);
+  });
+
+  it.each(["replacement", "removal", "arrival"] as const)(
+    "[B4 mounted] keeps per-call completion across global callback %s",
+    async (change) => {
+      mockSpec.keys = [`per-call-key-${change}`];
+      const initialGlobal = jest.fn();
+      const nextGlobal = jest.fn();
+      const perCall = jest.fn();
+      const mounted = await mountReady(
+        change === "arrival"
+          ? { onError: jest.fn() }
+          : { onOauthRedirect: initialGlobal, onError: jest.fn() },
+      );
+      const started = await startPopup(() =>
+        mounted.context()!.handleGoogleOauth({
+          openInPage: false,
+          onOauthSuccess: perCall,
+        }),
+      );
+
+      await mounted.rerender(
+        { ...baseConfig },
+        change === "removal"
+          ? undefined
+          : { onOauthRedirect: nextGlobal, onError: jest.fn() },
+      );
+      await deliver(
+        started.popup,
+        callbackUrl({
+          provider: "google",
+          token: `per-call-token-${change}`,
+          state: started.authorizationUrl.searchParams.get("state")!,
+        }),
+      );
+      await started.observed.settled;
+
+      expect(perCall).toHaveBeenCalledTimes(1);
+      expect(perCall).toHaveBeenCalledWith({
+        oidcToken: `per-call-token-${change}`,
+        providerName: "google",
+        publicKey: `per-call-key-${change}`,
+      });
+      expect(initialGlobal).not.toHaveBeenCalled();
+      expect(nextGlobal).not.toHaveBeenCalled();
+      expect(mockDiscardedKeys).toHaveLength(0);
+    },
+  );
+
+  it("[B5 mounted] lets immutable per-call settings mask lagging raw defaults", async () => {
+    mockSpec.keys = ["override-key"];
+    mockSpec.proxy = async () => ({ oidcToken: "override-token" });
+    const completion = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const retainedHandler = mounted.context()!.handleDiscordOauth;
+    const changedConfig: ZeroXKeyProviderConfig = {
+      ...baseConfig,
+      auth: {
+        ...baseConfig.auth,
+        oauthConfig: {
+          ...baseConfig.auth?.oauthConfig,
+          discordClientId: "changed-default",
+          openOauthInPage: true,
+        },
+      },
+    };
+    let observed: ReturnType<typeof observe<void>> | undefined;
+    const digest = jest.spyOn(window.crypto.subtle, "digest");
+    let layoutSnapshot:
+      | {
+          clientId: string | undefined;
+          openInPage: boolean | undefined;
+          keys: number;
+          pkceEntries: number;
+          popups: number;
+        }
+      | undefined;
+    await mounted.rerender(
+      changedConfig,
+      { onError: jest.fn() },
+      <LayoutInvoker
+        invoke={() =>
+          retainedHandler({
+            clientId: "immutable-override",
+            openInPage: false,
+            onOauthSuccess: completion,
+          })
+        }
+        onInvoked={(value) => {
+          observed = value;
+        }}
+        onLayout={() => {
+          layoutSnapshot = {
+            clientId:
+              mounted.context()?.config?.auth?.oauthConfig?.discordClientId,
+            openInPage:
+              mounted.context()?.config?.auth?.oauthConfig?.openOauthInPage,
+            keys: mockCreatedKeys.length,
+            pkceEntries: digest.mock.calls.length,
+            popups: popups.handles.length,
+          };
+        }}
+      />,
+    );
+    expect(layoutSnapshot).toEqual({
+      clientId: "discord-A",
+      openInPage: undefined,
+      keys: 0,
+      pkceEntries: 1,
+      popups: 0,
+    });
+    await waitFor(() => popups.handles.length === 1, "override popup");
+    const popup = popups.handles[0]!;
+    const authorizationUrl = new URL(popup.assignedUrls[0]!);
+    expect(digest).toHaveBeenCalledTimes(1);
+    expect(authorizationUrl.searchParams.get("client_id")).toBe(
+      "immutable-override",
+    );
+    await deliver(
+      popup,
+      callbackUrl({
+        provider: "discord",
+        code: "override-code",
+        state: authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await observed!.settled;
+    expect(observed!.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(completion).toHaveBeenCalledTimes(1);
+  });
+
+  it("[B6 mounted] rejects changed raw signup defaults for an originally internal completion", async () => {
+    mockSpec.keys = ["must-not-allocate"];
+    mockSpec.completeOauth = async () => ({
+      action: AuthAction.LOGIN,
+      sessionToken: "internal-session",
+      session: undefined,
+    });
+    const mounted = await mountReady({ onError: jest.fn() });
+    const retainedHandler = mounted.context()!.handleGoogleOauth;
+    const changedConfig: ZeroXKeyProviderConfig = {
+      ...baseConfig,
+      auth: {
+        ...baseConfig.auth,
+        createSuborgParams: {
+          ...baseConfig.auth?.createSuborgParams,
+          oauth: { userName: "changed-before-passive" },
+        },
+      },
+    };
+    let observed: ReturnType<typeof observe<void>> | undefined;
+    let layoutSnapshot:
+      | { signupDefaults: unknown; keys: number; popups: number }
+      | undefined;
+    await mounted.rerender(
+      changedConfig,
+      { onOauthRedirect: jest.fn(), onError: jest.fn() },
+      <LayoutInvoker
+        invoke={() => retainedHandler({ openInPage: false })}
+        onInvoked={(value) => {
+          observed = value;
+        }}
+        onLayout={() => {
+          layoutSnapshot = {
+            signupDefaults:
+              mounted.context()?.config?.auth?.createSuborgParams?.oauth,
+            keys: mockCreatedKeys.length,
+            popups: popups.handles.length,
+          };
+        }}
+      />,
+    );
+    expect(layoutSnapshot).toEqual({
+      signupDefaults: undefined,
+      keys: 0,
+      popups: 0,
+    });
+    await observed!.settled;
+    expect(observed!.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(mockCompleteOauth).not.toHaveBeenCalled();
+    expect(mockCreatedKeys).toHaveLength(0);
   });
 });

@@ -2,6 +2,10 @@ import type { OAuthProviders } from "@0xkey-io/sdk-types";
 import { sha256 } from "@noble/hashes/sha2";
 import { bytesToHex } from "@noble/hashes/utils";
 import { OAUTH_PROVIDER_CONFIGS } from "./config";
+import {
+  OAuthPopupBindingError,
+  type OAuthPopupBinding,
+} from "./popup-binding";
 import { inspectOAuthPopupResponse } from "./popup-response";
 import { buildOAuthUrl } from "./url";
 
@@ -23,6 +27,7 @@ const RESERVED_ADDITIONAL_STATE = new Set([
 ]);
 
 export type OAuthPopupInput = {
+  binding: OAuthPopupBinding;
   provider: OAuthProviders;
   clientId: string;
   redirectUri: string;
@@ -56,6 +61,7 @@ export async function runOAuthPopup(
   input: OAuthPopupInput,
   dependencies: OAuthPopupDependencies,
 ): Promise<void> {
+  const binding = input.binding;
   const provider = input.provider;
   const clientId = input.clientId;
   const redirectUri = input.redirectUri;
@@ -74,6 +80,16 @@ export async function runOAuthPopup(
   } = dependencies;
   const openerOrigin = window.location.origin;
 
+  const assertCurrent = () => {
+    try {
+      binding.assertCurrent();
+    } catch (error) {
+      if (error instanceof OAuthPopupBindingError) throw error;
+      throw new OAuthPopupBindingError("context-unavailable");
+    }
+  };
+
+  assertCurrent();
   if (!clientId || !redirectUri) {
     throw new Error("OAuth popup configuration is incomplete.");
   }
@@ -108,6 +124,7 @@ export async function runOAuthPopup(
     }
     verifier = preparedPkce.verifier;
     codeChallenge = preparedPkce.codeChallenge;
+    assertCurrent();
   }
 
   const publicKey = await createApiKeyPair();
@@ -130,6 +147,12 @@ export async function runOAuthPopup(
     }
     throw error;
   };
+
+  try {
+    assertCurrent();
+  } catch (error) {
+    return disposePreservingFailure(error, "context");
+  }
 
   let nonce: string;
   let expectedState: string;
@@ -218,21 +241,24 @@ export async function runOAuthPopup(
       stopBrowserStage();
       expectedState = "";
       try {
+        assertCurrent();
         const oidcToken = providerConfig.usesPKCE
           ? await (async () => {
               const exchangeVerifier = verifier!;
               verifier = undefined;
-              return exchange!({
+              const exchangePromise = exchange!({
                 authCode: response.authCode!,
                 codeVerifier: exchangeVerifier,
                 publicKey,
                 nonce,
               });
+              return exchangePromise;
             })()
           : response.oidcToken!;
         if (!oidcToken)
           throw new Error("OAuth popup exchange returned no token.");
 
+        assertCurrent();
         phase = "handedOff";
         await complete({
           provider,
@@ -255,44 +281,56 @@ export async function runOAuthPopup(
     };
 
     const tick = () => {
-      if (phase !== "waiting") return;
-      if (now() >= expiresAt) {
-        void rejectBeforeHandoff(
-          new Error("OAuth popup authentication timed out."),
-          "expiry",
-        );
-        return;
-      }
-      if (popup!.closed) {
-        void rejectBeforeHandoff(
-          new Error("Authentication window was closed."),
-          "closed",
-        );
-        return;
-      }
-
-      let url: string;
       try {
-        url = popup!.location.href || "";
-      } catch {
-        return;
-      }
+        if (phase !== "waiting") return;
+        if (now() >= expiresAt) {
+          void rejectBeforeHandoff(
+            new Error("OAuth popup authentication timed out."),
+            "expiry",
+          );
+          return;
+        }
+        if (popup!.closed) {
+          void rejectBeforeHandoff(
+            new Error("Authentication window was closed."),
+            "closed",
+          );
+          return;
+        }
 
-      const response = inspectOAuthPopupResponse({
-        url,
-        expectedProvider: provider,
-        expectedState,
-        openerOrigin,
-      });
-      if (response.kind === "pending") return;
-      if (response.kind === "rejected") {
+        let url: string;
+        try {
+          url = popup!.location.href || "";
+        } catch {
+          return;
+        }
+
+        const response = inspectOAuthPopupResponse({
+          url,
+          expectedProvider: provider,
+          expectedState,
+          openerOrigin,
+          expectedRoute: binding.route,
+        });
+        if (response.kind === "pending") return;
+        if (response.kind === "rejected") {
+          void rejectBeforeHandoff(
+            response.reason === "callback-route-mismatch"
+              ? new OAuthPopupBindingError("callback-route-mismatch")
+              : new Error("OAuth popup response was rejected."),
+            "response",
+          );
+          return;
+        }
+        void processAccepted(response);
+      } catch (error) {
         void rejectBeforeHandoff(
-          new Error("OAuth popup response was rejected."),
+          error instanceof OAuthPopupBindingError
+            ? error
+            : new OAuthPopupBindingError("context-unavailable"),
           "response",
         );
-        return;
       }
-      void processAccepted(response);
     };
 
     try {

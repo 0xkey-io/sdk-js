@@ -25,6 +25,14 @@ import {
 } from "../../utils/oauth";
 import { runOAuthPopup } from "../../utils/oauth/popup-flow";
 import {
+  captureOAuthPopupBinding,
+  createOAuthInitializationBinding,
+  OAuthPopupBindingError,
+  type OAuthInitializationBinding,
+  type OAuthPopupProviderView,
+  type OAuthProxySnapshot,
+} from "../../utils/oauth/popup-binding";
+import {
   isValidSession,
   mergeWalletsWithoutDuplicates,
   SESSION_WARNING_THRESHOLD_MS,
@@ -251,6 +259,74 @@ function snapshotOAuthCallbacks(callbacks?: ZeroXKeyCallbacks) {
   return onOauthRedirect ? { onOauthRedirect } : undefined;
 }
 
+function captureProviderOAuthPopup(input: {
+  client: ZeroXKeyClient;
+  callbacks?: ZeroXKeyCallbacks | undefined;
+  masterConfig: ZeroXKeyProviderConfig;
+  initialization: OAuthInitializationBinding | undefined;
+  readCurrent(): OAuthPopupProviderView;
+  provider: OAuthProviders;
+  invocation: Readonly<{
+    clientId?: string | undefined;
+    openInPage?: boolean | undefined;
+  }>;
+  operation: Readonly<{
+    clientId: string;
+    openInPage: boolean;
+    emittedRedirectUri: string;
+  }>;
+  hasCustomCompletion: boolean;
+  needsProxyExchange?: boolean | undefined;
+}) {
+  try {
+    const popupCallbacks = snapshotOAuthCallbacks(input.callbacks);
+    const binding = captureOAuthPopupBinding({
+      initialization: input.initialization,
+      readCurrent: input.readCurrent,
+      provider: input.provider,
+      invocation: input.invocation,
+      operation: input.operation,
+      completion:
+        input.hasCustomCompletion || popupCallbacks?.onOauthRedirect
+          ? { category: "custom" }
+          : {
+              category: "internal",
+              internalSignupDefaults:
+                input.masterConfig.auth?.createSuborgParams?.oauth,
+            },
+      openerOrigin: window.location.origin,
+    });
+    const dependencies = createOAuthPopupDependencies(input.client);
+    let proxyOAuth2Authenticate:
+      | ZeroXKeyClient["httpClient"]["proxyOAuth2Authenticate"]
+      | undefined;
+    if (input.needsProxyExchange) {
+      const httpClient = input.client.httpClient;
+      const capability = httpClient.proxyOAuth2Authenticate;
+      proxyOAuth2Authenticate = (...args) =>
+        capability.call(httpClient, ...args);
+    }
+    return {
+      binding,
+      dependencies,
+      popupCallbacks,
+      proxyOAuth2Authenticate,
+    };
+  } catch (error) {
+    if (error instanceof OAuthPopupBindingError) throw error;
+    throw new OAuthPopupBindingError("context-unavailable");
+  }
+}
+
+function oauthConstructorIdentity(config: ZeroXKeyProviderConfig) {
+  return {
+    organizationId: config.organizationId,
+    apiBaseUrl: config.apiBaseUrl,
+    authProxyUrl: config.authProxyUrl,
+    authProxyConfigId: config.authProxyConfigId,
+  };
+}
+
 /**
  * Provides ZeroXKey client authentication, session management, wallet operations, and user profile management
  * for the React Wallet Kit SDK. This context provider encapsulates all core authentication flows (Passkey, Wallet, OTP, OAuth),
@@ -307,11 +383,23 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
   const proxyAuthConfigRef = useRef<ProxyTGetWalletKitConfigResponse | null>(
     null,
   );
+  const proxyOAuthSnapshotRef = useRef<OAuthProxySnapshot | undefined>(
+    undefined,
+  );
+  const oauthInitializationBindingRef = useRef<OAuthInitializationBinding>();
+  const oauthProviderViewRef = useRef<OAuthPopupProviderView>();
 
   const [allSessions, setAllSessions] = useState<
     Record<string, Session> | undefined
   >(undefined);
   const { isMobile, pushPage, popPage, closeModal } = useModal();
+  oauthProviderViewRef.current = {
+    rawConfig: config,
+    masterConfig,
+    proxy: proxyOAuthSnapshotRef.current,
+    isMobile,
+    client,
+  };
 
   const completeRedirectOauth = async () => {
     // Since we use localStorage (see storage.ts), we always clean up OAuth data
@@ -839,11 +927,13 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
 
     try {
       setClientState(ClientState.Loading);
+      oauthInitializationBindingRef.current = undefined;
+      const constructorIdentity = oauthConstructorIdentity(masterConfig);
       const zeroXKeyClient = new ZeroXKeyClient({
-        apiBaseUrl: masterConfig.apiBaseUrl,
-        authProxyUrl: masterConfig.authProxyUrl,
-        authProxyConfigId: masterConfig.authProxyConfigId,
-        organizationId: masterConfig.organizationId,
+        apiBaseUrl: constructorIdentity.apiBaseUrl,
+        authProxyUrl: constructorIdentity.authProxyUrl,
+        authProxyConfigId: constructorIdentity.authProxyConfigId,
+        organizationId: constructorIdentity.organizationId,
 
         // Define passkey and wallet config here. If we don't pass it into the client, Mr. Client will assume that we don't want to use passkeys/wallets and not create the stamper!
         passkeyConfig: {
@@ -866,6 +956,10 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       });
 
       await zeroXKeyClient.init();
+      oauthInitializationBindingRef.current = createOAuthInitializationBinding({
+        constructorIdentity,
+        client: zeroXKeyClient,
+      });
       setClient(zeroXKeyClient);
 
       // Don't set clientState to ready until we fetch the proxy auth config (See other fetchProxyAuthConfig useEffect)
@@ -3365,18 +3459,34 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
             ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
           );
         }
-        const httpClient = client.httpClient;
-        const proxyOAuth2Authenticate =
-          httpClient.proxyOAuth2Authenticate.bind(httpClient);
-        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+          needsProxyExchange: true,
+        });
         return runOAuthPopup(
           {
+            binding: popup.binding,
             provider,
             clientId,
             redirectUri,
             additionalState: additionalParameters,
             exchange: async ({ authCode, codeVerifier, nonce }) => {
-              const response = await proxyOAuth2Authenticate({
+              const response = await popup.proxyOAuth2Authenticate!({
                 provider: "OAUTH2_PROVIDER_DISCORD",
                 authCode,
                 redirectUri,
@@ -3392,12 +3502,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                 publicKey,
                 oidcToken,
                 sessionKey,
-                callbacks: popupCallbacks,
+                callbacks: popup.popupCallbacks,
                 completeOauth,
                 onOauthSuccess,
               }),
           },
-          createOAuthPopupDependencies(client),
+          popup.dependencies,
         );
       }
 
@@ -3470,18 +3580,34 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
             ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
           );
         }
-        const httpClient = client.httpClient;
-        const proxyOAuth2Authenticate =
-          httpClient.proxyOAuth2Authenticate.bind(httpClient);
-        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+          needsProxyExchange: true,
+        });
         return runOAuthPopup(
           {
+            binding: popup.binding,
             provider,
             clientId,
             redirectUri,
             additionalState: additionalParameters,
             exchange: async ({ authCode, codeVerifier, nonce }) => {
-              const response = await proxyOAuth2Authenticate({
+              const response = await popup.proxyOAuth2Authenticate!({
                 provider: "OAUTH2_PROVIDER_X",
                 authCode,
                 redirectUri,
@@ -3497,12 +3623,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                 publicKey,
                 oidcToken,
                 sessionKey,
-                callbacks: popupCallbacks,
+                callbacks: popup.popupCallbacks,
                 completeOauth,
                 onOauthSuccess,
               }),
           },
-          createOAuthPopupDependencies(client),
+          popup.dependencies,
         );
       }
 
@@ -3577,9 +3703,27 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
             ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
           );
         }
-        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+        });
         return runOAuthPopup(
           {
+            binding: popup.binding,
             provider,
             clientId,
             redirectUri,
@@ -3590,12 +3734,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                 publicKey,
                 oidcToken,
                 sessionKey,
-                callbacks: popupCallbacks,
+                callbacks: popup.popupCallbacks,
                 completeOauth,
                 onOauthSuccess,
               }),
           },
-          createOAuthPopupDependencies(client),
+          popup.dependencies,
         );
       }
 
@@ -3664,9 +3808,27 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
             ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
           );
         }
-        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+        });
         return runOAuthPopup(
           {
+            binding: popup.binding,
             provider,
             clientId,
             redirectUri,
@@ -3677,12 +3839,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                 publicKey,
                 oidcToken,
                 sessionKey,
-                callbacks: popupCallbacks,
+                callbacks: popup.popupCallbacks,
                 completeOauth,
                 onOauthSuccess,
               }),
           },
-          createOAuthPopupDependencies(client),
+          popup.dependencies,
         );
       }
 
@@ -3750,9 +3912,27 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
             ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
           );
         }
-        const popupCallbacks = snapshotOAuthCallbacks(callbacks);
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+        });
         return runOAuthPopup(
           {
+            binding: popup.binding,
             provider,
             clientId,
             redirectUri,
@@ -3772,12 +3952,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                 publicKey,
                 oidcToken,
                 sessionKey,
-                callbacks: popupCallbacks,
+                callbacks: popup.popupCallbacks,
                 completeOauth,
                 onOauthSuccess,
               }),
           },
-          createOAuthPopupDependencies(client),
+          popup.dependencies,
         );
       }
 
@@ -5833,12 +6013,21 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         let proxyAuthConfig: ProxyTGetWalletKitConfigResponse | undefined;
 
         if (shouldFetchWalletKitConfig) {
+          const fetchedFor = {
+            authProxyConfigId: config.authProxyConfigId,
+            authProxyUrl: config.authProxyUrl,
+            shouldFetch: true,
+          };
           // Only fetch the proxy auth config if we have an authProxyId and the autoFetchWalletKitConfig param is enabled or not passed in.
           proxyAuthConfig = await getAuthProxyConfig(
             config.authProxyConfigId!, // Can assert safely. See shouldFetchWalletKitConfig definition.
             config.authProxyUrl,
           );
           proxyAuthConfigRef.current = proxyAuthConfig;
+          proxyOAuthSnapshotRef.current = {
+            value: proxyAuthConfig,
+            fetchedFor,
+          };
         }
 
         setMasterConfig(buildConfig(proxyAuthConfig));

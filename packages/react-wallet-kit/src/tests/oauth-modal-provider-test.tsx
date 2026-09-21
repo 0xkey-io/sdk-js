@@ -108,16 +108,36 @@ const mockProxyOauth = jest.fn((params: ProxyOauthParams) => {
 });
 const mockZeroXKeyClient = jest.fn((config: unknown) => {
   mockConstructedConfigs.push(config);
-  return {
-    init: mockInit,
+  const constructorConfig = config as ZeroXKeyProviderConfig;
+  let initialized = false;
+  const httpClient = {
+    config: {
+      organizationId: constructorConfig.organizationId,
+      apiBaseUrl: constructorConfig.apiBaseUrl ?? "https://api.0xkey.io",
+      authProxyUrl:
+        constructorConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+      authProxyConfigId: constructorConfig.authProxyConfigId,
+    },
+    proxyOAuth2Authenticate: mockProxyOauth,
+  };
+  const client = {
+    config: constructorConfig,
+    async init() {
+      await mockInit();
+      initialized = true;
+    },
     getAllSessions: mockGetAllSessions,
     getActiveSessionKey: mockGetActiveSessionKey,
     createApiKeyPair: mockCreateApiKeyPair,
     completeOauth: mockCompleteOauth,
     getSession: mockGetSession,
     addOauthProvider: mockAddOauthProvider,
-    httpClient: { proxyOAuth2Authenticate: mockProxyOauth },
+    get httpClient() {
+      if (!initialized) throw new Error("Synthetic client is not initialized");
+      return httpClient;
+    },
   } as unknown as ZeroXKeyClient;
+  return client;
 });
 
 jest.mock("@0xkey-io/core", () => {

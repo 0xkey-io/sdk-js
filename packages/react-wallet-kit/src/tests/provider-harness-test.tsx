@@ -40,14 +40,30 @@ const mockGetActiveSessionKey = jest.fn(
 );
 const mockZeroXKeyClient = jest.fn((config: unknown) => {
   mockConstructedConfigs.push(config);
+  const constructorConfig = config as ZeroXKeyProviderConfig;
+  let initialized = false;
+  const httpClient = {
+    config: {
+      organizationId: constructorConfig.organizationId,
+      apiBaseUrl: constructorConfig.apiBaseUrl ?? "https://api.0xkey.io",
+      authProxyUrl:
+        constructorConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+      authProxyConfigId: constructorConfig.authProxyConfigId,
+    },
+  };
   return {
-    init: mockInit,
+    config: constructorConfig,
+    async init() {
+      await mockInit();
+      initialized = true;
+    },
     getAllSessions: mockGetAllSessions,
     getActiveSessionKey: mockGetActiveSessionKey,
-  } satisfies Pick<
-    ZeroXKeyClient,
-    "init" | "getAllSessions" | "getActiveSessionKey"
-  >;
+    get httpClient() {
+      if (!initialized) throw new Error("Synthetic client is not initialized");
+      return httpClient;
+    },
+  } as unknown as ZeroXKeyClient;
 });
 
 jest.mock("@0xkey-io/core", () => {

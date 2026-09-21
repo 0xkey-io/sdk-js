@@ -18,6 +18,10 @@ import {
   type OAuthPopupInput,
 } from "../utils/oauth/popup-flow";
 import { inspectOAuthPopupResponse } from "../utils/oauth/popup-response";
+import {
+  OAuthPopupBindingError,
+  type OAuthPopupRoute,
+} from "../utils/oauth/popup-binding";
 import { installOAuthPopups } from "./fixtures/oauth-popup";
 
 const origin = "https://app.example.test";
@@ -53,12 +57,19 @@ function inspect(
   url: string,
   expectedProvider: OAuthProviders,
   expectedState: string,
+  expectedRoute: OAuthPopupRoute = {
+    emittedRedirectUri: callbackPath,
+    origin,
+    observedPath: "/oauth/callback",
+    staticQuery: [],
+  },
 ) {
   return inspectOAuthPopupResponse({
     url,
     expectedProvider,
     expectedState,
     openerOrigin: origin,
+    expectedRoute,
   });
 }
 
@@ -95,6 +106,113 @@ describe("strict OAuth popup response admission", () => {
         expectedState,
       ),
     ).toEqual({ kind: "accepted", authCode: "code-discord" });
+  });
+
+  it.each([
+    ["wrong path", `${origin}/other?code=code&state=`],
+    ["trailing slash", `${callbackPath}/?code=code&state=`],
+    ["escape spelling", `${origin}/oauth/%63allback?code=code&state=`],
+    [
+      "origin prefix lookalike",
+      `https://app.example.test.evil.invalid/oauth/callback?code=code&state=`,
+    ],
+  ])("rejects a response-bearing %s route", (_label, prefix) => {
+    const url = `${prefix}${encodeURIComponent(expectedState)}`;
+    expect(inspect(url, OAuthProviders.DISCORD, expectedState)).toEqual({
+      kind: "rejected",
+      reason: "callback-route-mismatch",
+    });
+  });
+
+  it.each([
+    ["one-slash repair", "https:/app.example.test/oauth/callback"],
+    ["missing-slashes repair", "https:app.example.test/oauth/callback"],
+    ["backslash repair", "https://app.example.test\\oauth/callback"],
+    ["userinfo repair", "https://@app.example.test/oauth/callback"],
+    ["authority control repair", "https://app.example.test\t/oauth/callback"],
+    ["empty port repair", "https://app.example.test:/oauth/callback"],
+    ["percent host repair", "https://app%2eexample.test/oauth/callback"],
+    ["percent host letter repair", "https://%61pp.example.test/oauth/callback"],
+  ])("rejects a response-bearing raw URL %s", (_label, rawPrefix) => {
+    const separator = rawPrefix.includes("?") ? "&" : "?";
+    const url = `${rawPrefix}${separator}code=code&state=${encodeURIComponent(expectedState)}`;
+    expect(inspect(url, OAuthProviders.DISCORD, expectedState)).toEqual({
+      kind: "rejected",
+      reason: "callback-route-mismatch",
+    });
+  });
+
+  it("requires the exact decoded static-query multiset and rejects unknown extras", () => {
+    const route: OAuthPopupRoute = {
+      emittedRedirectUri: `${callbackPath}?tenant=one&tenant=two&mode=a%2Fb`,
+      origin,
+      observedPath: "/oauth/callback",
+      staticQuery: [
+        ["tenant", "one"],
+        ["tenant", "two"],
+        ["mode", "a/b"],
+      ],
+    };
+    const encodedState = encodeURIComponent(expectedState);
+    const accepted =
+      `${callbackPath}?mode=a%2fb&tenant=two&code=code&tenant=one` +
+      `&scope=openid&state=${encodedState}`;
+    expect(
+      inspect(accepted, OAuthProviders.DISCORD, expectedState, route),
+    ).toEqual({ kind: "accepted", authCode: "code" });
+
+    for (const query of [
+      `tenant=one&mode=a%2Fb&code=code&state=${encodedState}`,
+      `tenant=one&tenant=changed&mode=a%2Fb&code=code&state=${encodedState}`,
+      `tenant=one&tenant=two&tenant=two&mode=a%2Fb&code=code&state=${encodedState}`,
+      `tenant=one&tenant=two&mode=a%2Fb&unknown=value&code=code&state=${encodedState}`,
+    ]) {
+      expect(
+        inspect(
+          `${callbackPath}?${query}`,
+          OAuthProviders.DISCORD,
+          expectedState,
+          route,
+        ),
+      ).toEqual({
+        kind: "rejected",
+        reason: "callback-route-mismatch",
+      });
+    }
+  });
+
+  it("requires static query on fragment responses after browser root serialization", () => {
+    const route: OAuthPopupRoute = {
+      emittedRedirectUri: `${origin}?tenant=one&tenant=two`,
+      origin,
+      observedPath: "/",
+      staticQuery: [
+        ["tenant", "one"],
+        ["tenant", "two"],
+      ],
+    };
+    const googleState = expectedState.replace("discord", "google");
+    const fragment = new URLSearchParams({
+      id_token: "token",
+      state: googleState,
+    });
+    const accepted = new URL(
+      `${origin}/?tenant=two&tenant=one#${fragment.toString()}`,
+    ).href;
+    expect(
+      inspect(accepted, OAuthProviders.GOOGLE, googleState, route),
+    ).toEqual({ kind: "accepted", oidcToken: "token" });
+    expect(
+      inspect(
+        `${origin}/?tenant=one#${fragment.toString()}`,
+        OAuthProviders.GOOGLE,
+        googleState,
+        route,
+      ),
+    ).toEqual({
+      kind: "rejected",
+      reason: "callback-route-mismatch",
+    });
   });
 
   it.each([
@@ -158,7 +276,7 @@ describe("strict OAuth popup response admission", () => {
       `https://app.example.test.evil.invalid/oauth/callback?code=code&state=${encodeURIComponent(expectedState)}`,
     ],
   ])("rejects $0", (_label, url) => {
-    expect(inspect(url, OAuthProviders.DISCORD, expectedState)).toEqual({
+    expect(inspect(url, OAuthProviders.DISCORD, expectedState)).toMatchObject({
       kind: "rejected",
     });
   });
@@ -263,6 +381,9 @@ describe("live OAuth popup lifecycle", () => {
   }>;
   let dependencies: OAuthPopupDependencies;
   let input: OAuthPopupInput;
+  let contextCurrent: boolean;
+  let currentFailure: Error | undefined;
+  let currentAssertions: number;
 
   beforeEach(() => {
     textEncoderDescriptor = Object.getOwnPropertyDescriptor(
@@ -280,6 +401,9 @@ describe("live OAuth popup lifecycle", () => {
     discarded = [];
     exchanges = [];
     completions = [];
+    contextCurrent = true;
+    currentFailure = undefined;
+    currentAssertions = 0;
     dependencies = {
       randomBytes(length) {
         order.push("random");
@@ -310,6 +434,21 @@ describe("live OAuth popup lifecycle", () => {
       clientId: "client-A",
       redirectUri: `${origin}/oauth/callback`,
       additionalState: { sessionKey: "session-A" },
+      binding: {
+        route: {
+          emittedRedirectUri: `${origin}/oauth/callback`,
+          origin,
+          observedPath: "/oauth/callback",
+          staticQuery: [],
+        },
+        assertCurrent() {
+          currentAssertions += 1;
+          if (currentFailure) throw currentFailure;
+          if (!contextCurrent) {
+            throw new OAuthPopupBindingError("context-changed");
+          }
+        },
+      },
       async exchange(exchangeInput) {
         exchanges.push(exchangeInput);
         return "token-A";
@@ -396,6 +535,120 @@ describe("live OAuth popup lifecycle", () => {
     ]);
     expect(discarded).toEqual([]);
     expect(popup!.close).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(currentAssertions).toBe(5);
+  });
+
+  it("guards before allocation and after each await before launch", async () => {
+    contextCurrent = false;
+    let observed = observeFlow(runOAuthPopup(input, dependencies));
+    await observed.settled;
+    expect(observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(order).toEqual([]);
+
+    contextCurrent = true;
+    currentAssertions = 0;
+    const preparation = deferred<{
+      verifier: string;
+      codeChallenge: string;
+    }>();
+    dependencies.generatePkce = () => preparation.promise;
+    observed = observeFlow(runOAuthPopup(input, dependencies));
+    await Promise.resolve();
+    contextCurrent = false;
+    preparation.resolve({ verifier: "verifier", codeChallenge: "challenge" });
+    await observed.settled;
+    expect(observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(order).toEqual(["random"]);
+    expect(discarded).toEqual([]);
+
+    contextCurrent = true;
+    currentAssertions = 0;
+    order = [];
+    const key = deferred<string>();
+    dependencies.generatePkce = async () => ({
+      verifier: "verifier",
+      codeChallenge: "challenge",
+    });
+    dependencies.createApiKeyPair = () => key.promise;
+    observed = observeFlow(runOAuthPopup(input, dependencies));
+    for (let index = 0; index < 8; index += 1) await Promise.resolve();
+    contextCurrent = false;
+    key.resolve("public-after-change");
+    await observed.settled;
+    expect(observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(discarded).toEqual(["public-after-change"]);
+    expect(popups.handles).toHaveLength(0);
+  });
+
+  it("guards terminal admission and post-exchange handoff", async () => {
+    let started = await start();
+    contextCurrent = false;
+    deliverDiscord();
+    await tick();
+    await started.observed.settled;
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(exchanges).toEqual([]);
+    expect(completions).toEqual([]);
+    expect(discarded).toEqual(["public-A"]);
+
+    contextCurrent = true;
+    currentAssertions = 0;
+    discarded = [];
+    const exchange = deferred<string>();
+    input.exchange = async (exchangeInput) => {
+      exchanges.push(exchangeInput);
+      return exchange.promise;
+    };
+    dependencies.createApiKeyPair = async () => "public-B";
+    started = await start();
+    const secondUrl = new URL(started.popup!.assignedUrls[0]!);
+    started.popup!.deliver(
+      `${origin}/oauth/callback?${new URLSearchParams({
+        code: "code-B",
+        state: secondUrl.searchParams.get("state")!,
+      })}`,
+    );
+    await tick();
+    expect(exchanges).toHaveLength(1);
+    contextCurrent = false;
+    exchange.resolve("token-B");
+    await started.observed.settled;
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+    expect(completions).toEqual([]);
+    expect(discarded).toEqual(["public-B"]);
+  });
+
+  it("settles a guard throw from the polling tick without exposing its cause", async () => {
+    const started = await start();
+    currentFailure = new Error("sensitive endpoint and callback sentinel");
+    deliverDiscord();
+    await tick();
+    await started.observed.settled;
+
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "OAuth popup context is unavailable.",
+        reason: "context-unavailable",
+      }),
+    });
+    expect(discarded).toEqual(["public-A"]);
     expect(jest.getTimerCount()).toBe(0);
   });
 
@@ -538,6 +791,15 @@ describe("live OAuth popup lifecycle", () => {
           provider,
           clientId: `client-${owner}`,
           redirectUri: `${origin}/oauth/callback`,
+          binding: {
+            route: {
+              emittedRedirectUri: `${origin}/oauth/callback`,
+              origin,
+              observedPath: "/oauth/callback",
+              staticQuery: [],
+            },
+            assertCurrent() {},
+          },
           async exchange({ authCode, codeVerifier }) {
             exchangeCalls.push({ owner, authCode, codeVerifier });
             return `token-${owner}`;

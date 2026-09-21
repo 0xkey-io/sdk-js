@@ -15,6 +15,11 @@ export type MountedProvider = {
   container: HTMLDivElement;
   root: Root;
   context(): ClientContextType | undefined;
+  rerender(
+    config: ZeroXKeyProviderConfig,
+    callbacks?: ZeroXKeyCallbacks,
+    children?: ReactNode,
+  ): Promise<void>;
 };
 
 export type ProviderDomOptions = {
@@ -154,6 +159,21 @@ export function setupProviderDom(options: ProviderDomOptions = {}) {
       container,
       root,
       context: () => latestContext,
+      async rerender(nextConfig, nextCallbacks, nextChildren) {
+        await act(async () => {
+          root.render(
+            <ZeroXKeyProvider
+              config={nextConfig}
+              {...(nextCallbacks !== undefined && {
+                callbacks: nextCallbacks,
+              })}
+            >
+              <Probe />
+              {nextChildren}
+            </ZeroXKeyProvider>,
+          );
+        });
+      },
     };
     mounted.add(handle);
     await act(async () => {

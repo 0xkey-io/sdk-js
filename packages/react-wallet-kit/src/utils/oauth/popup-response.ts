@@ -1,8 +1,9 @@
 import { OAuthProviders } from "@0xkey-io/sdk-types";
+import { parseStrictOAuthWebUrl, type OAuthPopupRoute } from "./popup-binding";
 
 export type OAuthPopupResponse =
   | { kind: "pending" }
-  | { kind: "rejected" }
+  | { kind: "rejected"; reason?: "callback-route-mismatch" }
   | { kind: "accepted"; authCode?: string; oidcToken?: string };
 
 const responseSignalFields = [
@@ -16,6 +17,13 @@ const responseSignalFields = [
 const securityFields = ["state", ...responseSignalFields] as const;
 
 const errorFields = ["error", "error_description", "error_uri"] as const;
+
+const permittedQueryMetadata = new Set([
+  "scope",
+  "authuser",
+  "prompt",
+  "session_state",
+]);
 
 function hasValidEscapes(value: string): boolean {
   for (
@@ -48,6 +56,52 @@ function hasExactlyOneNonempty(
 ): boolean {
   const values = params.getAll(field);
   return values.length === 1 && values[0] !== "";
+}
+
+function sameMultiset(left: readonly string[], right: readonly string[]) {
+  if (left.length !== right.length) return false;
+  const counts = new Map<string, number>();
+  for (const value of left) counts.set(value, (counts.get(value) ?? 0) + 1);
+  for (const value of right) {
+    const count = counts.get(value);
+    if (!count) return false;
+    if (count === 1) counts.delete(value);
+    else counts.set(value, count - 1);
+  }
+  return counts.size === 0;
+}
+
+function matchesRoute(
+  strict: NonNullable<ReturnType<typeof parseStrictOAuthWebUrl>>,
+  query: URLSearchParams,
+  route: OAuthPopupRoute,
+): boolean {
+  if (
+    strict.parsed.origin !== route.origin ||
+    strict.observedPath !== route.observedPath
+  ) {
+    return false;
+  }
+
+  const expectedByKey = new Map<string, string[]>();
+  for (const [key, value] of route.staticQuery) {
+    const values = expectedByKey.get(key) ?? [];
+    values.push(value);
+    expectedByKey.set(key, values);
+  }
+  for (const [key, expectedValues] of expectedByKey) {
+    if (!sameMultiset(query.getAll(key), expectedValues)) return false;
+  }
+  for (const key of new Set(query.keys())) {
+    if (
+      !expectedByKey.has(key) &&
+      !securityFields.includes(key as (typeof securityFields)[number]) &&
+      !permittedQueryMetadata.has(key)
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function inspectRawAppleHash(
@@ -98,6 +152,7 @@ export function inspectOAuthPopupResponse(input: {
   expectedProvider: OAuthProviders;
   expectedState: string;
   openerOrigin: string;
+  expectedRoute: OAuthPopupRoute;
 }): OAuthPopupResponse {
   let parsed: URL;
   try {
@@ -120,7 +175,14 @@ export function inspectOAuthPopupResponse(input: {
   if (!hasQueryResponse && !hasFragmentResponse) {
     return { kind: "pending" };
   }
-  if (parsed.origin !== input.openerOrigin) return { kind: "rejected" };
+  const strict = parseStrictOAuthWebUrl(input.url, { allowFragment: true });
+  if (
+    !strict ||
+    strict.parsed.origin !== input.openerOrigin ||
+    !matchesRoute(strict, query, input.expectedRoute)
+  ) {
+    return { kind: "rejected", reason: "callback-route-mismatch" };
+  }
   if (hasProviderError(query) || hasProviderError(fragment)) {
     return { kind: "rejected" };
   }
