@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createECDH, createPrivateKey, createSign } from "node:crypto";
+import {
+  createECDH,
+  createPrivateKey,
+  createPublicKey,
+  createSign,
+  createVerify,
+} from "node:crypto";
 import {
   assessExpiredLogin,
   assessSuccessfulLogin,
@@ -22,6 +28,60 @@ const validClaims = {
   exp: 1_900,
 };
 
+function p256TestKey() {
+  const ecdh = createECDH("prime256v1");
+  ecdh.generateKeys();
+  const point = ecdh.getPublicKey(undefined, "uncompressed");
+  const privateKey = createPrivateKey({
+    key: {
+      kty: "EC",
+      crv: "P-256",
+      x: point.subarray(1, 33).toString("base64url"),
+      y: point.subarray(33).toString("base64url"),
+      d: ecdh.getPrivateKey().toString("base64url"),
+    },
+    format: "jwk",
+  });
+  return {
+    publicKey: ecdh.getPublicKey("hex", "compressed"),
+    verifyingKey: createPublicKey(privateKey),
+    sign: (message: string, raw = false) => {
+      const signer = createSign("SHA256");
+      signer.update(message);
+      return signer
+        .sign({ key: privateKey, dsaEncoding: raw ? "ieee-p1363" : "der" })
+        .toString("hex");
+    },
+  };
+}
+
+function legalSignedLogin(
+  body: Record<string, unknown>,
+  token: string,
+  verificationKey: ReturnType<typeof p256TestKey>,
+  sessionKey: ReturnType<typeof p256TestKey>,
+  tokenId: string,
+): boolean {
+  const signature = body.clientSignature as Record<string, unknown>;
+  const expectedMessage = `{"login":{"publicKey":"${sessionKey.publicKey}"},"tokenId":"${tokenId}","type":"USAGE_TYPE_LOGIN"}`;
+  if (
+    body.verificationToken !== token ||
+    body.publicKey !== sessionKey.publicKey ||
+    signature.publicKey !== verificationKey.publicKey ||
+    signature.scheme !== "CLIENT_SIGNATURE_SCHEME_API_P256" ||
+    signature.message !== expectedMessage ||
+    typeof signature.signature !== "string" ||
+    !/^[0-9a-f]{128}$/i.test(signature.signature)
+  )
+    return false;
+  const verifier = createVerify("SHA256");
+  verifier.update(expectedMessage);
+  return verifier.verify(
+    { key: verificationKey.verifyingKey, dsaEncoding: "ieee-p1363" },
+    Buffer.from(signature.signature, "hex"),
+  );
+}
+
 test("success needs HTTP 200, a nonempty Session, and matching JWT claims", () => {
   assert.equal(
     assessSuccessfulLogin(
@@ -29,6 +89,7 @@ test("success needs HTTP 200, a nonempty Session, and matching JWT claims", () =
       "org-1",
       "key-B",
       1_000,
+      900,
     ),
     true,
   );
@@ -38,6 +99,7 @@ test("success needs HTTP 200, a nonempty Session, and matching JWT claims", () =
       "org-1",
       "key-B",
       1_000,
+      900,
     ),
     false,
   );
@@ -47,6 +109,7 @@ test("success needs HTTP 200, a nonempty Session, and matching JWT claims", () =
       "org-1",
       "key-B",
       1_000,
+      900,
     ),
     false,
   );
@@ -61,6 +124,7 @@ test("success needs HTTP 200, a nonempty Session, and matching JWT claims", () =
       "org-1",
       "key-B",
       1_000,
+      900,
     ),
     false,
   );
@@ -73,9 +137,86 @@ test("success needs HTTP 200, a nonempty Session, and matching JWT claims", () =
       "org-1",
       "key-B",
       1_000,
+      900,
     ),
     false,
   );
+  assert.equal(
+    assessSuccessfulLogin(
+      {
+        status: 200,
+        data: { session: session({ ...validClaims, exp: 1_600 }) },
+      },
+      "org-1",
+      "key-B",
+      1_000,
+      600,
+    ),
+    true,
+  );
+});
+
+test("unsupported OTP format is rejected before any challenge is sent", async () => {
+  for (const [otpLength, otpAlphanumeric, ttl, reason] of [
+    ["8", false, "600", "UNSUPPORTED_OTP_FORMAT"],
+    ["6", true, "600", "UNSUPPORTED_OTP_FORMAT"],
+    ["6", false, "0", "INVALID_SESSION_TTL"],
+  ] as const) {
+    let inits = 0;
+    const deps = {
+      now: () => 1_000_000,
+      ttyReady: () => true,
+      health: async () => ({
+        status: 200,
+        data: {
+          enabledProviders: ["email"],
+          otpLength,
+          otpAlphanumeric,
+          sessionExpirationSeconds: ttl,
+        },
+      }),
+      init: async () => {
+        inits++;
+        throw Error("must not send OTP");
+      },
+    } as unknown as AcceptanceDeps;
+    await assert.rejects(
+      runAcceptance(parseOptions(["--live", "--send-otp"]), deps),
+      new RegExp(reason),
+    );
+    assert.equal(inits, 0);
+  }
+});
+
+test("private TTY is required before the first challenge", async () => {
+  let inits = 0;
+  let healthChecks = 0;
+  const deps = {
+    now: () => 1_000_000,
+    ttyReady: () => false,
+    health: async () => {
+      healthChecks++;
+      return {
+        status: 200,
+        data: {
+          enabledProviders: ["email"],
+          otpLength: "6",
+          otpAlphanumeric: false,
+          sessionExpirationSeconds: "600",
+        },
+      };
+    },
+    init: async () => {
+      inits++;
+      throw Error("must not send OTP");
+    },
+  } as unknown as AcceptanceDeps;
+  await assert.rejects(
+    runAcceptance(parseOptions(["--live", "--send-otp"]), deps),
+    /PRIVATE_TTY_REQUIRED/,
+  );
+  assert.equal(inits, 0);
+  assert.equal(healthChecks, 0);
 });
 
 test("control C uses the built SDK public loginWithOtp Attested request", async () => {
@@ -292,6 +433,7 @@ test("offline mode never calls transport or prompt", async () => {
   const forbidden = async (): Promise<never> => {
     throw Error("network or prompt called");
   };
+  const events: Array<Record<string, string | number | boolean>> = [];
   const result = await runAcceptance(parseOptions([]), {
     health: forbidden,
     init: forbidden,
@@ -305,18 +447,31 @@ test("offline mode never calls transport or prompt", async () => {
     sleep: forbidden,
     expiryEvidence: forbidden,
     now: () => 0,
+    ttyReady: () => {
+      throw Error("TTY probed during dry run");
+    },
+    emit: (event) => {
+      events.push(event);
+    },
   });
   assert.equal(result.ok, true);
   assert.equal(result.mode, "dry-run");
+  assert.equal(events[0]?.phase, "transport-safety-smoke");
 });
 
 test("live uses three fresh challenges once and never retries a failing init", async () => {
   const options = parseOptions(["--live", "--send-otp"]);
   let inits = 0;
   const deps = {
+    ttyReady: () => true,
     health: async () => ({
       status: 200,
-      data: { enabledProviders: ["email"] },
+      data: {
+        enabledProviders: ["email"],
+        otpLength: "6",
+        otpAlphanumeric: false,
+        sessionExpirationSeconds: "600",
+      },
     }),
     init: async () => {
       inits++;
@@ -330,16 +485,23 @@ test("live uses three fresh challenges once and never retries a failing init", a
 test("live A, B, and C use distinct challenges and only B waits for expiry", async () => {
   let nowMs = 1_000_000;
   let issued = 0;
-  let keyCount = 0;
   let loginCount = 0;
+  const keyPairs: Array<ReturnType<typeof p256TestKey>> = [];
+  const verificationTokens: string[] = [];
   const challenges: string[] = [];
   const waits: number[] = [];
   let attested = 0;
   const deps: AcceptanceDeps = {
     now: () => nowMs,
+    ttyReady: () => true,
     health: async () => ({
       status: 200,
-      data: { enabledProviders: ["email"] },
+      data: {
+        enabledProviders: ["email"],
+        otpLength: "6",
+        otpAlphanumeric: false,
+        sessionExpirationSeconds: "600",
+      },
     }),
     init: async () => {
       issued++;
@@ -350,31 +512,90 @@ test("live A, B, and C use distinct challenges and only B waits for expiry", asy
       };
     },
     keys: async () => {
-      keyCount++;
-      return { publicKey: `key-${keyCount}`, sign: () => "signature" };
+      const key = p256TestKey();
+      keyPairs.push(key);
+      return key;
     },
     readOtp: async () => "123456",
     encrypt: async () => "encrypted",
-    verify: async (_id, _encrypted, ttl) => ({
-      status: 200,
-      data: {
-        verificationToken: session({
-          id: `token-${issued}`,
-          public_key: `key-${keyCount}`,
-          iat: nowMs / 1000,
-          exp: nowMs / 1000 + ttl,
-        }),
-      },
-    }),
+    verify: async (_id, _encrypted, ttl) => {
+      const token = session({
+        id: `token-${issued}`,
+        public_key: keyPairs.at(-1)!.publicKey,
+        iat: nowMs / 1000,
+        exp: nowMs / 1000 + ttl,
+      });
+      verificationTokens.push(token);
+      return { status: 200, data: { verificationToken: token } };
+    },
     account: async () => ({ status: 200, data: { organizationId: "org-1" } }),
     loginV2: async (body) => {
       loginCount++;
-      assert.ok((body.clientSignature as Record<string, unknown>).signature);
+      const verificationKey = keyPairs[(loginCount - 1) * 2]!;
+      const sessionKey = keyPairs[(loginCount - 1) * 2 + 1]!;
+      const token = verificationTokens[loginCount - 1]!;
+      assert.equal(
+        legalSignedLogin(
+          body,
+          token,
+          verificationKey,
+          sessionKey,
+          `token-${loginCount}`,
+        ),
+        true,
+      );
+      const stamp = body.clientSignature as Record<string, unknown>;
+      assert.equal(
+        legalSignedLogin(
+          {
+            ...body,
+            clientSignature: {
+              ...stamp,
+              message: String(stamp.message).replace(
+                `token-${loginCount}`,
+                "wrong-token",
+              ),
+            },
+          },
+          token,
+          verificationKey,
+          sessionKey,
+          `token-${loginCount}`,
+        ),
+        false,
+      );
+      assert.equal(
+        legalSignedLogin(
+          {
+            ...body,
+            clientSignature: { ...stamp, signature: "00".repeat(64) },
+          },
+          token,
+          verificationKey,
+          sessionKey,
+          `token-${loginCount}`,
+        ),
+        false,
+      );
+      assert.equal(
+        legalSignedLogin(
+          { ...body, publicKey: verificationKey.publicKey },
+          token,
+          verificationKey,
+          sessionKey,
+          `token-${loginCount}`,
+        ),
+        false,
+      );
       if (loginCount === 1)
         return {
           status: 200,
           data: {
-            session: session({ ...validClaims, public_key: body.publicKey }),
+            session: session({
+              ...validClaims,
+              exp: 1_600,
+              public_key: sessionKey.publicKey,
+            }),
           },
         };
       return { status: 401, traceId: "trace-B", data: { message: "generic" } };

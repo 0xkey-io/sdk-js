@@ -53,6 +53,7 @@ export type AcceptanceDeps = {
     organizationId: string,
   ) => Promise<HttpResult>;
   readOtp: () => Promise<string>;
+  ttyReady: () => boolean;
   encrypt: (bundle: string, otp: string, publicKey: string) => Promise<string>;
   keys: () => Promise<Key>;
   sleep: (ms: number) => Promise<void>;
@@ -169,6 +170,7 @@ export function assessSuccessfulLogin(
   org: string,
   key: string,
   issuedAt: number,
+  expectedTtl: number,
 ): boolean {
   if (result.status !== 200) return false;
   const session = record(result.data).session;
@@ -180,7 +182,7 @@ export function assessSuccessfulLogin(
     c.public_key === key &&
     typeof c.iat === "number" &&
     typeof c.exp === "number" &&
-    c.exp - c.iat === SESSION_TTL &&
+    c.exp - c.iat === expectedTtl &&
     c.iat <= issuedAt + 5 &&
     c.exp > issuedAt
   );
@@ -257,12 +259,22 @@ function verifiedToken(
 }
 async function newChallenge(deps: AcceptanceDeps, control: string) {
   const health = await deps.health();
+  const config = record(health.data);
   if (
     health.status !== 200 ||
-    !Array.isArray(record(health.data).enabledProviders) ||
-    !(record(health.data).enabledProviders as unknown[]).includes("email")
+    !Array.isArray(config.enabledProviders) ||
+    !config.enabledProviders.includes("email")
   )
     throw Error("CONFIG_HEALTH_FAILED");
+  if (config.otpLength !== "6" || config.otpAlphanumeric !== false)
+    throw Error("UNSUPPORTED_OTP_FORMAT");
+  if (
+    typeof config.sessionExpirationSeconds !== "string" ||
+    !/^[1-9]\d*$/.test(config.sessionExpirationSeconds) ||
+    !Number.isSafeInteger(Number(config.sessionExpirationSeconds))
+  )
+    throw Error("INVALID_SESSION_TTL");
+  const sessionTtl = Number(config.sessionExpirationSeconds);
   event(deps, control, "config", health, { healthy: true });
   const init = await deps.init(); // Exactly one request. A failed init is terminal.
   event(deps, control, "init", init, { accepted: init.status === 200 });
@@ -276,7 +288,7 @@ async function newChallenge(deps: AcceptanceDeps, control: string) {
   const key = await deps.keys();
   const otp = await deps.readOtp();
   if (!/^\d{6}$/.test(otp)) throw Error("INVALID_OTP_INPUT");
-  return { otpId, bundle, key, otp };
+  return { otpId, bundle, key, otp, sessionTtl };
 }
 async function verify(
   deps: AcceptanceDeps,
@@ -348,9 +360,12 @@ export async function runAcceptance(
   deps: AcceptanceDeps,
 ): Promise<{ ok: boolean; mode: "dry-run" | "live" }> {
   if (!options.live) {
-    event(deps, "synthetic", "dry-run", undefined, { noNetwork: true });
+    event(deps, "synthetic", "transport-safety-smoke", undefined, {
+      noNetwork: true,
+    });
     return { ok: true, mode: "dry-run" };
   }
+  if (deps.ttyReady?.() !== true) throw Error("PRIVATE_TTY_REQUIRED");
   const a = await newChallenge(deps, "A");
   const tokenA = await verify(deps, "A", a, OTP_TTL);
   const orgA = await organization(deps, "A", tokenA);
@@ -363,6 +378,7 @@ export async function runAcceptance(
     orgA,
     sessionA.publicKey,
     Math.floor(deps.now() / 1000),
+    a.sessionTtl,
   );
   event(deps, "A", "login", responseA, { sessionValid: goodA });
   if (!goodA) throw Error("CONTROL_A_FAILED");
@@ -403,6 +419,7 @@ export async function runAcceptance(
     orgC,
     c.key.publicKey,
     Math.floor(deps.now() / 1000),
+    SESSION_TTL,
   );
   event(deps, "C", "attested-login", responseC, { sessionValid: goodC });
   if (!goodC) throw Error("CONTROL_C_FAILED");
@@ -555,6 +572,8 @@ export async function makeLiveDeps(options: Options): Promise<AcceptanceDeps> {
       }),
     loginV2: (body) => post("/v1/otp_login_v2", body),
     readOtp: readHiddenOtp,
+    ttyReady: () =>
+      process.stdin.isTTY && typeof process.stdin.setRawMode === "function",
     keys: async () => keyPair(),
     encrypt: async (bundle, otp, publicKey) => {
       const envelope = record(JSON.parse(bundle));
@@ -680,6 +699,8 @@ async function main() {
       "CONTROL_B_INCONCLUSIVE_OR_FAILED",
       "CONTROL_C_FAILED",
       "CONFIG_HEALTH_FAILED",
+      "UNSUPPORTED_OTP_FORMAT",
+      "INVALID_SESSION_TTL",
       "INIT_FAILED",
       "INIT_MISSING_CHALLENGE",
       "INIT_MISSING_BUNDLE",
