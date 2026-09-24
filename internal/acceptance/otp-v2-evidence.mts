@@ -11,6 +11,7 @@ const LOG_LIMIT = 1024 * 1024;
 const MAX_PODS = 8;
 const MAX_WINDOW_MS = 180_000;
 const COMMAND_TIMEOUT_MS = 10_000;
+class EvidenceDeadlineExpired extends Error {}
 const hex64 = /^[0-9a-f]{64}$/;
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -32,15 +33,23 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 const integer = (value: unknown) =>
   typeof value === "number" && Number.isSafeInteger(value) ? value : NaN;
 
-function jsonLine(line: string): RecordValue {
+function jsonLine(line: string): RecordValue | undefined {
   try {
-    const raw = line.slice(line.indexOf("{"));
-    const value = object(JSON.parse(raw));
-    return Object.keys(object(value.fields)).length
-      ? object(value.fields)
-      : value;
+    const start = line.indexOf("{");
+    if (start < 0) return undefined;
+    const parsed: unknown = JSON.parse(line.slice(start));
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed))
+      return undefined;
+    const value = parsed as RecordValue;
+    if (!("fields" in value)) return value;
+    const fields = value.fields;
+    return fields !== null &&
+      typeof fields === "object" &&
+      !Array.isArray(fields)
+      ? (fields as RecordValue)
+      : undefined;
   } catch {
-    return {};
+    return undefined;
   }
 }
 
@@ -52,13 +61,16 @@ export function parseExpiryEvents(input: {
 }): ExpiryEvidence | undefined {
   if (!uuid.test(input.requestId) || !Number.isSafeInteger(input.notBeforeMs))
     return undefined;
-  const proxies = input.proxyLines
-    .map(jsonLine)
-    .filter(
-      (x) =>
-        x.event === "otp_v2_login_downstream_rejected" &&
-        x.request_id === input.requestId,
-    );
+  const proxyRecords = input.proxyLines.map(jsonLine);
+  const coordinatorRecords = input.coordinatorLines.map(jsonLine);
+  if (proxyRecords.some((x) => !x) || coordinatorRecords.some((x) => !x))
+    return undefined;
+  const proxies = proxyRecords.filter(
+    (x): x is RecordValue =>
+      x !== undefined &&
+      x.event === "otp_v2_login_downstream_rejected" &&
+      x.request_id === input.requestId,
+  );
   if (proxies.length !== 1) return undefined;
   const proxy = proxies[0]!;
   const fingerprint = text(proxy.activity_fingerprint);
@@ -73,13 +85,12 @@ export function parseExpiryEvents(input: {
     observedAtMs < input.notBeforeMs
   )
     return undefined;
-  const decisions = input.coordinatorLines
-    .map(jsonLine)
-    .filter(
-      (x) =>
-        x.event === "otp_v2_login_token_rejected" &&
-        x.activity_fingerprint === fingerprint,
-    );
+  const decisions = coordinatorRecords.filter(
+    (x): x is RecordValue =>
+      x !== undefined &&
+      x.event === "otp_v2_login_token_rejected" &&
+      x.activity_fingerprint === fingerprint,
+  );
   if (decisions.length !== 1) return undefined;
   const decision = decisions[0]!;
   const activityId = text(decision.activity_id);
@@ -268,13 +279,33 @@ export class BoundedEvidenceReader {
     )
       throw Error("EVIDENCE_CANDIDATE_REQUIRED");
   }
-  private async command(args: string[], limit = 256 * 1024) {
-    return this.runner(args, limit, COMMAND_TIMEOUT_MS);
+  private checkDeadline(deadline?: number): void {
+    if (deadline !== undefined && performance.now() >= deadline)
+      throw new EvidenceDeadlineExpired();
+  }
+  private async command(args: string[], limit = 256 * 1024, deadline?: number) {
+    this.checkDeadline(deadline);
+    const remaining =
+      deadline === undefined
+        ? COMMAND_TIMEOUT_MS
+        : Math.min(
+            COMMAND_TIMEOUT_MS,
+            Math.floor(deadline - performance.now()),
+          );
+    if (remaining <= 0) throw new EvidenceDeadlineExpired();
+    try {
+      const output = await this.runner(args, limit, remaining);
+      this.checkDeadline(deadline);
+      return output;
+    } catch (error) {
+      this.checkDeadline(deadline);
+      throw error;
+    }
   }
   private scoped(args: string[]) {
     return ["--context", CONTEXT, "--namespace", NAMESPACE, ...args];
   }
-  private async snapshot(): Promise<Snapshot> {
+  private async snapshot(deadline?: number): Promise<Snapshot> {
     const result = {} as Snapshot;
     for (const [name, expected] of [
       ["auth-proxy", this.pins.authProxyImageId],
@@ -283,6 +314,8 @@ export class BoundedEvidenceReader {
       const deployment = parseJson(
         await this.command(
           this.scoped(["get", "deployment", name, "-o", "json"]),
+          256 * 1024,
+          deadline,
         ),
       );
       const metadata = object(deployment.metadata);
@@ -309,6 +342,8 @@ export class BoundedEvidenceReader {
         parseJson(
           await this.command(
             this.scoped(["get", "replicasets", "-l", label, "-o", "json"]),
+            256 * 1024,
+            deadline,
           ),
         ).items,
       );
@@ -327,6 +362,8 @@ export class BoundedEvidenceReader {
         parseJson(
           await this.command(
             this.scoped(["get", "pods", "-l", label, "-o", "json"]),
+            256 * 1024,
+            deadline,
           ),
         ).items,
       );
@@ -412,7 +449,12 @@ export class BoundedEvidenceReader {
     this.requestStartMs = nowMs;
     this.windowStartMs = nowMs - 30_000;
   }
-  private async logs(name: string, pod: Pod, since: string): Promise<string[]> {
+  private async logs(
+    name: string,
+    pod: Pod,
+    since: string,
+    deadline?: number,
+  ): Promise<string[]> {
     const bytes = await this.command(
       this.scoped([
         "logs",
@@ -424,6 +466,7 @@ export class BoundedEvidenceReader {
         `--limit-bytes=${LOG_LIMIT + 1}`,
       ]),
       LOG_LIMIT + 1,
+      deadline,
     );
     if (bytes.length > LOG_LIMIT) throw Error("EVIDENCE_LOG_TRUNCATED");
     const raw = bytes.toString("utf8");
@@ -446,53 +489,63 @@ export class BoundedEvidenceReader {
       !uuid.test(requestId)
     )
       return undefined;
-    const after = await this.snapshot();
-    for (const key of ["authProxy", "coordinator"] as const) {
-      if (
-        JSON.stringify(after[key]) !== JSON.stringify(this.baseline[key]) ||
-        after[key].some((p) => p.startedAtMs > this.windowStartMs!)
-      )
+    const deadline =
+      performance.now() + MAX_WINDOW_MS - (nowMs - this.windowStartMs);
+    try {
+      this.checkDeadline(deadline);
+      const after = await this.snapshot(deadline);
+      for (const key of ["authProxy", "coordinator"] as const) {
+        if (
+          JSON.stringify(after[key]) !== JSON.stringify(this.baseline[key]) ||
+          after[key].some((p) => p.startedAtMs > this.windowStartMs!)
+        )
+          return undefined;
+      }
+      const since = new Date(this.windowStartMs).toISOString();
+      const proxyLines: string[] = [],
+        coordinatorLines: string[] = [];
+      const covered = (lines: string[]) => {
+        const times = lines.map((line) => {
+          const stamp = line.split(" ", 1)[0] ?? "";
+          return /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/.test(stamp)
+            ? Date.parse(stamp)
+            : NaN;
+        });
+        return (
+          times.length > 0 &&
+          times.every(
+            (time, i) =>
+              Number.isFinite(time) &&
+              time >= this.windowStartMs! &&
+              (i === 0 || time >= times[i - 1]!),
+          ) &&
+          times[0]! <= this.requestStartMs!
+        );
+      };
+      for (const pod of this.baseline.authProxy) {
+        const lines = await this.logs("auth-proxy", pod, since, deadline);
+        if (!covered(lines)) return undefined;
+        proxyLines.push(...lines);
+      }
+      for (const pod of this.baseline.coordinator) {
+        const lines = await this.logs("coordinator", pod, since, deadline);
+        if (!covered(lines)) return undefined;
+        coordinatorLines.push(...lines);
+      }
+      const last = await this.snapshot(deadline);
+      if (JSON.stringify(last) !== JSON.stringify(this.baseline))
         return undefined;
-    }
-    const since = new Date(this.windowStartMs).toISOString();
-    const proxyLines: string[] = [],
-      coordinatorLines: string[] = [];
-    const covered = (lines: string[]) => {
-      const times = lines.map((line) => {
-        const stamp = line.split(" ", 1)[0] ?? "";
-        return /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/.test(stamp)
-          ? Date.parse(stamp)
-          : NaN;
+      const evidence = parseExpiryEvents({
+        requestId,
+        proxyLines,
+        coordinatorLines,
+        notBeforeMs,
       });
-      return (
-        times.length > 0 &&
-        times.every(
-          (time, i) =>
-            Number.isFinite(time) &&
-            time >= this.windowStartMs! &&
-            (i === 0 || time >= times[i - 1]!),
-        ) &&
-        times[0]! <= this.requestStartMs!
-      );
-    };
-    for (const pod of this.baseline.authProxy) {
-      const lines = await this.logs("auth-proxy", pod, since);
-      if (!covered(lines)) return undefined;
-      proxyLines.push(...lines);
+      this.checkDeadline(deadline);
+      return evidence;
+    } catch (error) {
+      if (error instanceof EvidenceDeadlineExpired) return undefined;
+      throw error;
     }
-    for (const pod of this.baseline.coordinator) {
-      const lines = await this.logs("coordinator", pod, since);
-      if (!covered(lines)) return undefined;
-      coordinatorLines.push(...lines);
-    }
-    const last = await this.snapshot();
-    if (JSON.stringify(last) !== JSON.stringify(this.baseline))
-      return undefined;
-    return parseExpiryEvents({
-      requestId,
-      proxyLines,
-      coordinatorLines,
-      notBeforeMs,
-    });
   }
 }

@@ -64,6 +64,29 @@ test("missing, duplicate, and cross-fingerprint evidence is inconclusive", () =>
   );
 });
 
+test("malformed duplicate records cannot disappear from a unique event pair", () => {
+  assert.equal(
+    parseExpiryEvents({
+      ...input(),
+      proxyLines: [
+        proxy,
+        `{"event":"otp_v2_login_downstream_rejected","request_id":"${requestId}"`,
+      ],
+    }),
+    undefined,
+  );
+  assert.equal(
+    parseExpiryEvents({
+      ...input(),
+      coordinatorLines: [
+        coordinator,
+        `{"fields":{"event":"otp_v2_login_token_rejected","activity_fingerprint":"${fingerprint}"`,
+      ],
+    }),
+    undefined,
+  );
+});
+
 test("wrong reason, event type, version, and early decision are rejected", () => {
   assert.equal(
     parseExpiryEvents(
@@ -156,6 +179,7 @@ function fakeCluster(
     restartDuringWindow?: boolean;
     tooManyPods?: boolean;
     missingCoverage?: boolean;
+    delayAtDeploymentRead?: number;
   } = {},
 ) {
   const image = (name: string) =>
@@ -165,20 +189,27 @@ function fakeCluster(
     );
   const calls: string[][] = [];
   let authPodReads = 0;
+  let deploymentReads = 0;
+  const timeouts: number[] = [];
   const runner: CommandRunner = async (args, maxBytes, timeoutMs) => {
     calls.push([...args]);
-    assert.equal(timeoutMs, 10_000);
+    timeouts.push(timeoutMs);
+    assert.ok(timeoutMs > 0 && timeoutMs <= 10_000);
     const joined = args.join(" ");
     if (joined.includes("config view"))
       return Buffer.from(overrides.endpoint ?? "https://cluster.test");
     const name = joined.includes("coordinator") ? "coordinator" : "auth-proxy";
-    if (joined.includes("get deployment"))
+    if (joined.includes("get deployment")) {
+      deploymentReads++;
+      if (deploymentReads === overrides.delayAtDeploymentRead)
+        await new Promise((done) => setTimeout(done, 250));
       return Buffer.from(
         JSON.stringify({
           metadata: { name, namespace: "0xkey", uid: `deploy-${name}` },
           spec: { selector: { matchLabels: { app: name } } },
         }),
       );
+    }
     if (joined.includes("get replicasets"))
       return Buffer.from(
         JSON.stringify({
@@ -249,7 +280,7 @@ function fakeCluster(
     },
     runner,
   );
-  return { reader, calls };
+  return { reader, calls, timeouts };
 }
 
 test("collector checks fixed context, workload/image pins and resolves a bounded pair", async () => {
@@ -308,4 +339,15 @@ test("log stream without a pre-request record cannot prove coverage", async () =
   await reader.preflight();
   await reader.beginWindow(1032000);
   assert.equal(await reader.resolve(requestId, 1032000, 1033000), undefined);
+});
+
+test("collection cannot return evidence after the 180-second deadline", async () => {
+  for (const read of [5, 8]) {
+    const { reader, timeouts } = fakeCluster({ delayAtDeploymentRead: read });
+    await reader.preflight();
+    await reader.beginWindow(1032000);
+    const before = timeouts.length;
+    assert.equal(await reader.resolve(requestId, 1032000, 1181900), undefined);
+    assert.ok(timeouts.slice(before).every((timeout) => timeout <= 100));
+  }
 });
