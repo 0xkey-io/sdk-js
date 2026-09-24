@@ -142,8 +142,8 @@ import {
   mapAccountsToWallet,
   getActiveSessionOrThrowIfRequired,
   fetchAllWalletAccountsWithCursor,
-  getClientSignatureMessageForLogin,
   getClientSignatureMessageForSignup,
+  decodeVerificationToken,
 } from "../utils";
 import { createStorageManager } from "../__storage__/base";
 import { CrossPlatformApiKeyStamper } from "../__stampers__/api/base";
@@ -642,7 +642,7 @@ export class ZeroXKeyClient {
    * - This function creates a new passkey authenticator and uses it to register a new sub-organization for the user.
    * - Handles both passkey creation and sub-organization creation in a single flow.
    * - Optionally accepts additional sub-organization parameters, a custom session key, a custom passkey display name, and a custom session expiration.
-   * - Automatically generates a new API key pair for authentication and session management.
+   * - Uses the local key already bound to the verification token for signup and Session creation.
    * - Stores the resulting session token and manages cleanup of unused key pairs.
    *
    * @param params.passkeyDisplayName - display name for the passkey (defaults to a generated name based on the current timestamp).
@@ -1455,86 +1455,98 @@ export class ZeroXKeyClient {
    * Logs in a user using an OTP verification token.
    *
    * - This function logs in a user using the verification token received after OTP verification (from email or SMS).
-   * - If a public key is not provided, a new API key pair will be generated for authentication.
-   * - Optionally invalidates any existing sessions for the user if `invalidateExisting` is set to true.
-   * - Stores the resulting session token under the specified session key, or the default session key if not provided.
-   * - Handles cleanup of unused key pairs if login fails.
+   * - Signs StampLogin with the local key bound to the verification token.
+   * - Stores only the resulting Session, under the specified local session key.
    *
    * @param params.verificationToken - verification token received after OTP verification.
-   * @param params.publicKey - public key to use for authentication. If not provided, a new key pair will be generated.
+   * @param params.publicKey - deprecated compatibility parameter; must match the token-bound public key.
+   * @param params.expirationSeconds - Session lifetime in seconds (defaults to 900).
+   * @param params.sessionProfileId - optional Session Profile ID.
    * @param params.organizationId - optional organization ID to target (defaults to the verified subOrg ID linked to the verification token contact).
    * @param params.invalidateExisting - flag to invalidate existing session for the user.
    * @param params.sessionKey - session key to use for session creation (defaults to the default session key).
    * @returns A promise that resolves to a {@link BaseAuthResult}, which includes:
    *          - `sessionToken`: the signed JWT session token.
-   * @throws {ZeroXKeyError} If there is an error during the OTP login process or if key pair cleanup fails.
+   * @throws {ZeroXKeyError} If the token key is unavailable or StampLogin fails.
    */
   loginWithOtp = async (
     params: LoginWithOtpParams,
   ): Promise<BaseAuthResult> => {
     const {
       verificationToken,
-      invalidateExisting = false,
-      publicKey = await this.apiKeyStamper?.createKeyPair(),
+      publicKey: legacyPublicKey,
+      expirationSeconds = DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+      sessionProfileId,
+      invalidateExisting,
       organizationId,
       sessionKey = SessionKey.DefaultSessionkey,
     } = params;
 
+    let loginStamper: AttestedStamper | undefined;
+
     return withZeroXKeyErrorHandling(
       async () => {
-        const { message, publicKey: clientSignaturePublicKey } =
-          getClientSignatureMessageForLogin({
-            verificationToken,
-            sessionPublicKey: publicKey!,
-          });
+        const publicKey = decodeVerificationToken(verificationToken).public_key;
+        if (!publicKey) {
+          throw new ZeroXKeyError(
+            "Verification token is missing a public key",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+        if (legacyPublicKey && legacyPublicKey !== publicKey) {
+          throw new ZeroXKeyError(
+            "loginWithOtp publicKey must match the verification token key; use proxyOtpLoginV2 for A-to-B Session keys",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+        if (
+          !this.apiKeyStamper ||
+          !(await this.apiKeyStamper.listKeyPairs()).includes(publicKey)
+        ) {
+          throw new ZeroXKeyError(
+            "Verification token key is not available in local storage",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
 
-        this.apiKeyStamper?.setTemporaryPublicKey(publicKey!);
-        const signature = await this.apiKeyStamper?.sign(
-          message,
-          SignatureFormat.Raw,
+        // The shared stamper is mutable. Each login gets its own configured
+        // stamper and HTTP client so concurrent tokens cannot cross-sign.
+        loginStamper = new AttestedStamper(this.apiKeyStamper);
+        const loginClient = new ZeroXKeyClient(
+          this.config,
+          this.apiKeyStamper,
+          this.passkeyStamper,
+          this.walletManager,
+          loginStamper,
         );
-
-        if (!signature) {
-          throw new ZeroXKeyError(
-            `Failed to sign client signature for OTP login`,
-            ZeroXKeyErrorCodes.INTERNAL_ERROR,
-          );
-        }
-
-        const clientSignature: v1ClientSignature = {
-          message: message,
-          publicKey: clientSignaturePublicKey,
-          scheme: "CLIENT_SIGNATURE_SCHEME_API_P256",
-          signature: signature,
-        };
-
-        const res = await this.httpClient.proxyOtpLogin({
+        await loginClient.overrideAttestedStamper({
           verificationToken,
-          publicKey: publicKey!,
-          invalidateExisting,
-          clientSignature,
-          ...(organizationId && { organizationId }),
+          publicKey,
         });
-
-        if (!res) {
-          throw new ZeroXKeyError(
-            `Auth proxy OTP login failed`,
-            ZeroXKeyErrorCodes.OTP_LOGIN_ERROR,
-          );
-        }
-
-        const loginRes = await res;
+        const httpClient = new ZeroXKeySDKClientBase({
+          ...this.httpClient.config,
+          attestedStamper: loginStamper,
+        });
+        const loginRes = await httpClient.stampLogin(
+          {
+            publicKey,
+            expirationSeconds,
+            ...(sessionProfileId !== undefined && { sessionProfileId }),
+            ...(invalidateExisting !== undefined && { invalidateExisting }),
+            ...(organizationId !== undefined && { organizationId }),
+          },
+          StamperType.Attested,
+        );
         if (!loginRes.session) {
           throw new ZeroXKeyError(
-            "No session returned from OTP login",
+            "No session returned from OTP StampLogin",
             ZeroXKeyErrorCodes.OTP_LOGIN_ERROR,
           );
         }
 
-        await this.storeSession({
-          sessionToken: loginRes.session,
-          sessionKey,
-        });
+        // The general storeSession helper prunes every key without a stored
+        // Session. Another OTP login may still be using such a Token-bound key.
+        await this.storageManager.storeSession(loginRes.session, sessionKey);
 
         return {
           sessionToken: loginRes.session,
@@ -1543,24 +1555,10 @@ export class ZeroXKeyClient {
       {
         errorMessage: "Failed to log in with OTP",
         errorCode: ZeroXKeyErrorCodes.OTP_LOGIN_ERROR,
-        catchFn: async () => {
-          // Clean up the generated key pair if it wasn't successfully used
-          if (publicKey) {
-            try {
-              await this.apiKeyStamper?.deleteKeyPair(publicKey);
-            } catch (cleanupError) {
-              throw new ZeroXKeyError(
-                `Failed to clean up generated key pair`,
-                ZeroXKeyErrorCodes.KEY_PAIR_CLEANUP_ERROR,
-                cleanupError,
-              );
-            }
-          }
-        },
       },
       {
         finallyFn: async () => {
-          this.apiKeyStamper?.clearTemporaryPublicKey();
+          loginStamper?.clear();
         },
       },
     );
@@ -1595,7 +1593,7 @@ export class ZeroXKeyClient {
       createSubOrgParams,
       invalidateExisting,
       sessionKey,
-      publicKey = await this.apiKeyStamper?.createKeyPair(),
+      publicKey: legacyPublicKey,
     } = params;
 
     // build sign up body without client signature first
@@ -1611,6 +1609,28 @@ export class ZeroXKeyClient {
 
     return withZeroXKeyErrorHandling(
       async () => {
+        const publicKey = decodeVerificationToken(verificationToken).public_key;
+        if (!publicKey) {
+          throw new ZeroXKeyError(
+            "Verification token is missing a public key",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+        if (legacyPublicKey && legacyPublicKey !== publicKey) {
+          throw new ZeroXKeyError(
+            "signUpWithOtp publicKey must match the verification token key; use proxyOtpLoginV2 for A-to-B Session keys",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+        if (
+          !this.apiKeyStamper ||
+          !(await this.apiKeyStamper.listKeyPairs()).includes(publicKey)
+        ) {
+          throw new ZeroXKeyError(
+            "Verification token key is not available in local storage",
+            ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
         const { message, publicKey: clientSignaturePublicKey } =
           getClientSignatureMessageForSignup({
             verificationToken,
@@ -1623,10 +1643,10 @@ export class ZeroXKeyClient {
             oauthProviders: signUpBody.oauthProviders,
           });
 
-        this.apiKeyStamper?.setTemporaryPublicKey(publicKey!);
         const signature = await this.apiKeyStamper?.sign(
           message,
           SignatureFormat.Raw,
+          publicKey,
         );
 
         if (!signature) {
@@ -1648,16 +1668,17 @@ export class ZeroXKeyClient {
           clientSignature,
         });
 
-        if (!signupRes) {
+        if (!signupRes?.organizationId) {
           throw new ZeroXKeyError(
-            `Auth proxy OTP sign up failed`,
+            "Auth proxy OTP signup returned no organization ID",
             ZeroXKeyErrorCodes.OTP_SIGNUP_ERROR,
           );
         }
 
         const otpRes = await this.loginWithOtp({
           verificationToken,
-          publicKey: publicKey!,
+          publicKey,
+          organizationId: signupRes.organizationId,
           ...(invalidateExisting && { invalidateExisting }),
           ...(sessionKey && { sessionKey }),
         });
@@ -1668,27 +1689,8 @@ export class ZeroXKeyClient {
         };
       },
       {
-        catchFn: async () => {
-          // Clean up the generated key pair if it wasn't successfully used
-          if (publicKey) {
-            try {
-              await this.apiKeyStamper?.deleteKeyPair(publicKey);
-            } catch (cleanupError) {
-              throw new ZeroXKeyError(
-                `Failed to clean up generated key pair`,
-                ZeroXKeyErrorCodes.KEY_PAIR_CLEANUP_ERROR,
-                cleanupError,
-              );
-            }
-          }
-        },
         errorCode: ZeroXKeyErrorCodes.OTP_SIGNUP_ERROR,
         errorMessage: "Failed to sign up with OTP",
-      },
-      {
-        finallyFn: async () => {
-          this.apiKeyStamper?.clearTemporaryPublicKey();
-        },
       },
     );
   };
@@ -1771,6 +1773,7 @@ export class ZeroXKeyClient {
           const loginRes = await this.loginWithOtp({
             verificationToken,
             publicKey: publicKey!,
+            organizationId: subOrganizationId,
             ...(invalidateExisting && { invalidateExisting }),
             ...(sessionKey && { sessionKey }),
           });
