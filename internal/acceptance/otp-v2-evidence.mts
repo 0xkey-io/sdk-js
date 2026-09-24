@@ -431,7 +431,13 @@ export class BoundedEvidenceReader {
     )
       .toString("utf8")
       .trim();
-    if (actual !== endpoint(this.pins.clusterEndpoint).slice(0, -1))
+    let actualEndpoint: string;
+    try {
+      actualEndpoint = endpoint(actual);
+    } catch {
+      throw Error("EVIDENCE_CLUSTER_MISMATCH");
+    }
+    if (actualEndpoint !== endpoint(this.pins.clusterEndpoint))
       throw Error("EVIDENCE_CLUSTER_MISMATCH");
     this.baseline = await this.snapshot();
     // Prove read permission on both selected containers before the first OTP.
