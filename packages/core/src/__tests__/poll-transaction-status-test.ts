@@ -22,6 +22,7 @@ jest.mock(
   "@utils",
   () => ({
     __esModule: true,
+    ...jest.requireActual<typeof import("../utils")>("@utils"),
     parseSession: jest.fn(),
   }),
   { virtual: true },
