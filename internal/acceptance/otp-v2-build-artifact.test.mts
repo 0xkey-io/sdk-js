@@ -146,8 +146,11 @@ test("lockfile drift fails before an artifact directory is created", async () =>
   await assert.rejects(stat(destination), { code: "ENOENT" });
 });
 
-test("CI entrypoint records the checked-out HEAD and tree, not a supplied SHA", async () => {
-  const { parent, root, expectedLockSha256 } = await fixture();
+test("CI entrypoint pins a tracked lock over one MiB to checked-out HEAD and tree", async () => {
+  const { parent, root } = await fixture();
+  const lockBytes = "l".repeat(1_402_396);
+  await writeFile(join(root, "pnpm-lock.yaml"), lockBytes);
+  const expectedLockSha256 = sha256(lockBytes);
   execFileSync("git", ["init", "-q", root]);
   execFileSync("git", ["-C", root, "add", "pnpm-lock.yaml"]);
   execFileSync("git", [
@@ -212,4 +215,56 @@ test("CI entrypoint records the checked-out HEAD and tree, not a supplied SHA", 
     await readFile(output, "utf8"),
     `artifact_path=${destination}\n`,
   );
+});
+
+test("CI entrypoint rejects a tracked lock above the bounded read limit", async () => {
+  const { parent, root } = await fixture();
+  await writeFile(
+    join(root, "pnpm-lock.yaml"),
+    "l".repeat(8 * 1024 * 1024 + 1),
+  );
+  execFileSync("git", ["init", "-q", root]);
+  execFileSync("git", ["-C", root, "add", "pnpm-lock.yaml"]);
+  execFileSync("git", [
+    "-C",
+    root,
+    "-c",
+    "user.name=Fixture",
+    "-c",
+    "user.email=fixture@example.invalid",
+    "-c",
+    "commit.gpgsign=false",
+    "commit",
+    "-qm",
+    "oversized synthetic lock",
+  ]);
+  const output = join(parent, "github-output");
+  await writeFile(output, "");
+  const destination = join(parent, "artifact");
+  const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+  let stderr = "";
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        join(repo, "node_modules/tsx/dist/cli.js"),
+        join(repo, "internal/acceptance/otp-v2-build-artifact.mts"),
+        destination,
+      ],
+      {
+        cwd: root,
+        env: {
+          ...process.env,
+          GITHUB_OUTPUT: output,
+          GITHUB_RUN_ID: "12345",
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+  } catch (error) {
+    stderr = String((error as { stderr?: Buffer }).stderr);
+  }
+  assert.match(stderr, /SDK_LOCK_TOO_LARGE/);
+  await assert.rejects(stat(destination), { code: "ENOENT" });
+  assert.equal(await readFile(output, "utf8"), "");
 });

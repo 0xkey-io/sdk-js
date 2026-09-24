@@ -16,6 +16,8 @@ import { sdkArtifactsDigest } from "./otp-v2-evidence.mts";
 
 const sha256 = (bytes: Uint8Array) =>
   createHash("sha256").update(bytes).digest("hex");
+const MAX_LOCK_BYTES = 8 * 1024 * 1024;
+const GIT_TIMEOUT_MS = 10_000;
 
 export type PublicBuildMetadata = {
   gitHead: string;
@@ -131,7 +133,28 @@ export async function packageOtpAcceptanceBuild(
 }
 
 function git(root: string, ...args: string[]): string {
-  return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  return execFileSync("git", args, {
+    cwd: root,
+    encoding: "utf8",
+    maxBuffer: 1024,
+    timeout: GIT_TIMEOUT_MS,
+  }).trim();
+}
+
+function trackedLockFromHead(root: string): Buffer {
+  const object = "HEAD:pnpm-lock.yaml";
+  const sizeText = git(root, "cat-file", "-s", object);
+  if (!/^[1-9][0-9]*$/.test(sizeText)) throw Error("SDK_LOCK_SIZE_INVALID");
+  const expectedSize = Number(sizeText);
+  if (!Number.isSafeInteger(expectedSize) || expectedSize > MAX_LOCK_BYTES)
+    throw Error("SDK_LOCK_TOO_LARGE");
+  const bytes = execFileSync("git", ["show", object], {
+    cwd: root,
+    maxBuffer: MAX_LOCK_BYTES,
+    timeout: GIT_TIMEOUT_MS,
+  });
+  if (bytes.length !== expectedSize) throw Error("SDK_LOCK_SIZE_MISMATCH");
+  return bytes;
 }
 
 async function main(): Promise<void> {
@@ -141,9 +164,7 @@ async function main(): Promise<void> {
   if (!destination || !outputPath || !workflowRunId)
     throw Error("SDK_BUILD_CI_INPUT_MISSING");
   const root = process.cwd();
-  const trackedLock = execFileSync("git", ["show", "HEAD:pnpm-lock.yaml"], {
-    cwd: root,
-  });
+  const trackedLock = trackedLockFromHead(root);
   const metadata: PublicBuildMetadata = {
     gitHead: git(root, "rev-parse", "HEAD"),
     gitTree: git(root, "rev-parse", "HEAD^{tree}"),
