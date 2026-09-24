@@ -2,6 +2,7 @@ import typescript from "@rollup/plugin-typescript";
 import resolve from "@rollup/plugin-node-resolve";
 import alias from "@rollup/plugin-alias";
 import nodeExternals from "rollup-plugin-node-externals";
+import ts from "typescript";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripInternalReferencesFromDeclarations } from "./internal/contract-guard/scripts/strip-internal-dts.mjs";
@@ -18,6 +19,28 @@ const getInternalAliasEntries = () => [
     replacement: path.join(repoRoot, "internal/crypto-core/dist/index.mjs"),
   },
 ];
+
+const createTypescriptPlugin = (options) => {
+  let watchMode = false;
+  const compiler = {
+    ...ts,
+    sys: {
+      ...ts.sys,
+      watchFile: (...args) =>
+        watchMode ? ts.sys.watchFile(...args) : { close() {} },
+      watchDirectory: (...args) =>
+        watchMode ? ts.sys.watchDirectory(...args) : { close() {} },
+    },
+  };
+  const plugin = typescript({ ...options, typescript: compiler });
+  return {
+    ...plugin,
+    buildStart(...args) {
+      watchMode = this.meta.watchMode === true;
+      return plugin.buildStart.call(this, ...args);
+    },
+  };
+};
 
 const getFormatConfig = (format, options = {}) => {
   const pkgPath = path.join(process.cwd(), "package.json");
@@ -50,7 +73,7 @@ const getFormatConfig = (format, options = {}) => {
             resolve({ extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs"] }),
           ]
         : []),
-      typescript({
+      createTypescriptPlugin({
         tsconfig: options.tsconfig ?? "./tsconfig.json",
         outputToFilesystem: false,
         compilerOptions: {
