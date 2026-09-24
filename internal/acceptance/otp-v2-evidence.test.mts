@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, symlink, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -139,6 +139,12 @@ test("build tree digest changes for every built package file and lockfile, rejec
     join(root, "packages/core/dist/link"),
   );
   await assert.rejects(sdkArtifactsDigest(root), /SDK_BUILD_UNSAFE_PATH/);
+  await unlink(join(root, "packages/core/dist/link"));
+  const linkedRoot = await mkdtemp(join(tmpdir(), "otp-linked-tree-"));
+  await writeFile(join(linkedRoot, "pnpm-lock.yaml"), "lock");
+  await symlink(join(root, "packages"), join(linkedRoot, "packages"));
+  await mkdir(join(linkedRoot, "internal"));
+  await assert.rejects(sdkArtifactsDigest(linkedRoot), /SDK_BUILD_UNSAFE_PATH/);
 });
 
 function fakeCluster(

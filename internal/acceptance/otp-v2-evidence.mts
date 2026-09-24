@@ -106,6 +106,9 @@ export function parseExpiryEvents(input: {
 /** Digest path, NUL, byte length, and file hash for every built ordinary file. */
 export async function sdkArtifactsDigest(root: string): Promise<string> {
   const base = resolve(root);
+  const rootInfo = await lstat(base);
+  if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink())
+    throw Error("SDK_BUILD_UNSAFE_PATH");
   const files: string[] = [];
   async function visit(path: string) {
     const info = await lstat(path);
@@ -123,6 +126,9 @@ export async function sdkArtifactsDigest(root: string): Promise<string> {
   await visit(join(base, "pnpm-lock.yaml"));
   for (const category of ["packages", "internal"]) {
     const parent = join(base, category);
+    const parentInfo = await lstat(parent);
+    if (!parentInfo.isDirectory() || parentInfo.isSymbolicLink())
+      throw Error("SDK_BUILD_UNSAFE_PATH");
     for (const child of await readdir(parent)) {
       const childPath = join(parent, child);
       const childInfo = await lstat(childPath);
