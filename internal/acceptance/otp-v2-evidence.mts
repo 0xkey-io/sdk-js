@@ -246,6 +246,11 @@ const candidateImage = (value: string) =>
     value,
   );
 function endpoint(value: string) {
+  if (
+    !/^https:\/\/[^/?#@\\%\s]+\/?$/i.test(value) ||
+    /[^\x21-\x7e]/.test(value)
+  )
+    throw Error("EVIDENCE_CANDIDATE_REQUIRED");
   const url = new URL(value);
   if (
     url.protocol !== "https:" ||
@@ -428,9 +433,7 @@ export class BoundedEvidenceReader {
         ],
         4096,
       )
-    )
-      .toString("utf8")
-      .trim();
+    ).toString("utf8");
     let actualEndpoint: string;
     try {
       actualEndpoint = endpoint(actual);

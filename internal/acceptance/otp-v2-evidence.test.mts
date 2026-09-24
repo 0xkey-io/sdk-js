@@ -359,6 +359,32 @@ test("preflight fails closed on any different or malformed actual cluster URL", 
   }
 });
 
+test("preflight rejects a dot-path erased by URL parsing", async () => {
+  const { reader } = fakeCluster({ endpoint: "https://cluster.test/a/.." });
+  await assert.rejects(reader.preflight(), /EVIDENCE_CLUSTER_MISMATCH/);
+});
+
+test("preflight rejects an empty userinfo marker erased by URL parsing", async () => {
+  const { reader } = fakeCluster({ endpoint: "https://@cluster.test" });
+  await assert.rejects(reader.preflight(), /EVIDENCE_CLUSTER_MISMATCH/);
+});
+
+test("preflight rejects raw backslash, whitespace, and encoded-host normalization", async () => {
+  for (const endpoint of [
+    "https://cluster.test\\a\\..",
+    " https://cluster.test",
+    "https://cluster.test ",
+    "https://%63luster.test",
+  ]) {
+    const { reader } = fakeCluster({ endpoint });
+    await assert.rejects(
+      reader.preflight(),
+      /EVIDENCE_CLUSTER_MISMATCH/,
+      endpoint,
+    );
+  }
+});
+
 test("collector fails closed on wrong endpoint, image and truncated logs before OTP", async () => {
   for (const [option, code] of [
     [{ endpoint: "https://other.test" }, "EVIDENCE_CLUSTER_MISMATCH"],
