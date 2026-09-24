@@ -1486,7 +1486,8 @@ export class ZeroXKeyClient {
 
     return withZeroXKeyErrorHandling(
       async () => {
-        const publicKey = decodeVerificationToken(verificationToken).public_key;
+        const token = decodeVerificationToken(verificationToken);
+        const publicKey = token.public_key;
         if (!publicKey) {
           throw new ZeroXKeyError(
             "Verification token is missing a public key",
@@ -1506,6 +1507,39 @@ export class ZeroXKeyClient {
           throw new ZeroXKeyError(
             "Verification token key is not available in local storage",
             ZeroXKeyErrorCodes.INVALID_REQUEST,
+          );
+        }
+
+        let resolvedOrganizationId = organizationId;
+        if (resolvedOrganizationId === undefined) {
+          const { contact, verification_type: verificationType } = token;
+          if (
+            typeof contact !== "string" ||
+            !contact.trim() ||
+            (verificationType !== OtpType.Email &&
+              verificationType !== OtpType.Sms)
+          ) {
+            throw new ZeroXKeyError(
+              "Verification token is missing a valid contact selector",
+              ZeroXKeyErrorCodes.INVALID_REQUEST,
+            );
+          }
+          // Decoded claims select the lookup. Auth Proxy verifies the original
+          // Token and its verified contact binding before returning an org.
+          const account = await this.httpClient.proxyGetAccount({
+            filterType: OtpTypeToFilterTypeMap[verificationType],
+            filterValue: contact,
+            verificationToken,
+          });
+          resolvedOrganizationId = account?.organizationId;
+        }
+        if (
+          typeof resolvedOrganizationId !== "string" ||
+          !resolvedOrganizationId.trim()
+        ) {
+          throw new ZeroXKeyError(
+            "No verified organization found for OTP login",
+            ZeroXKeyErrorCodes.ACCOUNT_FETCH_ERROR,
           );
         }
 
@@ -1533,7 +1567,7 @@ export class ZeroXKeyClient {
             expirationSeconds,
             ...(sessionProfileId !== undefined && { sessionProfileId }),
             ...(invalidateExisting !== undefined && { invalidateExisting }),
-            ...(organizationId !== undefined && { organizationId }),
+            organizationId: resolvedOrganizationId,
           },
           StamperType.Attested,
         );
@@ -1546,7 +1580,14 @@ export class ZeroXKeyClient {
 
         // The general storeSession helper prunes every key without a stored
         // Session. Another OTP login may still be using such a Token-bound key.
-        await this.storageManager.storeSession(loginRes.session, sessionKey);
+        await withZeroXKeyErrorHandling(
+          async () =>
+            this.storageManager.storeSession(loginRes.session, sessionKey),
+          {
+            errorMessage: "Failed to store session",
+            errorCode: ZeroXKeyErrorCodes.STORE_SESSION_ERROR,
+          },
+        );
 
         return {
           sessionToken: loginRes.session,
@@ -1569,7 +1610,7 @@ export class ZeroXKeyClient {
    *
    * - This function signs up a user using the verification token received after OTP verification (from email or SMS).
    * - Creates a new sub-organization for the user with the provided parameters and associates the contact (email or phone) with the sub-organization.
-   * - Automatically generates a new API key pair for authentication and session management.
+   * - Uses the local API key already bound to the verification token.
    * - Stores the resulting session token under the specified session key, or the default session key if not provided.
    * - Handles both email and SMS OTP types, and supports additional sub-organization creation parameters.
    *

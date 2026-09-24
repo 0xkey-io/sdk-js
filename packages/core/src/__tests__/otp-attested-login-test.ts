@@ -7,9 +7,10 @@ import {
   createVerify,
 } from "crypto";
 import { AttestedScheme, AttestedStamper } from "@0xkey-io/attested-stamper";
-import { AuthAction } from "@0xkey-io/sdk-types";
+import { AuthAction, ZeroXKeyErrorCodes } from "@0xkey-io/sdk-types";
 import type { CrossPlatformApiKeyStamper } from "../__stampers__/api/base";
 import { ZeroXKeyClient } from "../__clients__/core";
+import { WebStorageManager } from "../__storage__/web/storage";
 import {
   OtpType,
   type LoginWithOtpParams,
@@ -48,14 +49,19 @@ const pairB = keyPair(privateB);
 const publicA = pairA.publicKey;
 const publicB = pairB.publicKey;
 
-function token(publicKey: string, id = "token-1") {
+function token(
+  publicKey: string,
+  id = "token-1",
+  claims: Record<string, unknown> = {},
+) {
   return `header.${Buffer.from(
     JSON.stringify({
       id,
       public_key: publicKey,
       contact: "person@example.test",
-      verification_type: "VERIFICATION_TYPE_EMAIL",
+      verification_type: "OTP_TYPE_EMAIL",
       exp: 2_000_000_000,
+      ...claims,
     }),
   ).toString("base64url")}.signature`;
 }
@@ -77,6 +83,7 @@ function response(session?: string, status = "ACTIVITY_STATUS_COMPLETED") {
 
 function setup(
   keys: Record<string, ReturnType<typeof keyPair>> = { [publicA]: pairA },
+  activeOrganizationId?: string,
 ) {
   const stored: Array<{ token: string; key: string | undefined }> = [];
   const deleted: string[] = [];
@@ -102,7 +109,10 @@ function setup(
     },
   } as unknown as CrossPlatformApiKeyStamper;
   const storage = {
-    getActiveSession: async () => undefined,
+    getActiveSession: async () =>
+      activeOrganizationId
+        ? { organizationId: activeOrganizationId, publicKey: publicB }
+        : undefined,
     storeSession: async (sessionToken: string, key?: string) => {
       stored.push({ token: sessionToken, key });
     },
@@ -163,13 +173,29 @@ function assertAttestedRequest(
 }
 
 test("loginWithOtp sends a real Attested stamp over the final StampLogin body and stores its Session", async () => {
-  const { client, stored, deleted, originalStamper, httpClient } = setup();
+  const { client, stored, deleted, originalStamper, httpClient } = setup(
+    undefined,
+    "other-active-org",
+  );
   const verificationToken = token(publicA);
+  const urls: string[] = [];
   global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+    urls.push(String(url));
+    if (String(url) === "https://auth.example.test/v1/account") {
+      expect(JSON.parse(String(init?.body))).toEqual({
+        filterType: "EMAIL",
+        filterValue: "person@example.test",
+        verificationToken,
+      });
+      return {
+        ok: true,
+        json: async () => ({ organizationId: "verified-org" }),
+      } as Response;
+    }
     assertAttestedRequest(url, init!, verificationToken, publicA);
     expect(JSON.parse(String(init?.body))).toMatchObject({
       type: "ACTIVITY_TYPE_STAMP_LOGIN",
-      organizationId: "parent-org",
+      organizationId: "verified-org",
       parameters: { publicKey: publicA, expirationSeconds: "900" },
     });
     return response("session-1");
@@ -179,6 +205,10 @@ test("loginWithOtp sends a real Attested stamp over the final StampLogin body an
     sessionToken: "session-1",
   });
   expect(stored).toEqual([{ token: "session-1", key: "@0xkey-io/session/v3" }]);
+  expect(urls).toEqual([
+    "https://auth.example.test/v1/account",
+    "https://api.example.test/public/v1/submit/stamp_login",
+  ]);
   expect(deleted).toEqual([]);
   expect(originalStamper.attestedIdentity).toBe("existing-identity");
   expect(client.httpClient).toBe(httpClient);
@@ -186,6 +216,7 @@ test("loginWithOtp sends a real Attested stamp over the final StampLogin body an
 
 test("loginWithOtp maps explicit Session options without changing its storage key", async () => {
   const { client, stored } = setup();
+  const urls: string[] = [];
   const params: LoginWithOtpParams = {
     verificationToken: token(publicA),
     publicKey: publicA,
@@ -195,7 +226,8 @@ test("loginWithOtp maps explicit Session options without changing its storage ke
     invalidateExisting: true,
     sessionKey: "my-session",
   };
-  global.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+  global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+    urls.push(String(url));
     expect(JSON.parse(String(init?.body))).toMatchObject({
       organizationId: "org-1",
       parameters: {
@@ -213,6 +245,9 @@ test("loginWithOtp maps explicit Session options without changing its storage ke
     sessionToken: "session-2",
   });
   expect(stored).toEqual([{ token: "session-2", key: "my-session" }]);
+  expect(urls).toEqual([
+    "https://api.example.test/public/v1/submit/stamp_login",
+  ]);
 });
 
 test("missing local Token key and incompatible legacy publicKey fail before network", async () => {
@@ -236,13 +271,49 @@ test("missing local Token key and incompatible legacy publicKey fail before netw
   expect(deleted).toEqual([]);
 });
 
+test.each([
+  ["missing contact", { contact: "" }, 0],
+  ["unsupported type", { verification_type: "OTP_TYPE_UNKNOWN" }, 0],
+  ["empty account binding", {}, 1],
+  ["failed account lookup", {}, 1],
+] as Array<[string, Record<string, unknown>, number]>)(
+  "standalone login rejects %s before StampLogin",
+  async (caseName, claims, expectedRequests) => {
+    const { client, stored, deleted } = setup();
+    let accountRequests = 0;
+    let stampRequests = 0;
+    global.fetch = (async (url: RequestInfo | URL) => {
+      if (String(url) === "https://auth.example.test/v1/account") {
+        accountRequests++;
+        if (caseName === "failed account lookup")
+          throw new Error("lookup failed");
+        return { ok: true, json: async () => ({}) } as Response;
+      }
+      stampRequests++;
+      return response("unexpected-session");
+    }) as typeof fetch;
+    await expect(
+      client.loginWithOtp({
+        verificationToken: token(publicA, "token-1", claims),
+      }),
+    ).rejects.toThrow();
+    expect(accountRequests).toBe(expectedRequests);
+    expect(stampRequests).toBe(0);
+    expect(stored).toEqual([]);
+    expect(deleted).toEqual([]);
+  },
+);
+
 test("failure and MFA pause do not store Session or delete the Token key", async () => {
   const { client, stored, deleted, originalStamper } = setup();
   global.fetch = (async () => {
     throw new Error("transport failed");
   }) as typeof fetch;
   await expect(
-    client.loginWithOtp({ verificationToken: token(publicA) }),
+    client.loginWithOtp({
+      verificationToken: token(publicA),
+      organizationId: "org-1",
+    }),
   ).rejects.toThrow();
   global.fetch = (async () =>
     response(
@@ -250,7 +321,10 @@ test("failure and MFA pause do not store Session or delete the Token key", async
       "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED",
     )) as typeof fetch;
   await expect(
-    client.loginWithOtp({ verificationToken: token(publicA) }),
+    client.loginWithOtp({
+      verificationToken: token(publicA),
+      organizationId: "org-1",
+    }),
   ).rejects.toThrow(/session/i);
   expect(stored).toEqual([]);
   expect(deleted).toEqual([]);
@@ -283,10 +357,12 @@ test("concurrent Token logins keep separate signing identities", async () => {
   await Promise.all([
     client.loginWithOtp({
       verificationToken: tokens.get(publicA)!,
+      organizationId: "org-1",
       sessionKey: "A",
     }),
     client.loginWithOtp({
       verificationToken: tokens.get(publicB)!,
+      organizationId: "org-1",
       sessionKey: "B",
     }),
   ]);
@@ -297,8 +373,63 @@ test("concurrent Token logins keep separate signing identities", async () => {
 test("successful Token login keeps other existing local keys available", async () => {
   const { client, deleted } = setup({ [publicA]: pairA, [publicB]: pairB });
   global.fetch = (async () => response("session-A")) as typeof fetch;
-  await client.loginWithOtp({ verificationToken: token(publicA) });
+  await client.loginWithOtp({
+    verificationToken: token(publicA),
+    organizationId: "org-1",
+  });
   expect(deleted).toEqual([]);
+});
+
+test("successful login registers a valid JWT and active key in web storage", async () => {
+  const { client } = setup();
+  const values = new Map<string, unknown>();
+  const storage = new WebStorageManager();
+  storage.setStorageValue = async (key, value) => {
+    values.set(key, value);
+  };
+  storage.getStorageValue = async (key) => values.get(key);
+  Object.assign(client, { storageManager: storage });
+  client.httpClient.config.storageManager = storage;
+  const session = `header.${Buffer.from(
+    JSON.stringify({
+      exp: 2_000_000_000,
+      public_key: publicA,
+      session_type: "SESSION_TYPE_READ_WRITE",
+      user_id: "user-1",
+      organization_id: "verified-org",
+    }),
+  ).toString("base64url")}.signature`;
+  global.fetch = (async () => response(session)) as typeof fetch;
+  await client.loginWithOtp({
+    verificationToken: token(publicA),
+    organizationId: "verified-org",
+    sessionKey: "named-session",
+  });
+  expect(await storage.listSessionKeys()).toEqual(["named-session"]);
+  expect(await storage.getActiveSessionKey()).toBe("named-session");
+  expect(await storage.getActiveSession()).toMatchObject({
+    token: session,
+    publicKey: publicA,
+    organizationId: "verified-org",
+  });
+});
+
+test("storage failure retains STORE_SESSION_ERROR classification", async () => {
+  const { client } = setup();
+  Object.assign(client, {
+    storageManager: {
+      storeSession: async () => {
+        throw new Error("storage unavailable");
+      },
+    },
+  });
+  global.fetch = (async () => response("session-1")) as typeof fetch;
+  await expect(
+    client.loginWithOtp({
+      verificationToken: token(publicA),
+      organizationId: "org-1",
+    }),
+  ).rejects.toMatchObject({ code: ZeroXKeyErrorCodes.STORE_SESSION_ERROR });
 });
 
 test("signUpWithOtp uses Token key A for signup then StampLogin in the created organization", async () => {
