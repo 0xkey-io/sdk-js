@@ -1,13 +1,12 @@
 /** Staging-only OTP V2 acceptance. Importing this module has no network side effects. */
-import {
-  createECDH,
-  createPrivateKey,
-  createSign,
-  createHash,
-} from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
+import { createECDH, createPrivateKey, createSign } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import {
+  BoundedEvidenceReader,
+  sdkArtifactsDigest,
+  type ExpiryEvidence,
+} from "./otp-v2-evidence.mts";
 
 const AUTH_PROXY = "https://authproxy.staging.0xkey.io";
 const API = "https://api.staging.0xkey.io";
@@ -16,22 +15,18 @@ const EMAIL = "torbenmagne+0xkey-attested-20260923@gmail.com";
 const OTP_TTL = 30;
 const SESSION_TTL = 900;
 
-export type HttpResult = { status: number; data: unknown; traceId?: string };
-export type ExpiryEvidence = {
-  traceId: string;
-  activityId: string;
-  tokenId: string;
-  decidedAtMs: number;
-  reason: "VERIFICATION_TOKEN_EXPIRED" | string;
-  source: "activity" | "enclave";
-};
+export type HttpResult = { status: number; data: unknown; requestId?: string };
+export type { ExpiryEvidence };
 export type Options = {
   live: boolean;
   authProxyUrl: string;
   apiUrl: string;
   configId: string;
   email: string;
-  sdkSha256?: string;
+  sdkArtifactsSha256?: string;
+  evidenceClusterEndpoint?: string;
+  evidenceAuthProxyImageId?: string;
+  evidenceCoordinatorImageId?: string;
 };
 type Key = {
   publicKey: string;
@@ -58,8 +53,12 @@ export type AcceptanceDeps = {
   keys: () => Promise<Key>;
   sleep: (ms: number) => Promise<void>;
   now: () => number;
-  /** Must be backed by a trusted internal Activity/trace lookup, not operator prose. */
-  expiryEvidence: (traceId: string) => Promise<ExpiryEvidence | undefined>;
+  evidencePreflight: () => Promise<void>;
+  beginExpiryWindow: (nowMs: number) => Promise<void>;
+  expiryEvidence: (
+    requestId: string,
+    notBeforeMs: number,
+  ) => Promise<ExpiryEvidence | undefined>;
   emit?: (event: Record<string, string | number | boolean>) => void;
 };
 
@@ -101,7 +100,10 @@ export function parseOptions(args: string[]): Options {
         "--api-url": "apiUrl",
         "--config-id": "configId",
         "--email": "email",
-        "--sdk-sha256": "sdkSha256",
+        "--sdk-artifacts-sha256": "sdkArtifactsSha256",
+        "--evidence-cluster-endpoint": "evidenceClusterEndpoint",
+        "--evidence-auth-proxy-image-id": "evidenceAuthProxyImageId",
+        "--evidence-coordinator-image-id": "evidenceCoordinatorImageId",
       } as const
     )[arg as "--email"];
     if (!property || !args[i + 1]) throw Error("INVALID_ARGUMENT");
@@ -114,7 +116,10 @@ export function parseOptions(args: string[]): Options {
   options.apiUrl = exactEndpoint(options.apiUrl, API);
   if (options.configId !== CONFIG_ID || options.email !== EMAIL)
     throw Error("UNAPPROVED_IDENTITY");
-  if (options.sdkSha256 && !/^[0-9a-f]{64}$/i.test(options.sdkSha256))
+  if (
+    options.sdkArtifactsSha256 &&
+    !/^[0-9a-f]{64}$/.test(options.sdkArtifactsSha256)
+  )
     throw Error("INVALID_BUILD_DIGEST");
   return options;
 }
@@ -192,21 +197,19 @@ export function assessExpiredLogin(
   result: HttpResult,
   evidence: ExpiryEvidence | undefined,
   notBeforeMs?: number,
-  expectedTokenId?: string,
 ): boolean {
   return (
     (result.status < 200 || result.status >= 300) &&
     !hasSession(result.data) &&
-    nonempty(result.traceId) &&
-    evidence?.traceId === result.traceId &&
+    nonempty(result.requestId) &&
+    evidence?.requestId === result.requestId &&
     nonempty(evidence.activityId) &&
-    nonempty(expectedTokenId) &&
-    evidence.tokenId === expectedTokenId &&
+    /^[0-9a-f]{64}$/.test(evidence.activityFingerprint) &&
     typeof notBeforeMs === "number" &&
     Number.isFinite(evidence.decidedAtMs) &&
     evidence.decidedAtMs >= notBeforeMs &&
     evidence.reason === "VERIFICATION_TOKEN_EXPIRED" &&
-    (evidence.source === "activity" || evidence.source === "enclave")
+    evidence.source === "activity"
   );
 }
 
@@ -217,8 +220,8 @@ function event(
   response?: HttpResult,
   checks?: Record<string, boolean>,
 ) {
-  const safeTrace = response?.traceId?.match(/^[a-zA-Z0-9:._-]{1,128}$/)
-    ? response.traceId
+  const safeRequest = response?.requestId?.match(/^[a-zA-Z0-9:._-]{1,128}$/)
+    ? response.requestId
     : undefined;
   deps.emit?.({
     at: new Date(deps.now()).toISOString(),
@@ -226,7 +229,7 @@ function event(
     phase,
     version: "v2",
     ...(response && { status: response.status }),
-    ...(safeTrace && { traceId: safeTrace }),
+    ...(safeRequest && { requestId: safeRequest }),
     ...checks,
   });
 }
@@ -366,6 +369,7 @@ export async function runAcceptance(
     return { ok: true, mode: "dry-run" };
   }
   if (deps.ttyReady?.() !== true) throw Error("PRIVATE_TTY_REQUIRED");
+  await deps.evidencePreflight();
   const a = await newChallenge(deps, "A");
   const tokenA = await verify(deps, "A", a, OTP_TTL);
   const orgA = await organization(deps, "A", tokenA);
@@ -389,19 +393,15 @@ export async function runAcceptance(
   const orgB = await organization(deps, "B", tokenB); // Lookup does not consume Token.
   const exp = claims(tokenB).exp as number;
   await deps.sleep(Math.max(0, (exp + 2) * 1000 - deps.now()));
+  await deps.beginExpiryWindow(deps.now());
   const sessionB = await deps.keys();
   const responseB = await deps.loginV2(
     signedLogin(tokenB, b.key, sessionB.publicKey, orgB),
   );
-  const evidence = responseB.traceId
-    ? await deps.expiryEvidence(responseB.traceId)
+  const evidence = responseB.requestId
+    ? await deps.expiryEvidence(responseB.requestId, (exp + 2) * 1000)
     : undefined;
-  const goodB = assessExpiredLogin(
-    responseB,
-    evidence,
-    (exp + 2) * 1000,
-    claims(tokenB).id as string,
-  );
+  const goodB = assessExpiredLogin(responseB, evidence, (exp + 2) * 1000);
   event(deps, "B", "expired-login", responseB, {
     noSession: !hasSession(responseB.data),
     authoritativeExpiry: goodB,
@@ -481,15 +481,9 @@ export async function readHiddenOtp(
 
 async function frozenBuild(expected: string | undefined) {
   if (!expected) throw Error("SDK_BUILD_DIGEST_REQUIRED");
-  const path = fileURLToPath(
-    new URL("../../packages/core/dist/index.mjs", import.meta.url),
-  );
-  const bytes = await readFile(path);
-  if (
-    createHash("sha256").update(bytes).digest("hex") !== expected.toLowerCase()
-  )
+  const root = fileURLToPath(new URL("../../", import.meta.url));
+  if ((await sdkArtifactsDigest(root)) !== expected)
     throw Error("SDK_BUILD_DIGEST_MISMATCH");
-  if (!(await stat(path)).isFile()) throw Error("SDK_BUILD_MISSING");
 }
 function keyPair(): Key {
   const ecdh = createECDH("prime256v1");
@@ -516,12 +510,21 @@ function keyPair(): Key {
     },
   };
 }
-function safeTrace(headers: Headers) {
-  return (
-    headers.get("x-request-id") ?? headers.get("x-activity-id") ?? undefined
-  );
+function safeRequestId(headers: Headers) {
+  return headers.get("x-request-id") ?? undefined;
 }
 export async function makeLiveDeps(options: Options): Promise<AcceptanceDeps> {
+  if (
+    !options.evidenceClusterEndpoint ||
+    !options.evidenceAuthProxyImageId ||
+    !options.evidenceCoordinatorImageId
+  )
+    throw Error("EVIDENCE_CANDIDATE_REQUIRED");
+  const evidence = new BoundedEvidenceReader({
+    clusterEndpoint: options.evidenceClusterEndpoint,
+    authProxyImageId: options.evidenceAuthProxyImageId,
+    coordinatorImageId: options.evidenceCoordinatorImageId,
+  });
   const crypto = await import("../../packages/crypto/dist/index.mjs");
   const core = await import("../../packages/core/dist/index.mjs");
   async function post(
@@ -544,11 +547,15 @@ export async function makeLiveDeps(options: Options): Promise<AcceptanceDeps> {
     }
     return {
       status: response.status,
-      traceId: safeTrace(response.headers),
+      requestId: safeRequestId(response.headers),
       data,
     };
   }
   return {
+    evidencePreflight: () => evidence.preflight(),
+    beginExpiryWindow: (nowMs) => evidence.beginWindow(nowMs),
+    expiryEvidence: (requestId, notBeforeMs) =>
+      evidence.resolve(requestId, notBeforeMs, Date.now()),
     now: Date.now,
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     emit: (value) => process.stdout.write(`${JSON.stringify(value)}\n`),
@@ -639,7 +646,7 @@ export async function makeLiveDeps(options: Options): Promise<AcceptanceDeps> {
           seen = {
             status: response.status,
             data: {},
-            traceId: safeTrace(response.headers),
+            requestId: safeRequestId(response.headers),
           };
         return response;
       };
@@ -651,7 +658,7 @@ export async function makeLiveDeps(options: Options): Promise<AcceptanceDeps> {
         });
         return {
           status: seen?.status ?? 0,
-          traceId: seen?.traceId,
+          requestId: seen?.requestId,
           data: { session: result.sessionToken },
         };
       } finally {
@@ -659,9 +666,6 @@ export async function makeLiveDeps(options: Options): Promise<AcceptanceDeps> {
         stored.length = 0;
       }
     },
-    // No user-provided reason switch: integration requires an authenticated,
-    // correlated internal Activity/trace evidence provider to replace this seam.
-    expiryEvidence: async () => undefined,
   };
 }
 
@@ -669,10 +673,7 @@ async function main() {
   try {
     const options = parseOptions(process.argv.slice(2));
     if (options.live) {
-      await frozenBuild(options.sdkSha256);
-      // No authenticated Activity/trace reason lookup exists in this checkout.
-      // Stop before OTP init until the bounded evidence adapter is supplied.
-      throw Error("EXPIRY_EVIDENCE_UNAVAILABLE");
+      await frozenBuild(options.sdkArtifactsSha256);
     }
     const deps = options.live
       ? await makeLiveDeps(options)
@@ -694,7 +695,15 @@ async function main() {
       "SDK_BUILD_DIGEST_REQUIRED",
       "SDK_BUILD_DIGEST_MISMATCH",
       "SDK_BUILD_MISSING",
-      "EXPIRY_EVIDENCE_UNAVAILABLE",
+      "SDK_BUILD_UNSAFE_PATH",
+      "EVIDENCE_CANDIDATE_REQUIRED",
+      "EVIDENCE_READ_FAILED",
+      "EVIDENCE_CLUSTER_MISMATCH",
+      "EVIDENCE_WORKLOAD_MISMATCH",
+      "EVIDENCE_IMAGE_MISMATCH",
+      "EVIDENCE_POD_BOUND",
+      "EVIDENCE_LOG_TRUNCATED",
+      "EVIDENCE_PREFLIGHT_REQUIRED",
       "CONTROL_A_FAILED",
       "CONTROL_B_INCONCLUSIVE_OR_FAILED",
       "CONTROL_C_FAILED",

@@ -16,6 +16,7 @@ import {
   makeLiveDeps,
   type AcceptanceDeps,
   type HttpResult,
+  type ExpiryEvidence,
 } from "./otp-v2-staging.mts";
 
 const session = (claims: Record<string, unknown>) =>
@@ -27,6 +28,17 @@ const validClaims = {
   iat: 1_000,
   exp: 1_900,
 };
+const requestB = "11111111-1111-4111-8111-111111111111";
+const fingerprintB = "a".repeat(64);
+const candidateOptions = () =>
+  parseOptions([
+    "--evidence-cluster-endpoint",
+    "https://example.test",
+    "--evidence-auth-proxy-image-id",
+    `docker-pullable://auth@sha256:${"a".repeat(64)}`,
+    "--evidence-coordinator-image-id",
+    `docker-pullable://coordinator@sha256:${"b".repeat(64)}`,
+  ]);
 
 function p256TestKey() {
   const ecdh = createECDH("prime256v1");
@@ -166,6 +178,7 @@ test("unsupported OTP format is rejected before any challenge is sent", async ()
     const deps = {
       now: () => 1_000_000,
       ttyReady: () => true,
+      evidencePreflight: async () => {},
       health: async () => ({
         status: 200,
         data: {
@@ -265,7 +278,7 @@ test("control C uses the built SDK public loginWithOtp Attested request", async 
     return {
       ok: true,
       status: 200,
-      headers: new Headers({ "x-request-id": "trace-C" }),
+      headers: new Headers({ "x-request-id": requestB }),
       json: async () => ({
         activity: {
           id: "activity-C",
@@ -278,11 +291,11 @@ test("control C uses the built SDK public loginWithOtp Attested request", async 
     } as Response;
   }) as typeof fetch;
   try {
-    const deps = await makeLiveDeps(parseOptions([]));
+    const deps = await makeLiveDeps(candidateOptions());
     const result = await deps.loginAttested(verificationToken, key, "org-1");
     assert.equal(stamped, true);
     assert.equal(result.status, 200);
-    assert.equal(result.traceId, "trace-C");
+    assert.equal(result.requestId, requestB);
     assert.equal(
       (result.data as Record<string, unknown>).session,
       sessionToken,
@@ -295,71 +308,60 @@ test("control C uses the built SDK public loginWithOtp Attested request", async 
 test("expiry needs correlated authoritative evidence, not HTTP failure or prose", () => {
   const rejected: HttpResult = {
     status: 500,
-    traceId: "trace-B",
+    requestId: requestB,
     data: { message: "expired" },
   };
   const proof = {
-    traceId: "trace-B",
+    requestId: requestB,
     activityId: "activity-B",
-    tokenId: "token-B",
+    activityFingerprint: fingerprintB,
     decidedAtMs: 1_032_000,
-    reason: "VERIFICATION_TOKEN_EXPIRED",
+    reason: "VERIFICATION_TOKEN_EXPIRED" as const,
     source: "activity" as const,
   };
-  assert.equal(assessExpiredLogin(rejected, proof, 1_032_000, "token-B"), true);
+  assert.equal(assessExpiredLogin(rejected, proof, 1_032_000), true);
   assert.equal(assessExpiredLogin(rejected, undefined), false);
   assert.equal(
+    assessExpiredLogin(rejected, { ...proof, requestId: "other" }, 1_032_000),
+    false,
+  );
+  assert.equal(
     assessExpiredLogin(
       rejected,
-      { ...proof, traceId: "other" },
+      { ...proof, activityFingerprint: "not-a-fingerprint" },
       1_032_000,
-      "token-B",
     ),
     false,
   );
   assert.equal(
     assessExpiredLogin(
       rejected,
-      { ...proof, tokenId: "other" },
+      {
+        ...proof,
+        reason: "TOKEN_ALREADY_CONSUMED",
+      } as unknown as ExpiryEvidence,
       1_032_000,
-      "token-B",
     ),
     false,
   );
   assert.equal(
     assessExpiredLogin(
       rejected,
-      { ...proof, reason: "TOKEN_ALREADY_CONSUMED" },
+      { ...proof, reason: "WRONG_ORGANIZATION" } as unknown as ExpiryEvidence,
       1_032_000,
-      "token-B",
     ),
     false,
   );
   assert.equal(
     assessExpiredLogin(
       rejected,
-      { ...proof, reason: "WRONG_ORGANIZATION" },
+      { ...proof, reason: "MISSING_SIGNATURE" } as unknown as ExpiryEvidence,
       1_032_000,
-      "token-B",
     ),
     false,
   );
   assert.equal(
-    assessExpiredLogin(
-      rejected,
-      { ...proof, reason: "MISSING_SIGNATURE" },
-      1_032_000,
-      "token-B",
-    ),
-    false,
-  );
-  assert.equal(
-    assessExpiredLogin(
-      rejected,
-      { ...proof, activityId: "" },
-      1_032_000,
-      "token-B",
-    ),
+    assessExpiredLogin(rejected, { ...proof, activityId: "" }, 1_032_000),
     false,
   );
   assert.equal(
@@ -367,7 +369,6 @@ test("expiry needs correlated authoritative evidence, not HTTP failure or prose"
       rejected,
       { ...proof, decidedAtMs: 1_031_999 },
       1_032_000,
-      "token-B",
     ),
     false,
   );
@@ -376,19 +377,13 @@ test("expiry needs correlated authoritative evidence, not HTTP failure or prose"
       { ...rejected, data: { nested: { session: "unexpected" } } },
       proof,
       1_032_000,
-      "token-B",
     ),
     false,
   );
   let deeplyNested: unknown = { session: "unexpected" };
   for (let i = 0; i < 15; i++) deeplyNested = { nested: deeplyNested };
   assert.equal(
-    assessExpiredLogin(
-      { ...rejected, data: deeplyNested },
-      proof,
-      1_032_000,
-      "token-B",
-    ),
+    assessExpiredLogin({ ...rejected, data: deeplyNested }, proof, 1_032_000),
     false,
   );
   assert.equal(
@@ -396,7 +391,6 @@ test("expiry needs correlated authoritative evidence, not HTTP failure or prose"
       { ...rejected, data: { nested: { session: { token: "unexpected" } } } },
       proof,
       1_032_000,
-      "token-B",
     ),
     false,
   );
@@ -427,6 +421,18 @@ test("option parser defaults to offline and rejects unsafe targets and partial l
     parseOptions(["--live", "--send-otp", "--email", "other@example.com"]),
   );
   assert.throws(() => parseOptions(["--live", "--send-otp", "--expired"]));
+  assert.throws(() => parseOptions(["--sdk-sha256", "a".repeat(64)]));
+  assert.equal(
+    parseOptions(["--sdk-artifacts-sha256", "a".repeat(64)]).sdkArtifactsSha256,
+    "a".repeat(64),
+  );
+});
+
+test("live dependency construction requires all reviewed cluster candidate pins", async () => {
+  await assert.rejects(
+    makeLiveDeps(parseOptions([])),
+    /EVIDENCE_CANDIDATE_REQUIRED/,
+  );
 });
 
 test("offline mode never calls transport or prompt", async () => {
@@ -446,6 +452,8 @@ test("offline mode never calls transport or prompt", async () => {
     keys: forbidden,
     sleep: forbidden,
     expiryEvidence: forbidden,
+    evidencePreflight: forbidden,
+    beginExpiryWindow: forbidden,
     now: () => 0,
     ttyReady: () => {
       throw Error("TTY probed during dry run");
@@ -464,6 +472,7 @@ test("live uses three fresh challenges once and never retries a failing init", a
   let inits = 0;
   const deps = {
     ttyReady: () => true,
+    evidencePreflight: async () => {},
     health: async () => ({
       status: 200,
       data: {
@@ -494,6 +503,8 @@ test("live A, B, and C use distinct challenges and only B waits for expiry", asy
   const deps: AcceptanceDeps = {
     now: () => nowMs,
     ttyReady: () => true,
+    evidencePreflight: async () => {},
+    beginExpiryWindow: async () => {},
     health: async () => ({
       status: 200,
       data: {
@@ -598,19 +609,19 @@ test("live A, B, and C use distinct challenges and only B waits for expiry", asy
             }),
           },
         };
-      return { status: 401, traceId: "trace-B", data: { message: "generic" } };
+      return { status: 401, requestId: requestB, data: { message: "generic" } };
     },
     sleep: async (ms) => {
       waits.push(ms);
       nowMs += ms;
     },
-    expiryEvidence: async (traceId) => ({
-      traceId,
+    expiryEvidence: async (requestId) => ({
+      requestId,
       activityId: "activity-B",
-      tokenId: "token-2",
+      activityFingerprint: fingerprintB,
       decidedAtMs: nowMs,
       reason: "VERIFICATION_TOKEN_EXPIRED",
-      source: "enclave",
+      source: "activity",
     }),
     loginAttested: async (_token, key) => {
       attested++;
