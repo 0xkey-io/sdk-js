@@ -179,6 +179,7 @@ function fakeCluster(
     restartDuringWindow?: boolean;
     tooManyPods?: boolean;
     missingCoverage?: boolean;
+    fractionalBoundary?: boolean;
     delayAtDeploymentRead?: number;
     pinnedEndpoint?: string;
   } = {},
@@ -268,7 +269,7 @@ function fakeCluster(
         ? "1970-01-01T00:17:13.000Z"
         : "1970-01-01T00:17:11.000Z";
       return Buffer.from(
-        `${marker} {"event":"other"}\n1970-01-01T00:17:12.000Z ${name === "auth-proxy" ? proxy : coordinator}\n`,
+        `${overrides.fractionalBoundary ? '1970-01-01T00:16:42.169Z {"event":"other"}\n' : ""}${marker} {"event":"other"}\n1970-01-01T00:17:12.000Z ${name === "auth-proxy" ? proxy : coordinator}\n`,
       );
     }
     throw Error("unexpected command");
@@ -283,6 +284,21 @@ function fakeCluster(
   );
   return { reader, calls, timeouts };
 }
+
+test("collector aligns fractional log windows to whole seconds", async () => {
+  const { reader, calls } = fakeCluster({ fractionalBoundary: true });
+  await reader.preflight();
+  await reader.beginWindow(1032769);
+  assert.equal(
+    (await reader.resolve(requestId, 1032000, 1033000))?.reason,
+    "VERIFICATION_TOKEN_EXPIRED",
+  );
+  assert.ok(
+    calls.some((args) =>
+      args.includes("--since-time=1970-01-01T00:16:42.000Z"),
+    ),
+  );
+});
 
 test("collector checks fixed context, workload/image pins and resolves a bounded pair", async () => {
   const { reader, calls } = fakeCluster();

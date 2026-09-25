@@ -528,12 +528,15 @@ test("live A, B, and C use distinct challenges and only B waits for expiry", asy
   const verificationTokens: string[] = [];
   const challenges: string[] = [];
   const waits: number[] = [];
+  let evidenceWindowOpenedAt: number | undefined;
   let attested = 0;
   const deps: AcceptanceDeps = {
     now: () => nowMs,
     ttyReady: () => true,
     evidencePreflight: async () => {},
-    beginExpiryWindow: async () => {},
+    beginExpiryWindow: async (at) => {
+      evidenceWindowOpenedAt = at;
+    },
     health: async () => ({
       status: 200,
       data: {
@@ -641,6 +644,8 @@ test("live A, B, and C use distinct challenges and only B waits for expiry", asy
       return { status: 401, requestId: requestB, data: { message: "generic" } };
     },
     sleep: async (ms) => {
+      // Preserve Verify's pre-request log before a quiet 30-second TTL wait.
+      assert.equal(evidenceWindowOpenedAt, 1_000_000);
       waits.push(ms);
       nowMs += ms;
     },

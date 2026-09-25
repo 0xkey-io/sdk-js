@@ -456,7 +456,9 @@ export class BoundedEvidenceReader {
       throw Error("EVIDENCE_PREFLIGHT_REQUIRED");
     this.baseline = await this.snapshot();
     this.requestStartMs = nowMs;
-    this.windowStartMs = nowMs - 30_000;
+    // kubectl log queries can include the whole starting second. Use the
+    // same whole-second boundary for querying, coverage and deadline checks.
+    this.windowStartMs = Math.floor((nowMs - 30_000) / 1000) * 1000;
   }
   private async logs(
     name: string,

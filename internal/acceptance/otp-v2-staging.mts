@@ -395,8 +395,10 @@ export async function runAcceptance(
   const tokenB = await verify(deps, "B", b, OTP_TTL);
   const orgB = await organization(deps, "B", tokenB); // Lookup does not consume Token.
   const exp = claims(tokenB).exp as number;
-  await deps.sleep(Math.max(0, (exp + 2) * 1000 - deps.now()));
+  // Anchor the window before the idle expiry wait so later log collection
+  // includes Verify's pre-request records. Keep coverage checks unchanged.
   await deps.beginExpiryWindow(deps.now());
+  await deps.sleep(Math.max(0, (exp + 2) * 1000 - deps.now()));
   const sessionB = await deps.keys();
   const responseB = await deps.loginV2(
     signedLogin(tokenB, b.key, sessionB.publicKey, orgB),
