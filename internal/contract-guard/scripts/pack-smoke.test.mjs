@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  packedConsumerInstallArgs,
   selectPilotPackageClosure,
   verifyPackedConsumer,
 } from "./pack-smoke.mjs";
@@ -33,6 +34,15 @@ function createTarball(tempRoot, manifest, files) {
   execFileSync("tar", ["-czf", tarball, "-C", fixtureRoot, "package"]);
   return tarball;
 }
+
+test("permits registry metadata lookup while preserving tarball resolution checks", () => {
+  assert.deepEqual(packedConsumerInstallArgs(), [
+    "install",
+    "--ignore-scripts",
+    "--prefer-offline",
+    "--frozen-lockfile=false",
+  ]);
+});
 
 test("includes runtime workspace dependencies in the pilot package closure", () => {
   const packages = [
