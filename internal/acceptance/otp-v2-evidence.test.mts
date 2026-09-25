@@ -180,6 +180,7 @@ function fakeCluster(
     tooManyPods?: boolean;
     missingCoverage?: boolean;
     delayAtDeploymentRead?: number;
+    pinnedEndpoint?: string;
   } = {},
 ) {
   const image = (name: string) =>
@@ -274,7 +275,7 @@ function fakeCluster(
   };
   const reader = new BoundedEvidenceReader(
     {
-      clusterEndpoint: "https://cluster.test",
+      clusterEndpoint: overrides.pinnedEndpoint ?? "https://cluster.test",
       authProxyImageId: image("auth-proxy"),
       coordinatorImageId: image("coordinator"),
     },
@@ -313,6 +314,75 @@ test("collector checks fixed context, workload/image pins and resolves a bounded
     await reader.resolve(requestId, 1032000, 1032000 + 180001),
     undefined,
   );
+});
+
+test("preflight accepts the pinned cluster when kubectl reports an uppercase DNS host", async () => {
+  const { reader } = fakeCluster({ endpoint: "https://CLUSTER.TEST" });
+  await reader.preflight();
+});
+
+test("preflight applies the same HTTPS origin canonicalization to both endpoints", async () => {
+  for (const options of [
+    {
+      pinnedEndpoint: "https://CLUSTER.TEST",
+      endpoint: "https://cluster.test/",
+    },
+    {
+      pinnedEndpoint: "https://cluster.test",
+      endpoint: "https://CLUSTER.TEST:443/",
+    },
+  ]) {
+    const { reader } = fakeCluster(options);
+    await reader.preflight();
+  }
+});
+
+test("preflight fails closed on any different or malformed actual cluster URL", async () => {
+  for (const endpoint of [
+    "https://other.test",
+    "https://cluster.test.evil",
+    "https://cluster.test:8443",
+    "https://user@cluster.test",
+    "https://user:pass@cluster.test",
+    "https://cluster.test/path",
+    "https://cluster.test/?query=1",
+    "https://cluster.test/#fragment",
+    "http://cluster.test",
+    "not-a-url",
+  ]) {
+    const { reader } = fakeCluster({ endpoint });
+    await assert.rejects(
+      reader.preflight(),
+      /EVIDENCE_CLUSTER_MISMATCH/,
+      endpoint,
+    );
+  }
+});
+
+test("preflight rejects a dot-path erased by URL parsing", async () => {
+  const { reader } = fakeCluster({ endpoint: "https://cluster.test/a/.." });
+  await assert.rejects(reader.preflight(), /EVIDENCE_CLUSTER_MISMATCH/);
+});
+
+test("preflight rejects an empty userinfo marker erased by URL parsing", async () => {
+  const { reader } = fakeCluster({ endpoint: "https://@cluster.test" });
+  await assert.rejects(reader.preflight(), /EVIDENCE_CLUSTER_MISMATCH/);
+});
+
+test("preflight rejects raw backslash, whitespace, and encoded-host normalization", async () => {
+  for (const endpoint of [
+    "https://cluster.test\\a\\..",
+    " https://cluster.test",
+    "https://cluster.test ",
+    "https://%63luster.test",
+  ]) {
+    const { reader } = fakeCluster({ endpoint });
+    await assert.rejects(
+      reader.preflight(),
+      /EVIDENCE_CLUSTER_MISMATCH/,
+      endpoint,
+    );
+  }
 });
 
 test("collector fails closed on wrong endpoint, image and truncated logs before OTP", async () => {

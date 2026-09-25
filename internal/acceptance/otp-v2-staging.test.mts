@@ -172,6 +172,9 @@ test("unsupported OTP format is rejected before any challenge is sent", async ()
   for (const [otpLength, otpAlphanumeric, ttl, reason] of [
     ["8", false, "600", "UNSUPPORTED_OTP_FORMAT"],
     ["6", true, "600", "UNSUPPORTED_OTP_FORMAT"],
+    ["6", null, "600", "UNSUPPORTED_OTP_FORMAT"],
+    ["6", "false", "600", "UNSUPPORTED_OTP_FORMAT"],
+    ["6", 0, "600", "UNSUPPORTED_OTP_FORMAT"],
     ["6", false, "0", "INVALID_SESSION_TTL"],
   ] as const) {
     let inits = 0;
@@ -199,6 +202,32 @@ test("unsupported OTP format is rejected before any challenge is sent", async ()
     );
     assert.equal(inits, 0);
   }
+});
+
+test("omitted otpAlphanumeric accepts the numeric OTP configuration", async () => {
+  let inits = 0;
+  const deps = {
+    now: () => 1_000_000,
+    ttyReady: () => true,
+    evidencePreflight: async () => {},
+    health: async () => ({
+      status: 200,
+      data: {
+        enabledProviders: ["email"],
+        otpLength: "6",
+        sessionExpirationSeconds: "1800",
+      },
+    }),
+    init: async () => {
+      inits++;
+      throw Error("synthetic init sentinel");
+    },
+  } as unknown as AcceptanceDeps;
+  await assert.rejects(
+    runAcceptance(parseOptions(["--live", "--send-otp"]), deps),
+    /synthetic init sentinel/,
+  );
+  assert.equal(inits, 1);
 });
 
 test("private TTY is required before the first challenge", async () => {

@@ -269,7 +269,10 @@ async function newChallenge(deps: AcceptanceDeps, control: string) {
     !config.enabledProviders.includes("email")
   )
     throw Error("CONFIG_HEALTH_FAILED");
-  if (config.otpLength !== "6" || config.otpAlphanumeric !== false)
+  if (
+    config.otpLength !== "6" ||
+    (config.otpAlphanumeric !== undefined && config.otpAlphanumeric !== false)
+  )
     throw Error("UNSUPPORTED_OTP_FORMAT");
   if (
     typeof config.sessionExpirationSeconds !== "string" ||
