@@ -97,6 +97,8 @@ export type externaldatav1Credential = {
   /** The public component of a cryptographic key pair used to sign messages and transactions. */
   publicKey: string;
   type: v1CredentialType;
+  /** The session profile associated with this credential, if any. This field is only applicable for credentials of type CREDENTIAL_TYPE_LOGIN. */
+  sessionProfileId?: string;
 };
 
 export type externaldatav1Quorum = {
@@ -535,7 +537,6 @@ export type v1AuthenticationMethodParams = {
 };
 
 export type v1AuthenticationType =
-  | "AUTHENTICATION_TYPE_UNSPECIFIED"
   | "AUTHENTICATION_TYPE_EMAIL_OTP"
   | "AUTHENTICATION_TYPE_SMS_OTP"
   | "AUTHENTICATION_TYPE_PASSKEY"
@@ -4757,6 +4758,8 @@ export type v1User = {
   oauthProviders: v1OauthProvider[];
   createdAt: externaldatav1Timestamp;
   updatedAt: externaldatav1Timestamp;
+  /** A list of MFA Policies that define multi-factor authentication requirements for this user. */
+  mfaPolicies: v1MfaPolicy[];
 };
 
 export type v1UserParams = {
