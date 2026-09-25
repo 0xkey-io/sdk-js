@@ -47,6 +47,15 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
+export function packedConsumerInstallArgs() {
+  return [
+    "install",
+    "--ignore-scripts",
+    "--prefer-offline",
+    "--frozen-lockfile=false",
+  ];
+}
+
 /**
  * Include every public package reached through a runtime or peer workspace
  * dependency. Dev-only workspace dependencies are intentionally excluded.
@@ -159,14 +168,10 @@ export function verifyPackedConsumer({ tarballs, tempRoot }) {
     )}\n`,
   );
 
-  run(
-    "pnpm",
-    ["install", "--ignore-scripts", "--offline", "--frozen-lockfile=false"],
-    {
-      cwd: consumerDir,
-      label: "Packed consumer install",
-    },
-  );
+  run("pnpm", packedConsumerInstallArgs(), {
+    cwd: consumerDir,
+    label: "Packed consumer install",
+  });
 
   /** @type {{
    *   importers?: Record<string, { dependencies?: Record<string, { specifier?: unknown, version?: unknown }> }>,
