@@ -146,7 +146,10 @@ export type VerifyOtpResult = {
 
 export type LoginWithOtpParams = {
   verificationToken: string;
+  /** @deprecated Must match the verification token key. Use proxyOtpLoginV2 for distinct Session keys. */
   publicKey?: string;
+  expirationSeconds?: string;
+  sessionProfileId?: string;
   organizationId?: string;
   invalidateExisting?: boolean;
   sessionKey?: string;

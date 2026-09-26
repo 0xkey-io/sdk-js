@@ -36,6 +36,9 @@ jobs:
       - name: Setup JS
         uses: ./.github/actions/js-setup
 
+      - name: Reject lockfile drift from Setup JS
+        run: git diff --exit-code HEAD -- pnpm-lock.yaml
+
       - name: Build packages
         run: pnpm run build-all
 
@@ -56,6 +59,9 @@ jobs:
       - name: Contract guard
         run: pnpm run contract-guard
 
+      - name: Acceptance artifact tests
+        run: pnpm exec tsx --test internal/acceptance/otp-v2-build-artifact.test.mts
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
@@ -63,6 +69,19 @@ jobs:
           path: |
             packages/*/dist/**
           retention-days: 1
+
+      - name: Package complete OTP acceptance build
+        id: otp-acceptance-build
+        run: pnpm exec tsx internal/acceptance/otp-v2-build-artifact.mts "$RUNNER_TEMP/otp-acceptance-build-$GITHUB_RUN_ID"
+
+      - name: Upload complete OTP acceptance build
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: otp-acceptance-build-${{ github.sha }}
+          path: ${{ steps.otp-acceptance-build.outputs.artifact_path }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
 
   security-audit:
     runs-on: ubuntu-latest

@@ -8,7 +8,11 @@ import YAML from "yaml";
 
 import * as packSmoke from "./pack-smoke.mjs";
 
-const { selectPilotPackageClosure, verifyPackedConsumer } = packSmoke;
+const {
+  packedConsumerInstallArgs,
+  selectPilotPackageClosure,
+  verifyPackedConsumer,
+} = packSmoke;
 
 /**
  * @param {string} name
@@ -94,6 +98,15 @@ function withFakePnpmLockfile(tempRoot, lockfile, callback) {
     }
   }
 }
+
+test("permits registry metadata lookup while preserving tarball resolution checks", () => {
+  assert.deepEqual(packedConsumerInstallArgs(), [
+    "install",
+    "--ignore-scripts",
+    "--prefer-offline",
+    "--frozen-lockfile=false",
+  ]);
+});
 
 test("includes runtime workspace dependencies in the pilot package closure", () => {
   const packages = [

@@ -155,6 +155,15 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
+export function packedConsumerInstallArgs() {
+  return [
+    "install",
+    "--ignore-scripts",
+    "--prefer-offline",
+    "--frozen-lockfile=false",
+  ];
+}
+
 /**
  * Extract and inspect every packed artifact before any consumer installation.
  * Failures are aggregated so one malformed artifact cannot hide later results.
@@ -419,14 +428,10 @@ export function verifyPackedConsumer({ tarballs, tempRoot, nodePackageNames }) {
     )}\n`,
   );
 
-  run(
-    "pnpm",
-    ["install", "--ignore-scripts", "--offline", "--frozen-lockfile=false"],
-    {
-      cwd: consumerDir,
-      label: "Packed consumer install",
-    },
-  );
+  run("pnpm", packedConsumerInstallArgs(), {
+    cwd: consumerDir,
+    label: "Packed consumer install",
+  });
 
   /** @type {{
    *   importers?: Record<string, { dependencies?: Record<string, { specifier?: unknown, version?: unknown }> }>,

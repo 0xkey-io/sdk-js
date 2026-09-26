@@ -13,8 +13,8 @@ const swaggerPath = path.resolve(
 const pinPath = path.resolve(__dirname, "../contract-pin.yaml");
 
 const FROZEN_OPENAPI_SHA256 =
-  "b42fcfa9a9480c2d4148038b8d9112559132b11727c7f839e05cb2782e3350e2"; // gitleaks:allow
-const FROZEN_SERVICES_COMMIT = "096c1fec26bed3b3f8104b473b35903db76760bb";
+  "cca6a179db09bb9ea1d01deabd0b9e7122f4dbc1f27735efdcf433700aee42e2"; // gitleaks:allow
+const FROZEN_SERVICES_COMMIT = "0eb6eb86a2ddb875552e97a33880d2c1c1eb4e4e";
 
 test("pin records the frozen services OpenAPI hash", () => {
   const pin: Record<string, string> = {};
@@ -58,6 +58,29 @@ test("swagger includes AUTHENTICATORS_NEEDED and get_mfa_status", () => {
   expect(swagger.definitions.v1ActivityStatus?.enum).toContain(
     "ACTIVITY_STATUS_AUTHENTICATORS_NEEDED",
   );
+});
+
+test("generated identity contract matches the Turnkey-aligned source", () => {
+  const swagger = JSON.parse(fs.readFileSync(swaggerPath, "utf8")) as {
+    definitions: {
+      externaldatav1Credential: { properties: Record<string, unknown> };
+      v1User: {
+        properties: Record<string, unknown>;
+        required?: string[];
+      };
+      v1AuthenticationType: { enum?: string[]; default?: string };
+    };
+  };
+
+  expect(
+    swagger.definitions.externaldatav1Credential.properties.sessionProfileId,
+  ).toBeDefined();
+  expect(swagger.definitions.v1User.properties.mfaPolicies).toBeDefined();
+  expect(swagger.definitions.v1User.required).toContain("mfaPolicies");
+  expect(swagger.definitions.v1AuthenticationType.enum).not.toContain(
+    "AUTHENTICATION_TYPE_UNSPECIFIED",
+  );
+  expect(swagger.definitions.v1AuthenticationType.default).toBeUndefined();
 });
 
 test("projected swagger preserves every referenced public definition", () => {

@@ -4538,6 +4538,10 @@
         "type": {
           "$ref": "#/definitions/v1CredentialType",
           "title": "To distinguish the credential type (webauthn, API key)"
+        },
+        "sessionProfileId": {
+          "type": "string",
+          "description": "The session profile associated with this credential, if any. This field is only applicable for credentials of type CREDENTIAL_TYPE_LOGIN."
         }
       },
       "required": [
@@ -5324,15 +5328,13 @@
     "v1AuthenticationType": {
       "type": "string",
       "enum": [
-        "AUTHENTICATION_TYPE_UNSPECIFIED",
         "AUTHENTICATION_TYPE_EMAIL_OTP",
         "AUTHENTICATION_TYPE_SMS_OTP",
         "AUTHENTICATION_TYPE_PASSKEY",
         "AUTHENTICATION_TYPE_API_KEY",
         "AUTHENTICATION_TYPE_OAUTH",
         "AUTHENTICATION_TYPE_SESSION"
-      ],
-      "default": "AUTHENTICATION_TYPE_UNSPECIFIED"
+      ]
     },
     "v1Authenticator": {
       "type": "object",
@@ -16949,6 +16951,14 @@
         },
         "updatedAt": {
           "$ref": "#/definitions/externaldatav1Timestamp"
+        },
+        "mfaPolicies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MfaPolicy"
+          },
+          "description": "A list of MFA Policies that define multi-factor authentication requirements for this user."
         }
       },
       "required": [
@@ -16959,7 +16969,8 @@
         "userTags",
         "oauthProviders",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "mfaPolicies"
       ]
     },
     "v1UserParams": {

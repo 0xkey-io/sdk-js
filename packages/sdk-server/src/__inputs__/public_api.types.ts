@@ -623,6 +623,8 @@ export interface definitions {
     publicKey: string;
     /** To distinguish the credential type (webauthn, API key) */
     type: definitions["v1CredentialType"];
+    /** @description The session profile associated with this credential, if any. This field is only applicable for credentials of type CREDENTIAL_TYPE_LOGIN. */
+    sessionProfileId?: string;
   };
   externaldatav1Quorum: {
     /**
@@ -1233,12 +1235,8 @@ export interface definitions {
     type: definitions["v1AuthenticationType"];
     id?: string;
   };
-  /**
-   * @default AUTHENTICATION_TYPE_UNSPECIFIED
-   * @enum {string}
-   */
+  /** @enum {string} */
   v1AuthenticationType:
-    | "AUTHENTICATION_TYPE_UNSPECIFIED"
     | "AUTHENTICATION_TYPE_EMAIL_OTP"
     | "AUTHENTICATION_TYPE_SMS_OTP"
     | "AUTHENTICATION_TYPE_PASSKEY"
@@ -6531,6 +6529,8 @@ export interface definitions {
     oauthProviders: definitions["v1OauthProvider"][];
     createdAt: definitions["externaldatav1Timestamp"];
     updatedAt: definitions["externaldatav1Timestamp"];
+    /** @description A list of MFA Policies that define multi-factor authentication requirements for this user. */
+    mfaPolicies: definitions["v1MfaPolicy"][];
   };
   v1UserParams: {
     /**
