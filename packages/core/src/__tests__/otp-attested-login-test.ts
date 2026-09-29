@@ -466,6 +466,10 @@ test("signUpWithOtp uses Token key A for signup then StampLogin in the created o
     urls.push(String(url));
     if (String(url).endsWith("/v1/signup_v2")) {
       const body = JSON.parse(String(init?.body));
+      expect((init?.headers as Record<string, string>)["X-Captcha-Token"]).toBe(
+        "otp-captcha-token",
+      );
+      expect(JSON.stringify(body)).not.toContain("otp-captcha-token");
       expect(body.verificationToken).toBe(verificationToken);
       expect(body.clientSignature.publicKey).toBe(publicA);
       const verifier = createVerify("SHA256");
@@ -486,6 +490,9 @@ test("signUpWithOtp uses Token key A for signup then StampLogin in the created o
       } as Response;
     }
     assertAttestedRequest(url, init!, verificationToken, publicA);
+    expect(
+      (init?.headers as Record<string, string>)["X-Captcha-Token"],
+    ).toBeUndefined();
     expect(JSON.parse(String(init?.body)).organizationId).toBe("new-org");
     return response("signup-session");
   }) as typeof fetch;
@@ -493,6 +500,7 @@ test("signUpWithOtp uses Token key A for signup then StampLogin in the created o
     verificationToken,
     contact: "person@example.test",
     otpType: OtpType.Email,
+    captchaToken: "otp-captcha-token",
   });
   expect(result.sessionToken).toBe("signup-session");
   expect(urls).toEqual([

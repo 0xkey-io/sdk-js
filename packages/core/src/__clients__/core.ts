@@ -744,6 +744,7 @@ export class ZeroXKeyClient {
       createSubOrgParams,
       sessionKey = SessionKey.DefaultSessionkey,
       organizationId,
+      captchaToken,
     } = params || {};
 
     let generatedPublicKey: string | undefined = undefined;
@@ -788,7 +789,7 @@ export class ZeroXKeyClient {
           },
         });
 
-        const res = await this.httpClient.proxySignup(signUpBody);
+        const res = await this.httpClient.proxySignup(signUpBody, captchaToken);
 
         if (!res) {
           throw new ZeroXKeyError(
@@ -1228,6 +1229,7 @@ export class ZeroXKeyClient {
       walletProvider,
       createSubOrgParams,
       sessionKey = SessionKey.DefaultSessionkey,
+      captchaToken,
     } = params;
 
     return withZeroXKeyErrorHandling(
@@ -1248,7 +1250,7 @@ export class ZeroXKeyClient {
           },
         });
 
-        const res = await this.httpClient.proxySignup(signUpBody);
+        const res = await this.httpClient.proxySignup(signUpBody, captchaToken);
 
         if (!res) {
           throw new ZeroXKeyError(
@@ -1320,6 +1322,7 @@ export class ZeroXKeyClient {
       walletProvider,
       createSubOrgParams,
       sessionKey = SessionKey.DefaultSessionkey,
+      captchaToken,
     } = params;
 
     return withZeroXKeyErrorHandling(
@@ -1360,7 +1363,10 @@ export class ZeroXKeyClient {
             },
           });
 
-          signupRes = await this.httpClient.proxySignup(signUpBody);
+          signupRes = await this.httpClient.proxySignup(
+            signUpBody,
+            captchaToken,
+          );
 
           if (!signupRes) {
             throw new ZeroXKeyError(
@@ -1421,9 +1427,13 @@ export class ZeroXKeyClient {
    * @throws {ZeroXKeyError} If there is an error during the OTP initialization process or if the maximum number of OTPs has been reached.
    */
   initOtp = async (params: InitOtpParams): Promise<InitOtpResult> => {
+    const { captchaToken, otpType, contact } = params;
     return withZeroXKeyErrorHandling(
       async () => {
-        const initOtpRes = await this.httpClient.proxyInitOtpV2(params);
+        const initOtpRes = await this.httpClient.proxyInitOtpV2(
+          { otpType, contact },
+          captchaToken,
+        );
 
         if (
           !initOtpRes ||
@@ -1707,6 +1717,7 @@ export class ZeroXKeyClient {
       invalidateExisting,
       sessionKey,
       publicKey: legacyPublicKey,
+      captchaToken,
     } = params;
 
     // build sign up body without client signature first
@@ -1776,10 +1787,10 @@ export class ZeroXKeyClient {
           signature: signature,
         };
 
-        const signupRes = await this.httpClient.proxySignupV2({
-          ...signUpBody,
-          clientSignature,
-        });
+        const signupRes = await this.httpClient.proxySignupV2(
+          { ...signUpBody, clientSignature },
+          captchaToken,
+        );
 
         if (!signupRes?.organizationId) {
           throw new ZeroXKeyError(
@@ -1846,6 +1857,7 @@ export class ZeroXKeyClient {
       invalidateExisting = false,
       sessionKey,
       createSubOrgParams,
+      captchaToken,
     } = params;
 
     return withZeroXKeyErrorHandling(
@@ -1875,6 +1887,7 @@ export class ZeroXKeyClient {
             ...(invalidateExisting && { invalidateExisting }),
             ...(sessionKey && { sessionKey }),
             publicKey: publicKey!,
+            ...(captchaToken !== undefined && { captchaToken }),
           });
 
           return {
@@ -1936,6 +1949,7 @@ export class ZeroXKeyClient {
       createSubOrgParams,
       invalidateExisting,
       sessionKey,
+      captchaToken,
     } = params;
 
     return withZeroXKeyErrorHandling(
@@ -1977,6 +1991,7 @@ export class ZeroXKeyClient {
             }),
             ...(invalidateExisting && { invalidateExisting }),
             ...(sessionKey && { sessionKey }),
+            ...(captchaToken !== undefined && { captchaToken }),
           });
 
           return {
@@ -2099,6 +2114,7 @@ export class ZeroXKeyClient {
       providerName = "OpenID Connect Provider" + " " + Date.now(),
       createSubOrgParams,
       sessionKey,
+      captchaToken,
     } = params;
 
     return withZeroXKeyErrorHandling(
@@ -2115,7 +2131,10 @@ export class ZeroXKeyClient {
           },
         });
 
-        const signupRes = await this.httpClient.proxySignup(signUpBody);
+        const signupRes = await this.httpClient.proxySignup(
+          signUpBody,
+          captchaToken,
+        );
 
         if (!signupRes) {
           throw new ZeroXKeyError(

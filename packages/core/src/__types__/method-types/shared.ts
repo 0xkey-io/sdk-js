@@ -65,6 +65,7 @@ export type LoginWithPasskeyParams = {
 };
 
 export type SignUpWithPasskeyParams = {
+  captchaToken?: string;
   createSubOrgParams?: CreateSubOrgParams;
   sessionKey?: string;
   passkeyDisplayName?: string;
@@ -102,6 +103,7 @@ export type LoginWithWalletParams = {
 };
 
 export type SignUpWithWalletParams = {
+  captchaToken?: string;
   walletProvider: WalletProvider;
   createSubOrgParams?: CreateSubOrgParams;
   sessionKey?: string;
@@ -109,6 +111,7 @@ export type SignUpWithWalletParams = {
 };
 
 export type LoginOrSignupWithWalletParams = {
+  captchaToken?: string;
   walletProvider: WalletProvider;
   publicKey?: string;
   createSubOrgParams?: CreateSubOrgParams;
@@ -117,6 +120,7 @@ export type LoginOrSignupWithWalletParams = {
 };
 
 export type InitOtpParams = {
+  captchaToken?: string;
   otpType: OtpType;
   contact: string;
 };
@@ -156,6 +160,7 @@ export type LoginWithOtpParams = {
 };
 
 export type SignUpWithOtpParams = {
+  captchaToken?: string;
   verificationToken: string;
   contact: string;
   otpType: OtpType;
@@ -166,6 +171,7 @@ export type SignUpWithOtpParams = {
 };
 
 export type CompleteOtpParams = {
+  captchaToken?: string;
   otpId: string;
   otpCode: string;
   otpEncryptionTargetBundle: string;
@@ -178,6 +184,7 @@ export type CompleteOtpParams = {
 };
 
 export type CompleteOauthParams = {
+  captchaToken?: string;
   oidcToken: string;
   publicKey: string;
   providerName?: string;
@@ -195,6 +202,7 @@ export type LoginWithOauthParams = {
 };
 
 export type SignUpWithOauthParams = {
+  captchaToken?: string;
   oidcToken: string;
   publicKey: string;
   providerName?: string;
