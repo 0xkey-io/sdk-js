@@ -1,5 +1,9 @@
 const fs = require("fs");
 const path = require("path");
+const {
+  CAPTCHA_PROTECTED_PATHS,
+  validateCaptchaHeaderContract,
+} = require("./captcha-contract.js");
 
 const SOURCE_DIRECTORY = path.resolve(__dirname, "../src");
 const PUBLIC_API_SWAGGER_PATH = path.resolve(
@@ -480,6 +484,7 @@ const generateSDKClientFromSwagger = async (
     async authProxyRequest<TBodyType, TResponseType>(
         url: string,
         body: TBodyType,
+        captchaToken?: string,
     ): Promise<TResponseType> {
         if (!this.config.authProxyUrl || !this.config.authProxyConfigId) {
         throw new ZeroXKeyError("Auth Proxy URL or ID is not configured.", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
@@ -489,6 +494,12 @@ const generateSDKClientFromSwagger = async (
         var headers: Record<string, string> = {
         "Content-Type": "application/json",
         "X-Auth-Proxy-Config-ID": this.config.authProxyConfigId,
+        }
+        if (captchaToken !== undefined) {
+        if (!${JSON.stringify(CAPTCHA_PROTECTED_PATHS)}.includes(url)) {
+          throw new ZeroXKeyError("Captcha token is only supported on protected Auth Proxy routes", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
+        }
+        headers["X-Captcha-Token"] = captchaToken;
         }
 
         const response = await fetch(fullUrl, {
@@ -752,14 +763,15 @@ const generateSDKClientFromSwagger = async (
 
     const inputType = `ProxyT${operationNameWithoutNamespace}Body`;
     const responseType = `ProxyT${operationNameWithoutNamespace}Response`;
+    const hasCaptchaHeader = CAPTCHA_PROTECTED_PATHS.includes(endpointPath);
 
     codeBuffer.push(
       `\n\t${methodName} = async (input: SdkTypes.${inputType}${
         METHODS_WITH_ONLY_OPTIONAL_PARAMETERS.includes(methodName)
           ? " = {}"
           : ""
-      }): Promise<SdkTypes.${responseType}> => {
-      return this.authProxyRequest("${endpointPath}", input);
+      }${hasCaptchaHeader ? ", captchaToken?: string" : ""}): Promise<SdkTypes.${responseType}> => {
+      return this.authProxyRequest("${endpointPath}", input${hasCaptchaHeader ? ", captchaToken" : ""});
     }`,
     );
   }
@@ -788,9 +800,21 @@ async function main() {
     AUTH_PROXY_SWAGGER_PATH,
     "utf-8",
   );
+  const sdkTypesAuthProxySwaggerSpecFile = await fs.promises.readFile(
+    path.resolve(
+      __dirname,
+      "../../sdk-types/src/__inputs__/auth_proxy.swagger.json",
+    ),
+    "utf-8",
+  );
+
+  if (authProxySwaggerSpecFile !== sdkTypesAuthProxySwaggerSpecFile) {
+    throw new Error("Auth Proxy Swagger inputs differ");
+  }
 
   const swaggerSpec = JSON.parse(swaggerSpecFile);
   const authProxySwaggerSpec = JSON.parse(authProxySwaggerSpecFile);
+  validateCaptchaHeaderContract(authProxySwaggerSpec);
 
   await generateSDKClientFromSwagger(
     swaggerSpec,

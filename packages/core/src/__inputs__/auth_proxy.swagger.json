@@ -135,6 +135,12 @@
             "schema": {
               "$ref": "#/definitions/v1InitOtpRequest"
             }
+          },
+          {
+            "name": "X-Captcha-Token",
+            "in": "header",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": ["Auth"]
@@ -167,6 +173,12 @@
             "schema": {
               "$ref": "#/definitions/v1InitOtpV2Request"
             }
+          },
+          {
+            "name": "X-Captcha-Token",
+            "in": "header",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": ["Auth"]
@@ -327,6 +339,12 @@
             "schema": {
               "$ref": "#/definitions/v1SignupRequest"
             }
+          },
+          {
+            "name": "X-Captcha-Token",
+            "in": "header",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": ["Auth"]
@@ -359,6 +377,12 @@
             "schema": {
               "$ref": "#/definitions/v1SignupV2Request"
             }
+          },
+          {
+            "name": "X-Captcha-Token",
+            "in": "header",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": ["Auth"]

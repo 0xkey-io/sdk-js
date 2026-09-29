@@ -39,6 +39,16 @@ jobs:
       - name: Reject lockfile drift from Setup JS
         run: git diff --exit-code HEAD -- pnpm-lock.yaml
 
+      - name: Captcha CI contract
+        run: node --test internal/acceptance/js-build-captcha-ci.test.mjs
+
+      - name: Auth Proxy codegen drift
+        run: |
+          pnpm --filter @0xkey-io/core codegen
+          pnpm --filter @0xkey-io/sdk-types codegen
+          pnpm exec prettier --write packages/core/src/__generated__/sdk-client-base.ts packages/sdk-types/src/__generated__/types.ts
+          git diff --exit-code -- packages/core/src/__generated__/sdk-client-base.ts packages/sdk-types/src/__generated__/types.ts
+
       - name: Build packages
         run: pnpm run build-all
 
@@ -53,6 +63,7 @@ jobs:
           pnpm --filter @0xkey-io/crypto \
             --filter @0xkey-io/encoding \
             --filter @0xkey-io/api-key-stamper \
+            --filter @0xkey-io/core \
             --filter @0xkey-io/react-wallet-kit \
             test
 
