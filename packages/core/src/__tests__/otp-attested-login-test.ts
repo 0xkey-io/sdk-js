@@ -464,7 +464,8 @@ test("signUpWithOtp uses Token key A for signup then StampLogin in the created o
   const urls: string[] = [];
   global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
     urls.push(String(url));
-    if (String(url).endsWith("/v1/signup_v2")) {
+    if (new URL(String(url)).pathname === "/v1/signup_v2") {
+      expect(new URL(String(url)).search).toBe("?captcha_config_id=config-1");
       const body = JSON.parse(String(init?.body));
       expect((init?.headers as Record<string, string>)["X-Captcha-Token"]).toBe(
         "otp-captcha-token",
@@ -504,7 +505,7 @@ test("signUpWithOtp uses Token key A for signup then StampLogin in the created o
   });
   expect(result.sessionToken).toBe("signup-session");
   expect(urls).toEqual([
-    "https://auth.example.test/v1/signup_v2",
+    "https://auth.example.test/v1/signup_v2?captcha_config_id=config-1",
     "https://api.example.test/public/v1/submit/stamp_login",
   ]);
   expect(stored).toHaveLength(1);

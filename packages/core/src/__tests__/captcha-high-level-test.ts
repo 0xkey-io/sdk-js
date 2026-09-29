@@ -56,12 +56,18 @@ function capture(answers: Record<string, object | object[]>) {
 }
 
 function expectTokenOnlyOn(requests: Request[], path: string, token = captcha) {
-  expect(requests.filter((request) => request.url.endsWith(path))).toHaveLength(
-    1,
+  const matching = requests.filter(
+    (request) => new URL(request.url).pathname === path,
   );
+  expect(matching).toHaveLength(1);
   for (const request of requests) {
+    const requestUrl = new URL(request.url);
+    const protectedRoute = requestUrl.pathname === path;
     expect(request.headers["X-Captcha-Token"]).toBe(
-      request.url.endsWith(path) ? token : undefined,
+      protectedRoute ? token : undefined,
+    );
+    expect(requestUrl.search).toBe(
+      protectedRoute ? "?captcha_config_id=config-1" : "",
     );
     expect(request.url).not.toContain(token);
     expect(JSON.stringify(request.body)).not.toContain(token);

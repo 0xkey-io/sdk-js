@@ -7,12 +7,15 @@ afterEach(() => {
   global.fetch = originalFetch;
 });
 
-const client = () =>
+const client = (
+  authProxyConfigId = "config-1",
+  authProxyUrl = "https://auth.example.test",
+) =>
   new ZeroXKeySDKClientBase({
     apiBaseUrl: "https://api.example.test",
     organizationId: "parent-org",
-    authProxyUrl: "https://auth.example.test",
-    authProxyConfigId: "config-1",
+    authProxyUrl,
+    authProxyConfigId,
   });
 
 describe("Captcha Auth Proxy header", () => {
@@ -26,40 +29,131 @@ describe("Captcha Auth Proxy header", () => {
       "proxyInitOtp" | "proxyInitOtpV2" | "proxySignup" | "proxySignupV2",
       string,
     ]
-  >)("%s sends a supplied token only as a header", async (method, path) => {
-    let request: { url: string; init: RequestInit } | undefined;
-    global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
-      request = { url: String(url), init: init! };
-      return { ok: true, json: async () => ({}) } as Response;
-    }) as typeof fetch;
+  >)(
+    "%s sends a token header with only the config hint in URL",
+    async (method, path) => {
+      let request: { url: string; init: RequestInit } | undefined;
+      global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+        request = { url: String(url), init: init! };
+        return { ok: true, json: async () => ({}) } as Response;
+      }) as typeof fetch;
 
-    const body = { marker: "body-only" };
-    await (client()[method] as (body: any, token?: string) => Promise<unknown>)(
-      body,
-      "opaque-captcha-token",
-    );
+      const body = { marker: "body-only" };
+      await (
+        client()[method] as (body: any, token?: string) => Promise<unknown>
+      )(body, "opaque-captcha-token");
 
-    expect(request?.url).toBe(`https://auth.example.test${path}`);
-    expect(request?.init.headers).toEqual({
-      "Content-Type": "application/json",
-      "X-Auth-Proxy-Config-ID": "config-1",
-      "X-Captcha-Token": "opaque-captcha-token",
-    });
-    expect(JSON.parse(String(request?.init.body))).toEqual(body);
-  });
+      expect(request?.url).toBe(
+        `https://auth.example.test${path}?captcha_config_id=config-1`,
+      );
+      expect(request?.url).not.toContain("opaque-captcha-token");
+      expect(request?.init.headers).toEqual({
+        "Content-Type": "application/json",
+        "X-Auth-Proxy-Config-ID": "config-1",
+        "X-Captcha-Token": "opaque-captcha-token",
+      });
+      expect(JSON.parse(String(request?.init.body))).toEqual(body);
+    },
+  );
 
   test("omits Captcha header when no token is supplied", async () => {
     let headers: HeadersInit | undefined;
-    global.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+    let requestUrl: string | undefined;
+    global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      requestUrl = String(url);
       headers = init?.headers;
       return { ok: true, json: async () => ({}) } as Response;
     }) as typeof fetch;
 
     await client().proxyInitOtp({ marker: "legacy" } as any);
+    expect(requestUrl).toBe("https://auth.example.test/v1/otp_init");
     expect(headers).toEqual({
       "Content-Type": "application/json",
       "X-Auth-Proxy-Config-ID": "config-1",
     });
+  });
+
+  test("encodes a nonstandard config ID without putting the token in the URL", async () => {
+    let requestUrl: string | undefined;
+    global.fetch = (async (url: RequestInfo | URL) => {
+      requestUrl = String(url);
+      return { ok: true, json: async () => ({}) } as Response;
+    }) as typeof fetch;
+
+    await client("test /&?=雪#").proxySignup(
+      { marker: "body-only" } as any,
+      "opaque-captcha-token",
+    );
+    expect(requestUrl).toBe(
+      "https://auth.example.test/v1/signup?captcha_config_id=test+%2F%26%3F%3D%E9%9B%AA%23",
+    );
+    expect(new URL(requestUrl!).searchParams.get("captcha_config_id")).toBe(
+      "test /&?=雪#",
+    );
+    expect(requestUrl).not.toContain("opaque-captcha-token");
+  });
+
+  test.each([
+    [
+      "https://auth.example.test/proxy?tenant=a%2Fb&empty=",
+      "https://auth.example.test/proxy/v1/signup?tenant=a%2Fb&empty=&captcha_config_id=config-1",
+    ],
+    [
+      "https://auth.example.test/proxy/?tenant=a%2Fb&captcha_config_id=stale&empty=",
+      "https://auth.example.test/proxy/v1/signup?tenant=a%2Fb&captcha_config_id=config-1&empty=",
+    ],
+    [
+      "https://auth.example.test?tenant=a",
+      "https://auth.example.test/v1/signup?tenant=a&captcha_config_id=config-1",
+    ],
+  ])(
+    "joins route before base query and sets one hint for %s",
+    async (base, expected) => {
+      let requestUrl: string | undefined;
+      global.fetch = (async (url: RequestInfo | URL) => {
+        requestUrl = String(url);
+        return { ok: true, json: async () => ({}) } as Response;
+      }) as typeof fetch;
+
+      await client("config-1", base).proxySignup(
+        { marker: "body-only" } as any,
+        "opaque-captcha-token",
+      );
+      expect(requestUrl).toBe(expected);
+      expect(requestUrl).not.toContain("opaque-captcha-token");
+    },
+  );
+
+  test("rejects a fragment on a protected token request before fetch", async () => {
+    let fetchCount = 0;
+    global.fetch = (async () => {
+      fetchCount += 1;
+      return { ok: true, json: async () => ({}) } as Response;
+    }) as typeof fetch;
+
+    await expect(
+      client(
+        "config-1",
+        "https://auth.example.test/proxy?tenant=a#ignored",
+      ).proxySignup({ marker: "body-only" } as any, "opaque-captcha-token"),
+    ).rejects.toThrow("Auth Proxy URL is invalid for Captcha request");
+    expect(fetchCount).toBe(0);
+  });
+
+  test("preserves legacy no-token URL concatenation for a base with query and fragment", async () => {
+    let requestUrl: string | undefined;
+    global.fetch = (async (url: RequestInfo | URL) => {
+      requestUrl = String(url);
+      return { ok: true, json: async () => ({}) } as Response;
+    }) as typeof fetch;
+
+    await client(
+      "config-1",
+      "https://auth.example.test/proxy?tenant=a#ignored",
+    ).proxySignup({ marker: "body-only" } as any);
+    expect(requestUrl).toBe(
+      "https://auth.example.test/proxy?tenant=a#ignored/v1/signup",
+    );
   });
 
   test.each(["/v1/account", "/v1/otp_login_v2", "/v1/unknown"])(

@@ -489,7 +489,7 @@ const generateSDKClientFromSwagger = async (
         if (!this.config.authProxyUrl || !this.config.authProxyConfigId) {
         throw new ZeroXKeyError("Auth Proxy URL or ID is not configured.", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
         }
-        const fullUrl = this.config.authProxyUrl + url;
+        let fullUrl = this.config.authProxyUrl + url;
         const stringifiedBody = JSON.stringify(body);
         var headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -500,6 +500,18 @@ const generateSDKClientFromSwagger = async (
           throw new ZeroXKeyError("Captcha token is only supported on protected Auth Proxy routes", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
         }
         headers["X-Captcha-Token"] = captchaToken;
+        let baseUrl: URL;
+        try {
+          baseUrl = new URL(this.config.authProxyUrl);
+        } catch (_) {
+          throw new ZeroXKeyError("Auth Proxy URL is invalid for Captcha request", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
+        }
+        if (this.config.authProxyUrl.includes("#") || !["http:", "https:"].includes(baseUrl.protocol)) {
+          throw new ZeroXKeyError("Auth Proxy URL is invalid for Captcha request", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
+        }
+        baseUrl.pathname = baseUrl.pathname.replace(/\\/+$/, "") + url;
+        baseUrl.searchParams.set("captcha_config_id", this.config.authProxyConfigId);
+        fullUrl = baseUrl.toString();
         }
 
         const response = await fetch(fullUrl, {
