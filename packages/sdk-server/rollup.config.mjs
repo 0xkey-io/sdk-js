@@ -1,4 +1,4 @@
-import typescript from "@rollup/plugin-typescript";
+import { createTypescriptPlugin } from "../../rollup.config.base.mjs";
 import nodeExternals from "rollup-plugin-node-externals";
 import path from "node:path";
 import preserveDirectives from "rollup-preserve-directives";
@@ -18,7 +18,7 @@ const getFormatConfig = (format) => {
       sourcemap: true,
     },
     plugins: [
-      typescript({
+      createTypescriptPlugin({
         tsconfig: "./tsconfig.json",
         outputToFilesystem: false,
         compilerOptions: {

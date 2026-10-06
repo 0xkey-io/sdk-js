@@ -170,3 +170,74 @@ test("one-shot Rollup reports a syntax error with a nonzero exit", () => {
     assert.match(result.stderr, /error|Unexpected token/i);
   });
 });
+
+test("SDK Server one-shot Rollup exits after emitting both formats and declarations", () => {
+  withFixture((fixture) => {
+    const serverConfigUrl = new URL(
+      "../../packages/sdk-server/rollup.config.mjs",
+      import.meta.url,
+    ).href;
+    const result = spawnSync(
+      process.execPath,
+      ["-e", childSource, fixture, serverConfigUrl, "build"],
+      { cwd: repoRoot, encoding: "utf8", timeout: 12000 },
+    );
+    assert.equal(
+      result.error,
+      undefined,
+      `${result.error}\n${result.stdout}\n${result.stderr}`,
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /BUILD_FINISHED/);
+    assert.match(
+      fs.readFileSync(path.join(fixture, "dist", "index.mjs"), "utf8"),
+      /value/,
+    );
+    assert.match(
+      fs.readFileSync(path.join(fixture, "dist", "index.js"), "utf8"),
+      /value/,
+    );
+    assert.match(
+      fs.readFileSync(path.join(fixture, "dist", "index.d.ts"), "utf8"),
+      /result: string/,
+    );
+  });
+});
+test("React Wallet Kit one-shot Rollup exits after emitting both formats and declarations", () => {
+  withFixture((fixture) => {
+    // Babel resolves presets from the package cwd, so retain the real package's installed tool graph.
+    fs.symlinkSync(
+      path.join(repoRoot, "packages/react-wallet-kit/node_modules"),
+      path.join(fixture, "node_modules"),
+      "dir",
+    );
+    const reactConfigUrl = new URL(
+      "../../packages/react-wallet-kit/rollup.config.mjs",
+      import.meta.url,
+    ).href;
+    const result = spawnSync(
+      process.execPath,
+      ["-e", childSource, fixture, reactConfigUrl, "build"],
+      { cwd: repoRoot, encoding: "utf8", timeout: 12000 },
+    );
+    assert.equal(
+      result.error,
+      undefined,
+      `${result.error}\n${result.stdout}\n${result.stderr}`,
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /BUILD_FINISHED/);
+    assert.match(
+      fs.readFileSync(path.join(fixture, "dist", "index.mjs"), "utf8"),
+      /value/,
+    );
+    assert.match(
+      fs.readFileSync(path.join(fixture, "dist", "index.js"), "utf8"),
+      /value/,
+    );
+    assert.match(
+      fs.readFileSync(path.join(fixture, "dist", "index.d.ts"), "utf8"),
+      /result: string/,
+    );
+  });
+});
