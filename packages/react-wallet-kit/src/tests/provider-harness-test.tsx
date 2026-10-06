@@ -32,6 +32,7 @@ function deferred<T>(): Deferred<T> {
 
 let mockInitDeferred: Deferred<void>;
 let mockActiveSessionDeferred: Deferred<string | undefined>;
+let mockMissingAuthContextGuard = false;
 const mockConstructedConfigs: unknown[] = [];
 const mockInit = jest.fn(() => mockInitDeferred.promise);
 const mockGetAllSessions = jest.fn(async () => ({}));
@@ -57,6 +58,10 @@ const mockZeroXKeyClient = jest.fn((config: unknown) => {
       await mockInit();
       initialized = true;
     },
+    restrictPersistedCredentialsToNewSessions: () => undefined,
+    ...(mockMissingAuthContextGuard
+      ? {}
+      : { setAuthContextGuard: () => undefined }),
     getAllSessions: mockGetAllSessions,
     getActiveSessionKey: mockGetActiveSessionKey,
     get httpClient() {
@@ -95,6 +100,28 @@ const config: ZeroXKeyProviderConfig = {
 };
 
 describe("ZeroXKeyProvider harness", () => {
+  it("fails initialization when Core cannot guard the raw constructor target", async () => {
+    mockMissingAuthContextGuard = true;
+    mockInitDeferred = deferred<void>();
+    mockActiveSessionDeferred = deferred<string | undefined>();
+    const dom = setupProviderDom();
+    let mounted: MountedProvider | undefined;
+    try {
+      const { ClientState } = dom.loadPublicExports();
+      mounted = await dom.mount(config);
+      await act(async () => {
+        mockInitDeferred.resolve();
+        mockActiveSessionDeferred.resolve(undefined);
+        await Promise.resolve();
+      });
+      expect(mounted.context()?.clientState).toBe(ClientState.Error);
+    } finally {
+      if (mounted) await dom.unmount(mounted);
+      await dom.restore();
+      mockMissingAuthContextGuard = false;
+    }
+  });
+
   it("initializes through Loading and unmounts after becoming Ready", async () => {
     mockInitDeferred = deferred<void>();
     mockActiveSessionDeferred = deferred<string | undefined>();
@@ -187,6 +214,55 @@ describe("ZeroXKeyProvider harness", () => {
       expect(jest.getTimerCount()).toBe(0);
       expect(dom.observations.consoleError).not.toHaveBeenCalled();
       expect(dom.observations.consoleWarn).not.toHaveBeenCalled();
+    } finally {
+      if (mounted) await dom.unmount(mounted);
+      await dom.restore();
+    }
+  });
+
+  it("does not continue A session recovery after B is ready", async () => {
+    mockInitDeferred = deferred<void>();
+    mockInitDeferred.resolve();
+    mockActiveSessionDeferred = deferred<string | undefined>();
+    mockActiveSessionDeferred.resolve(undefined);
+    const oldSessions = deferred<Record<string, never>>();
+    mockConstructedConfigs.length = 0;
+    mockInit.mockClear();
+    mockGetAllSessions.mockReset();
+    mockGetAllSessions.mockImplementationOnce(() => oldSessions.promise);
+    mockGetAllSessions.mockImplementation(async () => ({}));
+    mockGetActiveSessionKey.mockClear();
+    mockZeroXKeyClient.mockClear();
+
+    const dom = setupProviderDom();
+    let mounted: MountedProvider | undefined;
+    try {
+      const { ClientState } = dom.loadPublicExports();
+      mounted = await dom.mount(config);
+      expect(mockGetAllSessions).toHaveBeenCalledTimes(1);
+      await mounted.rerender({ ...config, organizationId: "org-B" });
+      for (let index = 0; index < 20; index += 1) {
+        await act(async () => {
+          await Promise.resolve();
+        });
+        if (mounted.context()?.clientState === ClientState.Ready) break;
+      }
+      expect(mounted.context()?.clientState).toBe(ClientState.Ready);
+      expect(mounted.context()?.httpClient?.config.organizationId).toBe(
+        "org-B",
+      );
+      expect(mockGetActiveSessionKey).not.toHaveBeenCalled();
+      expect(mounted.context()?.session).toBeUndefined();
+
+      await act(async () => {
+        oldSessions.resolve({});
+        await Promise.resolve();
+      });
+      expect(mockGetActiveSessionKey).not.toHaveBeenCalled();
+      expect(mounted.context()?.session).toBeUndefined();
+      expect(mounted.context()?.httpClient?.config.organizationId).toBe(
+        "org-B",
+      );
     } finally {
       if (mounted) await dom.unmount(mounted);
       await dom.restore();

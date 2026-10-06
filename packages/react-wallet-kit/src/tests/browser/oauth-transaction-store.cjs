@@ -552,6 +552,112 @@ async function callClaim(
   );
 }
 
+function redirectBinding() {
+  const value = structuredClone(binding);
+  value.completion = { kind: "redirect" };
+  return value;
+}
+
+async function callProductionCreate(page, input) {
+  return page.evaluate(async (value) => {
+    const harness = globalThis.__oauthIdbHarness;
+    const databaseName = harness.module.OAUTH_TRANSACTION_DATABASE_NAME;
+    const reportedName =
+      typeof databaseName === "string" ? databaseName : null;
+    try {
+      const store = harness.module.createOAuthTransactionStore({
+        databaseName,
+        now: () => 1_700_000_000_000,
+        randomBytes: () => crypto.getRandomValues(new Uint8Array(16)),
+        async discardFreshKey() {},
+      });
+      const created = await store.create(value);
+      return {
+        ok: true,
+        transactionId: created.transactionId,
+        databaseName: reportedName,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        reason:
+          error && typeof error.reason === "string" ? error.reason : "unbounded",
+        databaseName: reportedName,
+      };
+    }
+  }, input);
+}
+
+async function callProductionClaimReturned(page, returnedState) {
+  return page.evaluate(
+    async ({ returnedState: state, binding: trustedBinding }) => {
+      const harness = globalThis.__oauthIdbHarness;
+      try {
+        const databaseName = harness.module.OAUTH_TRANSACTION_DATABASE_NAME;
+        const store = harness.module.createOAuthTransactionStore({
+          databaseName,
+          now: () => 1_700_000_000_000,
+          randomBytes: () => crypto.getRandomValues(new Uint8Array(16)),
+          async discardFreshKey() {},
+        });
+        const claimed = await store.claimReturned({
+          returnedState: state,
+          binding: trustedBinding,
+        });
+        return {
+          ok: true,
+          claimed,
+          frozen: Object.isFrozen(claimed) && Object.isFrozen(claimed.binding),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          reason:
+            error && typeof error.reason === "string"
+              ? error.reason
+              : "unbounded",
+        };
+      }
+    },
+    { returnedState, binding: redirectBinding() },
+  );
+}
+
+async function callClaimReturned(page, storeName, returnedState) {
+  return page.evaluate(
+    async ({
+      storeName: name,
+      returnedState: state,
+      binding: trustedBinding,
+    }) => {
+      const harness = globalThis.__oauthIdbHarness;
+      try {
+        const claimed = await harness.stores.get(name).store.claimReturned({
+          returnedState: state,
+          binding: trustedBinding,
+        });
+        return {
+          ok: true,
+          claimed,
+          frozen:
+            Object.isFrozen(claimed) &&
+            Object.isFrozen(claimed.binding) &&
+            Object.isFrozen(claimed.binding.route),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          reason:
+            error && typeof error.reason === "string"
+              ? error.reason
+              : "unbounded",
+        };
+      }
+    },
+    { storeName, returnedState, binding },
+  );
+}
+
 async function prepareBarrierClaim(
   page,
   storeName,
@@ -680,6 +786,87 @@ async function runMatrix(context, origin, databaseName, record) {
     result: "passed",
   });
   await Promise.all([makeStore(pageA, "A"), makeStore(pageB, "B")]);
+
+  const productionInput = {
+    expectedState: "opaque-state-production",
+    binding: redirectBinding(),
+    keyRef: "prod_key_a",
+    verifier: "verifier-production",
+  };
+  const productionCreated = await callProductionCreate(pageA, productionInput);
+  record({
+    caseId: "production-database-redirect-claim",
+    page: "A",
+    phase: "observed",
+    result: productionCreated.ok ? "created" : "rejected",
+    reason: productionCreated.ok ? null : productionCreated.reason,
+    counts: { databaseName: productionCreated.databaseName ?? null },
+  });
+  assert.equal(productionCreated.ok, true);
+  const productionClaimed = await callProductionClaimReturned(
+    pageB,
+    productionInput.expectedState,
+  );
+  assert.equal(productionClaimed.ok, true);
+  assert.equal(productionClaimed.claimed.verifier, productionInput.verifier);
+  assert.equal(
+    productionClaimed.claimed.transactionId,
+    productionCreated.transactionId,
+  );
+  assert.equal(productionClaimed.claimed.binding.completion.kind, "redirect");
+  assert.equal(productionClaimed.frozen, true);
+  const productionRepeated = await callProductionClaimReturned(
+    pageA,
+    productionInput.expectedState,
+  );
+  assert.equal(productionRepeated.ok, false);
+  assert.equal(productionRepeated.reason, "unavailable");
+  record({
+    caseId: "production-database-redirect-claim",
+    page: "B",
+    phase: "committed",
+    result: "passed",
+  });
+
+  const coldA = inputFor("cold_key_a", "cold-a");
+  const coldB = inputFor("cold_key_b", "cold-b");
+  await pageA.evaluate(
+    (key) => globalThis.__oauthIdbHarness.putKey(key),
+    coldA.keyRef,
+  );
+  await pageA.evaluate(
+    (key) => globalThis.__oauthIdbHarness.putKey(key),
+    coldB.keyRef,
+  );
+  const createdColdA = await callCreate(pageA, "A", coldA, "cold-a");
+  const createdColdB = await callCreate(pageA, "A", coldB, "cold-b");
+  assert.equal(createdColdA.ok, true);
+  assert.equal(createdColdB.ok, true);
+  const recovered = await callClaimReturned(pageB, "B", coldA.expectedState);
+  record({
+    caseId: "cold-claim-by-returned-state",
+    page: "B",
+    phase: "observed",
+    result: recovered.ok ? "claimed" : "rejected",
+    reason: recovered.ok ? null : recovered.reason,
+  });
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.claimed.verifier, coldA.verifier);
+  assert.equal(recovered.claimed.transactionId, createdColdA.transactionId);
+  assert.equal(recovered.frozen, true);
+  const repeated = await callClaimReturned(pageA, "A", coldA.expectedState);
+  assert.equal(repeated.ok, false);
+  assert.equal(repeated.reason, "unavailable");
+  const other = await callClaimReturned(pageB, "B", coldB.expectedState);
+  assert.equal(other.ok, true);
+  assert.equal(other.claimed.verifier, coldB.verifier);
+  assert.equal(other.claimed.transactionId, createdColdB.transactionId);
+  record({
+    caseId: "cold-claim-by-returned-state",
+    page: "B",
+    phase: "committed",
+    result: "passed",
+  });
 
   let raceExchanges = 0;
   const syntheticExchange = async (claimed) => {

@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  * @jest-environment-options {"url":"https://app.example.test/"}
  */
+import "fake-indexeddb/auto";
 import {
   afterEach,
   beforeEach,
@@ -11,7 +12,12 @@ import {
   jest,
 } from "@jest/globals";
 import { createHash } from "node:crypto";
-import { AuthAction } from "@0xkey-io/sdk-types";
+import {
+  AuthAction,
+  OAuthProviders,
+  SessionType,
+  type Session,
+} from "@0xkey-io/sdk-types";
 import { act, useLayoutEffect } from "react";
 import type {
   StamperType,
@@ -19,6 +25,7 @@ import type {
   ZeroXKeyClient,
   ZeroXKeyProviderConfig,
 } from "../index";
+import { persistRedirectTransaction } from "../utils/oauth/redirect-transaction";
 import { installOAuthPopups } from "./fixtures/oauth-popup";
 import {
   setupProviderDom,
@@ -39,6 +46,9 @@ type CoreClient = Pick<
 type ProxyOauth = ZeroXKeyClient["httpClient"]["proxyOAuth2Authenticate"];
 type ProxyOauthParams = Parameters<ProxyOauth>[0];
 type CompleteOauthParams = Parameters<CoreClient["completeOauth"]>[0];
+type CompleteOauthGate = NonNullable<
+  Parameters<CoreClient["completeOauth"]>[1]
+>;
 type AddOauthProviderParams = Parameters<CoreClient["addOauthProvider"]>[0];
 
 type Deferred<T> = {
@@ -82,6 +92,7 @@ type ClientSpec = {
   proxy?: (params: ProxyOauthParams) => ReturnType<ProxyOauth>;
   completeOauth?: (
     params: CompleteOauthParams,
+    gate?: CompleteOauthGate,
   ) => ReturnType<CoreClient["completeOauth"]>;
   getSession?: (
     ...params: Parameters<CoreClient["getSession"]>
@@ -99,6 +110,25 @@ const mockCreatedKeys: Array<{ client: number; publicKey: string }> = [];
 const mockDiscardedKeys: Array<{ client: number; publicKey: string }> = [];
 const mockProxyCalls: Array<{ client: number; params: ProxyOauthParams }> = [];
 const mockCompleteOauth = jest.fn<(params: CompleteOauthParams) => void>();
+const mockGetClientParams = jest.fn(
+  async (_configId: string, _url?: string) => ({
+    turnstileSiteKey: undefined as string | undefined,
+  }),
+);
+const mockChallengeCalls: Array<{
+  siteKey: string;
+  signal: AbortSignal;
+  result: Deferred<{ token: string; reset(): void }>;
+}> = [];
+const mockCreateTurnstileChallengeRenderer = jest.fn(() => ({
+  challenge(siteKey: string, signal: AbortSignal) {
+    const result = deferred<{ token: string; reset(): void }>();
+    mockChallengeCalls.push({ siteKey, signal, result });
+    return result.promise;
+  },
+  dispose() {},
+}));
+const mockVerifyPage = jest.fn((_props: { onSuccess?: () => void }) => null);
 const mockGetSession =
   jest.fn<(...params: Parameters<CoreClient["getSession"]>) => void>();
 const mockAddOauthProvider =
@@ -143,6 +173,8 @@ const mockZeroXKeyClient = jest.fn((config: unknown) => {
   >;
   const instance: Record<string, unknown> = {
     ...base,
+    restrictPersistedCredentialsToNewSessions: () => undefined,
+    setAuthContextGuard: () => undefined,
     config: constructorConfig,
   };
   Object.defineProperty(instance, "httpClient", {
@@ -169,9 +201,12 @@ const mockZeroXKeyClient = jest.fn((config: unknown) => {
     mockDiscardedKeys.push({ client, publicKey });
   };
   if (clientSpec.completeOauth) {
-    instance.completeOauth = (params: CompleteOauthParams) => {
+    instance.completeOauth = (
+      params: CompleteOauthParams,
+      gate?: CompleteOauthGate,
+    ) => {
       mockCompleteOauth(params);
-      return clientSpec.completeOauth!(params);
+      return clientSpec.completeOauth!(params, gate);
     };
   }
   if (clientSpec.getSession) {
@@ -197,10 +232,56 @@ jest.mock("@0xkey-io/core", () => {
   return {
     ...actual,
     ZeroXKeyClient: mockZeroXKeyClient,
+    getClientParams: mockGetClientParams,
   };
 });
 
+jest.mock("../utils/captcha-turnstile-renderer", () => ({
+  createTurnstileChallengeRenderer: mockCreateTurnstileChallengeRenderer,
+}));
+
+jest.mock("../components/verify/Verify", () => ({
+  VerifyPage: mockVerifyPage,
+}));
+
+jest.mock("../providers/modal/Root", () => ({
+  ModalRoot: () => {
+    const { useModal } = jest.requireActual<
+      typeof import("../providers/modal/Hook")
+    >("../providers/modal/Hook");
+    return useModal().modalStack.at(-1)?.content ?? null;
+  },
+}));
+
 const redirectUri = "https://app.example.test/oauth/callback";
+
+if (typeof globalThis.structuredClone !== "function") {
+  globalThis.structuredClone = <T,>(value: T): T =>
+    JSON.parse(JSON.stringify(value)) as T;
+}
+
+async function seedRedirectLogin(input: {
+  provider: OAuthProviders;
+  clientId: string;
+  expectedState: string;
+  keyRef: string;
+  verifier: string | null;
+}): Promise<void> {
+  await persistRedirectTransaction({
+    organizationId: baseConfig.organizationId,
+    configId: null,
+    apiBaseUrl: baseConfig.apiBaseUrl ?? "https://api.example.test",
+    authProxyUrl: baseConfig.authProxyUrl ?? "https://auth.example.test",
+    provider: input.provider,
+    clientId: input.clientId,
+    redirectUri,
+    expectedState: input.expectedState,
+    keyRef: input.keyRef,
+    verifier: input.verifier,
+    async discardFreshKey() {},
+  });
+}
+
 const baseConfig: ZeroXKeyProviderConfig = {
   organizationId: "org-oauth",
   apiBaseUrl: "https://api.example.test",
@@ -227,6 +308,16 @@ const baseConfig: ZeroXKeyProviderConfig = {
     },
   },
 };
+
+function proofSession(): Session {
+  return {
+    sessionType: SessionType.READ_WRITE,
+    organizationId: "proof-org-A",
+    userId: "proof-user-A",
+    expiry: 4_102_444_800,
+    token: "proof-session-A",
+  };
+}
 
 let activeFetch: (
   input: RequestInfo | URL,
@@ -373,6 +464,10 @@ beforeEach(() => {
   mockDiscardedKeys.length = 0;
   mockProxyCalls.length = 0;
   mockCompleteOauth.mockReset();
+  mockGetClientParams.mockReset();
+  mockChallengeCalls.length = 0;
+  mockCreateTurnstileChallengeRenderer.mockClear();
+  mockVerifyPage.mockClear();
   mockGetSession.mockReset();
   mockAddOauthProvider.mockReset();
   mockInit.mockClear();
@@ -957,6 +1052,429 @@ describe("mounted public OAuth handlers", () => {
     expect(mockDiscardedKeys).toHaveLength(0);
   });
 
+  it("internal popup requests Captcha only after Core finds no account", async () => {
+    const lookup = deferred<void>();
+    const submitted: Array<string | undefined> = [];
+    mockSpec.keys = ["captcha-popup-key"];
+    mockSpec.getSession = async () => undefined;
+    mockSpec.completeOauth = async (_params, gate) => {
+      await lookup.promise;
+      if (!gate) throw new Error("Missing popup signup gate");
+      const signup = await gate(async (token) => {
+        submitted.push(token);
+        return { sessionToken: "captcha-popup-session" };
+      });
+      return { ...signup, action: AuthAction.SIGNUP };
+    };
+    mockGetClientParams.mockResolvedValue({ turnstileSiteKey: "site-A" });
+    const mounted = await mountReady(
+      { onError: jest.fn() },
+      { ...baseConfig, authProxyConfigId: "config-A" },
+    );
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "captcha-popup-oidc",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    expect(mockCompleteOauth).toHaveBeenCalledTimes(1);
+    expect(mockGetClientParams).not.toHaveBeenCalled();
+    expect(mockChallengeCalls).toHaveLength(0);
+    await act(async () => lookup.resolve());
+    await waitFor(() => mockChallengeCalls.length === 1, "popup challenge");
+    expect(mockGetClientParams).toHaveBeenCalledWith(
+      "config-A",
+      "https://auth.example.test",
+    );
+    expect(submitted).toEqual([]);
+    await act(async () => {
+      mockChallengeCalls[0]!.result.resolve({
+        token: "fresh-popup-token",
+        reset: jest.fn(),
+      });
+      await started.observed.settled;
+    });
+    expect(started.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(submitted).toEqual(["fresh-popup-token"]);
+  });
+
+  it("internal popup login and custom completion do not request Captcha", async () => {
+    let loginGate: CompleteOauthGate | undefined;
+    mockSpec.keys = ["existing-popup-key", "custom-popup-key"];
+    mockSpec.getSession = async () => undefined;
+    mockSpec.completeOauth = async (_params, gate) => {
+      loginGate = gate;
+      return { action: AuthAction.LOGIN, sessionToken: "existing-session" };
+    };
+    const mounted = await mountReady(
+      { onError: jest.fn() },
+      { ...baseConfig, authProxyConfigId: "config-A" },
+    );
+    const existing = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await deliver(
+      existing.popup,
+      callbackUrl({
+        provider: "google",
+        token: "existing-oidc",
+        state: existing.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await existing.observed.settled;
+    expect(loginGate).toEqual(expect.any(Function));
+    const custom = jest.fn();
+    const customPopup = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: custom,
+      }),
+    );
+    await deliver(
+      customPopup.popup,
+      callbackUrl({
+        provider: "google",
+        token: "custom-oidc",
+        state: customPopup.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await customPopup.observed.settled;
+    expect(custom).toHaveBeenCalledTimes(1);
+    expect(mockCompleteOauth).toHaveBeenCalledTimes(1);
+    expect(mockGetClientParams).not.toHaveBeenCalled();
+    expect(mockChallengeCalls).toHaveLength(0);
+  });
+
+  it("public completeOauth keeps its single-argument Core path", async () => {
+    let receivedGate: CompleteOauthGate | undefined;
+    mockSpec.getSession = async () => undefined;
+    mockSpec.completeOauth = async (_params, gate) => {
+      receivedGate = gate;
+      return { action: AuthAction.LOGIN, sessionToken: "existing-session" };
+    };
+    const mounted = await mountReady(
+      { onError: jest.fn() },
+      { ...baseConfig, authProxyConfigId: "config-A" },
+    );
+    await act(async () => {
+      await mounted.context()!.completeOauth({
+        oidcToken: "public-oidc",
+        publicKey: "public-key",
+      });
+    });
+    expect(receivedGate).toBeUndefined();
+    expect(mockGetClientParams).not.toHaveBeenCalled();
+    expect(mockChallengeCalls).toHaveLength(0);
+  });
+
+  it("internal popup refuses a changed OAuth binding before Captcha", async () => {
+    const lookup = deferred<void>();
+    let capturedGate: CompleteOauthGate | undefined;
+    const submitted = jest.fn(async (_token?: string) => ({
+      sessionToken: "never-submitted",
+    }));
+    mockSpec.keys = ["drift-popup-key"];
+    mockSpec.completeOauth = async (_params, gate) => {
+      capturedGate = gate;
+      await lookup.promise;
+      if (!gate) throw new Error("Missing popup signup gate");
+      const signup = await gate(submitted);
+      return { ...signup, action: AuthAction.SIGNUP };
+    };
+    const config = { ...baseConfig, authProxyConfigId: "config-A" };
+    const mounted = await mountReady({ onError: jest.fn() }, config);
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "drift-oidc",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    expect(mockCompleteOauth).toHaveBeenCalledTimes(1);
+    expect(capturedGate).toEqual(expect.any(Function));
+    await mounted.rerender({
+      ...config,
+      auth: {
+        ...config.auth,
+        oauthConfig: {
+          ...config.auth?.oauthConfig,
+          googleClientId: "google-other",
+        },
+      },
+    });
+    await act(async () => lookup.resolve());
+    await started.observed.settled;
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.any(Error),
+    });
+    expect(mockGetClientParams).not.toHaveBeenCalled();
+    expect(mockChallengeCalls).toHaveLength(0);
+    expect(submitted).not.toHaveBeenCalled();
+  });
+
+  it.each(popupCases)(
+    "$provider internal popup passes its signup gate to Core while login skips Captcha",
+    async ({ provider, handler, pkce }) => {
+      mockSpec.keys = [`internal-${provider}-key`];
+      mockSpec.proxy = async () => ({ oidcToken: `internal-${provider}-oidc` });
+      mockSpec.getSession = async () => undefined;
+      const gates: Array<CompleteOauthGate | undefined> = [];
+      mockSpec.completeOauth = async (_params, gate) => {
+        gates.push(gate);
+        return { action: AuthAction.LOGIN, sessionToken: "existing-session" };
+      };
+      if (provider === "facebook") {
+        expectedFetchCalls = 1;
+        activeFetch = async () => ({
+          ok: true,
+          json: async () => ({ id_token: "internal-facebook-oidc" }),
+        });
+      }
+      const mounted = await mountReady(
+        { onError: jest.fn() },
+        { ...baseConfig, authProxyConfigId: "config-A" },
+      );
+      const action = mounted.context()![handler] as (params: {
+        openInPage: boolean;
+      }) => Promise<void>;
+      const started = await startPopup(() => action({ openInPage: false }));
+      await deliver(
+        started.popup,
+        callbackUrl({
+          provider,
+          state: started.authorizationUrl.searchParams.get("state")!,
+          ...(pkce
+            ? { code: `internal-${provider}-code` }
+            : { token: `internal-${provider}-oidc` }),
+          ...(provider === "apple" && { fragmentCode: "apple-code" }),
+        }),
+      );
+      await started.observed.settled;
+      expect(started.observed.outcome()).toEqual({
+        status: "fulfilled",
+        value: undefined,
+      });
+      expect(gates).toEqual([expect.any(Function)]);
+      expect(mockGetClientParams).not.toHaveBeenCalled();
+      expect(mockChallengeCalls).toHaveLength(0);
+    },
+  );
+
+  it("concurrent internal popups admit one active challenge without crossing tokens", async () => {
+    mockSpec.keys = ["popup-A-key", "popup-B-key"];
+    mockSpec.getSession = async () => undefined;
+    const submissions: Array<{
+      publicKey: string;
+      token: string | undefined;
+    }> = [];
+    mockSpec.completeOauth = async (params, gate) => {
+      if (!gate) throw new Error("Missing popup signup gate");
+      const signup = await gate(async (token) => {
+        submissions.push({ publicKey: params.publicKey, token });
+        return { sessionToken: `session-${params.publicKey}` };
+      });
+      return { ...signup, action: AuthAction.SIGNUP };
+    };
+    mockGetClientParams.mockResolvedValue({ turnstileSiteKey: "site-A" });
+    const mounted = await mountReady(
+      { onError: jest.fn() },
+      { ...baseConfig, authProxyConfigId: "config-A" },
+    );
+    const popupA = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    const popupB = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    expect(stateFrom(popupA.authorizationUrl).get("transactionId")).not.toBe(
+      stateFrom(popupB.authorizationUrl).get("transactionId"),
+    );
+    await deliver(
+      popupA.popup,
+      callbackUrl({
+        provider: "google",
+        token: "oidc-A",
+        state: popupA.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await waitFor(() => mockChallengeCalls.length === 1, "first challenge");
+    await deliver(
+      popupB.popup,
+      callbackUrl({
+        provider: "google",
+        token: "oidc-B",
+        state: popupB.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await popupB.observed.settled;
+    expect(popupB.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.any(Error),
+    });
+    expect(mockChallengeCalls).toHaveLength(1);
+    expect(submissions).toEqual([]);
+    await act(async () => {
+      mockChallengeCalls[0]!.result.resolve({
+        token: "token-for-A",
+        reset: jest.fn(),
+      });
+      await popupA.observed.settled;
+    });
+    expect(popupA.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(submissions).toEqual([
+      { publicKey: "popup-A-key", token: "token-for-A" },
+    ]);
+  });
+
+  it("Discord popup exchanges before account lookup and challenges only before signup", async () => {
+    const lookup = deferred<void>();
+    const order: string[] = [];
+    mockSpec.keys = ["discord-signup-key"];
+    mockSpec.proxy = async () => {
+      order.push("exchange");
+      return { oidcToken: "discord-oidc" };
+    };
+    mockSpec.getSession = async () => undefined;
+    mockSpec.completeOauth = async (_params, gate) => {
+      order.push("account lookup");
+      await lookup.promise;
+      if (!gate) throw new Error("Missing popup signup gate");
+      const signup = await gate(async () => {
+        order.push("signup");
+        return { sessionToken: "discord-session" };
+      });
+      return { ...signup, action: AuthAction.SIGNUP };
+    };
+    mockGetClientParams.mockImplementation(async () => {
+      order.push("C3 capability");
+      return { turnstileSiteKey: "site-A" };
+    });
+    const mounted = await mountReady(
+      { onError: jest.fn() },
+      { ...baseConfig, authProxyConfigId: "config-A" },
+    );
+    const started = await startPopup(() =>
+      mounted.context()!.handleDiscordOauth({ openInPage: false }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "discord",
+        code: "discord-code",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    expect(order).toEqual(["exchange", "account lookup"]);
+    expect(mockChallengeCalls).toHaveLength(0);
+    await act(async () => lookup.resolve());
+    await waitFor(() => mockChallengeCalls.length === 1, "Discord challenge");
+    expect(order).toEqual(["exchange", "account lookup", "C3 capability"]);
+    await act(async () => {
+      mockChallengeCalls[0]!.result.resolve({
+        token: "discord-fresh-token",
+        reset: jest.fn(),
+      });
+      await started.observed.settled;
+    });
+    expect(order).toEqual([
+      "exchange",
+      "account lookup",
+      "C3 capability",
+      "signup",
+    ]);
+  });
+
+  it("global onOauthRedirect popup bypasses the internal Captcha gate", async () => {
+    mockSpec.keys = ["custom-global-key"];
+    const onOauthRedirect = jest.fn();
+    const mounted = await mountReady(
+      { onOauthRedirect, onError: jest.fn() },
+      { ...baseConfig, authProxyConfigId: "config-A" },
+    );
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "custom-global-oidc",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await started.observed.settled;
+    expect(onOauthRedirect).toHaveBeenCalledTimes(1);
+    expect(mockCompleteOauth).not.toHaveBeenCalled();
+    expect(mockGetClientParams).not.toHaveBeenCalled();
+    expect(mockChallengeCalls).toHaveLength(0);
+  });
+
+  it("OAuth-only binding change during challenge prevents signup", async () => {
+    const submitted = jest.fn(async (_token?: string) => ({
+      sessionToken: "never-submitted",
+    }));
+    mockSpec.keys = ["challenge-drift-key"];
+    mockSpec.completeOauth = async (_params, gate) => {
+      if (!gate) throw new Error("Missing popup signup gate");
+      const signup = await gate(submitted);
+      return { ...signup, action: AuthAction.SIGNUP };
+    };
+    mockGetClientParams.mockResolvedValue({ turnstileSiteKey: "site-A" });
+    const config = { ...baseConfig, authProxyConfigId: "config-A" };
+    const mounted = await mountReady({ onError: jest.fn() }, config);
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "challenge-drift-oidc",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await waitFor(() => mockChallengeCalls.length === 1, "pending challenge");
+    await mounted.rerender({
+      ...config,
+      auth: {
+        ...config.auth,
+        oauthConfig: {
+          ...config.auth?.oauthConfig,
+          googleClientId: "google-other",
+        },
+      },
+    });
+    await act(async () => {
+      mockChallengeCalls[0]!.result.resolve({
+        token: "fresh-but-stale-binding",
+        reset: jest.fn(),
+      });
+      await started.observed.settled;
+    });
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.any(Error),
+    });
+    expect(submitted).not.toHaveBeenCalled();
+    expect(mockGetClientParams).toHaveBeenCalledTimes(1);
+  });
+
   it("[P2] a synchronous per-call callback throw rejects after irreversible handoff", async () => {
     mockSpec.keys = ["public-sync-throw"];
     const thrown = new Error("synthetic callback throw");
@@ -998,6 +1516,13 @@ describe("mounted public OAuth handlers", () => {
       publicKey: "url-derived-google-key",
       sessionKey: "url-derived-google-session",
     }).toString();
+    await seedRedirectLogin({
+      provider: OAuthProviders.GOOGLE,
+      clientId: "google-A",
+      expectedState: state,
+      keyRef: "url-derived-google-key",
+      verifier: null,
+    });
     window.history.replaceState(
       null,
       document.title,
@@ -1027,7 +1552,6 @@ describe("mounted public OAuth handlers", () => {
       throw new Error("internal completion must not run");
     };
     const onOauthRedirect = jest.fn();
-    localStorage.setItem("discord_verifier", "seeded-discord-verifier");
     const state = new URLSearchParams({
       provider: "discord",
       flow: "redirect",
@@ -1035,6 +1559,13 @@ describe("mounted public OAuth handlers", () => {
       nonce: "url-derived-discord-nonce",
       sessionKey: "url-derived-discord-session",
     }).toString();
+    await seedRedirectLogin({
+      provider: OAuthProviders.DISCORD,
+      clientId: "discord-A",
+      expectedState: state,
+      keyRef: "url-derived-discord-key",
+      verifier: "seeded-discord-verifier",
+    });
     window.history.replaceState(
       null,
       document.title,
@@ -1077,7 +1608,6 @@ describe("mounted public OAuth handlers", () => {
     mockSpec.completeOauth = async () => {
       throw new Error("login completion must not run");
     };
-    localStorage.setItem("discord_verifier", "seeded-add-verifier");
     localStorage.setItem(
       "oauth_add_provider_metadata",
       JSON.stringify({
@@ -1094,6 +1624,13 @@ describe("mounted public OAuth handlers", () => {
       nonce: "url-derived-add-nonce",
       oauthIntent: "addProvider",
     }).toString();
+    await seedRedirectLogin({
+      provider: OAuthProviders.DISCORD,
+      clientId: "discord-A",
+      expectedState: state,
+      keyRef: "url-derived-add-key",
+      verifier: "seeded-add-verifier",
+    });
     window.history.replaceState(
       null,
       document.title,
@@ -2084,7 +2621,7 @@ describe("mounted public OAuth handlers", () => {
     ]);
   });
 
-  it("[B3 mounted] rejects a client whose delayed init completed for old props", async () => {
+  it("[B3 mounted] keeps a delayed A init from replacing the ready B client", async () => {
     const initGate = deferred<undefined>();
     mockInit.mockImplementationOnce(() => initGate.promise);
     mockSpec.keys = ["must-not-allocate-after-init"];
@@ -2099,32 +2636,60 @@ describe("mounted public OAuth handlers", () => {
       { ...baseConfig, organizationId: "org-after-init-start" },
       { onError: jest.fn() },
     );
-    initGate.resolve(undefined);
     await waitFor(
-      () => mounted.context()?.clientState === publicExports.ClientState.Ready,
-      "old client ready after changed props",
+      () =>
+        mounted.context()?.clientState === publicExports.ClientState.Ready &&
+        mockConstructedConfigs.length === 2,
+      "new client ready after changed props",
     );
-    const observed = observe(
-      mounted.context()!.handleGoogleOauth({ openInPage: false }),
-    );
-    await observed.settled;
+    initGate.resolve(undefined);
+    await flush();
 
     expect(mockConstructedConfigs[0]).toEqual(
       expect.objectContaining({ organizationId: "org-oauth" }),
     );
-    expect(observed.outcome()).toEqual({
-      status: "rejected",
-      reason: expect.objectContaining({ reason: "context-changed" }),
+    expect(mockConstructedConfigs[1]).toEqual(
+      expect.objectContaining({ organizationId: "org-after-init-start" }),
+    );
+    expect(mounted.context()?.httpClient?.config.organizationId).toBe(
+      "org-after-init-start",
+    );
+    const completion = jest.fn();
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: completion,
+      }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "B-token",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await started.observed.settled;
+    expect(started.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
     });
-    expect(mockCreatedKeys).toHaveLength(0);
-    expect(popups.handles).toHaveLength(0);
+    expect(mockCreatedKeys).toEqual([
+      { client: 1, publicKey: "must-not-allocate-after-init" },
+    ]);
+    expect(completion).toHaveBeenCalledTimes(1);
   });
 
-  it("[B3 mounted] rejects delayed proxy payload provenance after config ID changes", async () => {
-    const fetchGate = deferred<Response>();
-    activeFetch = () => fetchGate.promise;
-    expectedFetchCalls = 1;
-    expectedAuthProxyConfigCalls = 1;
+  it("[B3 mounted] ignores delayed A proxy payload and initializes from B", async () => {
+    const fetchGateA = deferred<Response>();
+    const fetchGateB = deferred<Response>();
+    let fetchIndex = 0;
+    activeFetch = () => {
+      fetchIndex += 1;
+      return fetchIndex === 1 ? fetchGateA.promise : fetchGateB.promise;
+    };
+    expectedFetchCalls = 2;
+    expectedAuthProxyConfigCalls = 2;
     mockSpec.keys = ["must-not-allocate-after-proxy"];
     const proxyConfig: ZeroXKeyProviderConfig = {
       ...baseConfig,
@@ -2147,7 +2712,8 @@ describe("mounted public OAuth handlers", () => {
       { ...proxyConfig, authProxyConfigId: "proxy-B" },
       { onError: jest.fn() },
     );
-    fetchGate.resolve({
+    await waitFor(() => fetchIndex === 2, "B proxy fetch");
+    fetchGateA.resolve({
       ok: true,
       json: async () => ({
         enabledProviders: ["google"],
@@ -2157,24 +2723,301 @@ describe("mounted public OAuth handlers", () => {
         oauthRedirectUrl: redirectUri,
       }),
     } as Response);
+    await flush();
+    expect(mockConstructedConfigs).toHaveLength(0);
+    fetchGateB.resolve({
+      ok: true,
+      json: async () => ({
+        enabledProviders: ["google"],
+        sessionExpirationSeconds: "900",
+        organizationId: "org-oauth",
+        oauthClientIds: { google: "proxy-google-B" },
+        oauthRedirectUrl: redirectUri,
+      }),
+    } as Response);
     await waitFor(
       () => mounted.context()?.clientState === publicExports.ClientState.Ready,
-      "old proxy client ready after config ID change",
+      "B proxy client ready after config ID change",
     );
-    const observed = observe(
-      mounted.context()!.handleGoogleOauth({ openInPage: false }),
-    );
-    await observed.settled;
-
     expect(mockConstructedConfigs[0]).toEqual(
-      expect.objectContaining({ authProxyConfigId: "proxy-A" }),
+      expect.objectContaining({ authProxyConfigId: "proxy-B" }),
     );
-    expect(observed.outcome()).toEqual({
+    expect(mounted.context()?.httpClient?.config.authProxyConfigId).toBe(
+      "proxy-B",
+    );
+    const completion = jest.fn();
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: completion,
+      }),
+    );
+    expect(started.authorizationUrl.searchParams.get("client_id")).toBe(
+      "proxy-google-B",
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "B-token",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await started.observed.settled;
+    expect(started.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(completion).toHaveBeenCalledTimes(1);
+  });
+
+  it("[B3 mounted] does not dispatch a delayed A redirect token after B becomes ready", async () => {
+    const exchange = deferred<{ oidcToken: string }>();
+    mockSpec.proxy = () => exchange.promise;
+    const onOauthRedirect = jest.fn();
+    const state = new URLSearchParams({
+      provider: "discord",
+      flow: "redirect",
+      publicKey: "redirect-A-key",
+      nonce: "redirect-A-nonce",
+    }).toString();
+    await seedRedirectLogin({
+      provider: OAuthProviders.DISCORD,
+      clientId: "discord-A",
+      expectedState: state,
+      keyRef: "redirect-A-key",
+      verifier: "seeded-A-verifier",
+    });
+    window.history.replaceState(
+      null,
+      document.title,
+      `/oauth/callback?${new URLSearchParams({ code: "A-code", state }).toString()}`,
+    );
+    const mounted = await dom.mount(baseConfig, {
+      onOauthRedirect,
+      onError: jest.fn(),
+    });
+    mounts.push(mounted);
+    await waitFor(() => mockProxyCalls.length === 1, "A redirect exchange");
+    await mounted.rerender(
+      { ...baseConfig, organizationId: "org-B" },
+      { onOauthRedirect, onError: jest.fn() },
+    );
+    await waitFor(
+      () => mounted.context()?.clientState === publicExports.ClientState.Ready,
+      "B ready while A redirect is in flight",
+    );
+    exchange.resolve({ oidcToken: "stale-A-token" });
+    await flush();
+    expect(onOauthRedirect).not.toHaveBeenCalled();
+    expect(mockCompleteOauth).not.toHaveBeenCalled();
+    expect(mounted.context()?.httpClient?.config.organizationId).toBe("org-B");
+  });
+
+  it("[B3 mounted] rejects an A popup after A→B→A and accepts the new A popup", async () => {
+    mockSpec.keys = ["old-A-key"];
+    mockClientSpecs[2] = { keys: ["new-A-key"] };
+    const oldCompletion = jest.fn();
+    const newCompletion = jest.fn();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const old = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: oldCompletion,
+      }),
+    );
+
+    await mounted.rerender(
+      { ...baseConfig, organizationId: "org-B" },
+      { onError: jest.fn() },
+    );
+    await waitFor(
+      () =>
+        mounted.context()?.clientState === publicExports.ClientState.Ready &&
+        mockConstructedConfigs.length === 2,
+      "B ready",
+    );
+    await mounted.rerender(baseConfig, { onError: jest.fn() });
+    await waitFor(
+      () =>
+        mounted.context()?.clientState === publicExports.ClientState.Ready &&
+        mockConstructedConfigs.length === 3,
+      "new A ready",
+    );
+
+    await deliver(
+      old.popup,
+      callbackUrl({
+        provider: "google",
+        token: "stale-A-token",
+        state: old.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await old.observed.settled;
+    expect(old.observed.outcome()).toEqual({
       status: "rejected",
       reason: expect.objectContaining({ reason: "context-changed" }),
     });
-    expect(mockCreatedKeys).toHaveLength(0);
-    expect(popups.handles).toHaveLength(0);
+    expect(oldCompletion).not.toHaveBeenCalled();
+    expect(mockDiscardedKeys).toEqual([{ client: 0, publicKey: "old-A-key" }]);
+
+    const current = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({
+        openInPage: false,
+        onOauthSuccess: newCompletion,
+      }),
+    );
+    await deliver(
+      current.popup,
+      callbackUrl({
+        provider: "google",
+        token: "new-A-token",
+        state: current.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await current.observed.settled;
+    expect(current.observed.outcome()).toEqual({
+      status: "fulfilled",
+      value: undefined,
+    });
+    expect(mockCreatedKeys).toEqual([
+      { client: 0, publicKey: "old-A-key" },
+      { client: 2, publicKey: "new-A-key" },
+    ]);
+    expect(newCompletion).toHaveBeenCalledTimes(1);
+  });
+
+  it("[B3 mounted] cannot complete A post-auth after switching to B", async () => {
+    mockSpec.keys = ["A-post-auth-key"];
+    const completion = deferred<{
+      action: AuthAction;
+      sessionToken: string;
+    }>();
+    mockSpec.completeOauth = () => completion.promise;
+    mockSpec.getSession = async () => undefined;
+    const onAuthenticationSuccess = jest.fn();
+    const mounted = await mountReady({
+      onAuthenticationSuccess,
+      onError: jest.fn(),
+    });
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "A-post-auth-token",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    expect(started.observed.outcome()).toEqual({ status: "pending" });
+    await mounted.rerender(
+      { ...baseConfig, organizationId: "org-B" },
+      { onAuthenticationSuccess, onError: jest.fn() },
+    );
+    await waitFor(
+      () => mounted.context()?.clientState === publicExports.ClientState.Ready,
+      "B ready before A Core completion",
+    );
+    await act(async () => {
+      completion.resolve({
+        action: AuthAction.LOGIN,
+        sessionToken: "old-session",
+      });
+      await started.observed.settled;
+    });
+    expect(onAuthenticationSuccess).not.toHaveBeenCalled();
+    expect(mounted.context()?.httpClient?.config.organizationId).toBe("org-B");
+  });
+
+  it("[B3 proof] suppresses A authentication success after proof settles under B", async () => {
+    mockSpec.keys = ["A-proof-key"];
+    mockSpec.completeOauth = async () => ({
+      action: AuthAction.SIGNUP,
+      sessionToken: "proof-signup-session",
+      appProofs: [{} as any],
+    });
+    mockSpec.getSession = async () => proofSession();
+    const onAuthenticationSuccess = jest.fn();
+    const config = {
+      ...baseConfig,
+      auth: { ...baseConfig.auth, verifyWalletOnSignup: true },
+    };
+    const mounted = await mountReady(
+      { onAuthenticationSuccess, onError: jest.fn() },
+      config,
+    );
+    const started = await startPopup(() =>
+      mounted.context()!.handleGoogleOauth({ openInPage: false }),
+    );
+    await deliver(
+      started.popup,
+      callbackUrl({
+        provider: "google",
+        token: "A-proof-oidc",
+        state: started.authorizationUrl.searchParams.get("state")!,
+      }),
+    );
+    await waitFor(() => mockVerifyPage.mock.calls.length > 0, "A proof page");
+    expect(onAuthenticationSuccess).not.toHaveBeenCalled();
+    await mounted.rerender(
+      { ...config, organizationId: "org-B" },
+      { onAuthenticationSuccess, onError: jest.fn() },
+    );
+    await act(async () => {
+      mockVerifyPage.mock.calls[0]![0].onSuccess?.();
+      await started.observed.settled;
+    });
+    expect(onAuthenticationSuccess).not.toHaveBeenCalled();
+    expect(started.observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ reason: "context-changed" }),
+    });
+  });
+
+  it("[B3 proof] refuses A proof modal after its session lookup settles under B", async () => {
+    const sessionLookup = deferred<Session | undefined>();
+    mockSpec.getSession = () => sessionLookup.promise;
+    const mounted = await mountReady({ onError: jest.fn() });
+    const observed = observe(
+      mounted.context()!.handleVerifyAppProofs({ appProofs: [{} as any] }),
+    );
+    await waitFor(() => mockGetSession.mock.calls.length > 0, "proof lookup");
+    await mounted.rerender(
+      { ...baseConfig, organizationId: "org-B" },
+      { onError: jest.fn() },
+    );
+    await act(async () => sessionLookup.resolve(proofSession()));
+    await flush();
+    expect(observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.any(Error),
+    });
+    expect(mockVerifyPage).not.toHaveBeenCalled();
+  });
+
+  it("[B3 proof] refuses an open proof modal after the organization changes", async () => {
+    mockSpec.getSession = async () => proofSession();
+    const mounted = await mountReady({ onError: jest.fn() });
+    const observed = observe(
+      mounted.context()!.handleVerifyAppProofs({ appProofs: [{} as any] }),
+    );
+    await waitFor(() => mockVerifyPage.mock.calls.length > 0, "proof page");
+    await mounted.rerender(
+      { ...baseConfig, organizationId: "org-B" },
+      { onError: jest.fn() },
+    );
+    await act(async () => {
+      mockVerifyPage.mock.calls[0]![0].onSuccess?.();
+      await observed.settled;
+    });
+    expect(observed.outcome()).toEqual({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "Verification context changed.",
+      }),
+    });
   });
 
   it.each(["replacement", "stable-new-object", "removal"] as const)(

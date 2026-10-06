@@ -211,6 +211,11 @@ export interface CompletePKCEFlowParams {
    * - Facebook: uses exchangeCodeForToken
    */
   exchangeCodeForToken: (verifier: string) => Promise<string>;
+  /**
+   * Verifier already taken from a per-transaction claim.
+   * When present, the shared provider slot is not read or cleared.
+   */
+  codeVerifier?: string;
 }
 
 /**
@@ -232,9 +237,12 @@ export async function completePKCEFlow({
   onOauthSuccess,
   onAddProvider,
   exchangeCodeForToken,
+  codeVerifier,
 }: CompletePKCEFlowParams): Promise<void> {
-  // Consume the verifier (retrieves and removes from storage)
-  const verifier = consumePKCEVerifier(providerName);
+  const verifier =
+    codeVerifier !== undefined
+      ? codeVerifier
+      : consumePKCEVerifier(providerName);
 
   // Exchange the code for an OIDC token using the provider-specific function
   const oidcToken = await exchangeCodeForToken(verifier);

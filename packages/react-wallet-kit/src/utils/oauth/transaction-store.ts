@@ -1,3 +1,4 @@
+export const OAUTH_TRANSACTION_DATABASE_NAME = "0xkey-oauth-transaction-v1";
 const DATABASE_NAME = /^oxkey-oauth-idb-test-[0-9a-f]{32}$/;
 const ID = /^[0-9a-f]{32}$/;
 const LABEL = /^[A-Za-z0-9_-]{1,128}$/;
@@ -62,7 +63,9 @@ type Route = {
   pathname: string;
   staticQuery: Array<[string, string]>;
 };
-type Completion = { kind: "synthetic"; targetId: string };
+type Completion =
+  | { kind: "synthetic"; targetId: string }
+  | { kind: "redirect" };
 type Binding = {
   organizationId: string;
   configId: string | null;
@@ -94,6 +97,10 @@ type ClaimInput = {
   returnedState: string;
   binding: Binding;
 };
+type ClaimReturnedInput = {
+  returnedState: string;
+  binding: Binding;
+};
 type ClaimedTransaction = {
   kind: "claimed";
   transactionId: string;
@@ -109,6 +116,7 @@ type CreateResult = { transactionId: string; cancel(): Promise<CancelResult> };
 export type OAuthTransactionStore = {
   create(input: CreateInput): Promise<CreateResult>;
   claim(input: ClaimInput): Promise<ClaimedTransaction>;
+  claimReturned(input: ClaimReturnedInput): Promise<ClaimedTransaction>;
 };
 type FactoryOptions = {
   databaseName: string;
@@ -292,13 +300,8 @@ function cloneBinding(value: unknown): Binding | undefined {
   )
     return undefined;
   const query = validateStaticQuery(value.route.staticQuery, redirect);
-  if (
-    !query ||
-    !isPlainExactObject(value.completion, ["kind", "targetId"]) ||
-    value.completion.kind !== "synthetic" ||
-    !isLabel(value.completion.targetId)
-  )
-    return undefined;
+  const completion = cloneCompletion(value.completion);
+  if (!query || !completion) return undefined;
   return {
     organizationId: value.organizationId,
     configId: value.configId,
@@ -312,8 +315,20 @@ function cloneBinding(value: unknown): Binding | undefined {
       pathname: value.route.pathname,
       staticQuery: query.map(([key, item]) => [key, item]),
     },
-    completion: { kind: "synthetic", targetId: value.completion.targetId },
+    completion,
   };
+}
+
+function cloneCompletion(value: unknown): Completion | undefined {
+  if (isPlainExactObject(value, ["kind"]) && value.kind === "redirect")
+    return { kind: "redirect" };
+  if (
+    isPlainExactObject(value, ["kind", "targetId"]) &&
+    value.kind === "synthetic" &&
+    isLabel(value.targetId)
+  )
+    return { kind: "synthetic", targetId: value.targetId };
+  return undefined;
 }
 
 function validTimestamps(createdAtMs: unknown, expiresAtMs: unknown): boolean {
@@ -413,6 +428,17 @@ function snapshotClaimInput(value: unknown): ClaimInput {
   };
 }
 
+function snapshotClaimReturnedInput(value: unknown): ClaimReturnedInput {
+  if (
+    !isPlainExactObject(value, ["returnedState", "binding"]) ||
+    !isText(value.returnedState, 4096)
+  )
+    fail("invalid-input");
+  const binding = cloneBinding(value.binding);
+  if (!binding) fail("invalid-input");
+  return { returnedState: value.returnedState, binding };
+}
+
 function sameBinding(left: Binding, right: Binding): boolean {
   return (
     left.organizationId === right.organizationId &&
@@ -430,9 +456,14 @@ function sameBinding(left: Binding, right: Binding): boolean {
         pair[0] === right.route.staticQuery[index]?.[0] &&
         pair[1] === right.route.staticQuery[index]?.[1],
     ) &&
-    left.completion.kind === right.completion.kind &&
-    left.completion.targetId === right.completion.targetId
+    sameCompletion(left.completion, right.completion)
   );
+}
+
+function sameCompletion(left: Completion, right: Completion): boolean {
+  if (left.kind === "synthetic" && right.kind === "synthetic")
+    return left.targetId === right.targetId;
+  return left.kind === "redirect" && right.kind === "redirect";
 }
 
 function sameRecord(
@@ -516,6 +547,12 @@ function validateSchema(database: IDBDatabase): boolean {
   );
 }
 
+function acceptedDatabaseName(name: string): boolean {
+  return (
+    name === OAUTH_TRANSACTION_DATABASE_NAME || DATABASE_NAME.test(name)
+  );
+}
+
 function openDatabase(databaseName: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     let request: IDBOpenDBRequest;
@@ -534,11 +571,21 @@ function openDatabase(databaseName: string): Promise<IDBDatabase> {
       finishError("open-failed");
       return;
     }
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
       try {
-        request.transaction?.abort();
+        const database = request.result;
+        if (event.oldVersion !== 0) {
+          request.transaction?.abort();
+          return;
+        }
+        database.createObjectStore(TRANSACTION_STORE, { keyPath: "id" });
+        database.createObjectStore(KEY_STORE);
       } catch {
-        /* bounded below */
+        try {
+          request.transaction?.abort();
+        } catch {
+          /* bounded below */
+        }
       }
     };
     request.onblocked = () => finishError("blocked");
@@ -729,6 +776,114 @@ async function claimRecord(
   }
 }
 
+async function claimReturnedRecord(
+  databaseName: string,
+  input: ClaimReturnedInput,
+  now: () => number,
+): Promise<ClaimedTransaction> {
+  const database = await openDatabase(databaseName);
+  try {
+    return await new Promise((resolve, reject) => {
+      let failure: OAuthTransactionFailureReason | undefined;
+      let result: ClaimedTransaction | undefined;
+      let settled = false;
+      const setFailure = (reason: OAuthTransactionFailureReason) => {
+        failure = reason;
+      };
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new OAuthTransactionStoreError("commit-unknown"));
+        }
+      }, STORAGE_TIMEOUT_MS);
+      const transaction = database.transaction(TRANSACTION_STORE, "readwrite");
+      const request = transaction.objectStore(TRANSACTION_STORE).getAll();
+      request.onerror = () =>
+        abortWith(transaction, setFailure, "transaction-aborted");
+      request.onsuccess = () => {
+        const rows: unknown = request.result;
+        if (!Array.isArray(rows)) {
+          abortWith(transaction, setFailure, "invalid-record");
+          return;
+        }
+        const matches: TransactionRecord[] = [];
+        for (const row of rows) {
+          const record = cloneRecord(row);
+          if (!record) {
+            abortWith(transaction, setFailure, "invalid-record");
+            return;
+          }
+          if (
+            record.expectedState !== input.returnedState ||
+            !sameBinding(record.binding, input.binding)
+          )
+            continue;
+          matches.push(record);
+        }
+        if (matches.length === 0) {
+          abortWith(transaction, setFailure, "unavailable");
+          return;
+        }
+        const record = matches[0];
+        if (matches.length > 1 || !record) {
+          abortWith(transaction, setFailure, "invalid-record");
+          return;
+        }
+        let current: number;
+        try {
+          current = sampleClock(now);
+        } catch {
+          abortWith(transaction, setFailure, "clock-invalid");
+          return;
+        }
+        if (current < record.createdAtMs) {
+          abortWith(transaction, setFailure, "clock-invalid");
+          return;
+        }
+        if (current >= record.expiresAtMs) {
+          abortWith(transaction, setFailure, "expired");
+          return;
+        }
+        result = {
+          kind: "claimed",
+          transactionId: record.id,
+          generation: record.generation,
+          keyRef: record.keyRef,
+          verifier: record.verifier,
+          binding: frozenBinding(record.binding),
+        };
+        const deletion = transaction
+          .objectStore(TRANSACTION_STORE)
+          .delete(record.id);
+        deletion.onerror = () => {
+          failure = "transaction-aborted";
+        };
+      };
+      transaction.oncomplete = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (!result) reject(new OAuthTransactionStoreError("commit-unknown"));
+        else resolve(Object.freeze(result));
+      };
+      transaction.onabort = () => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timeout);
+          reject(
+            new OAuthTransactionStoreError(failure ?? "transaction-aborted"),
+          );
+        }
+      };
+      transaction.onerror = () => {
+        failure ??= "transaction-aborted";
+      };
+    });
+  } finally {
+    database.close();
+  }
+}
+
 async function cancelRecord(
   databaseName: string,
   captured: TransactionRecord,
@@ -816,7 +971,7 @@ export function createOAuthTransactionStore(
       "discardFreshKey",
     ]) ||
     typeof options.databaseName !== "string" ||
-    !DATABASE_NAME.test(options.databaseName) ||
+    !acceptedDatabaseName(options.databaseName) ||
     typeof options.now !== "function" ||
     typeof options.randomBytes !== "function" ||
     typeof options.discardFreshKey !== "function"
@@ -880,6 +1035,15 @@ export function createOAuthTransactionStore(
     },
     async claim(value: ClaimInput): Promise<ClaimedTransaction> {
       return claimRecord(databaseName, snapshotClaimInput(value), now);
+    },
+    async claimReturned(
+      value: ClaimReturnedInput,
+    ): Promise<ClaimedTransaction> {
+      return claimReturnedRecord(
+        databaseName,
+        snapshotClaimReturnedInput(value),
+        now,
+      );
     },
   });
 }

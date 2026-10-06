@@ -2,8 +2,9 @@
  * @jest-environment jsdom
  * @jest-environment-options {"url":"https://app.example.test/"}
  */
+import "fake-indexeddb/auto";
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
-import type { OAuthProviders, Session } from "@0xkey-io/sdk-types";
+import { OAuthProviders, type Session } from "@0xkey-io/sdk-types";
 import { act, createElement, type ReactNode } from "react";
 import type {
   StamperType,
@@ -11,6 +12,7 @@ import type {
   ZeroXKeyClient,
   ZeroXKeyProviderConfig,
 } from "../index";
+import { persistRedirectTransaction } from "../utils/oauth/redirect-transaction";
 import { installOAuthPopups } from "./fixtures/oauth-popup";
 import {
   installControlledResizeObserver,
@@ -126,6 +128,8 @@ const mockZeroXKeyClient = jest.fn((config: unknown) => {
       await mockInit();
       initialized = true;
     },
+    restrictPersistedCredentialsToNewSessions: () => undefined,
+    setAuthContextGuard: () => undefined,
     getAllSessions: mockGetAllSessions,
     getActiveSessionKey: mockGetActiveSessionKey,
     createApiKeyPair: mockCreateApiKeyPair,
@@ -150,6 +154,33 @@ jest.mock("@0xkey-io/core", () => {
 });
 
 const redirectUri = "https://app.example.test/oauth/callback";
+
+if (typeof globalThis.structuredClone !== "function") {
+  globalThis.structuredClone = <T,>(value: T): T =>
+    JSON.parse(JSON.stringify(value)) as T;
+}
+
+async function seedRedirectLogin(input: {
+  provider: OAuthProviders;
+  clientId: string;
+  expectedState: string;
+  keyRef: string;
+  verifier: string | null;
+}): Promise<void> {
+  await persistRedirectTransaction({
+    organizationId: "org-oauth",
+    configId: null,
+    apiBaseUrl: "https://api.example.test",
+    authProxyUrl: "https://auth.example.test",
+    provider: input.provider,
+    clientId: input.clientId,
+    redirectUri,
+    expectedState: input.expectedState,
+    keyRef: input.keyRef,
+    verifier: input.verifier,
+    async discardFreshKey() {},
+  });
+}
 const animationUrl =
   "https://lottie.host/a7306a93-4125-48e1-b0e9-17904e5a774e/2aVGSPuWWf.json";
 const frameSettlingMs = 50;
@@ -872,7 +903,6 @@ describe("mounted OAuth add-provider modal behavior", () => {
       mockSpec.proxy = async () => ({ oidcToken: "redirect-discord-token" });
       mockSpec.addOauthProvider = () => addition.promise;
 
-      localStorage.setItem("discord_verifier", "seeded-discord-verifier");
       localStorage.setItem(
         "oauth_add_provider_metadata",
         JSON.stringify({
@@ -890,6 +920,13 @@ describe("mounted OAuth add-provider modal behavior", () => {
         oauthIntent: "addProvider",
         openModal: "true",
       }).toString();
+      await seedRedirectLogin({
+        provider: OAuthProviders.DISCORD,
+        clientId: "discord-A",
+        expectedState: state,
+        keyRef: "redirect-public-key",
+        verifier: "seeded-discord-verifier",
+      });
       window.history.replaceState(
         null,
         document.title,

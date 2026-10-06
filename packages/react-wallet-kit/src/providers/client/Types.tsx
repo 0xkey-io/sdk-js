@@ -64,7 +64,23 @@ import type {
 
 /** @expand */
 export interface ClientContextType
-  extends Omit<ZeroXKeyClientMethods, "connectWalletAccount"> {
+  extends Omit<
+    ZeroXKeyClientMethods,
+    | "connectWalletAccount"
+    | "signUpWithPasskey"
+    | "signUpWithWallet"
+    | "loginOrSignupWithWallet"
+  > {
+  /** React owns the per-signup Captcha gate; callers supply only signup inputs. */
+  signUpWithPasskey(
+    params?: Parameters<ZeroXKeyClientMethods["signUpWithPasskey"]>[0],
+  ): ReturnType<ZeroXKeyClientMethods["signUpWithPasskey"]>;
+  signUpWithWallet(
+    params: Parameters<ZeroXKeyClientMethods["signUpWithWallet"]>[0],
+  ): ReturnType<ZeroXKeyClientMethods["signUpWithWallet"]>;
+  loginOrSignupWithWallet(
+    params: Parameters<ZeroXKeyClientMethods["loginOrSignupWithWallet"]>[0],
+  ): ReturnType<ZeroXKeyClientMethods["loginOrSignupWithWallet"]>;
   /** @internal */
   httpClient: ZeroXKeySDKClientBase | undefined;
   /** @internal */
