@@ -6,7 +6,8 @@ import { ZeroXKeyProvider } from "../../providers/ZeroXKeyProvider";
 import { ClientState, type ZeroXKeyCallbacks } from "../../types/base";
 
 const openedPopups: Window[] = [];
-(window as Window & { __oauthPopupProbe?: Window[] }).__oauthPopupProbe = openedPopups;
+(window as Window & { __oauthPopupProbe?: Window[] }).__oauthPopupProbe =
+  openedPopups;
 const nativeOpen = window.open.bind(window);
 window.open = ((...args: Parameters<typeof window.open>) => {
   const child = nativeOpen(...args);
@@ -39,7 +40,9 @@ function remember(name: string, value: string): void {
 const callbacks: ZeroXKeyCallbacks = {
   onOauthRedirect(response) {
     const provider = new URL(window.location.href).searchParams.get("provider");
-    const seen = Number(document.documentElement.dataset.oauthCompletions || "0");
+    const seen = Number(
+      document.documentElement.dataset.oauthCompletions || "0",
+    );
     remember("oauthCompletions", String(seen + 1));
     remember("oauthResult", "popup");
     remember(
@@ -48,7 +51,8 @@ const callbacks: ZeroXKeyCallbacks = {
     );
     remember(
       "hasPublicKey",
-      typeof response.publicKey === "string" && /^[0-9a-f]{64,}$/i.test(response.publicKey)
+      typeof response.publicKey === "string" &&
+        /^[0-9a-f]{64,}$/i.test(response.publicKey)
         ? "1"
         : "0",
     );

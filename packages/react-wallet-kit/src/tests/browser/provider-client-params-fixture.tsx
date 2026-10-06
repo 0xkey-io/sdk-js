@@ -9,7 +9,10 @@ const CONTACT = "browser-otp@example.test";
 
 const pageUrl = new URL(window.location.href);
 
-function remember(name: "clientState" | "started" | "otpClass", value: string): void {
+function remember(
+  name: "clientState" | "started" | "otpClass",
+  value: string,
+): void {
   document.documentElement.dataset[name] = value;
 }
 
@@ -74,7 +77,8 @@ function classify(error: unknown): string {
     return "turnstile-unavailable";
   }
   if (has("Captcha") || has("Turnstile")) return "captcha-failed";
-  if (has("Permission denied") || has("ZeroXKey error 7")) return "otp-rejected";
+  if (has("Permission denied") || has("ZeroXKey error 7"))
+    return "otp-rejected";
   return "unclassified";
 }
 
@@ -92,12 +96,10 @@ function Probe(): null {
     if (client.clientState !== ClientState.Ready) return;
     if (document.documentElement.dataset.started === "1") return;
     remember("started", "1");
-    void client
-      .initOtp({ otpType: OtpType.Email, contact: CONTACT })
-      .then(
-        () => remember("otpClass", "otp-accepted"),
-        (error: unknown) => remember("otpClass", classify(error)),
-      );
+    void client.initOtp({ otpType: OtpType.Email, contact: CONTACT }).then(
+      () => remember("otpClass", "otp-accepted"),
+      (error: unknown) => remember("otpClass", classify(error)),
+    );
   }, [client, client.clientState]);
 
   return null;
@@ -143,8 +145,10 @@ if (!root || !proxy) {
 }
 
 window.addEventListener("error", () => {
-  if (!document.documentElement.dataset.otpClass) remember("otpClass", "unclassified");
+  if (!document.documentElement.dataset.otpClass)
+    remember("otpClass", "unclassified");
 });
 window.addEventListener("unhandledrejection", () => {
-  if (!document.documentElement.dataset.otpClass) remember("otpClass", "unclassified");
+  if (!document.documentElement.dataset.otpClass)
+    remember("otpClass", "unclassified");
 });

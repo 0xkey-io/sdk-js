@@ -548,9 +548,7 @@ function validateSchema(database: IDBDatabase): boolean {
 }
 
 function acceptedDatabaseName(name: string): boolean {
-  return (
-    name === OAUTH_TRANSACTION_DATABASE_NAME || DATABASE_NAME.test(name)
-  );
+  return name === OAUTH_TRANSACTION_DATABASE_NAME || DATABASE_NAME.test(name);
 }
 
 function openDatabase(databaseName: string): Promise<IDBDatabase> {

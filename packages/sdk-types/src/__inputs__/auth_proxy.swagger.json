@@ -413,9 +413,7 @@
                   ]
                 }
               },
-              "required": [
-                "error"
-              ],
+              "required": ["error"],
               "additionalProperties": false
             }
           },
@@ -426,14 +424,10 @@
               "properties": {
                 "error": {
                   "type": "string",
-                  "enum": [
-                    "origin not allowed"
-                  ]
+                  "enum": ["origin not allowed"]
                 }
               },
-              "required": [
-                "error"
-              ],
+              "required": ["error"],
               "additionalProperties": false
             }
           },
@@ -444,14 +438,10 @@
               "properties": {
                 "error": {
                   "type": "string",
-                  "enum": [
-                    "proxy config not found"
-                  ]
+                  "enum": ["proxy config not found"]
                 }
               },
-              "required": [
-                "error"
-              ],
+              "required": ["error"],
               "additionalProperties": false
             }
           },
@@ -485,9 +475,7 @@
             "description": "Auth Proxy configuration ID for this request. The SDK sets this header from getClientParams(configId)."
           }
         ],
-        "tags": [
-          "Wallet Kit"
-        ]
+        "tags": ["Wallet Kit"]
       }
     },
     "/v1/wallet_kit_config": {
@@ -786,14 +774,10 @@
       "properties": {
         "error": {
           "type": "string",
-          "enum": [
-            "client params unavailable"
-          ]
+          "enum": ["client params unavailable"]
         }
       },
-      "required": [
-        "error"
-      ],
+      "required": ["error"],
       "additionalProperties": false
     },
     "v1GetWalletKitConfigRequest": {

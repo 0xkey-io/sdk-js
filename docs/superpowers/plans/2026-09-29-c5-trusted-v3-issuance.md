@@ -8,6 +8,7 @@ ia_version: 1
 last_verified: "2026-09-29"
 review_after: "2026-09-30"
 ---
+
 # C5 trusted OAuth v3 issuance and claim: default-closed implementation plan
 
 > Review candidate only. This plan changes no product path or gate. Execute each slice in its owning repository under its local rules; preserve the dirty worktrees and existing V2 behavior. No staging, device, release, or readiness claim follows from source tests.
@@ -41,7 +42,7 @@ Use a fixed, reviewed Notarizer verification pin for signed config and parent ev
 
 **RED:** Add a disabled-v3 route test in which an authenticated `Prepared` decision, original stamped request, holder operation signature, and target are supplied. Today it returns 503. Add negative cases for absent/invalid original stamp, changed body after stamp, wrong parent/config/purpose/nonce/public key, reused nonce with different request digest, untrusted request hints, and a valid legacy cache entry without Prepare. Add a two-call swap: Prepare with holder A/key A, then Execute with holder B or with subject B's OIDC proof in place of the proof bound to A's operation, using the same caller-supplied operation ID; no Coordinator v3 admission may result. Each failure must occur before Signer invocation. Assert old LegacyPayload `/v1/oauth_login` request and flat `{session}` response remain byte-compatible.
 
-**GREEN:** Add a dedicated adopted-v3 branch after the *same authenticated* classified Prepare. Pass a typed evidence envelope carrying the original verified request digest/stamp identity, verified holder signature, fresh operation nonce, Prepare's account/config selector, provider-proof digest, and trusted deployment profile to Coordinator. The two calls must use one authenticated, server-issued operation identity and the same canonical transcript; a caller-supplied matching string is not proof. Do not assemble authority from the old OAuth JSON, old handler, proxy credential cache, or reconstructed request body. Fail closed if Prepare is absent, ambiguous, stale, or disabled. Keep the branch behind an explicit server-side v3 gate; default `NewServer` and existing handlers remain V2.
+**GREEN:** Add a dedicated adopted-v3 branch after the _same authenticated_ classified Prepare. Pass a typed evidence envelope carrying the original verified request digest/stamp identity, verified holder signature, fresh operation nonce, Prepare's account/config selector, provider-proof digest, and trusted deployment profile to Coordinator. The two calls must use one authenticated, server-issued operation identity and the same canonical transcript; a caller-supplied matching string is not proof. Do not assemble authority from the old OAuth JSON, old handler, proxy credential cache, or reconstructed request body. Fail closed if Prepare is absent, ambiguous, stale, or disabled. Keep the branch behind an explicit server-side v3 gate; default `NewServer` and existing handlers remain V2.
 
 **Proof/compatibility gate:** A focused Go test must show a user can change every browser-supplied target hint without changing the typed trusted envelope, and that an altered original stamped request is rejected. Pin this hop to the authenticated service identity and explicit v3 route/contract version. Go GREEN only establishes provenance into Coordinator, not signed config currentness or a usable SDK session.
 
