@@ -7,8 +7,6 @@ import { parse } from "yaml";
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 const knownPayWorkflows = [
-  "commerce-contract.yml",
-  "commerce-verifier.yml",
   "js-build.yml",
   "pay-publish.yml",
   "pay-v1.yml",
