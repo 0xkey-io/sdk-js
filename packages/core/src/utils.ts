@@ -434,7 +434,9 @@ export function parseSession(token: string | Session): Session {
     throw new Error("Invalid JWT: Missing payload");
   }
 
-  const decoded = JSON.parse(atob(payload));
+  const decoded = JSON.parse(
+    atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+  );
   const {
     exp,
     public_key: publicKey,

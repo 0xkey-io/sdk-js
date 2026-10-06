@@ -7521,6 +7521,17 @@ export type ProxyTSignupV2Body = {
 
 export type ProxyTSignupV2Input = { body: ProxyTSignupV2Body };
 
+export type ProxyTGetWalletKitClientParamsResponse = {
+  /** Public Turnstile site key for effective enabled and ready Captcha. Omitted when trusted off or not open. */
+  turnstileSiteKey?: string;
+};
+
+export type ProxyTGetWalletKitClientParamsBody = {};
+
+export type ProxyTGetWalletKitClientParamsInput = {
+  body: ProxyTGetWalletKitClientParamsBody;
+};
+
 export type ProxyTGetWalletKitConfigResponse = {
   /** List of enabled authentication providers (e.g., 'facebook', 'google', 'apple', 'email', 'sms', 'passkey', 'wallet') */
   enabledProviders: string[];

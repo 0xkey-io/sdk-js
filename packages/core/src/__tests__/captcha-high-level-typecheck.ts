@@ -1,4 +1,7 @@
-import type { ZeroXKeyClient } from "../__clients__/core";
+import type {
+  ZeroXKeyClient,
+  ZeroXKeyClientMethods,
+} from "../__clients__/core";
 import { OtpType, type WalletProvider } from "../__types__";
 
 // Typecheck-only consumer fixture: these calls are never made at runtime.
@@ -50,3 +53,14 @@ const consumeCaptchaInputs = (
 };
 
 void consumeCaptchaInputs;
+
+const consumeConvenienceOauth = (client: ZeroXKeyClientMethods) => {
+  const params = { oidcToken: "oidc", publicKey: "key" };
+  const gate = async (submit: (token?: string) => Promise<unknown>) =>
+    submit("token");
+  client.completeOauth(params);
+  // @ts-expect-error The deferred signup gate is Core-only, not in React's public context.
+  client.completeOauth(params, gate);
+};
+
+void consumeConvenienceOauth;

@@ -44,6 +44,7 @@ import {
   type EmbeddedWallet,
   type ConnectedWallet,
   type StorageBase,
+  type TStamper,
   type EmbeddedWalletAccount,
   type ConnectedWalletAccount,
   type WalletManagerBase,
@@ -146,9 +147,17 @@ import {
   decodeVerificationToken,
 } from "../utils";
 import { createStorageManager } from "../__storage__/base";
+import {
+  boundTargetKey,
+  type BoundAuthTarget,
+} from "../__storage__/bound-session";
 import { CrossPlatformApiKeyStamper } from "../__stampers__/api/base";
 import { CrossPlatformPasskeyStamper } from "../__stampers__/passkey/base";
 import { AttestedScheme, AttestedStamper } from "@0xkey-io/attested-stamper";
+
+type SignupCaptchaGate<T = ProxyTSignupResponse> = (
+  submit: (captchaToken?: string) => Promise<T>,
+) => Promise<T>;
 import {
   DEFAULT_ETHEREUM_ACCOUNTS,
   DEFAULT_SOLANA_ACCOUNTS,
@@ -178,6 +187,19 @@ type PublicMethods<T> = {
   [K in keyof T as T[K] extends Function ? K : never]: T[K];
 };
 
+// Session storage is shared by clients in one JavaScript runtime. Serialize
+// commits so a replacement client can write after an in-flight older commit.
+let authMutationTail: Promise<unknown> = Promise.resolve();
+// Replacement initialization in this runtime waits for native retirement.
+// Native storage must independently fence other runtimes and processes.
+let authRetirementBarrier: Promise<void> = Promise.resolve();
+const webBoundOAuthExperiments = new WeakSet<ZeroXKeyClient>();
+
+/** Internal browser proof hook; intentionally absent from the package index. */
+export function enableWebBoundOAuthExperiment(client: ZeroXKeyClient): void {
+  webBoundOAuthExperiments.add(client);
+}
+
 export type ZeroXKeyClientMethods = Omit<
   PublicMethods<ZeroXKeyClient>,
   | "init"
@@ -185,7 +207,17 @@ export type ZeroXKeyClientMethods = Omit<
   | "httpClient"
   | "constructor"
   | "discardUncommittedApiKeyPair"
->;
+  | "retireAuthWrites"
+  | "setAuthContextGuard"
+  | "awaitAuthRetirement"
+  | "awaitPendingAuthMutations"
+  | "restrictPersistedCredentialsToNewSessions"
+  | "completeOauth"
+> & {
+  completeOauth: (
+    params: CompleteOauthParams,
+  ) => Promise<BaseAuthResult & { action: AuthAction }>;
+};
 
 const ERC20_TRANSFER_ABI = [
   {
@@ -247,6 +279,31 @@ const encryptOtpAttemptBundle = ({
   return formatHpkeBuf(encrypted);
 };
 
+const accountOrganizationId = (accountRes: unknown): string => {
+  if (
+    accountRes === null ||
+    typeof accountRes !== "object" ||
+    Array.isArray(accountRes)
+  ) {
+    throw new ZeroXKeyError(
+      "Invalid account lookup result",
+      ZeroXKeyErrorCodes.ACCOUNT_FETCH_ERROR,
+    );
+  }
+  const organizationId = (accountRes as { organizationId?: unknown })
+    .organizationId;
+  if (
+    typeof organizationId !== "string" ||
+    (organizationId !== "" && organizationId.trim() === "")
+  ) {
+    throw new ZeroXKeyError(
+      "Invalid account lookup result",
+      ZeroXKeyErrorCodes.ACCOUNT_FETCH_ERROR,
+    );
+  }
+  return organizationId;
+};
+
 interface AuthDependencies {
   apiKeyStamper?: CrossPlatformApiKeyStamper | undefined;
   passkeyStamper?: CrossPlatformPasskeyStamper | undefined;
@@ -260,6 +317,130 @@ export class ZeroXKeyClient {
   config: ZeroXKeySDKClientConfig;
   private authDependencies: AuthDependencies = {};
   private authReady = false;
+  private authWritesRetired = false;
+  private ownAuthRetirement: Promise<void> = Promise.resolve();
+  private initializingStorage: Promise<StorageBase | undefined> | undefined;
+  private credentialsScoped = false;
+  private authContextGuard?: () => boolean;
+  private experimentalBoundTarget: BoundAuthTarget | undefined;
+  private readonly experimentalIssuedClients =
+    new WeakSet<ZeroXKeySDKClientBase>();
+
+  private currentAuthTarget = (): BoundAuthTarget => ({
+    organizationId: this.config.organizationId,
+    apiBaseUrl: this.config.apiBaseUrl || "https://api.0xkey.io",
+    authProxyUrl: this.config.authProxyUrl || "https://authproxy.0xkey.io",
+    authProxyConfigId: this.config.authProxyConfigId,
+  });
+
+  private matchesExperimentalTarget = (target: {
+    organizationId?: string | undefined;
+    apiBaseUrl?: string | undefined;
+    authProxyUrl?: string | undefined;
+    authProxyConfigId?: string | undefined;
+  }): boolean => {
+    try {
+      if (!target.organizationId || !target.apiBaseUrl || !target.authProxyUrl)
+        return false;
+      return (
+        boundTargetKey({
+          organizationId: target.organizationId,
+          apiBaseUrl: target.apiBaseUrl,
+          authProxyUrl: target.authProxyUrl,
+          authProxyConfigId: target.authProxyConfigId,
+        }) === boundTargetKey(this.experimentalBoundTarget!)
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  private assertAuthContextActive = (): void => {
+    if (
+      this.experimentalBoundTarget &&
+      (!this.matchesExperimentalTarget(this.currentAuthTarget()) ||
+        (this.authDependencies.httpClient !== undefined &&
+          !this.matchesExperimentalTarget(
+            this.authDependencies.httpClient.config,
+          )))
+    )
+      this.retireAuthWrites();
+    if (this.authWritesRetired || this.authContextGuard?.() === false)
+      throw new ZeroXKeyError(
+        "Client auth context changed",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
+  };
+
+  /** Bind all credentials issued by this client to its current UI target. */
+  setAuthContextGuard = (guard: () => boolean): void => {
+    this.authContextGuard = guard;
+    this.authDependencies.storageManager?.setAuthContextGuard?.(guard);
+    this.authDependencies.apiKeyStamper?.setAuthContextGuard(guard);
+  };
+
+  /** Prevents this client from committing further auth storage mutations. */
+  retireAuthWrites = (): void => {
+    if (this.authWritesRetired) return;
+    this.authWritesRetired = true;
+    const storage = this.authDependencies.storageManager;
+    storage?.revokeAuthAccess?.();
+    this.authDependencies.apiKeyStamper?.revokeAuthAccess();
+    const storageToRetire = storage
+      ? Promise.resolve(storage)
+      : this.initializingStorage;
+    if (storageToRetire) {
+      const retirement = authRetirementBarrier.then(async () => {
+        const current = await storageToRetire;
+        current?.revokeAuthAccess?.();
+        await current?.retireAuthAccess?.();
+      });
+      authRetirementBarrier = retirement;
+      this.ownAuthRetirement = retirement;
+      // Preserve the rejection for explicit waiters without an unhandled one.
+      void retirement.catch(() => undefined);
+    }
+  };
+
+  /** Wait for this context's storage retirement hook, when provided. */
+  awaitAuthRetirement = (): Promise<void> => this.ownAuthRetirement;
+
+  /** Wait for commits started by clients in this JavaScript runtime. */
+  awaitPendingAuthMutations = async (): Promise<void> => {
+    await authMutationTail.catch(() => undefined);
+  };
+
+  /** Bind this client's storage, HTTP clients, and stamper to new sessions. */
+  restrictPersistedCredentialsToNewSessions = (): void => {
+    if (this.credentialsScoped) return;
+    const storage = this.storageManager;
+    if (!storage.restrictToNewSessions) {
+      throw new ZeroXKeyError(
+        "Credential storage cannot enforce client session scope",
+        ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+      );
+    }
+    storage.restrictToNewSessions();
+    this.credentialsScoped = true;
+  };
+
+  private commitAuthMutation = async <T>(
+    operation: () => Promise<T>,
+  ): Promise<T> => {
+    const commit = authMutationTail
+      .catch(() => undefined)
+      .then(async () => {
+        if (this.authWritesRetired) {
+          throw new ZeroXKeyError(
+            "Client auth context changed",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        return operation();
+      });
+    authMutationTail = commit.catch(() => undefined);
+    return commit;
+  };
   private initPromise?: Promise<void> | undefined;
 
   private assertAuthReady(): void {
@@ -276,7 +457,94 @@ export class ZeroXKeyClient {
     return this.authDependencies.httpClient!;
   }
   set httpClient(value: ZeroXKeySDKClientBase) {
+    if (
+      this.experimentalBoundTarget &&
+      (!this.experimentalIssuedClients.has(value) ||
+        !this.matchesExperimentalTarget(value.config))
+    )
+      throw new ZeroXKeyError(
+        "Bound OAuth HTTP client was not issued by this client",
+        ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+      );
     this.authDependencies.httpClient = value;
+  }
+
+  private captureCaptchaTarget(
+    captchaToken: string | undefined,
+    errorCode: ZeroXKeyErrorCodes,
+  ):
+    | { client: ZeroXKeySDKClientBase; assertUnchanged: () => void }
+    | undefined {
+    if (captchaToken === undefined) return undefined;
+    return this.captureAuthProxyTarget(errorCode);
+  }
+
+  private captureAuthProxyTarget(errorCode: ZeroXKeyErrorCodes): {
+    client: ZeroXKeySDKClientBase;
+    assertUnchanged: () => void;
+  } {
+    const client = this.httpClient;
+    const configId = this.config.authProxyConfigId;
+    const proxyUrl = this.config.authProxyUrl ?? "https://authproxy.0xkey.io";
+    const assertUnchanged = () => {
+      if (
+        !configId ||
+        this.httpClient !== client ||
+        this.config.authProxyConfigId !== configId ||
+        (this.config.authProxyUrl ?? "https://authproxy.0xkey.io") !==
+          proxyUrl ||
+        client.config.authProxyConfigId !== configId ||
+        client.config.authProxyUrl !== proxyUrl
+      ) {
+        throw new ZeroXKeyError("Captcha client selection changed", errorCode);
+      }
+    };
+    assertUnchanged();
+    return { client, assertUnchanged };
+  }
+
+  private captureSignupCaptchaTarget(errorCode: ZeroXKeyErrorCodes): {
+    client: ZeroXKeySDKClientBase;
+    assertUnchanged: () => void;
+  } {
+    const target = this.captureAuthProxyTarget(errorCode);
+    const organizationId = this.config.organizationId;
+    const apiBaseUrl = this.config.apiBaseUrl || "https://api.0xkey.io";
+    const assertUnchanged = () => {
+      target.assertUnchanged();
+      if (
+        this.config.organizationId !== organizationId ||
+        (this.config.apiBaseUrl || "https://api.0xkey.io") !== apiBaseUrl ||
+        target.client.config.organizationId !== organizationId ||
+        target.client.config.apiBaseUrl !== apiBaseUrl
+      ) {
+        throw new ZeroXKeyError("Captcha client selection changed", errorCode);
+      }
+    };
+    assertUnchanged();
+    return { client: target.client, assertUnchanged };
+  }
+
+  private captureCurrentHttpTarget(errorCode: ZeroXKeyErrorCodes): {
+    client: ZeroXKeySDKClientBase;
+    assertUnchanged: () => void;
+  } {
+    const client = this.httpClient;
+    const configId = client.config.authProxyConfigId;
+    const proxyUrl = client.config.authProxyUrl;
+    const assertUnchanged = () => {
+      if (
+        this.httpClient !== client ||
+        client.config.authProxyConfigId !== configId ||
+        client.config.authProxyUrl !== proxyUrl
+      ) {
+        throw new ZeroXKeyError(
+          "Auth proxy client selection changed",
+          errorCode,
+        );
+      }
+    };
+    return { client, assertUnchanged };
   }
 
   private get apiKeyStamper(): CrossPlatformApiKeyStamper | undefined {
@@ -340,13 +608,74 @@ export class ZeroXKeyClient {
   }
 
   init(): Promise<void> {
+    if (this.authWritesRetired)
+      return Promise.reject(
+        new ZeroXKeyError(
+          "Client auth context changed",
+          ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+        ),
+      );
     if (this.initPromise) return this.initPromise;
     if (this.authReady) return Promise.resolve();
     this.authReady = false;
+    const priorRetirement = authRetirementBarrier;
+    let settleStorage!: (storage?: StorageBase) => void;
+    this.initializingStorage = new Promise((resolve) => {
+      settleStorage = resolve;
+    });
+    const experimentalWebCredentials = webBoundOAuthExperiments.has(this);
+    const experimentalTarget = experimentalWebCredentials
+      ? this.currentAuthTarget()
+      : undefined;
+    if (experimentalTarget) this.experimentalBoundTarget = experimentalTarget;
     const attempt = Promise.resolve()
       .then(async () => {
-        const storageManager = await createStorageManager();
-        const apiKeyStamper = new CrossPlatformApiKeyStamper(storageManager);
+        await priorRetirement;
+        if (this.authWritesRetired)
+          throw new ZeroXKeyError(
+            "Client auth context changed",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        const target = experimentalTarget ?? this.currentAuthTarget();
+        if (experimentalWebCredentials && !isWeb())
+          throw new Error("Bound OAuth experiment requires a browser");
+        const webBoundOAuthExperiment = experimentalWebCredentials
+          ? new (
+              await import("../__storage__/web/bound-oauth-experiment")
+            ).WebBoundOAuthExperiment(target, () => {
+              this.assertAuthContextActive();
+              return true;
+            })
+          : undefined;
+        const storageManager =
+          webBoundOAuthExperiment ?? (await createStorageManager());
+        try {
+          if (!storageManager.restrictToNewSessions) {
+            throw new ZeroXKeyError(
+              "Credential storage cannot enforce client session scope",
+              ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+            );
+          }
+          storageManager.restrictToNewSessions();
+          await storageManager.bindTarget?.(target);
+        } finally {
+          settleStorage(storageManager);
+        }
+        if (experimentalWebCredentials) this.assertAuthContextActive();
+        if (this.authWritesRetired)
+          throw new ZeroXKeyError(
+            "Client auth context changed",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        if (this.authContextGuard)
+          storageManager.setAuthContextGuard?.(this.authContextGuard);
+        this.credentialsScoped = true;
+        const apiKeyStamper = new CrossPlatformApiKeyStamper(
+          storageManager,
+          webBoundOAuthExperiment,
+        );
+        if (this.authContextGuard)
+          apiKeyStamper.setAuthContextGuard(this.authContextGuard);
         const dependencies: AuthDependencies = {
           ...this.authDependencies,
           storageManager,
@@ -375,11 +704,24 @@ export class ZeroXKeyClient {
           );
         }
         await Promise.all(tasks);
+        if (this.authWritesRetired)
+          throw new ZeroXKeyError(
+            "Client auth context changed",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        await authRetirementBarrier;
+        if (this.authWritesRetired)
+          throw new ZeroXKeyError(
+            "Client auth context changed",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
         dependencies.httpClient = this.buildHttpClient(dependencies);
         this.authDependencies = dependencies;
         this.authReady = true;
       })
       .finally(() => {
+        settleStorage(undefined);
+        this.initializingStorage = undefined;
         this.initPromise = undefined;
       });
     this.initPromise = attempt;
@@ -413,6 +755,31 @@ export class ZeroXKeyClient {
     dependencies: AuthDependencies,
     params?: CreateHttpClientParams,
   ): ZeroXKeySDKClientBase => {
+    if (this.experimentalBoundTarget) this.assertAuthContextActive();
+    let issuedClient: ZeroXKeySDKClientBase | undefined;
+    const assertIssuedTarget = (): void => {
+      this.assertAuthContextActive();
+      if (
+        this.experimentalBoundTarget &&
+        issuedClient &&
+        !this.matchesExperimentalTarget(issuedClient.config)
+      ) {
+        this.retireAuthWrites();
+        throw new ZeroXKeyError(
+          "Bound OAuth HTTP target changed",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+    };
+    const revocableStamp = (stamper?: TStamper): TStamper | undefined =>
+      stamper && {
+        stamp: async (input) => {
+          assertIssuedTarget();
+          const stamp = await stamper.stamp(input);
+          assertIssuedTarget();
+          return stamp;
+        },
+      };
     // We can comfortably default to the prod urls here
     const apiBaseUrl =
       params?.apiBaseUrl || this.config.apiBaseUrl || "https://api.0xkey.io";
@@ -423,19 +790,38 @@ export class ZeroXKeyClient {
 
     const organizationId = params?.organizationId || this.config.organizationId;
 
-    return new ZeroXKeySDKClientBase({
+    if (
+      this.experimentalBoundTarget &&
+      !this.matchesExperimentalTarget({
+        organizationId,
+        apiBaseUrl,
+        authProxyUrl,
+        authProxyConfigId:
+          params?.authProxyConfigId ?? this.config.authProxyConfigId,
+      })
+    )
+      throw new ZeroXKeyError(
+        "Bound OAuth HTTP target changed",
+        ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+      );
+
+    issuedClient = new ZeroXKeySDKClientBase({
       ...this.config,
       ...params,
 
       apiBaseUrl,
       authProxyUrl,
       organizationId,
-      apiKeyStamper: dependencies.apiKeyStamper,
-      passkeyStamper: dependencies.passkeyStamper,
-      walletStamper: dependencies.walletManager?.stamper,
-      attestedStamper: dependencies.attestedStamper,
+      apiKeyStamper: revocableStamp(dependencies.apiKeyStamper),
+      passkeyStamper: revocableStamp(dependencies.passkeyStamper),
+      walletStamper: revocableStamp(dependencies.walletManager?.stamper),
+      attestedStamper: revocableStamp(dependencies.attestedStamper),
       storageManager: dependencies.storageManager,
+      assertActive: assertIssuedTarget,
     });
+    if (this.experimentalBoundTarget)
+      this.experimentalIssuedClients.add(issuedClient);
+    return issuedClient;
   };
 
   overrideAttestedStamper = async (
@@ -596,25 +982,16 @@ export class ZeroXKeyClient {
   logout = async (params?: LogoutParams): Promise<void> => {
     return withZeroXKeyErrorHandling(
       async () => {
-        if (params?.sessionKey) {
-          const session = await this.storageManager.getSession(
-            params.sessionKey,
+        const sessionKey =
+          params?.sessionKey ??
+          (await this.storageManager.getActiveSessionKey());
+        if (!sessionKey) {
+          throw new ZeroXKeyError(
+            "No active session found to log out from.",
+            ZeroXKeyErrorCodes.NO_SESSION_FOUND,
           );
-          this.storageManager.clearSession(params.sessionKey);
-          this.apiKeyStamper?.deleteKeyPair(session?.publicKey!);
-        } else {
-          const sessionKey = await this.storageManager.getActiveSessionKey();
-          const session = await this.storageManager.getActiveSession();
-          if (sessionKey) {
-            this.storageManager.clearSession(sessionKey);
-            this.apiKeyStamper?.deleteKeyPair(session?.publicKey!);
-          } else {
-            throw new ZeroXKeyError(
-              "No active session found to log out from.",
-              ZeroXKeyErrorCodes.NO_SESSION_FOUND,
-            );
-          }
         }
+        await this.clearSession({ sessionKey });
       },
       {
         errorMessage: "Failed to log out",
@@ -736,6 +1113,7 @@ export class ZeroXKeyClient {
    */
   signUpWithPasskey = async (
     params?: SignUpWithPasskeyParams,
+    withSignupCaptcha?: SignupCaptchaGate,
   ): Promise<PasskeyAuthResult> => {
     const {
       passkeyDisplayName,
@@ -750,6 +1128,20 @@ export class ZeroXKeyClient {
     let generatedPublicKey: string | undefined = undefined;
     return withZeroXKeyErrorHandling(
       async () => {
+        if (withSignupCaptcha && captchaToken !== undefined) {
+          throw new ZeroXKeyError(
+            "Conflicting Captcha sources",
+            ZeroXKeyErrorCodes.PASSKEY_SIGNUP_AUTH_ERROR,
+          );
+        }
+        const captchaTarget = withSignupCaptcha
+          ? this.captureSignupCaptchaTarget(
+              ZeroXKeyErrorCodes.PASSKEY_SIGNUP_AUTH_ERROR,
+            )
+          : this.captureCaptchaTarget(
+              captchaToken,
+              ZeroXKeyErrorCodes.PASSKEY_SIGNUP_AUTH_ERROR,
+            );
         generatedPublicKey = await this.apiKeyStamper?.createKeyPair();
         const passkeyName = passkeyDisplayName || `passkey-${Date.now()}`;
 
@@ -789,7 +1181,22 @@ export class ZeroXKeyClient {
           },
         });
 
-        const res = await this.httpClient.proxySignup(signUpBody, captchaToken);
+        captchaTarget?.assertUnchanged();
+        let submitted = false;
+        const submitSignup = (token?: string) => {
+          if (submitted) throw new Error("Signup already submitted");
+          submitted = true;
+          captchaTarget?.assertUnchanged();
+          return (captchaTarget?.client ?? this.httpClient).proxySignup(
+            signUpBody,
+            token,
+          );
+        };
+        const res = withSignupCaptcha
+          ? await withSignupCaptcha(submitSignup)
+          : await submitSignup(captchaToken);
+        if (!submitted) throw new Error("Signup was not submitted");
+        captchaTarget?.assertUnchanged();
 
         if (!res) {
           throw new ZeroXKeyError(
@@ -1224,6 +1631,7 @@ export class ZeroXKeyClient {
    */
   signUpWithWallet = async (
     params: SignUpWithWalletParams,
+    withSignupCaptcha?: SignupCaptchaGate,
   ): Promise<WalletAuthResult> => {
     const {
       walletProvider,
@@ -1234,6 +1642,20 @@ export class ZeroXKeyClient {
 
     return withZeroXKeyErrorHandling(
       async () => {
+        if (withSignupCaptcha && captchaToken !== undefined) {
+          throw new ZeroXKeyError(
+            "Conflicting Captcha sources",
+            ZeroXKeyErrorCodes.WALLET_SIGNUP_AUTH_ERROR,
+          );
+        }
+        const captchaTarget = withSignupCaptcha
+          ? this.captureSignupCaptchaTarget(
+              ZeroXKeyErrorCodes.WALLET_SIGNUP_AUTH_ERROR,
+            )
+          : this.captureCaptchaTarget(
+              captchaToken,
+              ZeroXKeyErrorCodes.WALLET_SIGNUP_AUTH_ERROR,
+            );
         const { signedRequest, publicKey } =
           await this.buildWalletLoginRequest(params);
 
@@ -1250,7 +1672,22 @@ export class ZeroXKeyClient {
           },
         });
 
-        const res = await this.httpClient.proxySignup(signUpBody, captchaToken);
+        captchaTarget?.assertUnchanged();
+        let submitted = false;
+        const submitSignup = (token?: string) => {
+          if (submitted) throw new Error("Signup already submitted");
+          submitted = true;
+          captchaTarget?.assertUnchanged();
+          return (captchaTarget?.client ?? this.httpClient).proxySignup(
+            signUpBody,
+            token,
+          );
+        };
+        const res = withSignupCaptcha
+          ? await withSignupCaptcha(submitSignup)
+          : await submitSignup(captchaToken);
+        if (!submitted) throw new Error("Signup was not submitted");
+        captchaTarget?.assertUnchanged();
 
         if (!res) {
           throw new ZeroXKeyError(
@@ -1317,6 +1754,7 @@ export class ZeroXKeyClient {
    */
   loginOrSignupWithWallet = async (
     params: LoginOrSignupWithWalletParams,
+    withSignupCaptcha?: SignupCaptchaGate,
   ): Promise<WalletAuthResult & { action: AuthAction }> => {
     const {
       walletProvider,
@@ -1327,25 +1765,36 @@ export class ZeroXKeyClient {
 
     return withZeroXKeyErrorHandling(
       async () => {
+        if (withSignupCaptcha && captchaToken !== undefined) {
+          throw new ZeroXKeyError(
+            "Conflicting Captcha sources",
+            ZeroXKeyErrorCodes.WALLET_SIGNUP_AUTH_ERROR,
+          );
+        }
+        const captchaTarget = withSignupCaptcha
+          ? this.captureSignupCaptchaTarget(
+              ZeroXKeyErrorCodes.WALLET_SIGNUP_AUTH_ERROR,
+            )
+          : this.captureCaptchaTarget(
+              captchaToken,
+              ZeroXKeyErrorCodes.WALLET_SIGNUP_AUTH_ERROR,
+            );
         const { signedRequest, publicKey } =
           await this.buildWalletLoginRequest(params);
+        captchaTarget?.assertUnchanged();
 
         // here we check if the subOrg exists and create one
         // then we send off the stamped request to ZeroXKey
 
-        const accountRes = await this.httpClient.proxyGetAccount({
+        const accountRes = await (
+          captchaTarget?.client ?? this.httpClient
+        ).proxyGetAccount({
           filterType: FilterType.PublicKey,
           filterValue: publicKey,
         });
+        captchaTarget?.assertUnchanged();
 
-        if (!accountRes) {
-          throw new ZeroXKeyError(
-            `Account fetch failed`,
-            ZeroXKeyErrorCodes.ACCOUNT_FETCH_ERROR,
-          );
-        }
-
-        const subOrganizationId = accountRes.organizationId;
+        const subOrganizationId = accountOrganizationId(accountRes);
 
         // if there is no subOrganizationId, we create one
         let signupRes: ProxyTSignupResponse | undefined;
@@ -1363,10 +1812,21 @@ export class ZeroXKeyClient {
             },
           });
 
-          signupRes = await this.httpClient.proxySignup(
-            signUpBody,
-            captchaToken,
-          );
+          let submitted = false;
+          const submitSignup = (token?: string) => {
+            if (submitted) throw new Error("Signup already submitted");
+            submitted = true;
+            captchaTarget?.assertUnchanged();
+            return (captchaTarget?.client ?? this.httpClient).proxySignup(
+              signUpBody,
+              token,
+            );
+          };
+          signupRes = withSignupCaptcha
+            ? await withSignupCaptcha(submitSignup)
+            : await submitSignup(captchaToken);
+          if (!submitted) throw new Error("Signup was not submitted");
+          captchaTarget?.assertUnchanged();
 
           if (!signupRes) {
             throw new ZeroXKeyError(
@@ -1484,10 +1944,14 @@ export class ZeroXKeyClient {
    * @throws {ZeroXKeyError} If there is an error during the OTP verification process, such as an invalid code or network failure.
    */
   verifyOtp = async (params: VerifyOtpParams): Promise<VerifyOtpResult> => {
+    const target = this.captureCurrentHttpTarget(
+      ZeroXKeyErrorCodes.VERIFY_OTP_ERROR,
+    );
     const { otpId, otpCode, otpEncryptionTargetBundle, contact, otpType } =
       params;
     const resolvedPublicKey =
       params.publicKey ?? (await this.apiKeyStamper?.createKeyPair());
+    target.assertUnchanged();
 
     return withZeroXKeyErrorHandling(
       async () => {
@@ -1496,10 +1960,11 @@ export class ZeroXKeyClient {
           publicKey: resolvedPublicKey!,
           otpEncryptionTargetBundle,
         });
-        const verifyOtpRes = await this.httpClient.proxyVerifyOtpV2({
+        const verifyOtpRes = await target.client.proxyVerifyOtpV2({
           otpId,
           encryptedOtpBundle,
         });
+        target.assertUnchanged();
 
         if (!verifyOtpRes) {
           throw new ZeroXKeyError(
@@ -1507,20 +1972,14 @@ export class ZeroXKeyClient {
             ZeroXKeyErrorCodes.INTERNAL_ERROR,
           );
         }
-        const accountRes = await this.httpClient.proxyGetAccount({
+        const accountRes = await target.client.proxyGetAccount({
           filterType: OtpTypeToFilterTypeMap[otpType],
           filterValue: contact,
           verificationToken: verifyOtpRes.verificationToken,
         });
+        target.assertUnchanged();
 
-        if (!accountRes) {
-          throw new ZeroXKeyError(
-            `Account fetch failed`,
-            ZeroXKeyErrorCodes.ACCOUNT_FETCH_ERROR,
-          );
-        }
-
-        const subOrganizationId = accountRes.organizationId;
+        const subOrganizationId = accountOrganizationId(accountRes);
         return {
           subOrganizationId: subOrganizationId,
           verificationToken: verifyOtpRes.verificationToken,
@@ -1664,7 +2123,9 @@ export class ZeroXKeyClient {
         // Session. Another OTP login may still be using such a Token-bound key.
         await withZeroXKeyErrorHandling(
           async () =>
-            this.storageManager.storeSession(loginRes.session, sessionKey),
+            this.commitAuthMutation(() =>
+              this.storageManager.storeSession(loginRes.session, sessionKey),
+            ),
           {
             errorMessage: "Failed to store session",
             errorCode: ZeroXKeyErrorCodes.STORE_SESSION_ERROR,
@@ -1733,6 +2194,10 @@ export class ZeroXKeyClient {
 
     return withZeroXKeyErrorHandling(
       async () => {
+        const captchaTarget = this.captureCaptchaTarget(
+          captchaToken,
+          ZeroXKeyErrorCodes.OTP_SIGNUP_ERROR,
+        );
         const publicKey = decodeVerificationToken(verificationToken).public_key;
         if (!publicKey) {
           throw new ZeroXKeyError(
@@ -1787,10 +2252,11 @@ export class ZeroXKeyClient {
           signature: signature,
         };
 
-        const signupRes = await this.httpClient.proxySignupV2(
-          { ...signUpBody, clientSignature },
-          captchaToken,
-        );
+        captchaTarget?.assertUnchanged();
+        const signupRes = await (
+          captchaTarget?.client ?? this.httpClient
+        ).proxySignupV2({ ...signUpBody, clientSignature }, captchaToken);
+        captchaTarget?.assertUnchanged();
 
         if (!signupRes?.organizationId) {
           throw new ZeroXKeyError(
@@ -1847,6 +2313,10 @@ export class ZeroXKeyClient {
   ): Promise<
     BaseAuthResult & { verificationToken: string; action: AuthAction }
   > => {
+    const captchaTarget = this.captureCaptchaTarget(
+      params.captchaToken,
+      ZeroXKeyErrorCodes.OTP_SIGNUP_ERROR,
+    );
     const {
       otpId,
       otpCode,
@@ -1859,6 +2329,7 @@ export class ZeroXKeyClient {
       createSubOrgParams,
       captchaToken,
     } = params;
+    captchaTarget?.assertUnchanged();
 
     return withZeroXKeyErrorHandling(
       async () => {
@@ -1870,6 +2341,7 @@ export class ZeroXKeyClient {
           otpType: otpType,
           publicKey: publicKey!,
         });
+        captchaTarget?.assertUnchanged();
 
         if (!verificationToken) {
           throw new ZeroXKeyError(
@@ -1941,6 +2413,7 @@ export class ZeroXKeyClient {
    */
   completeOauth = async (
     params: CompleteOauthParams,
+    withSignupCaptcha?: SignupCaptchaGate<BaseAuthResult>,
   ): Promise<BaseAuthResult & { action: AuthAction }> => {
     const {
       oidcToken,
@@ -1952,20 +2425,32 @@ export class ZeroXKeyClient {
       captchaToken,
     } = params;
 
+    if (withSignupCaptcha && captchaToken !== undefined) {
+      throw new ZeroXKeyError(
+        "Conflicting Captcha sources",
+        ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+      );
+    }
+
     return withZeroXKeyErrorHandling(
       async () => {
-        const accountRes = await this.httpClient.proxyGetAccount({
+        const captchaTarget = withSignupCaptcha
+          ? this.captureSignupCaptchaTarget(
+              ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+            )
+          : this.captureCaptchaTarget(
+              captchaToken,
+              ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+            );
+        const accountRes = await (
+          captchaTarget?.client ?? this.httpClient
+        ).proxyGetAccount({
           filterType: "OIDC_TOKEN",
           filterValue: oidcToken,
         });
+        captchaTarget?.assertUnchanged();
 
-        if (!accountRes) {
-          throw new ZeroXKeyError(
-            `Account fetch failed`,
-            ZeroXKeyErrorCodes.ACCOUNT_FETCH_ERROR,
-          );
-        }
-        const subOrganizationId = accountRes.organizationId;
+        const subOrganizationId = accountOrganizationId(accountRes);
 
         if (subOrganizationId) {
           const loginRes = await this.loginWithOauth({
@@ -1980,7 +2465,7 @@ export class ZeroXKeyClient {
             action: AuthAction.LOGIN,
           };
         } else {
-          const signUpRes = await this.signUpWithOauth({
+          const signupParams: SignUpWithOauthParams = {
             oidcToken,
             publicKey,
             ...(providerName && {
@@ -1992,7 +2477,34 @@ export class ZeroXKeyClient {
             ...(invalidateExisting && { invalidateExisting }),
             ...(sessionKey && { sessionKey }),
             ...(captchaToken !== undefined && { captchaToken }),
-          });
+          };
+          let signUpRes: BaseAuthResult;
+          if (withSignupCaptcha) {
+            let submitted = false;
+            let signupPromise: Promise<BaseAuthResult> | undefined;
+            const submitSignup = (token?: string) => {
+              if (submitted) throw new Error("Signup already submitted");
+              submitted = true;
+              if (
+                token !== undefined &&
+                (typeof token !== "string" || !token.trim())
+              ) {
+                throw new Error("Captcha challenge returned no token");
+              }
+              captchaTarget?.assertUnchanged();
+              signupPromise = this.signUpWithOauth({
+                ...signupParams,
+                ...(token !== undefined && { captchaToken: token }),
+              });
+              return signupPromise;
+            };
+            await withSignupCaptcha(submitSignup);
+            if (!signupPromise) throw new Error("Signup was not submitted");
+            signUpRes = await signupPromise;
+          } else {
+            signUpRes = await this.signUpWithOauth(signupParams);
+          }
+          captchaTarget?.assertUnchanged();
 
           return {
             ...signUpRes,
@@ -2119,6 +2631,10 @@ export class ZeroXKeyClient {
 
     return withZeroXKeyErrorHandling(
       async () => {
+        const captchaTarget = this.captureCaptchaTarget(
+          captchaToken,
+          ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+        );
         const signUpBody = buildSignUpBody({
           createSubOrgParams: {
             ...createSubOrgParams,
@@ -2131,10 +2647,10 @@ export class ZeroXKeyClient {
           },
         });
 
-        const signupRes = await this.httpClient.proxySignup(
-          signUpBody,
-          captchaToken,
-        );
+        const signupRes = await (
+          captchaTarget?.client ?? this.httpClient
+        ).proxySignup(signUpBody, captchaToken);
+        captchaTarget?.assertUnchanged();
 
         if (!signupRes) {
           throw new ZeroXKeyError(
@@ -5015,7 +5531,9 @@ export class ZeroXKeyClient {
 
     return withZeroXKeyErrorHandling(
       async () => {
-        await this.storageManager.storeSession(sessionToken, sessionKey);
+        await this.commitAuthMutation(() =>
+          this.storageManager.storeSession(sessionToken, sessionKey),
+        );
       },
       {
         errorMessage: "Failed to store session",
@@ -5027,9 +5545,10 @@ export class ZeroXKeyClient {
   /**
    * Clears the session associated with the specified session key, or the active session by default.
    *
-   * - This function deletes the session and its associated key pair from storage.
+   * - This function deletes the session from storage. Target-bound Web sessions
+   *   retain their key pair until a safe cross-database cleanup is available.
    * - If a sessionKey is provided, it will clear the session under that key; otherwise, it will clear the default (active) session.
-   * - Removes the session data from local storage and deletes the corresponding API key pair from the key store.
+   * - Legacy storage also deletes the corresponding API key pair.
    * - Throws an error if the session does not exist or if there is an error during the clearing process.
    *
    * @param params.sessionKey - session key to clear the session under (defaults to the default session key).
@@ -5041,17 +5560,30 @@ export class ZeroXKeyClient {
     return withZeroXKeyErrorHandling(
       async () => {
         const session = await this.storageManager.getSession(sessionKey);
-        if (session) {
-          await Promise.all([
-            this.apiKeyStamper?.deleteKeyPair(session.publicKey!),
-            this.storageManager.clearSession(sessionKey),
-          ]);
-        } else {
+        if (!session) {
           throw new ZeroXKeyError(
             `No session found with key: ${sessionKey}`,
             ZeroXKeyErrorCodes.NOT_FOUND,
           );
         }
+        await this.commitAuthMutation(async () => {
+          const current = await this.storageManager.getSession(sessionKey);
+          if (
+            !current ||
+            current.token !== session.token ||
+            current.publicKey !== session.publicKey
+          )
+            return;
+          await this.storageManager.clearSession(sessionKey);
+          // Bound session records and API keypairs live in separate IDB databases.
+          // A second tab can reuse the key before this deletion, so retain it.
+          if (
+            session.publicKey &&
+            !this.storageManager.retainsKeyPairOnClear?.()
+          ) {
+            await this.apiKeyStamper?.deleteKeyPair(session.publicKey);
+          }
+        });
       },
       {
         errorMessage: "Failed to delete session",
@@ -5063,9 +5595,10 @@ export class ZeroXKeyClient {
   /**
    * Clears all sessions and resets the active session state.
    *
-   * - This function removes all session data from the client and persistent storage, including all associated key pairs.
+   * - This function clears sessions visible to this client. Target-bound Web
+   *   sessions retain key pairs and do not enumerate legacy or other targets.
    * - Iterates through all stored session keys, clearing each session and deleting its corresponding API key pair.
-   * - After clearing, there will be no active session, and all session-related data will be removed from local storage.
+   * - After clearing, this client has no active session.
    * - Throws an error if no sessions exist or if there is an error during the clearing process.
    *
    * @returns A promise that resolves when all sessions are successfully cleared.
@@ -5077,7 +5610,7 @@ export class ZeroXKeyClient {
         const sessionKeys = await this.storageManager.listSessionKeys();
         if (sessionKeys.length === 0) return;
         for (const sessionKey of sessionKeys) {
-          this.clearSession({ sessionKey });
+          await this.clearSession({ sessionKey });
         }
       },
       {
@@ -5254,7 +5787,9 @@ export class ZeroXKeyClient {
     const { sessionKey } = params;
     return withZeroXKeyErrorHandling(
       async () => {
-        await this.storageManager.setActiveSessionKey(sessionKey);
+        await this.commitAuthMutation(() =>
+          this.storageManager.setActiveSessionKey(sessionKey),
+        );
       },
       {
         errorMessage: "Failed to set active session",

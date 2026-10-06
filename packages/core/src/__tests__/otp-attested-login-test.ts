@@ -512,6 +512,200 @@ test("signUpWithOtp uses Token key A for signup then StampLogin in the created o
   expect(deleted).toEqual([]);
 });
 
+test.each(["config mutation", "http client replacement"])(
+  "completeOtp never sends a verified Token to another account target: %s",
+  async (change) => {
+    const { client } = await setup();
+    const targetKey = createECDH("prime256v1");
+    targetKey.setPrivateKey(Buffer.alloc(32, 3));
+    const otpEncryptionTargetBundle = JSON.stringify({
+      data: Buffer.from(
+        JSON.stringify({ targetPublic: targetKey.getPublicKey("hex") }),
+      ).toString("hex"),
+    });
+    let releaseVerification!: () => void;
+    let verificationStarted!: () => void;
+    const paused = new Promise<void>((resolve) => {
+      releaseVerification = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      verificationStarted = resolve;
+    });
+    const requests: string[] = [];
+    global.fetch = (async (url: RequestInfo | URL) => {
+      const path = new URL(String(url)).pathname;
+      requests.push(path);
+      if (path !== "/v1/otp_verify_v2") {
+        throw new Error(`unexpected account request ${path}`);
+      }
+      verificationStarted();
+      await paused;
+      return {
+        ok: true,
+        json: async () => ({ verificationToken: token(publicA) }),
+      } as Response;
+    }) as typeof fetch;
+
+    const pending = client.completeOtp({
+      otpId: "otp-1",
+      otpCode: "123456",
+      otpEncryptionTargetBundle,
+      contact: "person@example.test",
+      otpType: OtpType.Email,
+      publicKey: publicA,
+      captchaToken: "otp-captcha-token",
+    });
+    await started;
+    if (change === "config mutation") {
+      client.httpClient.config.authProxyConfigId = "config-2";
+    } else {
+      client.httpClient = client.createHttpClient({
+        authProxyUrl: "https://other.example.test",
+      });
+    }
+    releaseVerification();
+    await expect(pending).rejects.toThrow();
+    expect(requests).toEqual(["/v1/otp_verify_v2"]);
+  },
+);
+
+test("direct verifyOtp preserves an explicit HTTP client config override without Captcha", async () => {
+  const { client } = await setup();
+  client.httpClient = client.createHttpClient({
+    authProxyConfigId: "config-2",
+    authProxyUrl: "https://auth-b.example.test",
+  });
+  const targetKey = createECDH("prime256v1");
+  targetKey.setPrivateKey(Buffer.alloc(32, 3));
+  const otpEncryptionTargetBundle = JSON.stringify({
+    data: Buffer.from(
+      JSON.stringify({ targetPublic: targetKey.getPublicKey("hex") }),
+    ).toString("hex"),
+  });
+  const requests: string[] = [];
+  global.fetch = (async (url: RequestInfo | URL) => {
+    requests.push(String(url));
+    const path = new URL(String(url)).pathname;
+    return {
+      ok: true,
+      json: async () =>
+        path === "/v1/otp_verify_v2"
+          ? { verificationToken: token(publicA) }
+          : { organizationId: "existing-org" },
+    } as Response;
+  }) as typeof fetch;
+  await expect(
+    client.verifyOtp({
+      otpId: "otp-1",
+      otpCode: "123456",
+      otpEncryptionTargetBundle,
+      contact: "person@example.test",
+      otpType: OtpType.Email,
+      publicKey: publicA,
+    }),
+  ).resolves.toMatchObject({ subOrganizationId: "existing-org" });
+  expect(requests).toEqual([
+    "https://auth-b.example.test/v1/otp_verify_v2",
+    "https://auth-b.example.test/v1/account",
+  ]);
+});
+
+test("direct verifyOtp does not return an A Token after account lookup switches to B", async () => {
+  const { client } = await setup();
+  const targetKey = createECDH("prime256v1");
+  targetKey.setPrivateKey(Buffer.alloc(32, 3));
+  const otpEncryptionTargetBundle = JSON.stringify({
+    data: Buffer.from(
+      JSON.stringify({ targetPublic: targetKey.getPublicKey("hex") }),
+    ).toString("hex"),
+  });
+  let releaseLookup!: () => void;
+  let lookupStarted!: () => void;
+  const paused = new Promise<void>((resolve) => {
+    releaseLookup = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    lookupStarted = resolve;
+  });
+  const requests: string[] = [];
+  global.fetch = (async (url: RequestInfo | URL) => {
+    const path = new URL(String(url)).pathname;
+    requests.push(path);
+    if (path === "/v1/account") {
+      lookupStarted();
+      await paused;
+    }
+    return {
+      ok: true,
+      json: async () =>
+        path === "/v1/otp_verify_v2"
+          ? { verificationToken: token(publicA) }
+          : { organizationId: "existing-org" },
+    } as Response;
+  }) as typeof fetch;
+  const pending = client.verifyOtp({
+    otpId: "otp-1",
+    otpCode: "123456",
+    otpEncryptionTargetBundle,
+    contact: "person@example.test",
+    otpType: OtpType.Email,
+    publicKey: publicA,
+  });
+  await started;
+  client.httpClient = client.createHttpClient({
+    authProxyConfigId: "config-2",
+    authProxyUrl: "https://auth-b.example.test",
+  });
+  releaseLookup();
+  await expect(pending).rejects.toThrow();
+  expect(requests).toEqual(["/v1/otp_verify_v2", "/v1/account"]);
+});
+
+test.each(["config mutation", "http client replacement"])(
+  "signUpWithOtp refuses a changed Captcha target after signing: %s",
+  async (change) => {
+    const { client } = await setup();
+    const apiKeyStamper = (client as any).apiKeyStamper;
+    const originalSign = apiKeyStamper.sign.bind(apiKeyStamper);
+    let releaseSign!: () => void;
+    let signStarted!: () => void;
+    const signPaused = new Promise<void>((resolve) => {
+      releaseSign = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      signStarted = resolve;
+    });
+    apiKeyStamper.sign = async (...args: Parameters<typeof originalSign>) => {
+      signStarted();
+      await signPaused;
+      return originalSign(...args);
+    };
+    const requests: string[] = [];
+    global.fetch = (async (url: RequestInfo | URL) => {
+      requests.push(String(url));
+      throw new Error("unexpected network request");
+    }) as typeof fetch;
+
+    const pending = client.signUpWithOtp({
+      verificationToken: token(publicA),
+      contact: "person@example.test",
+      otpType: OtpType.Email,
+      captchaToken: "otp-captcha-token",
+    });
+    await started;
+    if (change === "config mutation") {
+      client.httpClient.config.authProxyConfigId = "config-2";
+    } else {
+      client.httpClient = client.createHttpClient({
+        authProxyUrl: "https://other.example.test",
+      });
+    }
+    releaseSign();
+    await expect(pending).rejects.toThrow();
+    expect(requests).toEqual([]);
+  },
+);
+
 test("signUpWithOtp rejects a different publicKey before any network request", async () => {
   const { client, deleted } = await setup({
     [publicA]: pairA,

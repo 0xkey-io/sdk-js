@@ -1,8 +1,10 @@
 import { jest } from "@jest/globals";
 import WindowWrapper from "@polyfills/window";
 import { ZeroXKeyClient } from "../../__clients__/core";
+import { installBoundWebStore } from "./bound-web-store";
 
 export async function createReadyClient(): Promise<ZeroXKeyClient> {
+  installBoundWebStore();
   (globalThis as any).window = {};
   (globalThis as any).document = {};
 

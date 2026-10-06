@@ -28,7 +28,7 @@ const stampHeaderName = "X-Stamp";
  * @param ieee the ECDSA signature in IEEE encoding
  * @return ECDSA signature in DER encoding
  */
-function convertEcdsaIeee1363ToDer(ieee: Uint8Array): Uint8Array {
+export function convertEcdsaIeee1363ToDer(ieee: Uint8Array): Uint8Array {
   if (ieee.length % 2 != 0 || ieee.length == 0 || ieee.length > 132) {
     throw new Error(
       "Invalid IEEE P1363 signature encoding. Length: " + ieee.length,

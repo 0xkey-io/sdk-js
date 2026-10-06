@@ -253,6 +253,7 @@ const generateSDKClientFromSwagger = async (
     
     // Storage manager
     private storageManager?: StorageBase | undefined;
+    private assertActive?: (() => void) | undefined;
 
     constructor(config: ZeroXKeyHttpClientConfig) {
         this.config = config;
@@ -272,6 +273,7 @@ const generateSDKClientFromSwagger = async (
         if (config.storageManager) {
         this.storageManager = config.storageManager;
         }
+        this.assertActive = config.assertActive;
         if (config.defaultStamperType) {
         this.defaultStamperType = config.defaultStamperType;
         } else{
@@ -424,6 +426,7 @@ const generateSDKClientFromSwagger = async (
         headers[stamp.stampHeaderName] = stamp.stampHeaderValue
         }
 
+        this.assertActive?.();
         const response = await fetch(fullUrl, {
         method: "POST",
         headers: headers,
@@ -514,6 +517,7 @@ const generateSDKClientFromSwagger = async (
         fullUrl = baseUrl.toString();
         }
 
+        this.assertActive?.();
         const response = await fetch(fullUrl, {
         method: "POST",
         headers: headers,
@@ -560,6 +564,7 @@ const generateSDKClientFromSwagger = async (
         [signedRequest.stamp.stampHeaderName]: signedRequest.stamp.stampHeaderValue,
         };
 
+        this.assertActive?.();
         const response = await fetch(signedRequest.url, {
         method: "POST",
         headers,

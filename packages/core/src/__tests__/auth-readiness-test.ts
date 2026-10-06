@@ -4,6 +4,7 @@ import { CrossPlatformApiKeyStamper } from "../__stampers__/api/base";
 import * as factory from "../__storage__/base";
 import * as utils from "../utils";
 import WindowWrapper from "@polyfills/window";
+import { installBoundWebStore } from "./test-support/bound-web-store";
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -34,6 +35,7 @@ it("constructor injection cannot create keys, store sessions or expose HTTP befo
 });
 
 it("coalesces pending init, fails closed, retries real preparation, then is idempotent", async () => {
+  installBoundWebStore();
   (globalThis as any).window = {};
   jest.spyOn(utils, "isWeb").mockReturnValue(true);
   jest.spyOn(utils, "isReactNative").mockReturnValue(false);

@@ -275,3 +275,144 @@ describe("discardUncommittedApiKeyPair", () => {
     expect(stamper.getTemporaryPublicKey()).toBe("temporary-key");
   });
 });
+
+describe("shared auth persistence", () => {
+  const defaultSessionKey = "@0xkey-io/session/v3";
+
+  it("does not clear a replacement session or its key when an old read finishes late", async () => {
+    const { client: oldClient, keyStore, stamper, storage } = createHarness();
+    const newClient = new ZeroXKeyClient(
+      { organizationId: "org-new" },
+      stamper,
+    );
+    (newClient as any).storageManager = storage;
+    (newClient as any).authReady = true;
+    storage.sessions.set(defaultSessionKey, {
+      token: "old",
+      publicKey: "old-key",
+    } as Session);
+    storage.tokenPublicKeys.set("new", "new-key");
+    keyStore.keys.add("old-key");
+    keyStore.keys.add("new-key");
+
+    let releaseRead!: () => void;
+    let readStarted!: () => void;
+    const readStartedPromise = new Promise<void>((resolve) => {
+      readStarted = resolve;
+    });
+    const blockedRead = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const originalGetSession = storage.getSession.bind(storage);
+    let reads = 0;
+    storage.getSession = async (key?: string) => {
+      reads += 1;
+      if (reads === 1) {
+        const snapshot = await originalGetSession(key);
+        readStarted();
+        await blockedRead;
+        return snapshot;
+      }
+      return originalGetSession(key);
+    };
+
+    const staleClear = oldClient.clearSession({
+      sessionKey: defaultSessionKey,
+    });
+    await readStartedPromise;
+    await newClient.storeSession({ sessionToken: "new" });
+    releaseRead();
+    await staleClear;
+
+    expect(storage.sessions.get(defaultSessionKey)?.token).toBe("new");
+    expect(keyStore.keys.has("new-key")).toBe(true);
+  });
+
+  it("lets a replacement commit last when an older commit is already in storage", async () => {
+    const { client: oldClient, stamper, storage } = createHarness();
+    const newClient = new ZeroXKeyClient(
+      { organizationId: "org-new" },
+      stamper,
+    );
+    (newClient as any).storageManager = storage;
+    (newClient as any).authReady = true;
+    storage.tokenPublicKeys.set("old", "old-key");
+    storage.tokenPublicKeys.set("new", "new-key");
+
+    let releaseStore!: () => void;
+    let storeStarted!: () => void;
+    const storeStartedPromise = new Promise<void>((resolve) => {
+      storeStarted = resolve;
+    });
+    const blockedStore = new Promise<void>((resolve) => {
+      releaseStore = resolve;
+    });
+    const originalStoreSession = storage.storeSession.bind(storage);
+    storage.storeSession = async (token: string, key?: string) => {
+      if (token === "old") {
+        storeStarted();
+        await blockedStore;
+      }
+      await originalStoreSession(token, key);
+    };
+
+    const oldStore = oldClient.storeSession({ sessionToken: "old" });
+    await storeStartedPromise;
+    oldClient.retireAuthWrites();
+    const newStore = newClient.storeSession({ sessionToken: "new" });
+    releaseStore();
+    await Promise.all([oldStore, newStore]);
+
+    expect(storage.sessions.get(defaultSessionKey)?.token).toBe("new");
+    await expect(
+      oldClient.storeSession({ sessionToken: "old" }),
+    ).rejects.toMatchObject({
+      code: ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+    });
+  });
+
+  it("finishes an old key deletion before a replacement session commit", async () => {
+    const { client: oldClient, keyStore, stamper, storage } = createHarness();
+    const newClient = new ZeroXKeyClient(
+      { organizationId: "org-new" },
+      stamper,
+    );
+    (newClient as any).storageManager = storage;
+    (newClient as any).authReady = true;
+    storage.sessions.set(defaultSessionKey, {
+      token: "old",
+      publicKey: "old-key",
+    } as Session);
+    storage.tokenPublicKeys.set("new", "new-key");
+    keyStore.keys.add("old-key");
+    keyStore.keys.add("new-key");
+
+    let releaseDelete!: () => void;
+    let deleteStarted!: () => void;
+    const deleteStartedPromise = new Promise<void>((resolve) => {
+      deleteStarted = resolve;
+    });
+    const blockedDelete = new Promise<void>((resolve) => {
+      releaseDelete = resolve;
+    });
+    const originalDelete = keyStore.deleteKeyPair.bind(keyStore);
+    keyStore.deleteKeyPair = async (publicKey, options) => {
+      if (publicKey === "old-key") {
+        deleteStarted();
+        await blockedDelete;
+      }
+      await originalDelete(publicKey, options);
+    };
+
+    const oldClear = oldClient.clearSession({ sessionKey: defaultSessionKey });
+    await deleteStartedPromise;
+    oldClient.retireAuthWrites();
+    const newStore = newClient.storeSession({ sessionToken: "new" });
+    expect(storage.sessions.has(defaultSessionKey)).toBe(false);
+    releaseDelete();
+    await Promise.all([oldClear, newStore]);
+
+    expect(storage.sessions.get(defaultSessionKey)?.token).toBe("new");
+    expect(keyStore.keys.has("new-key")).toBe(true);
+  });
+});

@@ -35,6 +35,7 @@ export class ZeroXKeySDKClientBase {
 
   // Storage manager
   private storageManager?: StorageBase | undefined;
+  private assertActive?: (() => void) | undefined;
 
   constructor(config: ZeroXKeyHttpClientConfig) {
     this.config = config;
@@ -54,6 +55,7 @@ export class ZeroXKeySDKClientBase {
     if (config.storageManager) {
       this.storageManager = config.storageManager;
     }
+    this.assertActive = config.assertActive;
     if (config.defaultStamperType) {
       this.defaultStamperType = config.defaultStamperType;
     } else {
@@ -222,6 +224,7 @@ export class ZeroXKeySDKClientBase {
       headers[stamp.stampHeaderName] = stamp.stampHeaderValue;
     }
 
+    this.assertActive?.();
     const response = await fetch(fullUrl, {
       method: "POST",
       headers: headers,
@@ -352,6 +355,7 @@ export class ZeroXKeySDKClientBase {
       fullUrl = baseUrl.toString();
     }
 
+    this.assertActive?.();
     const response = await fetch(fullUrl, {
       method: "POST",
       headers: headers,
@@ -399,6 +403,7 @@ export class ZeroXKeySDKClientBase {
         signedRequest.stamp.stampHeaderValue,
     };
 
+    this.assertActive?.();
     const response = await fetch(signedRequest.url, {
       method: "POST",
       headers,
@@ -6761,6 +6766,12 @@ export class ZeroXKeySDKClientBase {
     captchaToken?: string,
   ): Promise<SdkTypes.ProxyTSignupV2Response> => {
     return this.authProxyRequest("/v1/signup_v2", input, captchaToken);
+  };
+
+  proxyGetWalletKitClientParams = async (
+    input: SdkTypes.ProxyTGetWalletKitClientParamsBody,
+  ): Promise<SdkTypes.ProxyTGetWalletKitClientParamsResponse> => {
+    return this.authProxyRequest("/v1/wallet_kit_client_params", input);
   };
 
   proxyGetWalletKitConfig = async (

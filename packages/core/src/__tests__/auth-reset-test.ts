@@ -40,6 +40,76 @@ beforeEach(() => {
 });
 
 describe("v2 auth session isolation", () => {
+  it("scopes each client to newly stored token identities without deleting prior sessions", async () => {
+    const oldClient = new WebStorageManager();
+    const newClient = new WebStorageManager();
+    const newToken = `header.${Buffer.from(
+      JSON.stringify({
+        ...claims,
+        user_id: "new-user",
+        organization_id: "new-org",
+      }),
+    ).toString("base64")}.signature`;
+    await oldClient.storeSession(token, "old-key");
+
+    newClient.restrictToNewSessions();
+    expect(await newClient.getActiveSession()).toBeUndefined();
+    expect(await newClient.getSession("old-key")).toBeUndefined();
+    expect(await newClient.listSessionKeys()).toEqual([]);
+
+    await newClient.storeSession(newToken, "new-key");
+    expect((await newClient.getActiveSession())?.token).toBe(newToken);
+    expect(await newClient.listSessionKeys()).toEqual(["new-key"]);
+    expect(await newClient.getSession("old-key")).toBeUndefined();
+    expect((await oldClient.getSession("old-key"))?.token).toBe(token);
+
+    await newClient.clearAllSessions();
+    expect((await oldClient.getSession("old-key"))?.token).toBe(token);
+    expect(await newClient.getActiveSession()).toBeUndefined();
+  });
+
+  it("stops accepting a bound key when another client replaces its token", async () => {
+    const oldClient = new WebStorageManager();
+    const newClient = new WebStorageManager();
+    newClient.restrictToNewSessions();
+    await newClient.storeSession(token, "shared-key");
+    expect((await newClient.getActiveSession())?.token).toBe(token);
+
+    const replacedToken = `header.${Buffer.from(
+      JSON.stringify({
+        ...claims,
+        user_id: "replaced",
+      }),
+    ).toString("base64")}.signature`;
+    await oldClient.storeSession(replacedToken, "shared-key");
+    expect(await newClient.getActiveSession()).toBeUndefined();
+    expect(await newClient.getSession("shared-key")).toBeUndefined();
+  });
+
+  it.each([undefined, "", null, 0])(
+    "never adopts a malformed unbound record with token %s",
+    async (malformedToken) => {
+      raw.set(
+        "@0xkey-io/auth/v2/session/old-key",
+        JSON.stringify({ publicKey: pk, token: malformedToken }),
+      );
+      raw.set(
+        "@0xkey-io/auth/v2/meta/all-session-keys",
+        JSON.stringify(["old-key"]),
+      );
+      raw.set(
+        "@0xkey-io/auth/v2/meta/active-session-key",
+        JSON.stringify("old-key"),
+      );
+      const newClient = new WebStorageManager();
+      newClient.restrictToNewSessions();
+
+      expect(await newClient.getSession("old-key")).toBeUndefined();
+      expect(await newClient.getActiveSession()).toBeUndefined();
+      expect(await newClient.listSessionKeys()).toEqual([]);
+    },
+  );
+
   it.each([
     "custom",
     "@0xkey-io/all-session-keys",
