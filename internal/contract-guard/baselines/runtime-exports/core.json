@@ -161,6 +161,11 @@
       "arity": 2
     },
     {
+      "name": "getClientParams",
+      "kind": "function",
+      "arity": 1
+    },
+    {
       "name": "getClientSignatureMessageForLogin",
       "kind": "class",
       "arity": 1

@@ -3,6 +3,10 @@
   "exports": [
     {
       "kind": "re-export",
+      "name": "createCaptchaWebViewBridge"
+    },
+    {
+      "kind": "re-export",
       "name": "isEthereumProvider"
     },
     {
@@ -11,7 +15,27 @@
     },
     {
       "kind": "re-export",
+      "name": "receiveCaptchaNativeMessage"
+    },
+    {
+      "kind": "re-export",
       "name": "sendSignedRequest"
+    },
+    {
+      "kind": "re-export",
+      "name": "type CaptchaBridgeContext"
+    },
+    {
+      "kind": "re-export",
+      "name": "type CaptchaBridgeInput"
+    },
+    {
+      "kind": "re-export",
+      "name": "type CaptchaBridgeResult"
+    },
+    {
+      "kind": "re-export",
+      "name": "type CaptchaNativeMessageEvent"
     },
     {
       "kind": "re-export",

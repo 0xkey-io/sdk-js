@@ -3,7 +3,19 @@
   "exports": [
     {
       "kind": "re-export",
+      "name": "Chain"
+    },
+    {
+      "kind": "re-export",
+      "name": "Curve"
+    },
+    {
+      "kind": "re-export",
       "name": "decodeVerificationToken"
+    },
+    {
+      "kind": "re-export",
+      "name": "FilterType"
     },
     {
       "kind": "re-export",
@@ -23,7 +35,27 @@
     },
     {
       "kind": "re-export",
+      "name": "OtpType"
+    },
+    {
+      "kind": "re-export",
+      "name": "OtpTypeToFilterTypeMap"
+    },
+    {
+      "kind": "re-export",
       "name": "sendSignedRequest"
+    },
+    {
+      "kind": "re-export",
+      "name": "SessionKey"
+    },
+    {
+      "kind": "re-export",
+      "name": "SignIntent"
+    },
+    {
+      "kind": "re-export",
+      "name": "StamperType"
     },
     {
       "kind": "re-export",
@@ -32,6 +64,14 @@
     {
       "kind": "re-export",
       "name": "type ZeroXKeySDKClientBase"
+    },
+    {
+      "kind": "re-export",
+      "name": "WalletInterfaceType"
+    },
+    {
+      "kind": "re-export",
+      "name": "WalletSource"
     },
     {
       "kind": "re-export",
