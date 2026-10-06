@@ -17,9 +17,10 @@ const {
 /**
  * @param {string} name
  * @param {Record<string, unknown>} [pkg]
+ * @returns {import("./lib/paths.mjs").PkgMeta}
  */
 function packageMeta(name, pkg = {}) {
-  const dirName = name.split("/").at(-1);
+  const dirName = /** @type {string} */ (name.split("/").at(-1));
   return {
     dirName,
     dirPath: `/fixture/${dirName}`,
@@ -324,7 +325,7 @@ test("rejects empty and malformed Node selections before creating a consumer", (
         () =>
           verifyPackedConsumer({
             tarballs: [tarball],
-            nodePackageNames,
+            nodePackageNames: /** @type {string[]} */ (nodePackageNames),
             tempRoot: consumerRoot,
           }),
         /Node package selection/,
@@ -790,7 +791,7 @@ test("rejects invalid identities across the complete artifact set", () => {
         ],
         pattern: /Packed artifact manifest is invalid/,
       },
-      ...[
+      .../** @type {[string, string][]} */ ([
         ["null", "null\n"],
         ["array", "[]\n"],
         ["primitive", "7\n"],
@@ -800,7 +801,7 @@ test("rejects invalid identities across the complete artifact set", () => {
         ["missing-version", '{"name":"@fixture/missing-version"}\n'],
         ["empty-version", '{"name":"@fixture/empty-version","version":" "}\n'],
         ["non-string-version", '{"name":"@fixture/bad-version","version":7}\n'],
-      ].map(([label, packageJson]) => ({
+      ]).map(([label, packageJson]) => ({
         label,
         artifacts: [
           {
@@ -905,6 +906,7 @@ test("continues artifact inspection after failures and records later successes",
           artifacts,
           tempRoot: path.join(tempRoot, "continue-inspection"),
         }),
+      /** @param {any} error */
       (error) => {
         assert.equal(error.failures.length, 2);
         assert.deepEqual(error.inspectedArtifactNames, ["@fixture/valid"]);
@@ -1026,7 +1028,7 @@ test("accepts not-requested only with explicitly empty Node seeds", () => {
     const common = {
       packages: [packageMeta("@fixture/artifact-only")],
       artifactOnlySeeds: new Set(["@fixture/artifact-only"]),
-      nodeVerification: "not-requested",
+      nodeVerification: /** @type {const} */ ("not-requested"),
       packPackage() {
         return artifactOnly;
       },
@@ -1113,7 +1115,7 @@ test("reports exact artifact and Node sets from real profile selection", () => {
       nodeVerification: "required",
       tempRoot: path.join(tempRoot, "orchestration"),
       packPackage(pkgMeta) {
-        return tarballsByName.get(pkgMeta.pkg.name);
+        return /** @type {string} */ (tarballsByName.get(pkgMeta.pkg.name));
       },
     });
 

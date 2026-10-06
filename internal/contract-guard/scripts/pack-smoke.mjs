@@ -54,7 +54,7 @@ function validatePackedManifest(manifest, label) {
   ) {
     throw new Error(`${label}: Packed artifact manifest must be an object`);
   }
-  const { name, version } = manifest;
+  const { name, version } = /** @type {Record<string, unknown>} */ (manifest);
   if (typeof name !== "string" || name.trim() === "") {
     throw new Error(
       `${label}: Packed artifact manifest name must be a non-empty string`,
@@ -522,7 +522,7 @@ function packWorkspacePackage(pkgMeta, tempRoot) {
       `${pkgMeta.pkg.name}: expected one tarball, found ${newTarballs.length}`,
     );
   }
-  return path.join(tempRoot, newTarballs[0]);
+  return path.join(tempRoot, /** @type {string} */ (newTarballs[0]));
 }
 
 /**
@@ -552,6 +552,7 @@ export function runPackageCompatibility(options = {}) {
   const lines = [];
   /** @type {string[]} */
   const failures = [];
+  /** @param {string} message */
   const configurationFailure = (message) => {
     failures.push(message);
     lines.push("Configuration: failed", "Node verification: failed");
@@ -565,7 +566,8 @@ export function runPackageCompatibility(options = {}) {
   }
   if (
     nodeVerification === "not-requested" &&
-    (!Object.hasOwn(options, "nodeSeeds") || nodeSeeds.size !== 0)
+    (!Object.prototype.hasOwnProperty.call(options, "nodeSeeds") ||
+      nodeSeeds.size !== 0)
   ) {
     return configurationFailure(
       "Node verification not-requested requires explicitly empty nodeSeeds",
@@ -620,8 +622,11 @@ export function runPackageCompatibility(options = {}) {
     });
   } catch (error) {
     artifactInspectionFailed = true;
-    if (Array.isArray(error?.failures)) {
-      for (const failure of error.failures) failures.push(failure.message);
+    const inspectionFailures =
+      /** @type {{ failures?: unknown } | null | undefined} */ (error)
+        ?.failures;
+    if (Array.isArray(inspectionFailures)) {
+      for (const failure of inspectionFailures) failures.push(failure.message);
     } else {
       failures.push(errorMessage(error));
     }
