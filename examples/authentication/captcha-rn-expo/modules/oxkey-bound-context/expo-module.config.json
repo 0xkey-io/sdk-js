@@ -1,0 +1,7 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["OxkeyBoundContextModule"] },
+  "android": {
+    "modules": ["io.zeroxkey.boundcontext.OxkeyBoundContextModule"]
+  }
+}

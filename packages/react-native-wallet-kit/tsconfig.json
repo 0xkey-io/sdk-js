@@ -18,6 +18,11 @@
     "src/**/*.jsx",
     "src/**/*.json"
   ],
-  "exclude": ["**/__tests__/**/*", "**/__fixtures__/**/*"],
+  "exclude": [
+    "**/__tests__/**/*",
+    "**/__fixtures__/**/*",
+    "src/tests/**/*",
+    "src/type-tests/**/*"
+  ],
   "references": [{ "path": "../core" }, { "path": "../sdk-types" }]
 }

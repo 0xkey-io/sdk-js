@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Captcha RN Expo Candidate",
+    "slug": "captcha-rn-expo-candidate",
+    "scheme": "captcha-rn-expo-candidate",
+    "version": "0.0.0",
+    "ios": { "bundleIdentifier": "io.zeroxkey.captchacandidate" },
+    "android": { "package": "io.zeroxkey.captchacandidate" },
+    "plugins": ["expo-dev-client"]
+  }
+}
