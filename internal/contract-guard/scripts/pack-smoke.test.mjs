@@ -6,13 +6,40 @@ import path from "node:path";
 import test from "node:test";
 import YAML from "yaml";
 
+import {
+  assertTypeScriptFloorVersion,
+  SUPPORTED_TYPESCRIPT_FLOOR,
+} from "./lib/typescript-floor.mjs";
 import * as packSmoke from "./pack-smoke.mjs";
 
 const {
+  CONSUMER_TYPECHECK_PROFILES,
   packedConsumerInstallArgs,
   selectPilotPackageClosure,
   verifyPackedConsumer,
 } = packSmoke;
+
+test("checks the supported TypeScript Bundler floor first", () => {
+  assert.equal(SUPPORTED_TYPESCRIPT_FLOOR, "5.4");
+  assert.deepEqual(
+    CONSUMER_TYPECHECK_PROFILES.map(({ name }) => name),
+    ["bundler", "node16"],
+  );
+  assert.deepEqual(CONSUMER_TYPECHECK_PROFILES[0]?.compilerOptions, {
+    module: "ESNext",
+    moduleResolution: "Bundler",
+  });
+});
+
+test("requires consumer typechecks to run on the floor compiler", () => {
+  assert.doesNotThrow(() => assertTypeScriptFloorVersion("Version 5.4.3\n"));
+  for (const output of ["Version 5.3.3\n", "Version 5.9.3\n", ""]) {
+    assert.throws(
+      () => assertTypeScriptFloorVersion(output),
+      /Consumer typechecks must run on TypeScript 5\.4\.x/,
+    );
+  }
+});
 
 /**
  * @param {string} name
@@ -474,6 +501,14 @@ test("builds and verifies a Node consumer from only the requested artifacts", ()
     assert.deepEqual(Object.keys(consumerPackage.pnpm.overrides), [
       "@0xkey-io/selected",
     ]);
+    const bundlerConfig = JSON.parse(
+      fs.readFileSync(path.join(consumerDir, "tsconfig.bundler.json"), "utf8"),
+    );
+    assert.equal(bundlerConfig.compilerOptions.moduleResolution, "Bundler");
+    assert.equal(bundlerConfig.compilerOptions.module, "ESNext");
+    assert.equal(bundlerConfig.compilerOptions.strict, true);
+    assert.equal(bundlerConfig.compilerOptions.skipLibCheck, false);
+    assert.equal(fs.existsSync(path.join(consumerDir, "tsconfig.json")), false);
     for (const fileName of ["consumer.cjs", "consumer.mjs", "consumer.ts"]) {
       const source = fs.readFileSync(path.join(consumerDir, fileName), "utf8");
       assert.match(source, /@0xkey-io\/selected/);
@@ -1324,7 +1359,7 @@ test("rejects a packed package with an invalid declaration", () => {
           tarballs: [tarball],
           tempRoot: path.join(tempRoot, "consumer-root"),
         }),
-      /TypeScript consumer failed/,
+      /TypeScript consumer \(bundler\) failed/,
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -1352,7 +1387,7 @@ test("rejects a packed package with a missing declaration entry", () => {
           tarballs: [tarball],
           tempRoot: path.join(tempRoot, "consumer-root"),
         }),
-      /TypeScript consumer failed/,
+      /TypeScript consumer \(bundler\) failed/,
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

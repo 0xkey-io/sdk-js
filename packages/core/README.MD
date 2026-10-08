@@ -6,6 +6,10 @@ If you're using React, please use [`@0xkey-io/react-wallet-kit`](https://www.npm
 
 To learn how to use `@0xkey-io/core`, check out [our docs!](https://docs.0xkey.com/sdks/typescript-frontend)
 
+## TypeScript support
+
+Requires TypeScript 5.4 or newer with `"moduleResolution": "bundler"`. `node16`/`nodenext` resolution is not supported; see [TypeScript Support](https://github.com/0xkey-io/sdk-js#typescript-support).
+
 ## API key retention migration note
 
 Automatic key sweeping has been narrowed to conservative retention. Keys that are

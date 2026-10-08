@@ -5,12 +5,35 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { listPublicPackages, REPO_ROOT } from "./lib/paths.mjs";
+import { assertTypeScriptFloorCompiler } from "./lib/typescript-floor.mjs";
 
 const PILOT_PACKAGES = new Set([
   "@0xkey-io/encoding",
   "@0xkey-io/crypto",
   "@0xkey-io/api-key-stamper",
   "@0xkey-io/attested-stamper",
+]);
+
+/**
+ * Bundler is the supported consumer floor. Node16 stays only because the
+ * pilot closure already passes it: it is a regression signal for these
+ * packages, not a support promise. Packages that reach ox/abitype fail it.
+ */
+export const CONSUMER_TYPECHECK_PROFILES = Object.freeze([
+  Object.freeze({
+    name: "bundler",
+    compilerOptions: Object.freeze({
+      module: "ESNext",
+      moduleResolution: "Bundler",
+    }),
+  }),
+  Object.freeze({
+    name: "node16",
+    compilerOptions: Object.freeze({
+      module: "Node16",
+      moduleResolution: "Node16",
+    }),
+  }),
 ]);
 
 /**
@@ -409,24 +432,25 @@ export function verifyPackedConsumer({ tarballs, tempRoot, nodePackageNames }) {
     path.join(consumerDir, "consumer.ts"),
     `${packageNames.map((name, index) => `import * as package${index} from ${JSON.stringify(name)};\nvoid package${index};`).join("\n")}\n`,
   );
-  fs.writeFileSync(
-    path.join(consumerDir, "tsconfig.json"),
-    `${JSON.stringify(
-      {
-        compilerOptions: {
-          module: "Node16",
-          moduleResolution: "Node16",
-          noEmit: true,
-          skipLibCheck: false,
-          strict: true,
-          target: "ES2022",
+  for (const profile of CONSUMER_TYPECHECK_PROFILES) {
+    fs.writeFileSync(
+      path.join(consumerDir, `tsconfig.${profile.name}.json`),
+      `${JSON.stringify(
+        {
+          compilerOptions: {
+            ...profile.compilerOptions,
+            noEmit: true,
+            skipLibCheck: false,
+            strict: true,
+            target: "ES2022",
+          },
+          files: ["consumer.ts"],
         },
-        files: ["consumer.ts"],
-      },
-      null,
-      2,
-    )}\n`,
-  );
+        null,
+        2,
+      )}\n`,
+    );
+  }
 
   run("pnpm", packedConsumerInstallArgs(), {
     cwd: consumerDir,
@@ -494,14 +518,14 @@ export function verifyPackedConsumer({ tarballs, tempRoot, nodePackageNames }) {
     cwd: consumerDir,
     label: "ESM consumer",
   });
-  run(
-    path.join(REPO_ROOT, "node_modules/.bin/tsc"),
-    ["--noEmit", "-p", "tsconfig.json"],
-    {
+  const tscPath = path.join(REPO_ROOT, "node_modules/.bin/tsc");
+  assertTypeScriptFloorCompiler(tscPath);
+  for (const profile of CONSUMER_TYPECHECK_PROFILES) {
+    run(tscPath, ["--noEmit", "-p", `tsconfig.${profile.name}.json`], {
       cwd: consumerDir,
-      label: "TypeScript consumer",
-    },
-  );
+      label: `TypeScript consumer (${profile.name})`,
+    });
+  }
 }
 
 /**

@@ -7,5 +7,6 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext"
   },
-  "include": ["scripts/**/*.mjs", "scripts/**/*.ts", "fixtures/**/*.ts"]
+  "include": ["scripts/**/*.mjs", "scripts/**/*.ts", "fixtures/**/*.ts"],
+  "exclude": ["fixtures/consumer-typechecks/bundler/**"]
 }
