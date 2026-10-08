@@ -71,6 +71,37 @@ export const isValidSession = (session?: Session | undefined): boolean => {
   return session?.expiry !== undefined && session.expiry * 1000 > Date.now();
 };
 
+export const OTP_RESEND_COOLDOWN_SECONDS = 60;
+
+/**
+ * Returns the server-requested wait for an OTP init that was refused by a
+ * resend cooldown or rate limit, or undefined for any other error.
+ */
+export const getOtpCooldown = (
+  error: unknown,
+): { message: string; retryAfterSeconds: number | undefined } | undefined => {
+  if (error === null || typeof error !== "object") return undefined;
+  const { code, message, retryAfterSeconds } = error as {
+    code?: unknown;
+    message?: unknown;
+    retryAfterSeconds?: unknown;
+  };
+  if (
+    code !== ZeroXKeyErrorCodes.OTP_RESEND_COOLDOWN &&
+    code !== ZeroXKeyErrorCodes.OTP_INIT_RATE_LIMITED
+  ) {
+    return undefined;
+  }
+  return {
+    message:
+      typeof message === "string" && message
+        ? message
+        : "Please wait before requesting another code.",
+    retryAfterSeconds:
+      typeof retryAfterSeconds === "number" ? retryAfterSeconds : undefined,
+  };
+};
+
 export async function withZeroXKeyErrorHandling<T>(
   fn: () => Promise<T>,
   sessionExpireFn?: () => Promise<void>,

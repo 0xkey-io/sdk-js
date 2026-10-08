@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ActionButton, IconButton } from "../design/Buttons";
 import { PhoneInputBox } from "../design/Inputs";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { useZeroXKey } from "../../providers/client/Hook";
+import { getOtpCooldown } from "../../utils/utils";
 
 interface PhoneNumberInputProps {
   onContinue?: (phone: string, formattedPhone: string) => void;
@@ -16,20 +17,29 @@ export function PhoneNumberInput(props: PhoneNumberInputProps) {
   const [formattedPhone, setFormattedPhone] = useState("");
   const [isValid, setIsValid] = useState(false);
   const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
   const useContinueButton = config?.ui?.preferLargeActionButtons ?? false;
 
   const handleContinue = async () => {
-    if (isValid && onContinue) {
+    if (isValid && onContinue && !loadingRef.current) {
+      loadingRef.current = true;
       setLoading(true);
+      setError(null);
       try {
         await Promise.resolve(onContinue(phone, formattedPhone));
+      } catch (error) {
+        const cooldown = getOtpCooldown(error);
+        if (!cooldown) throw error;
+        setError(cooldown.message);
       } finally {
+        loadingRef.current = false;
         setLoading(false);
       }
     }
   };
 
-  const buttonDisabled = !isValid;
+  const buttonDisabled = !isValid || loading;
 
   const buttonClass = clsx(
     "transition-all duration-300",
@@ -38,51 +48,57 @@ export function PhoneNumberInput(props: PhoneNumberInputProps) {
   );
 
   return (
-    <div
-      className={clsx(
-        "w-full items-center justify-center space-y-3",
-        useContinueButton ? "flex flex-col" : "flex flex-row",
-      )}
-    >
+    <>
       <div
         className={clsx(
-          "w-full",
-          !useContinueButton && "relative flex items-center",
+          "w-full items-center justify-center space-y-3",
+          useContinueButton ? "flex flex-col" : "flex flex-row",
         )}
       >
-        <PhoneInputBox
-          value={phone}
-          onChange={(raw, formatted, valid) => {
-            setPhone(raw);
-            setFormattedPhone(formatted);
-            setIsValid(valid);
-          }}
-          onEnter={handleContinue}
-        />
+        <div
+          className={clsx(
+            "w-full",
+            !useContinueButton && "relative flex items-center",
+          )}
+        >
+          <PhoneInputBox
+            value={phone}
+            onChange={(raw, formatted, valid) => {
+              setPhone(raw);
+              setFormattedPhone(formatted);
+              setIsValid(valid);
+              setError(null);
+            }}
+            onEnter={handleContinue}
+          />
 
-        {!useContinueButton && (
-          <IconButton
-            icon={faArrowRight}
+          {!useContinueButton && (
+            <IconButton
+              icon={faArrowRight}
+              onClick={handleContinue}
+              disabled={buttonDisabled}
+              loading={loading}
+              className={clsx("absolute right-2 w-6 h-6", buttonClass)}
+              spinnerClassName="text-primary-text-light dark:text-primary-text-dark"
+            />
+          )}
+        </div>
+
+        {useContinueButton && (
+          <ActionButton
             onClick={handleContinue}
             disabled={buttonDisabled}
             loading={loading}
-            className={clsx("absolute right-2 w-6 h-6", buttonClass)}
+            className={clsx("w-full", buttonClass)}
             spinnerClassName="text-primary-text-light dark:text-primary-text-dark"
-          />
+          >
+            Continue
+          </ActionButton>
         )}
       </div>
-
-      {useContinueButton && (
-        <ActionButton
-          onClick={handleContinue}
-          disabled={buttonDisabled}
-          loading={loading}
-          className={clsx("w-full", buttonClass)}
-          spinnerClassName="text-primary-text-light dark:text-primary-text-dark"
-        >
-          Continue
-        </ActionButton>
+      {error && (
+        <div className="mt-2 text-red-400 text-center text-sm">{error}</div>
       )}
-    </div>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useModal } from "../../providers/modal/Hook";
 import { useZeroXKey } from "../../providers/client/Hook";
 import { Spinner } from "../design/Spinners";
@@ -8,6 +8,7 @@ import { OtpType, ZeroXKeyError, ZeroXKeyErrorCodes } from "@0xkey-io/core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faPhone } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
+import { getOtpCooldown, OTP_RESEND_COOLDOWN_SECONDS } from "../../utils/utils";
 
 interface OtpVerificationProps {
   contact: string;
@@ -19,6 +20,7 @@ interface OtpVerificationProps {
   formattedContact?: string; // Optional formatted contact for display purposes
   sessionKey?: string; // Optional sessionKey for multisession
   onContinue?: (optCode: string) => Promise<void>; // Optional callback for continue action
+  resendCooldownSeconds?: number | undefined; // Seconds before the code can be resent, counted from when this screen opens. Defaults to 60.
 }
 export function OtpVerification(props: OtpVerificationProps) {
   const {
@@ -29,12 +31,22 @@ export function OtpVerification(props: OtpVerificationProps) {
     formattedContact,
     sessionKey,
     onContinue = null, // Default to null if not provided
+    resendCooldownSeconds = OTP_RESEND_COOLDOWN_SECONDS,
   } = props;
   const { initOtp, completeOtp } = useZeroXKey();
   const { closeModal, isMobile } = useModal();
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [resending, setResending] = useState<boolean>(false);
   const [resent, setResent] = useState<boolean>(false);
+  const resendingRef = useRef(false);
+  const [resendAvailableAt, setResendAvailableAt] = useState<number>(
+    () => Date.now() + resendCooldownSeconds * 1000,
+  );
+  const [now, setNow] = useState<number>(() => Date.now());
+  const resendSecondsLeft = Math.max(
+    0,
+    Math.ceil((resendAvailableAt - now) / 1000),
+  );
   const [otpId, setOtpId] = useState<string>(props.otpId);
   // Resend can return a fresh enclave-signed target bundle (and very likely
   // will, since each init call generates a new ephemeral target keypair on the
@@ -79,7 +91,23 @@ export function OtpVerification(props: OtpVerificationProps) {
     }
   };
 
+  useEffect(() => {
+    setNow(Date.now());
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= resendAvailableAt) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendAvailableAt]);
+
+  const startResendCooldown = (seconds: number) => {
+    setResendAvailableAt(Date.now() + seconds * 1000);
+  };
+
   const handleResend = async () => {
+    if (resendingRef.current || resendSecondsLeft > 0) return;
+    resendingRef.current = true;
     setResending(true);
     try {
       const { otpId: id, otpEncryptionTargetBundle: nextBundle } =
@@ -87,9 +115,19 @@ export function OtpVerification(props: OtpVerificationProps) {
       setOtpId(id);
       setOtpEncryptionTargetBundle(nextBundle);
       setResent(true);
+      setError(null);
+      startResendCooldown(resendCooldownSeconds);
     } catch (error) {
-      throw new Error(`Error resending OTP: ${error}`);
+      const cooldown = getOtpCooldown(error);
+      if (!cooldown) {
+        throw new Error(`Error resending OTP: ${error}`);
+      }
+      setError(cooldown.message);
+      startResendCooldown(
+        cooldown.retryAfterSeconds ?? OTP_RESEND_COOLDOWN_SECONDS,
+      );
     } finally {
+      resendingRef.current = false;
       setResending(false);
     }
   };
@@ -137,16 +175,16 @@ export function OtpVerification(props: OtpVerificationProps) {
         )}
         <BaseButton
           onClick={handleResend}
-          disabled={resending || resent}
-          className={`text-xs text-inherit font-semibold bg-transparent border-none ${resent && "opacity-30"}`}
+          disabled={resending || resendSecondsLeft > 0}
+          className={`text-xs text-inherit font-semibold bg-transparent border-none ${resendSecondsLeft > 0 && "opacity-30"}`}
         >
           {resending ? (
             <span className="flex items-center gap-2.5">
               <Spinner className="size-3" />
               Resending...
             </span>
-          ) : resent ? (
-            "Code sent!"
+          ) : resendSecondsLeft > 0 ? (
+            `${resent ? "Code sent! " : ""}Resend code in ${resendSecondsLeft}s`
           ) : (
             "Resend Code"
           )}
