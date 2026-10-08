@@ -47,6 +47,11 @@
       "name": "ZeroXKeyNetworkError",
       "kind": "class",
       "arity": 4
+    },
+    {
+      "name": "ZeroXKeyRateLimitError",
+      "kind": "class",
+      "arity": 4
     }
   ]
 }

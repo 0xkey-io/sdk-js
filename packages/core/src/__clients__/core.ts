@@ -145,6 +145,7 @@ import {
   fetchAllWalletAccountsWithCursor,
   getClientSignatureMessageForSignup,
   decodeVerificationToken,
+  otpRateLimitErrorFrom,
 } from "../utils";
 import { createStorageManager } from "../__storage__/base";
 import {
@@ -1885,15 +1886,52 @@ export class ZeroXKeyClient {
    * @param params.organizationId - optional organization ID to target (defaults to the session's organization ID or the parent organization ID).
    * @returns A promise that resolves to the OTP ID required for verification.
    * @throws {ZeroXKeyError} If there is an error during the OTP initialization process or if the maximum number of OTPs has been reached.
+   * @throws {ZeroXKeyRateLimitError} With code `OTP_RESEND_COOLDOWN` or `OTP_INIT_RATE_LIMITED` when the server asks the caller to wait; `retryAfterSeconds` carries the wait when known.
+   *
+   * Concurrent calls for the same contact and auth proxy target share one request
+   * (only one code is sent); the shared request is forgotten once it settles.
    */
   initOtp = async (params: InitOtpParams): Promise<InitOtpResult> => {
+    const key = this.initOtpKey(params);
+    const inFlight = this.initOtpInFlight.get(key);
+    if (inFlight) return inFlight;
+
+    const request: Promise<InitOtpResult> = this.sendInitOtp(params).finally(
+      () => {
+        if (this.initOtpInFlight.get(key) === request) {
+          this.initOtpInFlight.delete(key);
+        }
+      },
+    );
+    this.initOtpInFlight.set(key, request);
+    return request;
+  };
+
+  private readonly initOtpInFlight = new Map<string, Promise<InitOtpResult>>();
+
+  private initOtpKey({ otpType, contact }: InitOtpParams): string {
+    const target = this.authDependencies.httpClient?.config ?? this.config;
+    const trimmed = String(contact ?? "").trim();
+    return JSON.stringify([
+      otpType,
+      otpType === OtpType.Email ? trimmed.toLowerCase() : trimmed,
+      target.organizationId,
+      target.authProxyUrl,
+      target.authProxyConfigId,
+    ]);
+  }
+
+  private sendInitOtp = async (
+    params: InitOtpParams,
+  ): Promise<InitOtpResult> => {
     const { captchaToken, otpType, contact } = params;
     return withZeroXKeyErrorHandling(
       async () => {
-        const initOtpRes = await this.httpClient.proxyInitOtpV2(
-          { otpType, contact },
-          captchaToken,
-        );
+        const initOtpRes = await this.httpClient
+          .proxyInitOtpV2({ otpType, contact }, captchaToken)
+          .catch((error: unknown) => {
+            throw otpRateLimitErrorFrom(error) ?? error;
+          });
 
         if (
           !initOtpRes ||

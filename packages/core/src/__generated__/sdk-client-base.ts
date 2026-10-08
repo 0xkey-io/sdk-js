@@ -363,14 +363,21 @@ export class ZeroXKeySDKClientBase {
     });
 
     if (!response.ok) {
+      const errorResponse = {
+        status: response.status,
+        retryAfter: response.headers?.get?.("retry-after") ?? undefined,
+      };
       let res: GrpcStatus;
       try {
         res = await response.json();
       } catch (_) {
-        throw new Error(`${response.status} ${response.statusText}`);
+        throw Object.assign(
+          new Error(`${response.status} ${response.statusText}`),
+          errorResponse,
+        );
       }
 
-      throw new ZeroXKeyRequestError(res);
+      throw new ZeroXKeyRequestError(res, errorResponse);
     }
 
     const data = await response.json();

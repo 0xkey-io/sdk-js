@@ -118,6 +118,8 @@ export enum ZeroXKeyErrorCodes {
   SWITCH_WALLET_CHAIN_ERROR = "SWITCH_WALLET_CHAIN_ERROR",
   ONRAMP_ERROR = "ONRAMP_ERROR",
   MAX_OTP_INITIATED_ERROR = "MAX_OTP_INITIATED_ERROR",
+  OTP_RESEND_COOLDOWN = "OTP_RESEND_COOLDOWN",
+  OTP_INIT_RATE_LIMITED = "OTP_INIT_RATE_LIMITED",
 
   CLIENT_NOT_INITIALIZED = "CLIENT_NOT_INITIALIZED",
   WALLET_MANAGER_COMPONENT_NOT_INITIALIZED = "WALLET_MANAGER_COMPONENT_NOT_INITIALIZED",
@@ -179,6 +181,23 @@ export class ZeroXKeyNetworkError extends ZeroXKeyError {
   ) {
     super(message, code, cause);
     this.name = "ZeroXKeyNetworkError";
+  }
+}
+
+/**
+ * Raised when the server refuses a request until a cooldown elapses, for
+ * example `OTP_RESEND_COOLDOWN` or `OTP_INIT_RATE_LIMITED`.
+ * `retryAfterSeconds` is undefined when the server did not say how long to wait.
+ */
+export class ZeroXKeyRateLimitError extends ZeroXKeyError {
+  constructor(
+    message: string,
+    code: ZeroXKeyErrorCodes,
+    public retryAfterSeconds: number | undefined,
+    cause?: unknown,
+  ) {
+    super(message, code, cause);
+    this.name = "ZeroXKeyRateLimitError";
   }
 }
 

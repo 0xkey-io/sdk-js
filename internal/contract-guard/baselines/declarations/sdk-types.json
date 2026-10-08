@@ -68,6 +68,10 @@
     {
       "kind": "class",
       "name": "ZeroXKeyNetworkError"
+    },
+    {
+      "kind": "class",
+      "name": "ZeroXKeyRateLimitError"
     }
   ]
 }

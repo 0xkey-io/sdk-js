@@ -122,9 +122,14 @@
       "arity": 4
     },
     {
+      "name": "ZeroXKeyRateLimitError",
+      "kind": "class",
+      "arity": 4
+    },
+    {
       "name": "ZeroXKeyRequestError",
       "kind": "class",
-      "arity": 1
+      "arity": 2
     },
     {
       "name": "addressFormatConfig",

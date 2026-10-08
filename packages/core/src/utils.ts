@@ -23,6 +23,7 @@ import {
   ZeroXKeyError,
   ZeroXKeyErrorCodes,
   ZeroXKeyNetworkError,
+  ZeroXKeyRateLimitError,
 } from "@0xkey-io/sdk-types";
 import {
   type CreateSubOrgParams,
@@ -1148,6 +1149,147 @@ const throwMatchingMessage = (
     });
   }
 };
+
+const MAX_OTP_INITIATED_MESSAGE = "Max number of OTPs have been initiated";
+const RETRY_AFTER_SECONDS_FIELDS = [
+  "retryAfterSeconds",
+  "retry_after_seconds",
+  "retry_after",
+];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object";
+
+const ceilSeconds = (seconds: number): number | undefined =>
+  Number.isFinite(seconds) && seconds >= 0 ? Math.ceil(seconds) : undefined;
+
+/**
+ * @internal
+ *
+ * Parses a `Retry-After` value: delay-seconds, or an HTTP-date.
+ */
+export function parseRetryAfterSeconds(value: unknown): number | undefined {
+  if (typeof value === "number") return ceilSeconds(value);
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^\d+(\.\d+)?$/.test(trimmed)) return ceilSeconds(Number(trimmed));
+  if (!/[a-z]/i.test(trimmed)) return undefined;
+  const retryAt = Date.parse(trimmed);
+  if (Number.isNaN(retryAt)) return undefined;
+  return Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+}
+
+function retryAfterFieldSeconds(value: unknown, depth = 0): number | undefined {
+  if (depth > 3) return undefined;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const seconds = retryAfterFieldSeconds(item, depth + 1);
+      if (seconds !== undefined) return seconds;
+    }
+    return undefined;
+  }
+  if (!isRecord(value)) return undefined;
+  for (const field of RETRY_AFTER_SECONDS_FIELDS) {
+    const seconds = parseRetryAfterSeconds(value[field]);
+    if (seconds !== undefined) return seconds;
+  }
+  // google.rpc.RetryInfo, as emitted by grpc-gateway: { retryDelay: "42s" }
+  const retryDelay = value.retryDelay;
+  if (typeof retryDelay === "string") {
+    const match = /^(\d+(?:\.\d+)?)s$/.exec(retryDelay.trim());
+    if (match) return ceilSeconds(Number(match[1]));
+  }
+  for (const nested of Object.values(value)) {
+    if (isRecord(nested)) {
+      const seconds = retryAfterFieldSeconds(nested, depth + 1);
+      if (seconds !== undefined) return seconds;
+    }
+  }
+  return undefined;
+}
+
+function retryAfterMessageSeconds(message: string): number | undefined {
+  const match =
+    /(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/i.exec(message) ??
+    /retry[\s_-]*after\D{0,3}(\d+(?:\.\d+)?)/i.exec(message);
+  return match ? ceilSeconds(Number(match[1])) : undefined;
+}
+
+function safeStringify(value: unknown): string {
+  if (value === undefined) return "";
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
+const pluralSeconds = (seconds: number) =>
+  `${seconds} second${seconds === 1 ? "" : "s"}`;
+
+/**
+ * @internal
+ *
+ * Maps an OTP init failure caused by a server-side cooldown or rate limit to a
+ * `ZeroXKeyRateLimitError`, and returns undefined for any other failure.
+ *
+ * The wait time comes from the `Retry-After` header when present, then from a
+ * `retryAfterSeconds`/`retry_after` body field, then from a number in the message.
+ */
+export function otpRateLimitErrorFrom(
+  error: unknown,
+): ZeroXKeyRateLimitError | undefined {
+  if (!isRecord(error)) return undefined;
+  const body = isRecord(error.body) ? error.body : undefined;
+  const message =
+    typeof body?.message === "string"
+      ? body.message
+      : typeof error.message === "string"
+        ? error.message
+        : "";
+  const searchable = [
+    message,
+    typeof error.message === "string" ? error.message : "",
+    String(error.code ?? ""),
+    safeStringify(body ?? error.details),
+  ].join(" ");
+
+  let code: ZeroXKeyErrorCodes;
+  if (searchable.includes(ZeroXKeyErrorCodes.OTP_RESEND_COOLDOWN)) {
+    code = ZeroXKeyErrorCodes.OTP_RESEND_COOLDOWN;
+  } else if (searchable.includes(ZeroXKeyErrorCodes.OTP_INIT_RATE_LIMITED)) {
+    code = ZeroXKeyErrorCodes.OTP_INIT_RATE_LIMITED;
+  } else if (
+    error.status === 429 &&
+    !searchable.includes(MAX_OTP_INITIATED_MESSAGE)
+  ) {
+    code = ZeroXKeyErrorCodes.OTP_INIT_RATE_LIMITED;
+  } else {
+    return undefined;
+  }
+
+  const retryAfterSeconds =
+    parseRetryAfterSeconds(error.retryAfter) ??
+    retryAfterFieldSeconds(body ?? error.details) ??
+    retryAfterMessageSeconds(message);
+
+  const friendlyMessage =
+    code === ZeroXKeyErrorCodes.OTP_RESEND_COOLDOWN
+      ? retryAfterSeconds !== undefined
+        ? `Please wait ${pluralSeconds(retryAfterSeconds)} before requesting another code.`
+        : "Please wait before requesting another code."
+      : retryAfterSeconds !== undefined
+        ? `Too many codes requested. Try again in ${pluralSeconds(retryAfterSeconds)}.`
+        : "Too many codes requested. Please try again later.";
+
+  return new ZeroXKeyRateLimitError(
+    friendlyMessage,
+    code,
+    retryAfterSeconds,
+    error,
+  );
+}
 
 /**
  * @internal
