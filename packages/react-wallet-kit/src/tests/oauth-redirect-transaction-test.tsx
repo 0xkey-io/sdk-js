@@ -154,15 +154,26 @@ function redirectBinding(input?: {
   };
 }
 
+const outerRealm = new (Node.constructor as FunctionConstructor)(
+  "return { setImmediate, now: () => Date.now() }",
+)() as { setImmediate(callback: () => void): void; now(): number };
+const WAIT_TIMEOUT_MS = 5_000;
+
 async function flush(): Promise<void> {
   await act(async () => {
-    await new Promise<void>((resolve) => {
-      const schedule = new (Node.constructor as FunctionConstructor)(
-        "return setImmediate",
-      )() as (callback: () => void) => void;
-      schedule(() => resolve());
-    });
+    await new Promise<void>((resolve) => outerRealm.setImmediate(resolve));
   });
+}
+
+/**
+ * crypto.subtle and fake-indexeddb settle on Node's real event loop while
+ * Jest fake timers are installed, so a fixed number of turns is not a bound:
+ * wait on the real clock instead, without advancing fake timers. On timeout
+ * this returns so the caller's assertions report the observed state.
+ */
+async function waitUntil(condition: () => boolean): Promise<void> {
+  const deadline = outerRealm.now() + WAIT_TIMEOUT_MS;
+  while (!condition() && outerRealm.now() < deadline) await flush();
 }
 
 describe("full-page OAuth redirect transactions", () => {
@@ -185,10 +196,9 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
 
       let settled: "pending" | "resolved" | unknown = "pending";
@@ -203,15 +213,12 @@ describe("full-page OAuth redirect transactions", () => {
           settled = error;
         },
       );
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (
+      await waitUntil(
+        () =>
           localStorage.getItem(verifierKey) !== null ||
           navigations.length > 0 ||
-          settled !== "pending"
-        )
-          break;
-        await flush();
-      }
+          settled !== "pending",
+      );
 
       expect(localStorage.getItem(verifierKey)).toBeNull();
       expect(navigations).toHaveLength(1);
@@ -273,20 +280,16 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
 
       const pending = mounted.context()!.handleDiscordOauth({
         openInPage: true,
       });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       expect(navigations).toHaveLength(1);
       const state = new URL(navigations[0]!).searchParams.get("state");
       expect(state).toEqual(expect.any(String));
@@ -319,14 +322,11 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (
-          mounted.context()?.clientState === ClientState.Ready ||
-          proxyCalls.length > 0
-        )
-          break;
-        await flush();
-      }
+      await waitUntil(
+        () =>
+          mounted?.context()?.clientState === ClientState.Ready ||
+          proxyCalls.length > 0,
+      );
 
       expect(proxyCalls).toHaveLength(1);
       expect(proxyCalls[0]?.codeVerifier).toBe(storedVerifier);
@@ -371,20 +371,16 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
 
       const pending = mounted.context()!.handleDiscordOauth({
         openInPage: true,
       });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       expect(navigations).toHaveLength(1);
       const state = new URL(navigations[0]!).searchParams.get("state");
       expect(state).toEqual(expect.any(String));
@@ -415,10 +411,9 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       expect(proxyCalls).toHaveLength(0);
 
@@ -458,19 +453,15 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       const pending = mounted.context()!.handleDiscordOauth({
         openInPage: true,
       });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       const state = new URL(navigations[0]!).searchParams.get("state");
       expect(state).toEqual(expect.any(String));
       await dom.unmount(mounted);
@@ -496,10 +487,9 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       expect(proxyCalls).toHaveLength(0);
       const store = createOAuthTransactionStore({
@@ -546,21 +536,16 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       const pending = mounted.context()!.handleXOauth({ openInPage: true });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (
-          localStorage.getItem(verifierKey) !== null ||
-          navigations.length > 0
-        )
-          break;
-        await flush();
-      }
+      await waitUntil(
+        () =>
+          localStorage.getItem(verifierKey) !== null || navigations.length > 0,
+      );
       expect(localStorage.getItem(verifierKey)).toBeNull();
       expect(navigations).toHaveLength(1);
       const authUrl = new URL(navigations[0]!);
@@ -616,23 +601,18 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       const pending = mounted.context()!.handleFacebookOauth({
         openInPage: true,
       });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (
-          localStorage.getItem(verifierKey) !== null ||
-          navigations.length > 0
-        )
-          break;
-        await flush();
-      }
+      await waitUntil(
+        () =>
+          localStorage.getItem(verifierKey) !== null || navigations.length > 0,
+      );
       expect(localStorage.getItem(verifierKey)).toBeNull();
       expect(navigations).toHaveLength(1);
       const authUrl = new URL(navigations[0]!);
@@ -690,19 +670,15 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       const pending = mounted
         .context()!
         .handleGoogleOauth({ openInPage: true });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       expect(navigations).toHaveLength(1);
       const authUrl = new URL(navigations[0]!);
       expect(authUrl.searchParams.has("transactionId")).toBe(false);
@@ -755,17 +731,13 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       const pending = mounted.context()!.handleAppleOauth({ openInPage: true });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       expect(navigations).toHaveLength(1);
       const authUrl = new URL(navigations[0]!);
       expect(authUrl.searchParams.has("transactionId")).toBe(false);
@@ -820,17 +792,13 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       const pending = mounted.context()!.handleXOauth({ openInPage: true });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       const state = new URL(navigations[0]!).searchParams.get("state");
       expect(state).toEqual(expect.any(String));
       const storedVerifier = await readStoredVerifier(state!);
@@ -857,14 +825,11 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (
-          mounted.context()?.clientState === ClientState.Ready ||
-          proxyCalls.length > 0
-        )
-          break;
-        await flush();
-      }
+      await waitUntil(
+        () =>
+          mounted?.context()?.clientState === ClientState.Ready ||
+          proxyCalls.length > 0,
+      );
       expect(proxyCalls).toHaveLength(1);
       expect(proxyCalls[0]?.codeVerifier).toBe(storedVerifier);
       const store = createOAuthTransactionStore({
@@ -913,19 +878,15 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       const pending = mounted.context()!.handleFacebookOauth({
         openInPage: true,
       });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       const state = new URL(navigations[0]!).searchParams.get("state");
       expect(state).toEqual(expect.any(String));
       const storedVerifier = await readStoredVerifier(state!);
@@ -952,14 +913,11 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (
-          mounted.context()?.clientState === ClientState.Ready ||
-          facebookExchanges.length > 0
-        )
-          break;
-        await flush();
-      }
+      await waitUntil(
+        () =>
+          mounted?.context()?.clientState === ClientState.Ready ||
+          facebookExchanges.length > 0,
+      );
       expect(facebookExchanges).toEqual([storedVerifier]);
       const store = createOAuthTransactionStore({
         databaseName: OAUTH_TRANSACTION_DATABASE_NAME,
@@ -1008,18 +966,14 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       const pending = mounted
         .context()!
         .handleGoogleOauth({ openInPage: true });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       const state = new URL(navigations[0]!).searchParams.get("state");
       expect(state).toEqual(expect.any(String));
       await dom.unmount(mounted);
@@ -1044,10 +998,9 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       expect(onOauthRedirect).toHaveBeenCalledTimes(1);
       expect(onOauthRedirect).toHaveBeenCalledWith({
@@ -1101,16 +1054,12 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       const pending = mounted.context()!.handleAppleOauth({ openInPage: true });
       void pending.catch(() => undefined);
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (navigations.length > 0) break;
-        await flush();
-      }
+      await waitUntil(() => navigations.length > 0);
       const state = new URL(navigations[0]!).searchParams.get("state");
       expect(state).toEqual(expect.any(String));
       expect(state).toContain("provider=apple");
@@ -1133,10 +1082,9 @@ describe("full-page OAuth redirect transactions", () => {
         mockActiveSessionDeferred.resolve(undefined);
         await Promise.resolve();
       });
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (mounted.context()?.clientState === ClientState.Ready) break;
-        await flush();
-      }
+      await waitUntil(
+        () => mounted?.context()?.clientState === ClientState.Ready,
+      );
       expect(mounted.context()?.clientState).toBe(ClientState.Ready);
       expect(onOauthRedirect).toHaveBeenCalledTimes(1);
       expect(onOauthRedirect).toHaveBeenCalledWith({
