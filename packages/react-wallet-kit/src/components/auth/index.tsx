@@ -26,7 +26,7 @@ import { DeveloperError } from "../design/Failure";
 import { useModal } from "../../providers/modal/Hook";
 import { useZeroXKey } from "../../providers/client/Hook";
 import { ClientState } from "../../types/base";
-import { isWalletConnect } from "../../utils/utils";
+import { getOtpCooldown, isWalletConnect } from "../../utils/utils";
 
 type AuthComponentProps = {
   sessionKey?: string | undefined;
@@ -94,6 +94,7 @@ export function AuthComponent({
         showTitle: false,
       });
     } catch (error) {
+      if (getOtpCooldown(error)) throw error;
       throw new Error(`Error initializing OTP: ${error}`);
     }
   };
@@ -126,6 +127,7 @@ export function AuthComponent({
         showTitle: false,
       });
     } catch (error) {
+      if (getOtpCooldown(error)) throw error;
       throw new Error(`Error initializing OTP: ${error}`);
     }
   };
