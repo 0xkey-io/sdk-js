@@ -1,0 +1,31 @@
+{
+  "name": "captcha-rn-expo-candidate",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "patch-package && node scripts/verify-native-patch.mjs && node scripts/verify-navigation-routing.mjs",
+    "start": "expo start --dev-client",
+    "prebuild": "expo prebuild",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "typecheck": "tsc --noEmit",
+    "test:native-bound-context": "node --test scripts/native-bound-context-v2.test.mjs",
+    "verify:patch": "node scripts/verify-native-patch.mjs && node scripts/verify-navigation-routing.mjs"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "56.0.22",
+    "expo-crypto": "56.0.5",
+    "expo-dev-client": "56.0.27",
+    "expo-sqlite": "56.0.6",
+    "react": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-webview": "^13.16.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "patch-package": "8.0.1",
+    "typescript": "5.9.3"
+  }
+}

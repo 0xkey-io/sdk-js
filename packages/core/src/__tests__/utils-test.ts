@@ -40,12 +40,6 @@ import {
   WalletSource,
 } from "../__types__";
 
-// mock the bs58 library
-jest.mock("bs58", () => ({
-  encode: jest.fn(() => "base58-encoded"),
-}));
-import { bs58 } from "@0xkey-io/encoding";
-
 // For deterministic ETH behavior, mock the heavy crypto/EC parts.
 
 // Mock ethers keccak256, and toUtf8Bytes
@@ -375,8 +369,7 @@ describe("addressFromPublicKey", () => {
 
   it("Solana: base58 encodes the raw bytes of the hex public key", () => {
     const out = addressFromPublicKey(Chain.Solana, "a1b2c3");
-    expect(out).toBe("base58-encoded");
-    expect(bs58.encode).toHaveBeenCalled();
+    expect(out).toBe("wK8v");
   });
 
   it("throws for unsupported chain", () => {
@@ -419,8 +412,10 @@ describe("getAuthenticatorAddresses", () => {
     expect(out.ethereum).toEqual([
       "0x1234567890abcdef1234567890abcdef12345678",
     ]);
-    // SOL: mocked base58 output
-    expect(out.solana).toEqual(["base58-encoded"]);
+    // SOL: base58 of the 32 raw 0xcd bytes.
+    expect(out.solana).toEqual([
+      "ErNbLjU6E8tSbZH3REsMeTDP3Z8G52k6YedWwvBpAJ7v",
+    ]);
   });
 
   it("returns empty arrays when no apiKeys", () => {

@@ -4,46 +4,16 @@ import {
   ZeroXKeyErrorCodes,
 } from "@0xkey-io/sdk-types";
 
-jest.mock(
-  "@polyfills/window",
-  () => ({
-    __esModule: true,
-    default: {
-      localStorage: {
-        getItem: jest.fn(),
-        setItem: jest.fn(),
-        removeItem: jest.fn(),
-      },
-    },
-  }),
-  { virtual: true },
-);
-jest.mock(
-  "@utils",
-  () => ({
-    __esModule: true,
-    ...jest.requireActual<typeof import("../utils")>("@utils"),
-    parseSession: jest.fn(),
-  }),
-  { virtual: true },
-);
-
-import { ZeroXKeyClient } from "../__clients__/core";
 import { StamperType } from "../__types__";
+import { createReadyClient } from "./test-support/ready-client";
 
-function createClientWithStatusResponse(
+async function createClientWithStatusResponse(
   response: TGetSendTransactionStatusResponse,
-): ZeroXKeyClient {
-  const client = new ZeroXKeyClient({
-    organizationId: "org-id",
-  });
-
-  (client as any).storageManager = {
-    getActiveSession: async () => undefined,
-  };
-  (client as any).httpClient = {
-    getSendTransactionStatus: async () => response,
-  };
+) {
+  const client = await createReadyClient();
+  jest
+    .spyOn(client.httpClient, "getSendTransactionStatus")
+    .mockResolvedValue(response);
 
   return client;
 }
@@ -51,11 +21,12 @@ function createClientWithStatusResponse(
 describe("pollTransactionStatus", () => {
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
+    delete (globalThis as any).document;
+    delete (globalThis as any).window;
   });
 
   it("throws a ZeroXKeyError with the terminal status payload for failed EVM transactions", async () => {
-    jest.useFakeTimers();
-
     const response: TGetSendTransactionStatusResponse = {
       txStatus: "FAILED",
       error: {
@@ -87,7 +58,8 @@ describe("pollTransactionStatus", () => {
       },
     };
 
-    const client = createClientWithStatusResponse(response);
+    const client = await createClientWithStatusResponse(response);
+    jest.useFakeTimers();
     const promise = client.pollTransactionStatus({
       organizationId: "org-id",
       sendTransactionStatusId: "status-id",
@@ -112,13 +84,12 @@ describe("pollTransactionStatus", () => {
   });
 
   it("falls back to the terminal status when no structured error is present", async () => {
-    jest.useFakeTimers();
-
     const response: TGetSendTransactionStatusResponse = {
       txStatus: "CANCELLED",
     };
 
-    const client = createClientWithStatusResponse(response);
+    const client = await createClientWithStatusResponse(response);
+    jest.useFakeTimers();
     const promise = client.pollTransactionStatus({
       organizationId: "org-id",
       sendTransactionStatusId: "status-id",

@@ -1,5 +1,5 @@
 import postcss from "rollup-plugin-postcss";
-import typescript from "@rollup/plugin-typescript";
+import { createTypescriptPlugin } from "../../rollup.config.base.mjs";
 import nodeExternals from "rollup-plugin-node-externals";
 import path from "node:path";
 import alias from "@rollup/plugin-alias";
@@ -80,7 +80,7 @@ const getFormatConfig = (format) => {
           "@babel/preset-react",
         ],
       }),
-      typescript({
+      createTypescriptPlugin({
         tsconfig: "./tsconfig.json",
         outputToFilesystem: false,
         compilerOptions: {

@@ -1,6 +1,16 @@
 export * from "./providers";
 export * from "./types/base";
 export * from "./types/method-types";
+export {
+  createCaptchaWebViewBridge,
+  type CaptchaBridgeContext,
+  type CaptchaBridgeInput,
+  type CaptchaBridgeResult,
+} from "./utils/captcha-webview-bridge";
+export {
+  receiveCaptchaNativeMessage,
+  type CaptchaNativeMessageEvent,
+} from "./utils/captcha-webview-adapter";
 
 // Re-export selected values from @0xkey-io/core
 export {

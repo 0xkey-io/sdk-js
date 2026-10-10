@@ -9,13 +9,19 @@ export function buildOAuthState(params: {
   flow: "redirect" | "popup";
   publicKey: string;
   nonce?: string;
+  transactionId?: string;
   additionalState?: Record<string, string> | undefined;
 }): string {
-  const { provider, flow, publicKey, nonce, additionalState } = params;
+  const { provider, flow, publicKey, nonce, transactionId, additionalState } =
+    params;
   let state = `provider=${provider}&flow=${flow}&publicKey=${encodeURIComponent(publicKey)}`;
 
   if (nonce) {
     state += `&nonce=${nonce}`;
+  }
+
+  if (transactionId) {
+    state += `&transactionId=${encodeURIComponent(transactionId)}`;
   }
 
   if (additionalState) {
@@ -235,6 +241,7 @@ export interface BuildOAuthUrlParams {
   nonce: string;
   flow: "redirect" | "popup";
   codeChallenge?: string | undefined;
+  transactionId?: string | undefined;
   additionalState?: Record<string, string> | undefined;
 }
 
@@ -250,6 +257,7 @@ export function buildOAuthUrl(params: BuildOAuthUrlParams): string {
     nonce,
     flow,
     codeChallenge,
+    transactionId,
     additionalState,
   } = params;
 
@@ -293,6 +301,9 @@ export function buildOAuthUrl(params: BuildOAuthUrlParams): string {
   // Include nonce in state for providers that need it there (not in URL params)
   if (!config.nonceInParams) {
     stateParams.nonce = nonce;
+  }
+  if (transactionId) {
+    stateParams.transactionId = transactionId;
   }
   if (additionalState) {
     stateParams.additionalState = additionalState;

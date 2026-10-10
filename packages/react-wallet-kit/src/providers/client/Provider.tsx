@@ -9,21 +9,30 @@ import {
   cleanupOAuthUrlPreserveSearch,
   clearAllOAuthData,
   completeOAuthFlow,
-  completeOAuthPopup,
   exchangeFacebookCodeForToken,
   generateChallengePair,
   getOAuthAddProviderMetadata,
   getProviderIcon,
   completePKCEFlow,
-  hasPKCEVerifier,
   OAUTH_INTENT_ADD_PROVIDER,
   openOAuthPopup,
   parseOAuthResponse,
+  claimRedirectVerifier,
+  persistRedirectTransaction,
   type PKCEProvider,
   redirectToOAuthProvider,
   storeOAuthAddProviderMetadata,
-  storePKCEVerifier,
 } from "../../utils/oauth";
+import { runOAuthPopup } from "../../utils/oauth/popup-flow";
+import {
+  captureOAuthPopupBinding,
+  createOAuthInitializationBinding,
+  OAuthPopupBindingError,
+  type OAuthInitializationBinding,
+  type OAuthPopupBinding,
+  type OAuthPopupProviderView,
+  type OAuthProxySnapshot,
+} from "../../utils/oauth/popup-binding";
 import {
   isValidSession,
   mergeWalletsWithoutDuplicates,
@@ -42,6 +51,7 @@ import {
 } from "../../utils/timers";
 import {
   getAuthProxyConfig,
+  getClientParams,
   Chain,
   DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
   OtpType,
@@ -129,7 +139,16 @@ import {
   pollOnRampTransactionStatus,
   type OnRampFlowResult,
 } from "@0xkey-io/core";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Component,
+  ReactNode,
+  type MutableRefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ZeroXKeyError,
   ZeroXKeyErrorCodes,
@@ -162,6 +181,12 @@ import {
   ImportType,
 } from "../../types/base";
 import { AuthComponent } from "../../components/auth";
+import { CaptchaChallengeHost } from "../../components/auth/CaptchaChallengeHost";
+import {
+  createCaptchaAttemptGate,
+  type CaptchaTarget,
+} from "../../utils/captcha-attempt-gate";
+import { createTurnstileChallengeRenderer } from "../../utils/captcha-turnstile-renderer";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ActionPage } from "../../components/auth/Action";
 import { SignMessageModal } from "../../components/sign/Message";
@@ -227,6 +252,126 @@ interface ClientProviderProps {
   callbacks?: ZeroXKeyCallbacks | undefined;
 }
 
+function createOAuthPopupDependencies(client: ZeroXKeyClient) {
+  const createApiKeyPairCapability = client.createApiKeyPair;
+  const discardUncommittedApiKeyPairCapability =
+    client.discardUncommittedApiKeyPair;
+  return {
+    createApiKeyPair: () => createApiKeyPairCapability.call(client),
+    discardUncommittedApiKeyPair: (publicKey: string) =>
+      discardUncommittedApiKeyPairCapability.call(client, publicKey),
+    generatePkce: generateChallengePair,
+    randomBytes(length: number) {
+      const bytes = new Uint8Array(length);
+      window.crypto.getRandomValues(bytes);
+      return bytes;
+    },
+    now: Date.now,
+    openPopup: openOAuthPopup,
+  };
+}
+
+function snapshotOAuthCallbacks(callbacks?: ZeroXKeyCallbacks) {
+  const onOauthRedirect = callbacks?.onOauthRedirect;
+  return onOauthRedirect ? { onOauthRedirect } : undefined;
+}
+
+function captureProviderOAuthPopup(input: {
+  client: ZeroXKeyClient;
+  callbacks?: ZeroXKeyCallbacks | undefined;
+  masterConfig: ZeroXKeyProviderConfig;
+  initialization: OAuthInitializationBinding | undefined;
+  readCurrent(): OAuthPopupProviderView;
+  provider: OAuthProviders;
+  invocation: Readonly<{
+    clientId?: string | undefined;
+    openInPage?: boolean | undefined;
+  }>;
+  operation: Readonly<{
+    clientId: string;
+    openInPage: boolean;
+    emittedRedirectUri: string;
+  }>;
+  hasCustomCompletion: boolean;
+  needsProxyExchange?: boolean | undefined;
+}) {
+  try {
+    const popupCallbacks = snapshotOAuthCallbacks(input.callbacks);
+    const binding = captureOAuthPopupBinding({
+      initialization: input.initialization,
+      readCurrent: input.readCurrent,
+      provider: input.provider,
+      invocation: input.invocation,
+      operation: input.operation,
+      completion:
+        input.hasCustomCompletion || popupCallbacks?.onOauthRedirect
+          ? { category: "custom" }
+          : {
+              category: "internal",
+              internalSignupDefaults:
+                input.masterConfig.auth?.createSuborgParams?.oauth,
+            },
+      openerOrigin: window.location.origin,
+    });
+    const dependencies = createOAuthPopupDependencies(input.client);
+    let proxyOAuth2Authenticate:
+      | ZeroXKeyClient["httpClient"]["proxyOAuth2Authenticate"]
+      | undefined;
+    if (input.needsProxyExchange) {
+      const httpClient = input.client.httpClient;
+      const capability = httpClient.proxyOAuth2Authenticate;
+      proxyOAuth2Authenticate = (...args) =>
+        capability.call(httpClient, ...args);
+    }
+    return {
+      binding,
+      dependencies,
+      popupCallbacks,
+      proxyOAuth2Authenticate,
+    };
+  } catch (error) {
+    if (error instanceof OAuthPopupBindingError) throw error;
+    throw new OAuthPopupBindingError("context-unavailable");
+  }
+}
+
+function oauthConstructorIdentity(config: ZeroXKeyProviderConfig) {
+  return {
+    organizationId: config.organizationId,
+    apiBaseUrl: config.apiBaseUrl,
+    authProxyUrl: config.authProxyUrl,
+    authProxyConfigId: config.authProxyConfigId,
+  };
+}
+
+function rawConstructorTarget(config: ZeroXKeyProviderConfig) {
+  return {
+    ...oauthConstructorIdentity(config),
+    autoFetchWalletKitConfig: config.autoFetchWalletKitConfig,
+  };
+}
+
+type RawConstructorTarget = ReturnType<typeof rawConstructorTarget>;
+
+class RawConstructorTargetCommitBridge extends Component<{
+  target: RawConstructorTarget;
+  view: MutableRefObject<RawConstructorTarget>;
+  children: ReactNode;
+}> {
+  override getSnapshotBeforeUpdate(): null {
+    this.props.view.current = this.props.target;
+    return null;
+  }
+
+  override componentDidUpdate(): void {
+    // The target is published in the pre-layout commit phase above.
+  }
+
+  override render(): ReactNode {
+    return this.props.children;
+  }
+}
+
 /**
  * Provides ZeroXKey client authentication, session management, wallet operations, and user profile management
  * for the React Wallet Kit SDK. This context provider encapsulates all core authentication flows (Passkey, Wallet, OTP, OAuth),
@@ -253,6 +398,23 @@ interface ClientProviderProps {
  *
  * @returns A React context provider exposing authentication, wallet, and user management methods and state.
  */
+const retireClientAuthWrites = (
+  client: ZeroXKeyClient | undefined,
+): Promise<void> => {
+  const retiring = client as
+    | (ZeroXKeyClient & { retireAuthWrites?: () => void })
+    | undefined;
+  retiring?.retireAuthWrites?.();
+  const retirement =
+    (
+      retiring as
+        | (ZeroXKeyClient & { awaitAuthRetirement?: () => Promise<void> })
+        | undefined
+    )?.awaitAuthRetirement?.() ?? Promise.resolve();
+  void retirement.catch(() => undefined);
+  return retirement;
+};
+
 export const ClientProvider: React.FC<ClientProviderProps> = ({
   config,
   children,
@@ -283,21 +445,248 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
   const proxyAuthConfigRef = useRef<ProxyTGetWalletKitConfigResponse | null>(
     null,
   );
+  const proxyOAuthSnapshotRef = useRef<OAuthProxySnapshot | undefined>(
+    undefined,
+  );
+  const oauthInitializationBindingRef = useRef<OAuthInitializationBinding>();
+  const oauthProviderViewRef = useRef<OAuthPopupProviderView>();
+  const redirectOwnerRef = useRef<{ url: string; generation: number }>();
+  const generationRef = useRef(0);
+  const initializingClientRef = useRef<{
+    generation: number;
+    client: ZeroXKeyClient;
+  }>();
+  const retirementBarrierRef = useRef<Promise<void>>(Promise.resolve());
+  const retireGenerationClient = (
+    retiring: ZeroXKeyClient | undefined,
+  ): Promise<void> => {
+    if (!retiring) return retirementBarrierRef.current;
+    const retirement = retireClientAuthWrites(retiring);
+    const barrier = retirementBarrierRef.current.then(() => retirement);
+    retirementBarrierRef.current = barrier;
+    void barrier.catch(() => undefined);
+    return barrier;
+  };
+  // null preserves the initial mount's legacy session recovery. A target
+  // switch starts with no session keys bound to the new client generation.
+  const allowedSessionKeysRef = useRef<Set<string> | null>(null);
+  const renderedRawTarget = rawConstructorTarget(config);
+  const rawConstructorViewRef = useRef(renderedRawTarget);
+  const constructorTargetRef = useRef<{
+    organizationId: string;
+    apiBaseUrl: string | undefined;
+    authProxyUrl: string | undefined;
+    authProxyConfigId: string | undefined;
+    autoFetchWalletKitConfig: boolean | undefined;
+  }>();
+  const masterConfigGenerationRef = useRef(0);
+  const initializedGenerationRef = useRef(0);
+  const clientGenerationRef = useRef(0);
+  const captchaContainerRef = useRef<HTMLDivElement>(null);
+  const captchaRendererRef =
+    useRef<ReturnType<typeof createTurnstileChallengeRenderer>>();
+  const captchaTargetRef = useRef<CaptchaTarget>();
+  const captchaGateRef = useRef<ReturnType<typeof createCaptchaAttemptGate>>();
+  const captchaPendingCountRef = useRef(0);
+  const [captchaPending, setCaptchaPending] = useState(false);
+  if (!captchaGateRef.current) {
+    captchaGateRef.current = createCaptchaAttemptGate({
+      getClientParams,
+      challenge(siteKey, signal) {
+        const container = captchaContainerRef.current;
+        if (!container)
+          throw new Error("Captcha challenge container unavailable");
+        captchaRendererRef.current ??=
+          createTurnstileChallengeRenderer(container);
+        return captchaRendererRef.current.challenge(siteKey, signal);
+      },
+    });
+  }
+
+  useLayoutEffect(() => {
+    const previous = constructorTargetRef.current;
+    const next = {
+      organizationId: config.organizationId,
+      apiBaseUrl: config.apiBaseUrl,
+      authProxyUrl: config.authProxyUrl,
+      authProxyConfigId: config.authProxyConfigId,
+      autoFetchWalletKitConfig: config.autoFetchWalletKitConfig,
+    };
+    if (
+      previous?.organizationId === next.organizationId &&
+      previous.apiBaseUrl === next.apiBaseUrl &&
+      previous.authProxyUrl === next.authProxyUrl &&
+      previous.authProxyConfigId === next.authProxyConfigId &&
+      previous.autoFetchWalletKitConfig === next.autoFetchWalletKitConfig
+    ) {
+      return;
+    }
+    constructorTargetRef.current = next;
+    if (previous) {
+      retireGenerationClient(client);
+      const initializing = initializingClientRef.current?.client;
+      if (initializing !== client) retireGenerationClient(initializing);
+    }
+    generationRef.current += 1;
+    if (previous) {
+      allowedSessionKeysRef.current = new Set();
+      captchaGateRef.current?.cancel();
+      setClient(undefined);
+      setClientState(ClientState.Loading);
+      setSession(undefined);
+      setAllSessions(undefined);
+      setWallets([]);
+      setUser(undefined);
+      setWalletProviders([]);
+      oauthInitializationBindingRef.current = undefined;
+      proxyAuthConfigRef.current = null;
+      proxyOAuthSnapshotRef.current = undefined;
+      clearSessionTimeouts();
+    }
+  }, [
+    config.organizationId,
+    config.apiBaseUrl,
+    config.authProxyUrl,
+    config.authProxyConfigId,
+    config.autoFetchWalletKitConfig,
+  ]);
+
+  useLayoutEffect(() => {
+    // Keep the in-flight reference until React actually publishes this client.
+    if (initializingClientRef.current?.client === client)
+      initializingClientRef.current = undefined;
+    return () => {
+      void retireGenerationClient(client);
+    };
+  }, [client]);
+
+  useLayoutEffect(
+    () => () => {
+      retireGenerationClient(initializingClientRef.current?.client);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    const target = config.authProxyConfigId
+      ? {
+          authProxyConfigId: config.authProxyConfigId,
+          ...(config.authProxyUrl !== undefined && {
+            authProxyUrl: config.authProxyUrl,
+          }),
+        }
+      : undefined;
+    captchaTargetRef.current = target;
+    captchaGateRef.current!.setTarget(target);
+    return () => {
+      captchaGateRef.current?.cancel();
+      captchaTargetRef.current = undefined;
+    };
+  }, [config.authProxyConfigId, config.authProxyUrl]);
+
+  useEffect(() => {
+    return () => {
+      captchaRendererRef.current?.dispose();
+      captchaRendererRef.current = undefined;
+    };
+  }, []);
+
+  const runCaptchaProtected = useCallback(
+    async <T,>(
+      selectedClient: ZeroXKeyClient,
+      submit: (captchaToken?: string) => Promise<T>,
+    ): Promise<T> => {
+      const target = captchaTargetRef.current;
+      const generation = generationRef.current;
+      const selectedHttpClient = selectedClient.httpClient;
+      const defaultAuthProxyUrl = "https://authproxy.0xkey.io";
+      const defaultApiBaseUrl = "https://api.0xkey.io";
+      const matchesTarget = (clientConfig: {
+        authProxyConfigId?: string | undefined;
+        authProxyUrl?: string | undefined;
+      }) =>
+        clientConfig.authProxyConfigId === target?.authProxyConfigId &&
+        (clientConfig.authProxyUrl || defaultAuthProxyUrl) ===
+          (target?.authProxyUrl || defaultAuthProxyUrl);
+      const assertTarget = () => {
+        const raw = rawConstructorViewRef.current;
+        const constructorTarget = constructorTargetRef.current;
+        if (
+          !target?.authProxyConfigId ||
+          raw.organizationId !== constructorTarget?.organizationId ||
+          raw.apiBaseUrl !== constructorTarget.apiBaseUrl ||
+          raw.authProxyUrl !== constructorTarget.authProxyUrl ||
+          raw.authProxyConfigId !== constructorTarget.authProxyConfigId ||
+          raw.autoFetchWalletKitConfig !==
+            constructorTarget.autoFetchWalletKitConfig ||
+          generationRef.current !== generation ||
+          captchaTargetRef.current !== target ||
+          selectedClient.httpClient !== selectedHttpClient ||
+          selectedClient.config.organizationId !== raw.organizationId ||
+          (selectedClient.config.apiBaseUrl || defaultApiBaseUrl) !==
+            (raw.apiBaseUrl || defaultApiBaseUrl) ||
+          selectedHttpClient.config.organizationId !== raw.organizationId ||
+          (selectedHttpClient.config.apiBaseUrl || defaultApiBaseUrl) !==
+            (raw.apiBaseUrl || defaultApiBaseUrl) ||
+          !matchesTarget(selectedClient.config) ||
+          !matchesTarget(selectedHttpClient.config)
+        ) {
+          throw new Error("Captcha client selection changed");
+        }
+      };
+      assertTarget();
+      captchaPendingCountRef.current += 1;
+      setCaptchaPending(true);
+      try {
+        return await captchaGateRef.current!.run((captchaToken) => {
+          assertTarget();
+          return submit(captchaToken);
+        });
+      } finally {
+        captchaPendingCountRef.current -= 1;
+        if (captchaPendingCountRef.current === 0) setCaptchaPending(false);
+      }
+    },
+    [],
+  );
 
   const [allSessions, setAllSessions] = useState<
     Record<string, Session> | undefined
   >(undefined);
   const { isMobile, pushPage, popPage, closeModal } = useModal();
+  oauthProviderViewRef.current = {
+    rawConfig: config,
+    masterConfig,
+    proxy: proxyOAuthSnapshotRef.current,
+    isMobile,
+    client,
+  };
 
-  const completeRedirectOauth = async () => {
+  const completeRedirectOauth = async (generation: number) => {
+    const isCurrent = () => generationRef.current === generation;
+    let mayClearOAuthData = true;
+    const assertCurrent = () => {
+      if (!isCurrent()) throw new OAuthPopupBindingError("context-changed");
+    };
     // Since we use localStorage (see storage.ts), we always clean up OAuth data
     // when this runs — even if there are no OAuth params in the URL (e.g. the
     // user canceled at the provider and came back manually)
     try {
+      assertCurrent();
       // Check for either hash or search parameters that could indicate an OAuth redirect
       if (!window.location.hash && !window.location.search) {
         // No OAuth redirect parameters found, nothing to do
         return;
+      }
+      const redirectUrl = window.location.href;
+      const redirect = parseOAuthResponse(redirectUrl);
+      if (redirect?.flow === "redirect") {
+        const owner = redirectOwnerRef.current;
+        if (owner?.url === redirectUrl && owner.generation !== generation) {
+          mayClearOAuthData = false;
+          return;
+        }
+        redirectOwnerRef.current = { url: redirectUrl, generation };
       }
       /**
        * Wraps an OAuth completion action with optional modal UI.
@@ -331,7 +720,9 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                   }
                   action={async () => {
                     try {
+                      assertCurrent();
                       await action();
+                      assertCurrent();
                       if (isAddProvider && metadata) {
                         // Don't show success for auth. Not needed
                         pushPage({
@@ -373,7 +764,9 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           });
         } else {
           // No modal - execute directly
+          assertCurrent();
           await action();
+          assertCurrent();
         }
       };
 
@@ -416,6 +809,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         const completePKCERedirect = async (
           providerName: PKCEProvider,
           exchangeCodeFn: (codeVerifier: string) => Promise<string>,
+          codeVerifier?: string,
         ) => {
           const action = async () => {
             try {
@@ -424,11 +818,21 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                 providerName,
                 sessionKey: sessionKey ?? undefined,
                 callbacks,
-                completeOauth,
+                completeOauth: async (params) => {
+                  assertCurrent();
+                  const result = await completeOauthInternal(
+                    params,
+                    undefined,
+                    { assertCurrent },
+                  );
+                  assertCurrent();
+                  return result;
+                },
                 onAddProvider:
                   // Only set onAddProvider if we are adding a provider and have metadata
                   isAddProvider && metadata
                     ? async (oidcToken: string) => {
+                        assertCurrent();
                         await addOauthProvider({
                           providerName: provider!,
                           oidcToken,
@@ -438,11 +842,14 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                             stampWith: metadata.stampWith as StamperType,
                           }),
                         });
+                        assertCurrent();
                       }
                     : undefined,
                 exchangeCodeForToken: exchangeCodeFn,
+                ...(codeVerifier !== undefined ? { codeVerifier } : {}),
               });
             } catch (err) {
+              if (!isCurrent()) throw err;
               if (callbacks?.onError) {
                 const providerDisplayName =
                   capitalizeProviderName(providerName);
@@ -469,6 +876,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           });
 
           // Clean up URL after successful completion
+          assertCurrent();
           cleanupOAuthUrl();
         };
 
@@ -476,28 +884,58 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         if (provider === OAuthProviders.FACEBOOK) {
           const clientId = masterConfig?.auth?.oauthConfig?.facebookClientId;
           const redirectURI = masterConfig?.auth?.oauthConfig?.oauthRedirectUri;
-          const hasVerifier = hasPKCEVerifier(OAuthProviders.FACEBOOK);
+          const returnedState = new URL(redirectUrl).searchParams.get("state");
 
-          if (clientId && redirectURI && hasVerifier) {
-            await completePKCERedirect(
-              OAuthProviders.FACEBOOK,
-              async (codeVerifier) => {
-                const tokenResponse = await exchangeFacebookCodeForToken(
-                  clientId,
-                  redirectURI,
-                  code,
-                  codeVerifier,
-                );
-                const oidcToken = tokenResponse?.id_token;
-                if (!oidcToken) {
-                  throw new ZeroXKeyError(
-                    "Missing OIDC token",
-                    ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+          if (clientId && redirectURI && returnedState && masterConfig) {
+            let codeVerifier: string | null = null;
+            try {
+              codeVerifier = await claimRedirectVerifier({
+                organizationId: masterConfig.organizationId,
+                configId: masterConfig.authProxyConfigId ?? null,
+                apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+                authProxyUrl:
+                  masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+                provider: OAuthProviders.FACEBOOK,
+                clientId,
+                redirectUri: redirectURI,
+                returnedState,
+              });
+            } catch (error) {
+              if (!isCurrent()) return;
+              callbacks?.onError?.(
+                error instanceof ZeroXKeyError
+                  ? error
+                  : new ZeroXKeyError(
+                      "Facebook authentication failed",
+                      ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+                      error,
+                    ),
+              );
+              return;
+            }
+            if (typeof codeVerifier === "string") {
+              await completePKCERedirect(
+                OAuthProviders.FACEBOOK,
+                async (claimedVerifier) => {
+                  const tokenResponse = await exchangeFacebookCodeForToken(
+                    clientId,
+                    redirectURI,
+                    code,
+                    claimedVerifier,
                   );
-                }
-                return oidcToken;
-              },
-            );
+                  assertCurrent();
+                  const oidcToken = tokenResponse?.id_token;
+                  if (!oidcToken) {
+                    throw new ZeroXKeyError(
+                      "Missing OIDC token",
+                      ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+                    );
+                  }
+                  return oidcToken;
+                },
+                codeVerifier,
+              );
+            }
           }
           return;
         }
@@ -508,30 +946,68 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           const redirectURI =
             result.redirectUri ??
             masterConfig?.auth?.oauthConfig?.oauthRedirectUri;
-          const hasVerifier = hasPKCEVerifier(OAuthProviders.DISCORD);
+          const returnedState = new URL(redirectUrl).searchParams.get("state");
 
-          if (clientId && redirectURI && hasVerifier && nonce) {
-            await completePKCERedirect(
-              OAuthProviders.DISCORD,
-              async (codeVerifier) => {
-                const resp = await client?.httpClient.proxyOAuth2Authenticate({
-                  provider: "OAUTH2_PROVIDER_DISCORD",
-                  authCode: code,
-                  redirectUri: redirectURI,
-                  codeVerifier,
-                  clientId,
-                  nonce,
-                });
-                const oidcToken = resp?.oidcToken;
-                if (!oidcToken) {
-                  throw new ZeroXKeyError(
-                    "Missing OIDC token",
-                    ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+          if (
+            clientId &&
+            redirectURI &&
+            returnedState &&
+            nonce &&
+            masterConfig
+          ) {
+            let codeVerifier: string | null = null;
+            try {
+              codeVerifier = await claimRedirectVerifier({
+                organizationId: masterConfig.organizationId,
+                configId: masterConfig.authProxyConfigId ?? null,
+                apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+                authProxyUrl:
+                  masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+                provider: OAuthProviders.DISCORD,
+                clientId,
+                redirectUri: redirectURI,
+                returnedState,
+              });
+            } catch (error) {
+              if (!isCurrent()) return;
+              callbacks?.onError?.(
+                error instanceof ZeroXKeyError
+                  ? error
+                  : new ZeroXKeyError(
+                      "Discord authentication failed",
+                      ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+                      error,
+                    ),
+              );
+              return;
+            }
+            if (typeof codeVerifier === "string") {
+              await completePKCERedirect(
+                OAuthProviders.DISCORD,
+                async (claimedVerifier) => {
+                  const resp = await client?.httpClient.proxyOAuth2Authenticate(
+                    {
+                      provider: "OAUTH2_PROVIDER_DISCORD",
+                      authCode: code,
+                      redirectUri: redirectURI,
+                      codeVerifier: claimedVerifier,
+                      clientId,
+                      nonce,
+                    },
                   );
-                }
-                return oidcToken;
-              },
-            );
+                  assertCurrent();
+                  const oidcToken = resp?.oidcToken;
+                  if (!oidcToken) {
+                    throw new ZeroXKeyError(
+                      "Missing OIDC token",
+                      ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+                    );
+                  }
+                  return oidcToken;
+                },
+                codeVerifier,
+              );
+            }
           }
           return;
         }
@@ -542,30 +1018,68 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           const redirectURI =
             result.redirectUri ??
             masterConfig?.auth?.oauthConfig?.oauthRedirectUri;
-          const hasVerifier = hasPKCEVerifier(OAuthProviders.X);
+          const returnedState = new URL(redirectUrl).searchParams.get("state");
 
-          if (clientId && redirectURI && hasVerifier && nonce) {
-            await completePKCERedirect(
-              OAuthProviders.X,
-              async (codeVerifier) => {
-                const resp = await client?.httpClient.proxyOAuth2Authenticate({
-                  provider: "OAUTH2_PROVIDER_X",
-                  authCode: code,
-                  redirectUri: redirectURI,
-                  codeVerifier,
-                  clientId,
-                  nonce,
-                });
-                const oidcToken = resp?.oidcToken;
-                if (!oidcToken) {
-                  throw new ZeroXKeyError(
-                    "Missing OIDC token",
-                    ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+          if (
+            clientId &&
+            redirectURI &&
+            returnedState &&
+            nonce &&
+            masterConfig
+          ) {
+            let codeVerifier: string | null = null;
+            try {
+              codeVerifier = await claimRedirectVerifier({
+                organizationId: masterConfig.organizationId,
+                configId: masterConfig.authProxyConfigId ?? null,
+                apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+                authProxyUrl:
+                  masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+                provider: OAuthProviders.X,
+                clientId,
+                redirectUri: redirectURI,
+                returnedState,
+              });
+            } catch (error) {
+              if (!isCurrent()) return;
+              callbacks?.onError?.(
+                error instanceof ZeroXKeyError
+                  ? error
+                  : new ZeroXKeyError(
+                      "X authentication failed",
+                      ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+                      error,
+                    ),
+              );
+              return;
+            }
+            if (typeof codeVerifier === "string") {
+              await completePKCERedirect(
+                OAuthProviders.X,
+                async (claimedVerifier) => {
+                  const resp = await client?.httpClient.proxyOAuth2Authenticate(
+                    {
+                      provider: "OAUTH2_PROVIDER_X",
+                      authCode: code,
+                      redirectUri: redirectURI,
+                      codeVerifier: claimedVerifier,
+                      clientId,
+                      nonce,
+                    },
                   );
-                }
-                return oidcToken;
-              },
-            );
+                  assertCurrent();
+                  const oidcToken = resp?.oidcToken;
+                  if (!oidcToken) {
+                    throw new ZeroXKeyError(
+                      "Missing OIDC token",
+                      ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+                    );
+                  }
+                  return oidcToken;
+                },
+                codeVerifier,
+              );
+            }
           }
           return;
         }
@@ -597,7 +1111,65 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
 
         const isAddProvider = oauthIntent === OAUTH_INTENT_ADD_PROVIDER;
         const metadata = isAddProvider ? getOAuthAddProviderMetadata() : null;
-        const resolvedProvider = provider || OAuthProviders.GOOGLE;
+        const resolvedProvider = (provider ||
+          OAuthProviders.GOOGLE) as OAuthProviders;
+        const clientId =
+          resolvedProvider === OAuthProviders.APPLE
+            ? masterConfig?.auth?.oauthConfig?.appleClientId
+            : masterConfig?.auth?.oauthConfig?.googleClientId;
+        const storedRedirectUri =
+          resolvedProvider === OAuthProviders.GOOGLE
+            ? masterConfig?.auth?.oauthConfig?.oauthRedirectUri?.replace(
+                /\/$/,
+                "",
+              )
+            : masterConfig?.auth?.oauthConfig?.oauthRedirectUri;
+        const hash = window.location.hash.startsWith("#")
+          ? window.location.hash.slice(1)
+          : window.location.hash;
+        const appleStateEnd = hash.startsWith("state=provider=apple")
+          ? hash.indexOf("&code=")
+          : -1;
+        const returnedState = hash.startsWith("state=provider=apple")
+          ? appleStateEnd === -1
+            ? null
+            : hash.slice("state=".length, appleStateEnd)
+          : hash
+            ? new URLSearchParams(hash).get("state")
+            : null;
+        if (
+          !clientId ||
+          !storedRedirectUri ||
+          !returnedState ||
+          !masterConfig
+        ) {
+          return;
+        }
+        try {
+          await claimRedirectVerifier({
+            organizationId: masterConfig.organizationId,
+            configId: masterConfig.authProxyConfigId ?? null,
+            apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+            authProxyUrl:
+              masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+            provider: resolvedProvider,
+            clientId,
+            redirectUri: storedRedirectUri,
+            returnedState,
+          });
+        } catch (error) {
+          if (!isCurrent()) return;
+          callbacks?.onError?.(
+            error instanceof ZeroXKeyError
+              ? error
+              : new ZeroXKeyError(
+                  `${capitalizeProviderName(resolvedProvider)} authentication failed`,
+                  ZeroXKeyErrorCodes.OAUTH_LOGIN_ERROR,
+                  error,
+                ),
+          );
+          return;
+        }
 
         // Use completeOAuthFlow from utils for the core completion logic
         const action = async () => {
@@ -607,10 +1179,18 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
             oidcToken: idToken,
             sessionKey: sessionKey ?? undefined,
             callbacks,
-            completeOauth,
+            completeOauth: async (params) => {
+              assertCurrent();
+              const result = await completeOauthInternal(params, undefined, {
+                assertCurrent,
+              });
+              assertCurrent();
+              return result;
+            },
             onAddProvider:
               isAddProvider && metadata
                 ? async (oidcToken) => {
+                    assertCurrent();
                     await addOauthProvider({
                       providerName: resolvedProvider,
                       oidcToken,
@@ -620,6 +1200,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                         stampWith: metadata.stampWith as StamperType,
                       }),
                     });
+                    assertCurrent();
                   }
                 : undefined,
           });
@@ -634,10 +1215,14 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         });
 
         // Clean up the URL after processing
+        assertCurrent();
         cleanupOAuthUrlPreserveSearch();
       }
+    } catch (error) {
+      if (!isCurrent()) return;
+      throw error;
     } finally {
-      clearAllOAuthData();
+      if (isCurrent() && mayClearOAuthData) clearAllOAuthData();
     }
   };
 
@@ -810,16 +1395,27 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
    *
    * @internal
    */
-  const initializeClient = async () => {
-    if (!masterConfig || client || clientState == ClientState.Loading) return;
+  const initializeClient = async (generation: number) => {
+    if (
+      !masterConfig ||
+      masterConfigGenerationRef.current !== generation ||
+      initializedGenerationRef.current === generation
+    )
+      return;
+    initializedGenerationRef.current = generation;
 
+    let zeroXKeyClient: ZeroXKeyClient | undefined;
     try {
       setClientState(ClientState.Loading);
-      const zeroXKeyClient = new ZeroXKeyClient({
-        apiBaseUrl: masterConfig.apiBaseUrl,
-        authProxyUrl: masterConfig.authProxyUrl,
-        authProxyConfigId: masterConfig.authProxyConfigId,
-        organizationId: masterConfig.organizationId,
+      oauthInitializationBindingRef.current = undefined;
+      await retirementBarrierRef.current;
+      if (generationRef.current !== generation) return;
+      const constructorIdentity = oauthConstructorIdentity(masterConfig);
+      zeroXKeyClient = new ZeroXKeyClient({
+        apiBaseUrl: constructorIdentity.apiBaseUrl,
+        authProxyUrl: constructorIdentity.authProxyUrl,
+        authProxyConfigId: constructorIdentity.authProxyConfigId,
+        organizationId: constructorIdentity.organizationId,
 
         // Define passkey and wallet config here. If we don't pass it into the client, Mr. Client will assume that we don't want to use passkeys/wallets and not create the stamper!
         passkeyConfig: {
@@ -840,12 +1436,68 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         },
         defaultStamperType: masterConfig.defaultStamperType,
       });
+      initializingClientRef.current = { generation, client: zeroXKeyClient };
+
+      // The commit bridge publishes the next raw target before descendant
+      // layout effects. Aborted renders leave this committed target intact.
+      const expectedRawTarget = rawConstructorViewRef.current;
+      const bindAuthContextGuard = (
+        zeroXKeyClient as ZeroXKeyClient & {
+          setAuthContextGuard?: (guard: () => boolean) => void;
+        }
+      ).setAuthContextGuard;
+      if (!bindAuthContextGuard) {
+        throw new ZeroXKeyError(
+          "Credential storage cannot guard the active client target",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+      bindAuthContextGuard.call(zeroXKeyClient, () => {
+        const current = rawConstructorViewRef.current;
+        return (
+          current.organizationId === expectedRawTarget.organizationId &&
+          current.apiBaseUrl === expectedRawTarget.apiBaseUrl &&
+          current.authProxyUrl === expectedRawTarget.authProxyUrl &&
+          current.authProxyConfigId === expectedRawTarget.authProxyConfigId &&
+          current.autoFetchWalletKitConfig ===
+            expectedRawTarget.autoFetchWalletKitConfig
+        );
+      });
 
       await zeroXKeyClient.init();
+      if (generationRef.current !== generation) {
+        if (initializingClientRef.current?.client === zeroXKeyClient)
+          initializingClientRef.current = undefined;
+        await retireGenerationClient(zeroXKeyClient).catch(() => undefined);
+        return;
+      }
+      const restrict = (
+        zeroXKeyClient as ZeroXKeyClient & {
+          restrictPersistedCredentialsToNewSessions?: () => void;
+        }
+      ).restrictPersistedCredentialsToNewSessions;
+      if (!restrict) {
+        throw new ZeroXKeyError(
+          "Credential storage cannot enforce client session scope",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+      restrict.call(zeroXKeyClient);
+      oauthInitializationBindingRef.current = createOAuthInitializationBinding({
+        constructorIdentity,
+        client: zeroXKeyClient,
+      });
+      clientGenerationRef.current = generation;
       setClient(zeroXKeyClient);
 
       // Don't set clientState to ready until we fetch the proxy auth config (See other fetchProxyAuthConfig useEffect)
     } catch (error) {
+      if (initializingClientRef.current?.client === zeroXKeyClient)
+        initializingClientRef.current = undefined;
+      if (generationRef.current !== generation) {
+        await retireGenerationClient(zeroXKeyClient).catch(() => undefined);
+        return;
+      }
       setClientState(ClientState.Error);
       if (
         error instanceof ZeroXKeyError ||
@@ -868,25 +1520,32 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
    * Initializes the user sessions by fetching all active sessions and setting up their state.
    * @internal
    */
-  const initializeSessions = async () => {
+  const initializeSessions = async (generation: number) => {
+    const isCurrent = () => generationRef.current === generation;
+    if (!isCurrent()) return;
     setSession(undefined);
     setAllSessions(undefined);
     try {
       const allLocalStorageSessions = await getAllSessions();
-      if (!allLocalStorageSessions) return;
+      if (!isCurrent() || !allLocalStorageSessions) return;
 
       await Promise.all(
         Object.keys(allLocalStorageSessions).map(async (sessionKey) => {
+          if (!isCurrent()) return;
           const session = allLocalStorageSessions?.[sessionKey];
           if (!isValidSession(session)) {
+            if (!isCurrent()) return;
             await clearSession({ sessionKey });
+            if (!isCurrent()) return;
             if (sessionKey === (await getActiveSessionKey())) {
+              if (!isCurrent()) return;
               setSession(undefined);
             }
             delete allLocalStorageSessions[sessionKey];
             return;
           }
 
+          if (!isCurrent()) return;
           scheduleSessionExpiration({
             sessionKey,
             expiry: session!.expiry,
@@ -894,8 +1553,10 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         }),
       );
 
+      if (!isCurrent()) return;
       setAllSessions(allLocalStorageSessions || undefined);
       const activeSessionKey = await client?.getActiveSessionKey();
+      if (!isCurrent()) return;
       if (activeSessionKey) {
         // If we have an active session key, set
         if (!allLocalStorageSessions[activeSessionKey]) {
@@ -915,6 +1576,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           })(),
         ]);
 
+        if (!isCurrent()) return;
         // the prev wallets should only ever be WalletConnect wallets
         if (wallets) {
           setWallets((prev) => mergeWalletsWithoutDuplicates(prev, wallets));
@@ -923,6 +1585,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         return;
       }
     } catch (error) {
+      if (!isCurrent()) return;
       if (
         error instanceof ZeroXKeyError ||
         error instanceof ZeroXKeyNetworkError
@@ -964,6 +1627,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     walletProviders: WalletProvider[],
     onUpdateState: () => Promise<void>,
   ): Promise<() => void> {
+    const listenerGeneration = generationRef.current;
     if (walletProviders.length === 0) return () => {};
 
     const cleanups: Array<() => void> = [];
@@ -1067,6 +1731,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       if (standardEvents?.on) {
         if (standardEvents?.on) {
           const unsubscribe = standardEvents.on("change", async (evt: any) => {
+            if (generationRef.current !== listenerGeneration) return;
             // if the event is a proposalExpired, we want to re-fetch the providers
             // to refresh the uri, there is no need to refresh the wallets state
             if (evt?.type === "pairingExpired") {
@@ -1092,10 +1757,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
             if (evt?.type === "initialized") {
               // this updates our walletProvider state
               const providers = await debouncedFetchWalletProviders();
+              if (generationRef.current !== listenerGeneration) return;
 
               // if we have an active session, we need to restore any possibly connected
               // WalletConnect wallets since its now initialized
               const currentSession = await getSession();
+              if (generationRef.current !== listenerGeneration) return;
               if (currentSession) {
                 const wcProviders = providers?.filter(
                   (p) => p.interfaceType === WalletInterfaceType.WalletConnect,
@@ -1105,6 +1772,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                   walletProviders: wcProviders,
                   connectedOnly: true,
                 });
+                if (generationRef.current !== listenerGeneration) return;
 
                 if (wcWallets.length > 0) {
                   setWallets((prev) =>
@@ -1175,18 +1843,24 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
    * @returns A void promise.
    * @throws {ZeroXKeyError} If the client is not initialized or if there is an error during the process.
    */
+  const postAuthGeneration = clientGenerationRef.current;
   const handlePostAuth = async (params: {
     method: AuthMethod;
     action: AuthAction;
     identifier: string;
     appProofs?: v1AppProof[] | undefined;
   }) => {
+    const isCurrent = () => generationRef.current === postAuthGeneration;
+    if (!isCurrent()) return;
     const { method, action, identifier, appProofs } = params;
     try {
-      const sessionKey = await getActiveSessionKey();
+      const sessionKey = await client!.getActiveSessionKey();
+      if (!isCurrent()) return;
+      if (sessionKey) allowedSessionKeysRef.current?.add(sessionKey);
       const session = await getSession({
         ...(sessionKey && { sessionKey }),
       });
+      if (!isCurrent()) return;
 
       if (session && sessionKey)
         await scheduleSessionExpiration({
@@ -1194,12 +1868,14 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           expiry: session.expiry,
         });
 
-      const allSessions = await client!.getAllSessions();
+      const allSessions = await getAllSessions();
+      if (!isCurrent()) return;
 
       setSession(session);
       setAllSessions(allSessions);
 
       await Promise.all([maybeRefreshWallets(), maybeRefreshUser()]);
+      if (!isCurrent()) return;
 
       if (
         masterConfig?.auth?.verifyWalletOnSignup === true &&
@@ -1210,6 +1886,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         // On signup, if we have appProofs, verify them
         await handleVerifyAppProofs({ appProofs });
       }
+      if (!isCurrent()) return;
 
       callbacks?.onAuthenticationSuccess?.({
         session,
@@ -1218,6 +1895,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         identifier,
       });
     } catch (error) {
+      if (!isCurrent()) return;
       if (
         error instanceof ZeroXKeyError ||
         error instanceof ZeroXKeyNetworkError
@@ -1297,12 +1975,16 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         "Client is not initialized.",
         ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
       );
-    return withZeroXKeyErrorHandling(
+    if (allowedSessionKeysRef.current?.size === 0) return undefined;
+    const key = await withZeroXKeyErrorHandling(
       () => client.getActiveSessionKey(),
       undefined,
       callbacks,
       "Failed to get active session key",
     );
+    return key && allowedSessionKeysRef.current?.has(key) === false
+      ? undefined
+      : key;
   }, [client, callbacks]);
 
   const logout: (params?: LogoutParams) => Promise<void> = useCallback(
@@ -1318,7 +2000,13 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           // If no sessionKey is provided, we try to get the active one.
           let sessionKey = params?.sessionKey;
           if (!sessionKey) sessionKey = await getActiveSessionKey();
+          if (
+            allowedSessionKeysRef.current &&
+            (!sessionKey || !allowedSessionKeysRef.current.has(sessionKey))
+          )
+            return;
           await client.logout(params);
+          if (sessionKey) allowedSessionKeysRef.current?.delete(sessionKey);
           // We only handle post logout if the sessionKey is defined since that means we actually logged out of a session.
           if (sessionKey) handlePostLogout(sessionKey);
         },
@@ -1339,6 +2027,11 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           "Client is not initialized.",
           ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
         );
+      if (allowedSessionKeysRef.current?.size === 0) return undefined;
+      if (allowedSessionKeysRef.current) {
+        const key = params?.sessionKey ?? (await client.getActiveSessionKey());
+        if (!key || !allowedSessionKeysRef.current.has(key)) return undefined;
+      }
       return withZeroXKeyErrorHandling(
         () => client.getSession(params),
         undefined,
@@ -1357,12 +2050,27 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         "Client is not initialized.",
         ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
       );
-    return withZeroXKeyErrorHandling(
+    if (allowedSessionKeysRef.current) {
+      const allowed = await Promise.all(
+        [...allowedSessionKeysRef.current].map(
+          async (sessionKey) =>
+            [sessionKey, await client.getSession({ sessionKey })] as const,
+        ),
+      );
+      const sessions = Object.fromEntries(
+        allowed.filter(
+          (entry): entry is readonly [string, Session] => !!entry[1],
+        ),
+      );
+      return Object.keys(sessions).length ? sessions : undefined;
+    }
+    const sessions = await withZeroXKeyErrorHandling(
       () => client.getAllSessions(),
       undefined,
       callbacks,
       "Failed to get all sessions",
     );
+    return sessions;
   }, [client, callbacks]);
 
   const createPasskey = useCallback(
@@ -1400,6 +2108,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     [client, callbacks, logout],
   );
 
+  const managedStateGeneration = clientGenerationRef.current;
   const fetchWalletProviders = useCallback(
     async (chain?: Chain): Promise<WalletProvider[]> => {
       if (!client) {
@@ -1411,6 +2120,8 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       return withZeroXKeyErrorHandling(
         async () => {
           const newProviders = await client.fetchWalletProviders(chain);
+          if (generationRef.current !== managedStateGeneration)
+            return newProviders;
 
           // we update state with the latest providers
           // we keep this state so that initializeWalletProviderListeners() re-runs
@@ -1468,6 +2179,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         "Failed to refresh user",
       );
 
+      if (generationRef.current !== managedStateGeneration) return;
       if (user) {
         setUser(user);
       }
@@ -1508,6 +2220,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         callbacks,
         "Failed to refresh wallets",
       );
+      if (generationRef.current !== managedStateGeneration) return [];
 
       const wallets = await withZeroXKeyErrorHandling(
         () =>
@@ -1521,6 +2234,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         callbacks,
         "Failed to refresh wallets",
       );
+      if (generationRef.current !== managedStateGeneration) return [];
 
       if (wallets) {
         setWallets(wallets);
@@ -1548,6 +2262,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     [masterConfig, refreshWallets],
   );
 
+  const sessionOperationGeneration = clientGenerationRef.current;
   const clearSession = useCallback(
     async (params?: ClearSessionParams): Promise<void> => {
       if (!client)
@@ -1555,14 +2270,27 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           "Client is not initialized.",
           ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
         );
+      if (generationRef.current !== sessionOperationGeneration) return;
+      const permittedKey = params?.sessionKey ?? (await getActiveSessionKey());
+      if (
+        allowedSessionKeysRef.current &&
+        (!permittedKey || !allowedSessionKeysRef.current.has(permittedKey))
+      )
+        return;
       await withZeroXKeyErrorHandling(
-        async () => client.clearSession(params),
+        async () =>
+          client.clearSession(
+            permittedKey ? { sessionKey: permittedKey } : params,
+          ),
         undefined,
         callbacks,
         "Failed to clear session",
       );
-      const sessionKey = params?.sessionKey ?? (await getActiveSessionKey());
+      if (generationRef.current !== sessionOperationGeneration) return;
+      const sessionKey = permittedKey;
+      if (generationRef.current !== sessionOperationGeneration) return;
       if (!sessionKey) return;
+      allowedSessionKeysRef.current?.delete(sessionKey);
       if (!params?.sessionKey) {
         setSession(undefined);
       }
@@ -1594,6 +2322,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       sessionKey: string;
       expiry: number; // seconds since epoch
     }) => {
+      if (generationRef.current !== sessionOperationGeneration) return;
       const { sessionKey, expiry } = params;
 
       try {
@@ -1608,7 +2337,9 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         const timeUntilExpiry = expiryMs - now;
 
         const runRefresh = async () => {
+          if (generationRef.current !== sessionOperationGeneration) return;
           const activeSession = await getSession();
+          if (generationRef.current !== sessionOperationGeneration) return;
 
           if (!activeSession && expiryTimeoutsRef.current[warnKey]) {
             // Keep nudging until session materializes (short 10s timer is fine)
@@ -1622,6 +2353,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           }
 
           const session = await getSession({ sessionKey });
+          if (generationRef.current !== sessionOperationGeneration) return;
           if (!session) return;
 
           callbacks?.beforeSessionExpiry?.({ sessionKey });
@@ -1635,14 +2367,18 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         };
 
         const expireSession = async () => {
+          if (generationRef.current !== sessionOperationGeneration) return;
           const expiredSession = await getSession({ sessionKey });
+          if (generationRef.current !== sessionOperationGeneration) return;
           if (!expiredSession) return;
 
           callbacks?.onSessionExpired?.({ sessionKey });
 
           if ((await getActiveSessionKey()) === sessionKey) {
+            if (generationRef.current !== sessionOperationGeneration) return;
             setSession(undefined);
           }
+          if (generationRef.current !== sessionOperationGeneration) return;
 
           setAllSessions((prev) => {
             if (!prev) return prev;
@@ -1652,6 +2388,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           });
 
           await clearSession({ sessionKey });
+          if (generationRef.current !== sessionOperationGeneration) return;
 
           // Remove timers for this session
           clearKey(expiryTimeoutsRef.current, sessionKey);
@@ -1687,6 +2424,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           timeUntilExpiry,
         );
       } catch (error) {
+        if (generationRef.current !== sessionOperationGeneration) return;
         if (
           error instanceof ZeroXKeyError ||
           error instanceof ZeroXKeyNetworkError
@@ -1730,7 +2468,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const activeSessionKey = await client.getActiveSessionKey();
+      const activeSessionKey = await getActiveSessionKey();
       if (!activeSessionKey) {
         throw new ZeroXKeyError(
           "No active session found.",
@@ -1739,6 +2477,15 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
 
       const sessionKey = params?.sessionKey ?? activeSessionKey;
+      if (
+        allowedSessionKeysRef.current &&
+        !allowedSessionKeysRef.current.has(sessionKey)
+      ) {
+        throw new ZeroXKeyError(
+          "Session not found.",
+          ZeroXKeyErrorCodes.NOT_FOUND,
+        );
+      }
 
       const res = await withZeroXKeyErrorHandling(
         () => client.refreshSession({ ...params }),
@@ -1847,13 +2594,17 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         masterConfig.auth?.createSuborgParams?.passkeyAuth?.passkeyName ??
         `${websiteName}-${timestamp}`;
 
+      const { captchaToken: _callerToken, ...coreParams } = params;
       const res = await withZeroXKeyErrorHandling(
         () =>
-          client.signUpWithPasskey({
-            ...params,
-            passkeyDisplayName: passkeyName,
-            expirationSeconds,
-          }),
+          client.signUpWithPasskey(
+            {
+              ...coreParams,
+              passkeyDisplayName: passkeyName,
+              expirationSeconds,
+            },
+            (submit) => runCaptchaProtected(client, submit),
+          ),
         () => logout(),
         callbacks,
         "Failed to sign up with passkey",
@@ -1868,7 +2619,14 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       return res;
     },
-    [client, callbacks, logout, handlePostAuth, masterConfig],
+    [
+      client,
+      callbacks,
+      logout,
+      handlePostAuth,
+      masterConfig,
+      runCaptchaProtected,
+    ],
   );
 
   const connectWalletAccount = useCallback(
@@ -2052,8 +2810,16 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         params?.expirationSeconds ??
         masterConfig?.auth?.sessionExpirationSeconds ??
         DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const { captchaToken: _callerToken, ...coreParams } = params;
       const res = await withZeroXKeyErrorHandling(
-        () => client.signUpWithWallet({ ...params, expirationSeconds }),
+        () =>
+          client.signUpWithWallet(
+            {
+              ...coreParams,
+              expirationSeconds,
+            },
+            (submit) => runCaptchaProtected(client, submit),
+          ),
         undefined,
         callbacks,
         "Failed to sign up with wallet",
@@ -2068,7 +2834,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       return res;
     },
-    [client, callbacks, handlePostAuth, masterConfig],
+    [client, callbacks, handlePostAuth, masterConfig, runCaptchaProtected],
   );
 
   const loginOrSignupWithWallet = useCallback(
@@ -2100,8 +2866,13 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         params?.expirationSeconds ??
         masterConfig?.auth?.sessionExpirationSeconds ??
         DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const { captchaToken: _callerToken, ...coreParams } = params;
       const res = await withZeroXKeyErrorHandling(
-        () => client.loginOrSignupWithWallet({ ...params, expirationSeconds }),
+        () =>
+          client.loginOrSignupWithWallet(
+            { ...coreParams, expirationSeconds },
+            (submit) => runCaptchaProtected(client, submit),
+          ),
         undefined,
         callbacks,
         "Failed to login or sign up with wallet",
@@ -2116,7 +2887,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       return res;
     },
-    [client, callbacks, handlePostAuth, masterConfig],
+    [client, callbacks, handlePostAuth, masterConfig, runCaptchaProtected],
   );
 
   const initOtp = useCallback(
@@ -2127,14 +2898,21 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
         );
       }
+      const { captchaToken: _callerToken, ...coreParams } = params;
       return withZeroXKeyErrorHandling(
-        () => client.initOtp(params),
+        () =>
+          runCaptchaProtected(client, (captchaToken) =>
+            client.initOtp({
+              ...coreParams,
+              ...(captchaToken !== undefined && { captchaToken }),
+            }),
+          ),
         undefined,
         callbacks,
         "Failed to initialize OTP",
       );
     },
-    [client, callbacks],
+    [client, callbacks, runCaptchaProtected],
   );
 
   const verifyOtp = useCallback(
@@ -2212,8 +2990,15 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
+      const { captchaToken: _callerToken, ...coreParams } = params;
       const res = await withZeroXKeyErrorHandling(
-        () => client.signUpWithOtp(params),
+        () =>
+          runCaptchaProtected(client, (captchaToken) =>
+            client.signUpWithOtp({
+              ...coreParams,
+              ...(captchaToken !== undefined && { captchaToken }),
+            }),
+          ),
         undefined,
         callbacks,
         "Failed to sign up with OTP",
@@ -2228,7 +3013,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       return res;
     },
-    [client, callbacks, masterConfig, handlePostAuth],
+    [client, callbacks, masterConfig, handlePostAuth, runCaptchaProtected],
   );
 
   const completeOtp = useCallback(
@@ -2335,8 +3120,15 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
+      const { captchaToken: _callerToken, ...coreParams } = params;
       const res = await withZeroXKeyErrorHandling(
-        () => client.signUpWithOauth(params),
+        () =>
+          runCaptchaProtected(client, (captchaToken) =>
+            client.signUpWithOauth({
+              ...coreParams,
+              ...(captchaToken !== undefined && { captchaToken }),
+            }),
+          ),
         undefined,
         callbacks,
         "Failed to sign up with OAuth",
@@ -2351,12 +3143,15 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       return res;
     },
-    [client, callbacks, handlePostAuth, masterConfig],
+    [client, callbacks, handlePostAuth, masterConfig, runCaptchaProtected],
   );
 
-  const completeOauth = useCallback(
+  const oauthCompletionGeneration = clientGenerationRef.current;
+  const completeOauthInternal = useCallback(
     async (
       params: CompleteOauthParams,
+      popup?: { binding: OAuthPopupBinding; client: ZeroXKeyClient },
+      redirect?: { assertCurrent: () => void },
     ): Promise<BaseAuthResult & { action: AuthAction }> => {
       if (!client) {
         throw new ZeroXKeyError(
@@ -2370,6 +3165,13 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
         );
       }
+      if (generationRef.current !== oauthCompletionGeneration)
+        throw new OAuthPopupBindingError("context-changed");
+      if (popup) {
+        popup.binding.assertCurrent();
+        if (popup.client !== client)
+          throw new OAuthPopupBindingError("context-changed");
+      }
 
       // If createSubOrgParams is not provided, use the default from masterConfig
       const createSubOrgParams =
@@ -2381,12 +3183,29 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
+      const assertInternal = popup
+        ? () => popup.binding.assertCurrent()
+        : redirect?.assertCurrent;
       const res = await withZeroXKeyErrorHandling(
-        () => client.completeOauth(params),
+        () =>
+          assertInternal
+            ? client.completeOauth(params, async (submit) => {
+                assertInternal();
+                const result = await runCaptchaProtected(client, (token) => {
+                  assertInternal();
+                  return submit(token);
+                });
+                assertInternal();
+                return result;
+              })
+            : client.completeOauth(params),
         undefined,
         callbacks,
         "Failed to complete OAuth",
       );
+      if (generationRef.current !== oauthCompletionGeneration)
+        throw new OAuthPopupBindingError("context-changed");
+      popup?.binding.assertCurrent();
       if (res) {
         await handlePostAuth({
           method: AuthMethod.Oauth,
@@ -2395,9 +3214,24 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           appProofs: res.appProofs,
         });
       }
+      popup?.binding.assertCurrent();
       return res;
     },
-    [client, callbacks, masterConfig, handlePostAuth],
+    [client, callbacks, masterConfig, handlePostAuth, runCaptchaProtected],
+  );
+
+  const completeOauth = useCallback(
+    (params: CompleteOauthParams) => completeOauthInternal(params),
+    [completeOauthInternal],
+  );
+
+  const completePopupOauth = useCallback(
+    (
+      params: CompleteOauthParams,
+      binding: OAuthPopupBinding,
+      selectedClient: ZeroXKeyClient,
+    ) => completeOauthInternal(params, { binding, client: selectedClient }),
+    [completeOauthInternal],
   );
 
   const fetchWalletAccounts = useCallback(
@@ -3088,12 +3922,17 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           "Client is not initialized.",
           ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
         );
+      if (generationRef.current !== sessionOperationGeneration) return;
       await withZeroXKeyErrorHandling(
         () => client.storeSession(params),
         () => logout(),
         callbacks,
         "Failed to store session",
       );
+      if (generationRef.current !== sessionOperationGeneration) return;
+      const storedKey =
+        params.sessionKey ?? (await client.getActiveSessionKey());
+      if (storedKey) allowedSessionKeysRef.current?.add(storedKey);
       const sessionKey = await getActiveSessionKey();
       const session = await getSession({
         ...(sessionKey && { sessionKey }),
@@ -3132,7 +3971,16 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     setAllSessions(undefined);
     clearSessionTimeouts();
     return await withZeroXKeyErrorHandling(
-      () => client.clearAllSessions(),
+      async () => {
+        if (allowedSessionKeysRef.current) {
+          for (const sessionKey of [...allowedSessionKeysRef.current]) {
+            await client.clearSession({ sessionKey });
+            allowedSessionKeysRef.current.delete(sessionKey);
+          }
+        } else {
+          await client.clearAllSessions();
+        }
+      },
       () => logout(),
       callbacks,
       "Failed to clear all sessions",
@@ -3146,6 +3994,15 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           "Client is not initialized.",
           ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
         );
+      if (
+        allowedSessionKeysRef.current &&
+        !allowedSessionKeysRef.current.has(params.sessionKey)
+      ) {
+        throw new ZeroXKeyError(
+          "Session not found.",
+          ZeroXKeyErrorCodes.NOT_FOUND,
+        );
+      }
       const session = await withZeroXKeyErrorHandling(
         () => client.getSession({ sessionKey: params.sessionKey }),
         () => logout(),
@@ -3308,6 +4165,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.discordClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.DISCORD;
@@ -3331,8 +4189,69 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       const redirectUri = masterConfig.auth?.oauthConfig.oauthRedirectUri;
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+          needsProxyExchange: true,
+        });
+        return runOAuthPopup(
+          {
+            binding: popup.binding,
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            exchange: async ({ authCode, codeVerifier, nonce }) => {
+              const response = await popup.proxyOAuth2Authenticate!({
+                provider: "OAUTH2_PROVIDER_DISCORD",
+                authCode,
+                redirectUri,
+                codeVerifier,
+                clientId,
+                nonce,
+              });
+              return response?.oidcToken ?? "";
+            },
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popup.popupCallbacks,
+                completeOauth: (params) =>
+                  completePopupOauth(params, popup.binding, client),
+                onOauthSuccess,
+              }),
+          },
+          popup.dependencies,
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3341,11 +4260,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       const nonce = bytesToHex(sha256(publicKey));
 
-      // Generate PKCE challenge pair and store verifier
       const { verifier, codeChallenge } = await generateChallengePair();
-      storePKCEVerifier(provider, verifier);
-
-      // Build OAuth URL
       const authUrl = buildOAuthUrl({
         provider,
         clientId,
@@ -3356,72 +4271,33 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         codeChallenge,
         additionalState: additionalParameters,
       });
-
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
+      const expectedState = new URL(authUrl).searchParams.get("state");
+      if (!expectedState) {
+        throw new ZeroXKeyError(
+          "Discord redirect state is missing.",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
         );
       }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                  exchangeCodeForToken: async (codeVerifier) => {
-                    const resp =
-                      await client?.httpClient.proxyOAuth2Authenticate({
-                        provider: "OAUTH2_PROVIDER_DISCORD",
-                        authCode: result.authCode!,
-                        redirectUri,
-                        codeVerifier,
-                        clientId,
-                        nonce,
-                      });
-                    return resp?.oidcToken ?? "";
-                  },
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // ignore cross-origin
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
+      await persistRedirectTransaction({
+        organizationId: masterConfig.organizationId,
+        configId: masterConfig.authProxyConfigId ?? null,
+        apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+        authProxyUrl: masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+        provider,
+        clientId,
+        redirectUri,
+        expectedState,
+        keyRef: publicKey,
+        verifier,
+        discardFreshKey: async (keyRef) => {
+          if (!client?.discardUncommittedApiKeyPair) return;
+          await client.discardUncommittedApiKeyPair(keyRef);
+        },
       });
+
+      return redirectToOAuthProvider(authUrl);
     },
-    [client, callbacks, completeOauth, createApiKeyPair, masterConfig],
+    [client, callbacks, completePopupOauth, createApiKeyPair, masterConfig],
   );
 
   const handleXOauth = useCallback(
@@ -3430,6 +4306,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.xClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.X;
@@ -3453,8 +4330,69 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       const redirectUri = masterConfig.auth?.oauthConfig.oauthRedirectUri;
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+          needsProxyExchange: true,
+        });
+        return runOAuthPopup(
+          {
+            binding: popup.binding,
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            exchange: async ({ authCode, codeVerifier, nonce }) => {
+              const response = await popup.proxyOAuth2Authenticate!({
+                provider: "OAUTH2_PROVIDER_X",
+                authCode,
+                redirectUri,
+                codeVerifier,
+                clientId,
+                nonce,
+              });
+              return response?.oidcToken ?? "";
+            },
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popup.popupCallbacks,
+                completeOauth: (params) =>
+                  completePopupOauth(params, popup.binding, client),
+                onOauthSuccess,
+              }),
+          },
+          popup.dependencies,
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3463,11 +4401,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       const nonce = bytesToHex(sha256(publicKey));
 
-      // Generate PKCE challenge pair and store verifier
       const { verifier, codeChallenge } = await generateChallengePair();
-      storePKCEVerifier(provider, verifier);
-
-      // Build OAuth URL
       const authUrl = buildOAuthUrl({
         provider,
         clientId,
@@ -3478,72 +4412,33 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         codeChallenge,
         additionalState: additionalParameters,
       });
-
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
+      const expectedState = new URL(authUrl).searchParams.get("state");
+      if (!expectedState) {
+        throw new ZeroXKeyError(
+          "X redirect state is missing.",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
         );
       }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                  exchangeCodeForToken: async (codeVerifier) => {
-                    const resp =
-                      await client?.httpClient.proxyOAuth2Authenticate({
-                        provider: "OAUTH2_PROVIDER_X",
-                        authCode: result.authCode!,
-                        redirectUri,
-                        codeVerifier,
-                        clientId,
-                        nonce,
-                      });
-                    return resp?.oidcToken ?? "";
-                  },
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // ignore cross-origin
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
+      await persistRedirectTransaction({
+        organizationId: masterConfig.organizationId,
+        configId: masterConfig.authProxyConfigId ?? null,
+        apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+        authProxyUrl: masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+        provider,
+        clientId,
+        redirectUri,
+        expectedState,
+        keyRef: publicKey,
+        verifier,
+        discardFreshKey: async (keyRef) => {
+          if (!client?.discardUncommittedApiKeyPair) return;
+          await client.discardUncommittedApiKeyPair(keyRef);
+        },
       });
+
+      return redirectToOAuthProvider(authUrl);
     },
-    [client, callbacks, completeOauth, createApiKeyPair, masterConfig],
+    [client, callbacks, completePopupOauth, createApiKeyPair, masterConfig],
   );
 
   const handleGoogleOauth = useCallback(
@@ -3552,6 +4447,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.googleClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.GOOGLE;
@@ -3575,10 +4471,59 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       // Google requires no trailing slash
       const redirectUri =
         masterConfig.auth?.oauthConfig.oauthRedirectUri.replace(/\/$/, "");
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+        });
+        return runOAuthPopup(
+          {
+            binding: popup.binding,
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popup.popupCallbacks,
+                completeOauth: (params) =>
+                  completePopupOauth(params, popup.binding, client),
+                onOauthSuccess,
+              }),
+          },
+          popup.dependencies,
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3587,7 +4532,6 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       const nonce = bytesToHex(sha256(publicKey));
 
-      // Build OAuth URL
       const authUrl = buildOAuthUrl({
         provider,
         clientId,
@@ -3597,60 +4541,33 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         flow,
         additionalState: additionalParameters,
       });
-
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
+      const expectedState = new URL(authUrl).searchParams.get("state");
+      if (!expectedState) {
+        throw new ZeroXKeyError(
+          "Google redirect state is missing.",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
         );
       }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // Ignore cross-origin errors
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
+      await persistRedirectTransaction({
+        organizationId: masterConfig.organizationId,
+        configId: masterConfig.authProxyConfigId ?? null,
+        apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+        authProxyUrl: masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+        provider,
+        clientId,
+        redirectUri,
+        expectedState,
+        keyRef: publicKey,
+        verifier: null,
+        discardFreshKey: async (keyRef) => {
+          if (!client?.discardUncommittedApiKeyPair) return;
+          await client.discardUncommittedApiKeyPair(keyRef);
+        },
       });
+
+      return redirectToOAuthProvider(authUrl);
     },
-    [callbacks, completeOauth, createApiKeyPair, masterConfig],
+    [client, callbacks, completePopupOauth, createApiKeyPair, masterConfig],
   );
 
   const handleAppleOauth = useCallback(
@@ -3659,6 +4576,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.appleClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.APPLE;
@@ -3682,9 +4600,58 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       // TODO (Amir): Apple needs the '/' at the end. Maybe we should add it if not there?
       const redirectUri = masterConfig.auth?.oauthConfig.oauthRedirectUri;
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+        });
+        return runOAuthPopup(
+          {
+            binding: popup.binding,
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popup.popupCallbacks,
+                completeOauth: (params) =>
+                  completePopupOauth(params, popup.binding, client),
+                onOauthSuccess,
+              }),
+          },
+          popup.dependencies,
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3693,7 +4660,6 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       const nonce = bytesToHex(sha256(publicKey));
 
-      // Build OAuth URL
       const authUrl = buildOAuthUrl({
         provider,
         clientId,
@@ -3703,60 +4669,33 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         flow,
         additionalState: additionalParameters,
       });
-
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
+      const expectedState = new URL(authUrl).searchParams.get("state");
+      if (!expectedState) {
+        throw new ZeroXKeyError(
+          "Apple redirect state is missing.",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
         );
       }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // Ignore cross-origin errors
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
+      await persistRedirectTransaction({
+        organizationId: masterConfig.organizationId,
+        configId: masterConfig.authProxyConfigId ?? null,
+        apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+        authProxyUrl: masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+        provider,
+        clientId,
+        redirectUri,
+        expectedState,
+        keyRef: publicKey,
+        verifier: null,
+        discardFreshKey: async (keyRef) => {
+          if (!client?.discardUncommittedApiKeyPair) return;
+          await client.discardUncommittedApiKeyPair(keyRef);
+        },
       });
+
+      return redirectToOAuthProvider(authUrl);
     },
-    [callbacks, completeOauth, createApiKeyPair, masterConfig],
+    [client, callbacks, completePopupOauth, createApiKeyPair, masterConfig],
   );
 
   const handleFacebookOauth = useCallback(
@@ -3765,6 +4704,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         clientId = masterConfig?.auth?.oauthConfig?.facebookClientId,
         openInPage = masterConfig?.auth?.oauthConfig?.openOauthInPage ?? false,
         additionalState: additionalParameters,
+        onOauthSuccess,
       } = params || {};
 
       const provider = OAuthProviders.FACEBOOK;
@@ -3788,8 +4728,66 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const flow = openInPage ? "redirect" : "popup";
       const redirectUri = masterConfig.auth?.oauthConfig.oauthRedirectUri;
+
+      if (!openInPage) {
+        if (!client) {
+          throw new ZeroXKeyError(
+            "Client is not initialized.",
+            ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+          );
+        }
+        const popup = captureProviderOAuthPopup({
+          client,
+          callbacks,
+          masterConfig,
+          initialization: oauthInitializationBindingRef.current,
+          readCurrent: () => oauthProviderViewRef.current!,
+          provider,
+          invocation: {
+            clientId: params?.clientId,
+            openInPage: params?.openInPage,
+          },
+          operation: {
+            clientId,
+            openInPage,
+            emittedRedirectUri: redirectUri,
+          },
+          hasCustomCompletion: !!onOauthSuccess,
+        });
+        return runOAuthPopup(
+          {
+            binding: popup.binding,
+            provider,
+            clientId,
+            redirectUri,
+            additionalState: additionalParameters,
+            exchange: async ({ authCode, codeVerifier }) => {
+              const tokenData = await exchangeFacebookCodeForToken(
+                clientId,
+                redirectUri,
+                authCode,
+                codeVerifier,
+              );
+              return tokenData.id_token;
+            },
+            complete: ({ publicKey, oidcToken, sessionKey }) =>
+              completeOAuthFlow({
+                provider,
+                publicKey,
+                oidcToken,
+                sessionKey,
+                callbacks: popup.popupCallbacks,
+                completeOauth: (params) =>
+                  completePopupOauth(params, popup.binding, client),
+                onOauthSuccess,
+              }),
+          },
+          popup.dependencies,
+        );
+      }
+
+      const flow = "redirect";
 
       // Create key pair and generate nonce
       const publicKey = await createApiKeyPair();
@@ -3798,11 +4796,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       const nonce = bytesToHex(sha256(publicKey));
 
-      // Generate PKCE challenge pair and store verifier
       const { verifier, codeChallenge } = await generateChallengePair();
-      storePKCEVerifier(provider, verifier);
-
-      // Build OAuth URL
       const authUrl = buildOAuthUrl({
         provider,
         clientId,
@@ -3813,69 +4807,33 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         codeChallenge,
         additionalState: additionalParameters,
       });
-
-      if (openInPage) {
-        // Remainder of logic will occur in completeRedirectOauth
-        return redirectToOAuthProvider(authUrl);
-      }
-
-      // Popup flow
-      const authWindow = openOAuthPopup();
-      if (!authWindow) {
-        throw new Error(
-          `Failed to open ${capitalizeProviderName(provider)} login window.`,
+      const expectedState = new URL(authUrl).searchParams.get("state");
+      if (!expectedState) {
+        throw new ZeroXKeyError(
+          "Facebook redirect state is missing.",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
         );
       }
-      authWindow.location.href = authUrl;
-
-      return new Promise<void>((resolve, reject) => {
-        const interval = setInterval(() => {
-          try {
-            if (authWindow.closed) {
-              clearInterval(interval);
-              reject(new Error("Authentication window was closed."));
-              return;
-            }
-
-            const url = authWindow.location.href || "";
-            if (url.startsWith(window.location.origin)) {
-              const result = parseOAuthResponse(url, provider);
-              if (result) {
-                authWindow.close();
-                clearInterval(interval);
-
-                completeOAuthPopup({
-                  provider,
-                  publicKey,
-                  result,
-                  callbacks,
-                  completeOauth,
-                  onOauthSuccess: params?.onOauthSuccess,
-                  exchangeCodeForToken: async (codeVerifier) => {
-                    const tokenData = await exchangeFacebookCodeForToken(
-                      clientId,
-                      redirectUri,
-                      result.authCode!,
-                      codeVerifier,
-                    );
-                    return tokenData.id_token;
-                  },
-                })
-                  .then(() => resolve())
-                  .catch(reject);
-              }
-            }
-          } catch {
-            // Ignore cross-origin errors
-          }
-        }, 500);
-
-        if (authWindow.closed) {
-          clearInterval(interval);
-        }
+      await persistRedirectTransaction({
+        organizationId: masterConfig.organizationId,
+        configId: masterConfig.authProxyConfigId ?? null,
+        apiBaseUrl: masterConfig.apiBaseUrl ?? "https://api.0xkey.io",
+        authProxyUrl: masterConfig.authProxyUrl ?? "https://authproxy.0xkey.io",
+        provider,
+        clientId,
+        redirectUri,
+        expectedState,
+        keyRef: publicKey,
+        verifier,
+        discardFreshKey: async (keyRef) => {
+          if (!client?.discardUncommittedApiKeyPair) return;
+          await client.discardUncommittedApiKeyPair(keyRef);
+        },
       });
+
+      return redirectToOAuthProvider(authUrl);
     },
-    [callbacks, completeOauth, createApiKeyPair, masterConfig],
+    [client, callbacks, completePopupOauth, createApiKeyPair, masterConfig],
   );
 
   const handleLogin = useCallback(
@@ -5777,8 +6735,19 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
 
   const handleVerifyAppProofs = useCallback(
     async (params: HandleVerifyAppProofsParams): Promise<void> => {
+      const verificationGeneration = clientGenerationRef.current;
+      const assertCurrent = () => {
+        if (generationRef.current !== verificationGeneration) {
+          throw new ZeroXKeyError(
+            "Verification context changed.",
+            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+          );
+        }
+      };
+      assertCurrent();
       const { appProofs, successPageDuration = 3000, stampWith } = params || {};
       const s = await getSession();
+      assertCurrent();
       const organizationId = params?.organizationId || s?.organizationId;
       if (!organizationId) {
         throw new ZeroXKeyError(
@@ -5795,7 +6764,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
               <VerifyPage
                 appProofs={appProofs}
                 onSuccess={() => {
-                  resolve();
+                  try {
+                    assertCurrent();
+                    resolve();
+                  } catch (error) {
+                    reject(error);
+                  }
                 }}
                 onError={(error: unknown) => {
                   reject(error);
@@ -5892,35 +6866,56 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
   );
 
   useEffect(() => {
-    if (proxyAuthConfigRef.current) return;
-
-    // Only fetch the proxy auth config once. Use that to build the master config.
+    const generation = generationRef.current;
+    let cancelled = false;
     const fetchProxyAuthConfig = async () => {
       try {
         let proxyAuthConfig: ProxyTGetWalletKitConfigResponse | undefined;
 
         if (shouldFetchWalletKitConfig) {
+          const fetchedFor = {
+            authProxyConfigId: config.authProxyConfigId,
+            authProxyUrl: config.authProxyUrl,
+            shouldFetch: true,
+          };
           // Only fetch the proxy auth config if we have an authProxyId and the autoFetchWalletKitConfig param is enabled or not passed in.
           proxyAuthConfig = await getAuthProxyConfig(
             config.authProxyConfigId!, // Can assert safely. See shouldFetchWalletKitConfig definition.
             config.authProxyUrl,
           );
+          if (cancelled || generationRef.current !== generation) return;
           proxyAuthConfigRef.current = proxyAuthConfig;
+          proxyOAuthSnapshotRef.current = {
+            value: proxyAuthConfig,
+            fetchedFor,
+          };
         }
 
+        if (cancelled || generationRef.current !== generation) return;
+        masterConfigGenerationRef.current = generation;
         setMasterConfig(buildConfig(proxyAuthConfig));
       } catch {
+        if (cancelled || generationRef.current !== generation) return;
         setClientState(ClientState.Error);
       }
     };
 
     fetchProxyAuthConfig();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    config.organizationId,
+    config.apiBaseUrl,
+    config.authProxyUrl,
+    config.authProxyConfigId,
+    config.autoFetchWalletKitConfig,
+  ]);
 
   useEffect(() => {
     // Start the client initialization process once we have the master config.
     if (!masterConfig) return;
-    initializeClient();
+    initializeClient(generationRef.current);
   }, [masterConfig]);
 
   useEffect(() => {
@@ -5930,6 +6925,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     // If shouldFetchWalletKitConfig is false, we'll never have a proxyAuthConfig to build the master config with, so this useEffect should always run.
     if (!proxyAuthConfigRef.current && shouldFetchWalletKitConfig) return;
 
+    masterConfigGenerationRef.current = generationRef.current;
     setMasterConfig(buildConfig(proxyAuthConfigRef.current ?? undefined));
   }, [config, proxyAuthConfigRef.current]);
 
@@ -5953,13 +6949,16 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
   );
 
   useEffect(() => {
+    const generation = generationRef.current;
     const handleUpdateState = async () => {
+      if (generationRef.current !== generation) return;
       // we only refresh the wallets if there is an active session
       // this is needed because a disconnect event can occur
       // while the user is unauthenticated
       //
       // WalletProviders state is updated regardless of session state
       const currentSession = await getSession();
+      if (generationRef.current !== generation) return;
       if (currentSession) {
         // this updates both the wallets and walletProviders state
         await debouncedRefreshWallets();
@@ -5970,15 +6969,19 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     };
 
     let cleanup = () => {};
+    let disposed = false;
     initializeWalletProviderListeners(walletProviders, handleUpdateState)
       .then((fn) => {
-        cleanup = fn;
+        if (disposed || generationRef.current !== generation) fn();
+        else cleanup = fn;
       })
       .catch((err) => {
-        console.error("Failed to init providers:", err);
+        if (!disposed && generationRef.current === generation)
+          console.error("Failed to init providers:", err);
       });
 
     return () => {
+      disposed = true;
       cleanup();
     };
   }, [
@@ -6001,23 +7004,37 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
   useEffect(() => {
     // This will handle any redirect based oAuth. It then initializes the session. This is the last step before client is considered "ready"
     if (!client || !masterConfig) return;
-    completeRedirectOauth().finally(() => {
-      clearSessionTimeouts();
-
-      // if auth or wallet connecting features are enabled, we want to fetch
-      // the wallet providers to set the state
-      if (
-        masterConfig.walletConfig?.features?.auth ||
-        masterConfig.walletConfig?.features?.connecting
-      ) {
-        fetchWalletProviders();
+    const generation = clientGenerationRef.current;
+    if (generationRef.current !== generation) return;
+    const pendingAuthWrites = (
+      client as ZeroXKeyClient & {
+        awaitPendingAuthMutations?: () => Promise<void>;
       }
+    ).awaitPendingAuthMutations?.();
+    Promise.resolve(pendingAuthWrites)
+      .then(async () => {
+        if (generationRef.current !== generation) return;
+        await completeRedirectOauth(generation);
+      })
+      .finally(() => {
+        if (generationRef.current !== generation) return;
+        clearSessionTimeouts();
 
-      initializeSessions().finally(() => {
-        // Set the client state to ready only after all initializations are done.
-        setClientState(ClientState.Ready);
+        // if auth or wallet connecting features are enabled, we want to fetch
+        // the wallet providers to set the state
+        if (
+          masterConfig.walletConfig?.features?.auth ||
+          masterConfig.walletConfig?.features?.connecting
+        ) {
+          fetchWalletProviders();
+        }
+
+        initializeSessions(generation).finally(() => {
+          if (generationRef.current !== generation) return;
+          // Set the client state to ready only after all initializations are done.
+          setClientState(ClientState.Ready);
+        });
       });
-    });
 
     return () => {
       clearSessionTimeouts();
@@ -6025,126 +7042,135 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
   }, [client]);
 
   return (
-    <ClientContext.Provider
-      value={{
-        session,
-        allSessions,
-        clientState,
-        authState,
-        user,
-        wallets,
-        walletProviders,
-        config: masterConfig,
-        httpClient: client?.httpClient,
-        createHttpClient,
-        overrideAttestedStamper: async (params) => {
-          if (!client) throw new Error("0xKey client is not initialized");
-          return client.overrideAttestedStamper(params);
-        },
-        setMfaHandler: (handler) => {
-          if (!client) throw new Error("0xKey client is not initialized");
-          client.setMfaHandler(handler);
-        },
-        createPasskey,
-        logout,
-        loginWithPasskey,
-        signUpWithPasskey,
-        fetchWalletProviders,
-        connectWalletAccount,
-        disconnectWalletAccount,
-        switchWalletAccountChain,
-        buildWalletLoginRequest,
-        loginWithWallet,
-        signUpWithWallet,
-        loginOrSignupWithWallet,
-        initOtp,
-        verifyOtp,
-        loginWithOtp,
-        signUpWithOtp,
-        completeOtp,
-        loginWithOauth,
-        signUpWithOauth,
-        completeOauth,
-        fetchWallets,
-        fetchWalletAccounts,
-        fetchPrivateKeys,
-        refreshWallets,
-        signMessage,
-        signTransaction,
-        ethSendTransaction,
-        ethSendErc20Transfer,
-        solSendTransaction,
-        tronSendTransaction,
-        signAndSendTransaction,
-        pollTransactionStatus,
-        fetchUser,
-        fetchOrCreateP256ApiKeyUser,
-        fetchOrCreatePolicies,
-        refreshUser,
-        updateUserEmail,
-        removeUserEmail,
-        updateUserPhoneNumber,
-        removeUserPhoneNumber,
-        updateUserName,
-        addOauthProvider,
-        removeOauthProviders,
-        addPasskey,
-        removePasskeys,
-        createWallet,
-        createWalletAccounts,
-        exportWallet,
-        exportPrivateKey,
-        exportWalletAccount,
-        importWallet,
-        importPrivateKey,
-        deleteSubOrganization,
-        storeSession,
-        clearSession,
-        clearAllSessions,
-        refreshSession,
-        getSession,
-        getAllSessions,
-        setActiveSession,
-        clearUnusedKeyPairs,
-        getActiveSessionKey,
-        createApiKeyPair,
-        getProxyAuthConfig,
-        fetchBootProofForAppProof,
-        fetchLatestBootProof,
-        verifyLatestBootProof,
-        verifyAppProofs,
-        handleLogin,
-        handleGoogleOauth,
-        handleXOauth,
-        handleDiscordOauth,
-        handleAppleOauth,
-        handleFacebookOauth,
-        handleExportWallet,
-        handleExportPrivateKey,
-        handleExportWalletAccount,
-        handleImportWallet,
-        handleImportPrivateKey,
-        handleUpdateUserEmail,
-        handleUpdateUserPhoneNumber,
-        handleUpdateUserName,
-        handleAddOauthProvider,
-        handleRemoveOauthProvider,
-        handleAddPasskey,
-        handleRemovePasskey,
-        handleAddEmail,
-        handleAddPhoneNumber,
-        handleSignMessage,
-        handleConnectExternalWallet,
-        handleRemoveUserEmail,
-        handleRemoveUserPhoneNumber,
-        handleVerifyAppProofs,
-        handleVerifyEnclave,
-        handleOnRamp,
-        handleSendTransaction,
-        handleSendErc20Transfer,
-      }}
+    <RawConstructorTargetCommitBridge
+      target={renderedRawTarget}
+      view={rawConstructorViewRef}
     >
-      {children}
-    </ClientContext.Provider>
+      <ClientContext.Provider
+        value={{
+          session,
+          allSessions,
+          clientState,
+          authState,
+          user,
+          wallets,
+          walletProviders,
+          config: masterConfig,
+          httpClient: client?.httpClient,
+          createHttpClient,
+          overrideAttestedStamper: async (params) => {
+            if (!client) throw new Error("0xKey client is not initialized");
+            return client.overrideAttestedStamper(params);
+          },
+          setMfaHandler: (handler) => {
+            if (!client) throw new Error("0xKey client is not initialized");
+            client.setMfaHandler(handler);
+          },
+          createPasskey,
+          logout,
+          loginWithPasskey,
+          signUpWithPasskey,
+          fetchWalletProviders,
+          connectWalletAccount,
+          disconnectWalletAccount,
+          switchWalletAccountChain,
+          buildWalletLoginRequest,
+          loginWithWallet,
+          signUpWithWallet,
+          loginOrSignupWithWallet,
+          initOtp,
+          verifyOtp,
+          loginWithOtp,
+          signUpWithOtp,
+          completeOtp,
+          loginWithOauth,
+          signUpWithOauth,
+          completeOauth,
+          fetchWallets,
+          fetchWalletAccounts,
+          fetchPrivateKeys,
+          refreshWallets,
+          signMessage,
+          signTransaction,
+          ethSendTransaction,
+          ethSendErc20Transfer,
+          solSendTransaction,
+          tronSendTransaction,
+          signAndSendTransaction,
+          pollTransactionStatus,
+          fetchUser,
+          fetchOrCreateP256ApiKeyUser,
+          fetchOrCreatePolicies,
+          refreshUser,
+          updateUserEmail,
+          removeUserEmail,
+          updateUserPhoneNumber,
+          removeUserPhoneNumber,
+          updateUserName,
+          addOauthProvider,
+          removeOauthProviders,
+          addPasskey,
+          removePasskeys,
+          createWallet,
+          createWalletAccounts,
+          exportWallet,
+          exportPrivateKey,
+          exportWalletAccount,
+          importWallet,
+          importPrivateKey,
+          deleteSubOrganization,
+          storeSession,
+          clearSession,
+          clearAllSessions,
+          refreshSession,
+          getSession,
+          getAllSessions,
+          setActiveSession,
+          clearUnusedKeyPairs,
+          getActiveSessionKey,
+          createApiKeyPair,
+          getProxyAuthConfig,
+          fetchBootProofForAppProof,
+          fetchLatestBootProof,
+          verifyLatestBootProof,
+          verifyAppProofs,
+          handleLogin,
+          handleGoogleOauth,
+          handleXOauth,
+          handleDiscordOauth,
+          handleAppleOauth,
+          handleFacebookOauth,
+          handleExportWallet,
+          handleExportPrivateKey,
+          handleExportWalletAccount,
+          handleImportWallet,
+          handleImportPrivateKey,
+          handleUpdateUserEmail,
+          handleUpdateUserPhoneNumber,
+          handleUpdateUserName,
+          handleAddOauthProvider,
+          handleRemoveOauthProvider,
+          handleAddPasskey,
+          handleRemovePasskey,
+          handleAddEmail,
+          handleAddPhoneNumber,
+          handleSignMessage,
+          handleConnectExternalWallet,
+          handleRemoveUserEmail,
+          handleRemoveUserPhoneNumber,
+          handleVerifyAppProofs,
+          handleVerifyEnclave,
+          handleOnRamp,
+          handleSendTransaction,
+          handleSendErc20Transfer,
+        }}
+      >
+        <CaptchaChallengeHost
+          active={captchaPending}
+          containerRef={captchaContainerRef}
+        />
+        {children}
+      </ClientContext.Provider>
+    </RawConstructorTargetCommitBridge>
   );
 };

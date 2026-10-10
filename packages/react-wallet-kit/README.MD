@@ -10,6 +10,8 @@ To learn how to setup your ZeroXKey organization and configure the Auth Proxy, c
 
 You can use `@0xkey-io/react-wallet-kit` in any React based web application.
 
+TypeScript consumers need TypeScript 5.4 or newer with `"moduleResolution": "bundler"`. `node16`/`nodenext` resolution is not supported; see [TypeScript Support](https://github.com/0xkey-io/sdk-js#typescript-support).
+
 For this guide, let's create a new `Next.js` app. If you already have an existing app, you don't need to do this.
 
 ```bash npx

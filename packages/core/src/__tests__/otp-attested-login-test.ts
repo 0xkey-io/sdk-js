@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "@jest/globals";
+import { afterEach, expect, jest, test } from "@jest/globals";
 import {
   createECDH,
   createPrivateKey,
@@ -16,10 +16,14 @@ import {
   type LoginWithOtpParams,
   type StorageBase,
 } from "../__types__";
+import { createReadyClient } from "./test-support/ready-client";
 
 const originalFetch = global.fetch;
 afterEach(() => {
   global.fetch = originalFetch;
+  jest.restoreAllMocks();
+  delete (globalThis as any).document;
+  delete (globalThis as any).window;
 });
 
 const privateA = Buffer.alloc(32, 1);
@@ -81,7 +85,7 @@ function response(session?: string, status = "ACTIVITY_STATUS_COMPLETED") {
   } as Response;
 }
 
-function setup(
+async function setup(
   keys: Record<string, ReturnType<typeof keyPair>> = { [publicA]: pairA },
   activeOrganizationId?: string,
 ) {
@@ -125,19 +129,19 @@ function setup(
     publicKey: publicA,
     scheme: AttestedScheme.P256_OIDC,
   });
-  const client = new ZeroXKeyClient(
-    {
+  const client = await createReadyClient();
+  (globalThis as any).window.location = { hostname: "wallet.example.test" };
+  Object.assign(client, {
+    config: {
       apiBaseUrl: "https://api.example.test",
       authProxyUrl: "https://auth.example.test",
       authProxyConfigId: "config-1",
       organizationId: "parent-org",
     },
-    signer,
-    undefined,
-    undefined,
-    originalStamper,
-  );
-  Object.assign(client, { storageManager: storage });
+    apiKeyStamper: signer,
+    attestedStamper: originalStamper,
+    storageManager: storage,
+  });
   const httpClient = client.createHttpClient();
   httpClient.config.activityPoller = { intervalMs: 0, numRetries: 1 };
   Object.assign(client, { httpClient });
@@ -172,8 +176,24 @@ function assertAttestedRequest(
   ).toBe(true);
 }
 
+test("loginWithOtp rejects an uninitialized client before any request", async () => {
+  const client = new ZeroXKeyClient({ organizationId: "org-1" });
+  let requests = 0;
+  global.fetch = (async () => {
+    requests++;
+    return response("unexpected-session");
+  }) as typeof fetch;
+  await expect(
+    client.loginWithOtp({
+      verificationToken: token(publicA),
+      organizationId: "org-1",
+    }),
+  ).rejects.toMatchObject({ code: ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED });
+  expect(requests).toBe(0);
+});
+
 test("loginWithOtp sends a real Attested stamp over the final StampLogin body and stores its Session", async () => {
-  const { client, stored, deleted, originalStamper, httpClient } = setup(
+  const { client, stored, deleted, originalStamper, httpClient } = await setup(
     undefined,
     "other-active-org",
   );
@@ -215,7 +235,7 @@ test("loginWithOtp sends a real Attested stamp over the final StampLogin body an
 });
 
 test("loginWithOtp maps explicit Session options without changing its storage key", async () => {
-  const { client, stored } = setup();
+  const { client, stored } = await setup();
   const urls: string[] = [];
   const params: LoginWithOtpParams = {
     verificationToken: token(publicA),
@@ -251,7 +271,7 @@ test("loginWithOtp maps explicit Session options without changing its storage ke
 });
 
 test("missing local Token key and incompatible legacy publicKey fail before network", async () => {
-  const { client, stored, deleted } = setup({});
+  const { client, stored, deleted } = await setup({});
   let requests = 0;
   global.fetch = (async () => {
     requests++;
@@ -279,7 +299,7 @@ test.each([
 ] as Array<[string, Record<string, unknown>, number]>)(
   "standalone login rejects %s before StampLogin",
   async (caseName, claims, expectedRequests) => {
-    const { client, stored, deleted } = setup();
+    const { client, stored, deleted } = await setup();
     let accountRequests = 0;
     let stampRequests = 0;
     global.fetch = (async (url: RequestInfo | URL) => {
@@ -305,7 +325,7 @@ test.each([
 );
 
 test("failure and MFA pause do not store Session or delete the Token key", async () => {
-  const { client, stored, deleted, originalStamper } = setup();
+  const { client, stored, deleted, originalStamper } = await setup();
   global.fetch = (async () => {
     throw new Error("transport failed");
   }) as typeof fetch;
@@ -332,7 +352,10 @@ test("failure and MFA pause do not store Session or delete the Token key", async
 });
 
 test("concurrent Token logins keep separate signing identities", async () => {
-  const { client, stored } = setup({ [publicA]: pairA, [publicB]: pairB });
+  const { client, stored } = await setup({
+    [publicA]: pairA,
+    [publicB]: pairB,
+  });
   const tokens = new Map([
     [publicA, token(publicA, "token-A")],
     [publicB, token(publicB, "token-B")],
@@ -371,7 +394,10 @@ test("concurrent Token logins keep separate signing identities", async () => {
 });
 
 test("successful Token login keeps other existing local keys available", async () => {
-  const { client, deleted } = setup({ [publicA]: pairA, [publicB]: pairB });
+  const { client, deleted } = await setup({
+    [publicA]: pairA,
+    [publicB]: pairB,
+  });
   global.fetch = (async () => response("session-A")) as typeof fetch;
   await client.loginWithOtp({
     verificationToken: token(publicA),
@@ -381,7 +407,7 @@ test("successful Token login keeps other existing local keys available", async (
 });
 
 test("successful login registers a valid JWT and active key in web storage", async () => {
-  const { client } = setup();
+  const { client } = await setup();
   const values = new Map<string, unknown>();
   const storage = new WebStorageManager();
   storage.setStorageValue = async (key, value) => {
@@ -415,7 +441,7 @@ test("successful login registers a valid JWT and active key in web storage", asy
 });
 
 test("storage failure retains STORE_SESSION_ERROR classification", async () => {
-  const { client } = setup();
+  const { client } = await setup();
   Object.assign(client, {
     storageManager: {
       storeSession: async () => {
@@ -433,13 +459,18 @@ test("storage failure retains STORE_SESSION_ERROR classification", async () => {
 });
 
 test("signUpWithOtp uses Token key A for signup then StampLogin in the created organization", async () => {
-  const { client, stored, deleted } = setup();
+  const { client, stored, deleted } = await setup();
   const verificationToken = token(publicA);
   const urls: string[] = [];
   global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
     urls.push(String(url));
-    if (String(url).endsWith("/v1/signup_v2")) {
+    if (new URL(String(url)).pathname === "/v1/signup_v2") {
+      expect(new URL(String(url)).search).toBe("?captcha_config_id=config-1");
       const body = JSON.parse(String(init?.body));
+      expect((init?.headers as Record<string, string>)["X-Captcha-Token"]).toBe(
+        "otp-captcha-token",
+      );
+      expect(JSON.stringify(body)).not.toContain("otp-captcha-token");
       expect(body.verificationToken).toBe(verificationToken);
       expect(body.clientSignature.publicKey).toBe(publicA);
       const verifier = createVerify("SHA256");
@@ -460,6 +491,9 @@ test("signUpWithOtp uses Token key A for signup then StampLogin in the created o
       } as Response;
     }
     assertAttestedRequest(url, init!, verificationToken, publicA);
+    expect(
+      (init?.headers as Record<string, string>)["X-Captcha-Token"],
+    ).toBeUndefined();
     expect(JSON.parse(String(init?.body)).organizationId).toBe("new-org");
     return response("signup-session");
   }) as typeof fetch;
@@ -467,18 +501,216 @@ test("signUpWithOtp uses Token key A for signup then StampLogin in the created o
     verificationToken,
     contact: "person@example.test",
     otpType: OtpType.Email,
+    captchaToken: "otp-captcha-token",
   });
   expect(result.sessionToken).toBe("signup-session");
   expect(urls).toEqual([
-    "https://auth.example.test/v1/signup_v2",
+    "https://auth.example.test/v1/signup_v2?captcha_config_id=config-1",
     "https://api.example.test/public/v1/submit/stamp_login",
   ]);
   expect(stored).toHaveLength(1);
   expect(deleted).toEqual([]);
 });
 
+test.each(["config mutation", "http client replacement"])(
+  "completeOtp never sends a verified Token to another account target: %s",
+  async (change) => {
+    const { client } = await setup();
+    const targetKey = createECDH("prime256v1");
+    targetKey.setPrivateKey(Buffer.alloc(32, 3));
+    const otpEncryptionTargetBundle = JSON.stringify({
+      data: Buffer.from(
+        JSON.stringify({ targetPublic: targetKey.getPublicKey("hex") }),
+      ).toString("hex"),
+    });
+    let releaseVerification!: () => void;
+    let verificationStarted!: () => void;
+    const paused = new Promise<void>((resolve) => {
+      releaseVerification = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      verificationStarted = resolve;
+    });
+    const requests: string[] = [];
+    global.fetch = (async (url: RequestInfo | URL) => {
+      const path = new URL(String(url)).pathname;
+      requests.push(path);
+      if (path !== "/v1/otp_verify_v2") {
+        throw new Error(`unexpected account request ${path}`);
+      }
+      verificationStarted();
+      await paused;
+      return {
+        ok: true,
+        json: async () => ({ verificationToken: token(publicA) }),
+      } as Response;
+    }) as typeof fetch;
+
+    const pending = client.completeOtp({
+      otpId: "otp-1",
+      otpCode: "123456",
+      otpEncryptionTargetBundle,
+      contact: "person@example.test",
+      otpType: OtpType.Email,
+      publicKey: publicA,
+      captchaToken: "otp-captcha-token",
+    });
+    await started;
+    if (change === "config mutation") {
+      client.httpClient.config.authProxyConfigId = "config-2";
+    } else {
+      client.httpClient = client.createHttpClient({
+        authProxyUrl: "https://other.example.test",
+      });
+    }
+    releaseVerification();
+    await expect(pending).rejects.toThrow();
+    expect(requests).toEqual(["/v1/otp_verify_v2"]);
+  },
+);
+
+test("direct verifyOtp preserves an explicit HTTP client config override without Captcha", async () => {
+  const { client } = await setup();
+  client.httpClient = client.createHttpClient({
+    authProxyConfigId: "config-2",
+    authProxyUrl: "https://auth-b.example.test",
+  });
+  const targetKey = createECDH("prime256v1");
+  targetKey.setPrivateKey(Buffer.alloc(32, 3));
+  const otpEncryptionTargetBundle = JSON.stringify({
+    data: Buffer.from(
+      JSON.stringify({ targetPublic: targetKey.getPublicKey("hex") }),
+    ).toString("hex"),
+  });
+  const requests: string[] = [];
+  global.fetch = (async (url: RequestInfo | URL) => {
+    requests.push(String(url));
+    const path = new URL(String(url)).pathname;
+    return {
+      ok: true,
+      json: async () =>
+        path === "/v1/otp_verify_v2"
+          ? { verificationToken: token(publicA) }
+          : { organizationId: "existing-org" },
+    } as Response;
+  }) as typeof fetch;
+  await expect(
+    client.verifyOtp({
+      otpId: "otp-1",
+      otpCode: "123456",
+      otpEncryptionTargetBundle,
+      contact: "person@example.test",
+      otpType: OtpType.Email,
+      publicKey: publicA,
+    }),
+  ).resolves.toMatchObject({ subOrganizationId: "existing-org" });
+  expect(requests).toEqual([
+    "https://auth-b.example.test/v1/otp_verify_v2",
+    "https://auth-b.example.test/v1/account",
+  ]);
+});
+
+test("direct verifyOtp does not return an A Token after account lookup switches to B", async () => {
+  const { client } = await setup();
+  const targetKey = createECDH("prime256v1");
+  targetKey.setPrivateKey(Buffer.alloc(32, 3));
+  const otpEncryptionTargetBundle = JSON.stringify({
+    data: Buffer.from(
+      JSON.stringify({ targetPublic: targetKey.getPublicKey("hex") }),
+    ).toString("hex"),
+  });
+  let releaseLookup!: () => void;
+  let lookupStarted!: () => void;
+  const paused = new Promise<void>((resolve) => {
+    releaseLookup = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    lookupStarted = resolve;
+  });
+  const requests: string[] = [];
+  global.fetch = (async (url: RequestInfo | URL) => {
+    const path = new URL(String(url)).pathname;
+    requests.push(path);
+    if (path === "/v1/account") {
+      lookupStarted();
+      await paused;
+    }
+    return {
+      ok: true,
+      json: async () =>
+        path === "/v1/otp_verify_v2"
+          ? { verificationToken: token(publicA) }
+          : { organizationId: "existing-org" },
+    } as Response;
+  }) as typeof fetch;
+  const pending = client.verifyOtp({
+    otpId: "otp-1",
+    otpCode: "123456",
+    otpEncryptionTargetBundle,
+    contact: "person@example.test",
+    otpType: OtpType.Email,
+    publicKey: publicA,
+  });
+  await started;
+  client.httpClient = client.createHttpClient({
+    authProxyConfigId: "config-2",
+    authProxyUrl: "https://auth-b.example.test",
+  });
+  releaseLookup();
+  await expect(pending).rejects.toThrow();
+  expect(requests).toEqual(["/v1/otp_verify_v2", "/v1/account"]);
+});
+
+test.each(["config mutation", "http client replacement"])(
+  "signUpWithOtp refuses a changed Captcha target after signing: %s",
+  async (change) => {
+    const { client } = await setup();
+    const apiKeyStamper = (client as any).apiKeyStamper;
+    const originalSign = apiKeyStamper.sign.bind(apiKeyStamper);
+    let releaseSign!: () => void;
+    let signStarted!: () => void;
+    const signPaused = new Promise<void>((resolve) => {
+      releaseSign = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      signStarted = resolve;
+    });
+    apiKeyStamper.sign = async (...args: Parameters<typeof originalSign>) => {
+      signStarted();
+      await signPaused;
+      return originalSign(...args);
+    };
+    const requests: string[] = [];
+    global.fetch = (async (url: RequestInfo | URL) => {
+      requests.push(String(url));
+      throw new Error("unexpected network request");
+    }) as typeof fetch;
+
+    const pending = client.signUpWithOtp({
+      verificationToken: token(publicA),
+      contact: "person@example.test",
+      otpType: OtpType.Email,
+      captchaToken: "otp-captcha-token",
+    });
+    await started;
+    if (change === "config mutation") {
+      client.httpClient.config.authProxyConfigId = "config-2";
+    } else {
+      client.httpClient = client.createHttpClient({
+        authProxyUrl: "https://other.example.test",
+      });
+    }
+    releaseSign();
+    await expect(pending).rejects.toThrow();
+    expect(requests).toEqual([]);
+  },
+);
+
 test("signUpWithOtp rejects a different publicKey before any network request", async () => {
-  const { client, deleted } = setup({ [publicA]: pairA, [publicB]: pairB });
+  const { client, deleted } = await setup({
+    [publicA]: pairA,
+    [publicB]: pairB,
+  });
   let requests = 0;
   global.fetch = (async () => {
     requests++;
@@ -497,7 +729,7 @@ test("signUpWithOtp rejects a different publicKey before any network request", a
 });
 
 test("signUpWithOtp rejects a missing created organization without deleting Token key", async () => {
-  const { client, stored, deleted } = setup();
+  const { client, stored, deleted } = await setup();
   let requests = 0;
   global.fetch = (async () => {
     requests++;
@@ -516,7 +748,7 @@ test("signUpWithOtp rejects a missing created organization without deleting Toke
 });
 
 test("completeOtp passes the verified existing organization into Attested login", async () => {
-  const { client } = setup();
+  const { client } = await setup();
   client.verifyOtp = async () => ({
     verificationToken: token(publicA),
     subOrganizationId: "verified-org",

@@ -58,6 +58,19 @@ Lower-level stamping and encryption libraries for specialized use cases. Most ap
 | [`@0xkey-io/encoding`](/packages/encoding) | [![npm](https://img.shields.io/npm/v/@0xkey-io/encoding?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/encoding) | Encoding and decoding utilities                                   | [CHANGELOG](/packages/encoding/CHANGELOG.md) |
 | [`@0xkey-io/crypto`](/packages/crypto)     | [![npm](https://img.shields.io/npm/v/@0xkey-io/crypto?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/crypto)     | Cryptographic utilities for P256 keys, encryption, and decryption | [CHANGELOG](/packages/crypto/CHANGELOG.md)   |
 
+## TypeScript Support
+
+The supported TypeScript configuration for consuming these packages is:
+
+- TypeScript **5.4 or newer**
+- `"moduleResolution": "bundler"` (with `"module": "esnext"` or `"preserve"`)
+
+This floor follows the SDK's dependencies: `ox` (used through `viem`) itself requires TypeScript 5.4 or newer.
+
+`node16` and `nodenext` module resolution are not supported. Some low-level packages (`@0xkey-io/encoding`, `@0xkey-io/crypto`, `@0xkey-io/api-key-stamper` and `@0xkey-io/attested-stamper`) currently type-check under them and the repository keeps checking that, but this is not a compatibility promise. Under strict `node16`/`nodenext` with `skipLibCheck: false`, packages that depend on `viem`/`ox`, such as `@0xkey-io/core` and `@0xkey-io/react-wallet-kit`, report `TS1479` errors where CommonJS declarations import ESM-only declarations (`ox` → `abitype`, and Core → `@wallet-standard/base`). The SDK does not ship dual declaration builds to work around this.
+
+The contract guard (`pnpm run contract-guard`) type-checks Core and React Wallet Kit consumers with TypeScript 5.4, `moduleResolution: "bundler"`, `strict` and `skipLibCheck: false`; `pnpm run pack-smoke` runs the same floor against packed tarballs of the low-level packages.
+
 ## Code Examples
 
 See the [`examples/`](/examples) directory for a full list. Highlights:

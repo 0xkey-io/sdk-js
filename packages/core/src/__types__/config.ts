@@ -52,6 +52,8 @@ export interface ZeroXKeyHttpClientConfig {
   walletStamper?: TStamper | undefined;
   attestedStamper?: TStamper | undefined;
   storageManager?: StorageBase | undefined;
+  /** Core-issued clients use this to reject a retired auth target before network I/O. */
+  assertActive?: (() => void) | undefined;
 
   defaultStamperType?: StamperType | undefined;
   onMfaRequired?: ((context: MfaContext) => Promise<void>) | undefined;
@@ -156,6 +158,23 @@ export type TActivityPollerConfig = {
 
 /**@internal */
 export interface StorageBase {
+  /** Restrict this client instance to sessions it stores after initialization. */
+  restrictToNewSessions?(): void;
+  /** Restore only target-bound records from a cross-context atomic adapter. */
+  bindTarget?(target: {
+    organizationId: string;
+    apiBaseUrl: string;
+    authProxyUrl: string;
+    authProxyConfigId?: string | undefined;
+  }): Promise<boolean>;
+  /** Revoke access when the owning authentication context is retired. */
+  revokeAuthAccess?(): void;
+  /** Resolve only after a native durable retirement fence, when supported. */
+  retireAuthAccess?(): Promise<void>;
+  /** Bound records retain keypairs because session and key stores cannot delete atomically. */
+  retainsKeyPairOnClear?(): boolean;
+  /** Reject access while the owning UI target differs from this client. */
+  setAuthContextGuard?(guard: () => boolean): void;
   getStorageValue(sessionKey: string): Promise<any>;
   setStorageValue(sessionKey: string, storageValue: any): Promise<void>;
   setActiveSessionKey(sessionKey: string): Promise<void>;

@@ -34,12 +34,27 @@ export {
 //    `export type *` doesn't re-export types that are themselves re-exported from other
 //    modules - it only exports types defined directly in that file. We still use
 //    `__types__/index.ts` internally within core as a convenience import
+//
+// 4. enums are runtime values. Re-export them from the `@0xkey-io/core` package entry.
+//    Its ESM build imports `./__types__/enums.mjs`. A deep extensionless specifier
+//    fails Node ESM resolution, and `enums.js` is the CommonJS build.
 /** @internal */
 export type * from "@0xkey-io/core/dist/__types__/auth";
 /** @internal */
 export type * from "@0xkey-io/core/dist/__types__/config";
 /** @internal */
-export * from "@0xkey-io/core/dist/__types__/enums";
+export {
+  Chain,
+  Curve,
+  FilterType,
+  OtpType,
+  OtpTypeToFilterTypeMap,
+  SessionKey,
+  SignIntent,
+  StamperType,
+  WalletInterfaceType,
+  WalletSource,
+} from "@0xkey-io/core";
 /** @internal */
 export type * from "@0xkey-io/core/dist/__types__/error";
 /** @internal */

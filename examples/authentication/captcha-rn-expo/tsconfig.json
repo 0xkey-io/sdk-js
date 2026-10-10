@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@0xkey-io/core": ["../../../packages/core/dist/index.d.ts"],
+      "@utils": ["../../../packages/core/dist/utils.d.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

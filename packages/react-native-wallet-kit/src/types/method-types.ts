@@ -18,6 +18,9 @@ export type RefreshWalletsParams = {
 };
 
 export type HandleDiscordOauthParams = {
+  primaryClientId?: string;
+  secondaryClientIds?: string[];
+  /** @deprecated Use `primaryClientId`. */
   clientId?: string;
   additionalState?: Record<string, string>;
   onOauthSuccess?: (params: {
@@ -29,6 +32,9 @@ export type HandleDiscordOauthParams = {
 };
 
 export type HandleXOauthParams = {
+  primaryClientId?: string;
+  secondaryClientIds?: string[];
+  /** @deprecated Use `primaryClientId`. */
   clientId?: string;
   additionalState?: Record<string, string>;
   onOauthSuccess?: (params: {
@@ -40,6 +46,12 @@ export type HandleXOauthParams = {
 };
 
 export type HandleGoogleOauthParams = {
+  primaryClientId?: {
+    /** Client ID for the browser OAuth flow. */
+    webClientId?: string;
+  };
+  secondaryClientIds?: string[];
+  /** @deprecated Use `primaryClientId.webClientId`. */
   clientId?: string;
   additionalState?: Record<string, string>;
   onOauthSuccess?: (params: {
@@ -51,6 +63,14 @@ export type HandleGoogleOauthParams = {
 };
 
 export type HandleAppleOauthParams = {
+  primaryClientId?: {
+    /** Apple bundle ID retained for a future native iOS flow. */
+    iosBundleId?: string;
+    /** Apple Services ID used by the browser OAuth flow. */
+    serviceId?: string;
+  };
+  secondaryClientIds?: string[];
+  /** @deprecated Use `primaryClientId.serviceId`. */
   clientId?: string;
   additionalState?: Record<string, string>;
   onOauthSuccess?: (params: {
@@ -62,6 +82,9 @@ export type HandleAppleOauthParams = {
 };
 
 export type HandleFacebookOauthParams = {
+  primaryClientId?: string;
+  secondaryClientIds?: string[];
+  /** @deprecated Use `primaryClientId`. */
   clientId?: string;
   additionalState?: Record<string, string>;
   onOauthSuccess?: (params: {

@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertTypeScriptFloorCompiler } from "./lib/typescript-floor.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GUARD_DIR = path.resolve(__dirname, "..");
@@ -27,9 +28,18 @@ function runScript(scriptName) {
   }
 }
 
+/**
+ * `tsconfig.bundler.json` is the supported consumer floor (TypeScript 5.4 +
+ * Bundler) and covers Core and React Wallet Kit. `tsconfig.json` (NodeNext)
+ * is kept only for the pilot fixtures that already pass it.
+ */
+const CONSUMER_TYPECHECK_CONFIGS = ["tsconfig.bundler.json", "tsconfig.json"];
+
 function runConsumerTypechecks() {
-  const tsconfigPath = path.join(FIXTURES_DIR, "tsconfig.json");
-  if (!fs.existsSync(tsconfigPath)) {
+  const tsconfigPaths = CONSUMER_TYPECHECK_CONFIGS.map((name) =>
+    path.join(FIXTURES_DIR, name),
+  );
+  if (!tsconfigPaths.every((tsconfigPath) => fs.existsSync(tsconfigPath))) {
     console.warn("Skipping consumer typechecks: fixtures not found.");
     return;
   }
@@ -46,18 +56,28 @@ function runConsumerTypechecks() {
   }
 
   const tscPath = path.join(GUARD_DIR, "../../node_modules/typescript/bin/tsc");
-  const result = spawnSync(
-    process.execPath,
-    [tscPath, "-p", tsconfigPath, "--noEmit"],
-    {
-      cwd: FIXTURES_DIR,
-      stdio: "inherit",
-    },
-  );
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+  try {
+    assertTypeScriptFloorCompiler(process.execPath, [tscPath]);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
   }
-  console.log("Consumer typecheck fixtures passed.");
+  for (const tsconfigPath of tsconfigPaths) {
+    const result = spawnSync(
+      process.execPath,
+      [tscPath, "-p", tsconfigPath, "--noEmit"],
+      {
+        cwd: FIXTURES_DIR,
+        stdio: "inherit",
+      },
+    );
+    if (result.status !== 0) {
+      process.exit(result.status ?? 1);
+    }
+    console.log(
+      `Consumer typecheck fixtures passed: ${path.basename(tsconfigPath)}`,
+    );
+  }
 }
 
 for (const script of scripts) {

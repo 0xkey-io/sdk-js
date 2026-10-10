@@ -5,6 +5,7 @@ import type {
   TStamper,
   StorageBase,
   ApiKeyStamperBase,
+  DeleteKeyPairOptions,
 } from "../../__types__";
 import { ZeroXKeyError, ZeroXKeyErrorCodes } from "@0xkey-io/sdk-types";
 import { SignatureFormat } from "@0xkey-io/api-key-stamper";
@@ -18,13 +19,35 @@ import { SignatureFormat } from "@0xkey-io/api-key-stamper";
 export class CrossPlatformApiKeyStamper implements TStamper {
   private stamper?: ApiKeyStamperBase;
   private temporaryPublicKey?: string | undefined;
-  constructor(private storageManager: StorageBase) {
+  private authAccessRevoked = false;
+  private authContextGuard?: () => boolean;
+  constructor(
+    private storageManager: StorageBase,
+    private readonly webOptInStamper?: ApiKeyStamperBase,
+  ) {
     // Use init method to set up the stamper based on the platform. It's async, so can't be done in the constructor.
+  }
+
+  revokeAuthAccess(): void {
+    this.authAccessRevoked = true;
+    this.temporaryPublicKey = undefined;
+  }
+
+  setAuthContextGuard(guard: () => boolean): void {
+    this.authContextGuard = guard;
+  }
+
+  private assertAuthAccess(): void {
+    if (this.authAccessRevoked || this.authContextGuard?.() === false)
+      throw new ZeroXKeyError(
+        "Client auth context changed",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
   }
 
   async init(): Promise<void> {
     if (isWeb()) {
-      this.stamper = new IndexedDbStamper();
+      this.stamper = this.webOptInStamper ?? new IndexedDbStamper();
     } else if (isReactNative()) {
       try {
         // Dynamic import to prevent bundling the native module in web environments.
@@ -67,18 +90,23 @@ export class CrossPlatformApiKeyStamper implements TStamper {
     return this.stamper.createKeyPair(externalKeyPair);
   }
 
-  deleteKeyPair(publicKeyHex: string): Promise<void> {
+  async deleteKeyPair(
+    publicKeyHex: string,
+    options?: DeleteKeyPairOptions,
+  ): Promise<void> {
     if (!this.stamper) {
       throw new ZeroXKeyError(
         "Stamper is not initialized. Please call .init() before calling this method.",
         ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
       );
     }
-    // If the deleted key pair is the temporary one, clear it.
+
+    await this.stamper.deleteKeyPair(publicKeyHex, options);
+
+    // Preserve the override when deletion fails so an exact retry remains possible.
     if (this.temporaryPublicKey === publicKeyHex) {
       this.temporaryPublicKey = undefined;
     }
-    return this.stamper.deleteKeyPair(publicKeyHex);
   }
 
   // This allows forcing a specific public key to find the key pair for stamping. The key pair must already exist in indexedDB / Keychain.
@@ -97,6 +125,7 @@ export class CrossPlatformApiKeyStamper implements TStamper {
   }
 
   async stamp(payload: string): Promise<TStamp> {
+    this.assertAuthAccess();
     if (!this.stamper) {
       throw new ZeroXKeyError(
         "Stamper is not initialized. Please call .init() before calling this method.",
@@ -106,6 +135,7 @@ export class CrossPlatformApiKeyStamper implements TStamper {
     let publicKeyHex = this.temporaryPublicKey;
     if (!publicKeyHex) {
       const session = await this.storageManager.getActiveSession();
+      this.assertAuthAccess();
       if (!session) {
         throw new ZeroXKeyError(
           "No active session or token available.",
@@ -115,7 +145,9 @@ export class CrossPlatformApiKeyStamper implements TStamper {
       publicKeyHex = session.publicKey!;
     }
 
-    return this.stamper.stamp(payload, publicKeyHex);
+    const stamp = await this.stamper.stamp(payload, publicKeyHex);
+    this.assertAuthAccess();
+    return stamp;
   }
 
   async sign(
@@ -123,6 +155,7 @@ export class CrossPlatformApiKeyStamper implements TStamper {
     format: SignatureFormat = SignatureFormat.Der,
     explicitPublicKey?: string,
   ): Promise<string> {
+    this.assertAuthAccess();
     if (!this.stamper) {
       throw new ZeroXKeyError(
         "Stamper is not initialized. Please call .init() before calling this method.",
@@ -132,6 +165,7 @@ export class CrossPlatformApiKeyStamper implements TStamper {
     let publicKeyHex = explicitPublicKey ?? this.temporaryPublicKey;
     if (!publicKeyHex) {
       const session = await this.storageManager.getActiveSession();
+      this.assertAuthAccess();
       if (!session) {
         throw new ZeroXKeyError(
           "No active session or token available.",
@@ -141,6 +175,8 @@ export class CrossPlatformApiKeyStamper implements TStamper {
       publicKeyHex = session.publicKey!;
     }
 
-    return this.stamper.sign(payload, publicKeyHex, format);
+    const signature = await this.stamper.sign(payload, publicKeyHex, format);
+    this.assertAuthAccess();
+    return signature;
   }
 }

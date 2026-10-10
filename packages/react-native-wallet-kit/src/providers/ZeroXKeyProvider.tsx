@@ -4,12 +4,6 @@ import {
   withZeroXKeyErrorHandling,
   ZEROXKEY_OAUTH_REDIRECT_URL,
   generateChallengePair,
-  exchangeCodeForToken,
-  buildOAuthUrl,
-  storePKCEVerifier,
-  handlePKCEFlow,
-  completeOAuthFlow,
-  parseInAppBrowserResult,
   type TimerMap,
   clearKey,
   clearAll,
@@ -82,11 +76,9 @@ import {
   type TronSendTransactionParams,
 } from "@0xkey-io/core";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import DeviceInfo from "react-native-device-info";
 import { InAppBrowser } from "react-native-inappbrowser-reborn";
-import { sha256 } from "@noble/hashes/sha2";
-import { bytesToHex } from "@noble/hashes/utils";
 
 import {
   ZeroXKeyError,
@@ -139,6 +131,15 @@ import {
   encryptWalletToBundle,
   encryptPrivateKeyToBundle,
 } from "@0xkey-io/crypto";
+import {
+  createOAuthProviderFlowRuntime,
+  type CurrentOAuthProviderContext,
+  type OAuthProviderFlowRuntime,
+} from "../utils/oauth-provider-flow";
+import {
+  attachOAuthLinking,
+  type OAuthLinkingAttachment,
+} from "../utils/oauth-linking";
 
 /**
  * @inline
@@ -196,6 +197,20 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
   const proxyAuthConfigRef = useRef<ProxyTGetWalletKitConfigResponse | null>(
     null,
   );
+  const initializedOAuthClientRef = useRef<
+    | {
+        client: ZeroXKeyClient;
+        config: ZeroXKeyProviderConfig;
+      }
+    | undefined
+  >(undefined);
+  const oauthRuntimeRef = useRef<OAuthProviderFlowRuntime | undefined>(
+    undefined,
+  );
+  const currentOAuthContextRef = useRef<
+    CurrentOAuthProviderContext | undefined
+  >(undefined);
+  const oauthLinkingRef = useRef<OAuthLinkingAttachment | undefined>(undefined);
 
   const [allSessions, setAllSessions] = useState<
     Record<string, Session> | undefined
@@ -302,36 +317,6 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
     } as ZeroXKeyProviderConfig;
   };
 
-  const getOauthProviderSettings = (provider: OAuthProviders) => {
-    const oauth = masterConfig?.auth?.oauth;
-    const providerConfig = oauth ? (oauth as any)[provider] : undefined;
-    const providerObjectConfig =
-      providerConfig && typeof providerConfig === "object"
-        ? (providerConfig as { clientId?: string; redirectUri?: string })
-        : undefined;
-
-    const proxyClientIds = proxyAuthConfigRef.current?.oauthClientIds as
-      | Record<string, string | undefined>
-      | undefined;
-
-    const clientId =
-      providerObjectConfig?.clientId ??
-      (proxyClientIds ? proxyClientIds[provider] : undefined);
-
-    const appScheme = oauth?.appScheme;
-
-    // For Discord and X, default to scheme-based deep link if not explicitly provided.
-    const redirectUri =
-      providerObjectConfig?.redirectUri ??
-      ((provider === "discord" || provider === "x") && appScheme
-        ? `${appScheme}://`
-        : (oauth?.redirectUri ??
-          proxyAuthConfigRef.current?.oauthRedirectUrl ??
-          ZEROXKEY_OAUTH_REDIRECT_URL));
-
-    return { clientId, redirectUri, appScheme } as const;
-  };
-
   /**
    * Initializes the ZeroXKey client with the provided configuration.
    * This function sets up the client, fetches the proxy auth config if needed,
@@ -362,6 +347,21 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
       });
 
       await zeroXKeyClient.init();
+      initializedOAuthClientRef.current = {
+        client: zeroXKeyClient,
+        config: {
+          organizationId: masterConfig.organizationId,
+          ...(masterConfig.apiBaseUrl === undefined
+            ? {}
+            : { apiBaseUrl: masterConfig.apiBaseUrl }),
+          ...(masterConfig.authProxyUrl === undefined
+            ? {}
+            : { authProxyUrl: masterConfig.authProxyUrl }),
+          ...(masterConfig.authProxyConfigId === undefined
+            ? {}
+            : { authProxyConfigId: masterConfig.authProxyConfigId }),
+        },
+      };
       setClient(zeroXKeyClient);
 
       // Don't set clientState to ready until we fetch the proxy auth config (See other fetchProxyAuthConfig useEffect)
@@ -2513,77 +2513,31 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
     [masterConfig, refreshWallets],
   );
 
-  const handleDiscordOauth = useCallback(
-    async (params?: HandleDiscordOauthParams): Promise<void> => {
-      const { additionalState: additionalParameters } = params || {};
-      const {
-        clientId,
-        redirectUri,
-        appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.DISCORD);
-      try {
-        if (!masterConfig) {
-          throw new ZeroXKeyError(
-            "Config is not ready yet!",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!clientId) {
-          throw new ZeroXKeyError(
-            "Discord Client ID is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!redirectUri) {
-          throw new ZeroXKeyError(
-            "OAuth Redirect URI is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!scheme) {
-          throw new ZeroXKeyError(
-            "Missing appScheme. Please set auth.oauth.appScheme.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        // Create key pair and generate nonce
-        const publicKey = await createApiKeyPair();
-        if (!publicKey) {
-          throw new ZeroXKeyError(
-            "Failed to create public key for OAuth.",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-        const nonce = bytesToHex(sha256(publicKey));
-
-        // Generate PKCE challenge pair and store verifier
-        const { verifier, codeChallenge } = await generateChallengePair();
-        await storePKCEVerifier(OAuthProviders.DISCORD, verifier);
-
-        // Build OAuth URL (direct Discord URL, not proxy)
-        const discordAuthUrl = buildOAuthUrl({
-          provider: OAuthProviders.DISCORD,
-          clientId,
-          redirectUri,
-          publicKey,
-          nonce,
-          codeChallenge,
-          additionalState: additionalParameters,
-          useOauthProxyOrigin: false,
-        });
-
-        if (!(await InAppBrowser.isAvailable())) {
-          throw new ZeroXKeyError(
-            "InAppBrowser is not available",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const result = await InAppBrowser.openAuth(discordAuthUrl, scheme, {
+  currentOAuthContextRef.current = {
+    client,
+    config,
+    masterConfig,
+    proxyConfig: proxyAuthConfigRef.current,
+    callbacks,
+    completeOauth,
+  };
+  const initializedOAuthClient = initializedOAuthClientRef.current;
+  if (
+    client &&
+    initializedOAuthClient?.client === client &&
+    oauthRuntimeRef.current?.client !== client
+  ) {
+    oauthRuntimeRef.current = createOAuthProviderFlowRuntime({
+      client,
+      initializedConfig: initializedOAuthClient.config,
+      getCurrent: () => {
+        const current = currentOAuthContextRef.current;
+        if (!current) throw new Error("OAuth context changed");
+        return current;
+      },
+      isBrowserAvailable: () => InAppBrowser.isAvailable(),
+      openAuth: (url, returnTarget) =>
+        InAppBrowser.openAuth(url, returnTarget, {
           dismissButtonStyle: "cancel",
           animated: true,
           modalPresentationStyle: "fullScreen",
@@ -2593,549 +2547,109 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           showTitle: true,
           enableUrlBarHiding: true,
           enableDefaultShare: true,
-        });
+        }),
+      generatePkce: generateChallengePair,
+    });
+  }
 
-        if (!result || result.type !== "success" || !result.url) {
-          throw new ZeroXKeyError(
-            "OAuth flow did not complete successfully",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
+  const requireOAuthRuntime = (): OAuthProviderFlowRuntime => {
+    const runtime = oauthRuntimeRef.current;
+    if (!runtime) {
+      throw new ZeroXKeyError(
+        "Client is not initialized.",
+        ZeroXKeyErrorCodes.CLIENT_NOT_INITIALIZED,
+      );
+    }
+    return runtime;
+  };
 
-        // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
-        if (!parsed.authCode) {
-          throw new ZeroXKeyError(
-            "Missing authorization code from Discord OAuth",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Handle PKCE flow: exchange code for token and complete
-        await handlePKCEFlow({
-          provider: OAuthProviders.DISCORD,
-          publicKey,
-          authCode: parsed.authCode,
-          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
-          ...(callbacks && { callbacks }),
-          completeOauth,
-          exchangeCodeForToken: async (codeVerifier) => {
-            const resp = await client?.httpClient?.proxyOAuth2Authenticate({
-              provider: "OAUTH2_PROVIDER_DISCORD",
-              authCode: parsed.authCode!,
-              redirectUri,
-              codeVerifier,
-              clientId,
-              nonce,
-            });
-            const oidcToken = resp?.oidcToken as string;
-            if (!oidcToken) {
-              throw new ZeroXKeyError(
-                "Missing oidcToken from OAuth exchange",
-                ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-              );
-            }
-            return oidcToken;
-          },
-        });
-        return;
-      } catch (error) {
-        throw error;
-      }
+  const handleDiscordOauth = useCallback(
+    async (params?: HandleDiscordOauthParams): Promise<void> => {
+      await requireOAuthRuntime().start(OAuthProviders.DISCORD, params);
     },
-    [client, callbacks, masterConfig, session, user],
+    [],
   );
 
   const handleXOauth = useCallback(
     async (params?: HandleXOauthParams): Promise<void> => {
-      const { additionalState: additionalParameters } = params || {};
-      const {
-        clientId,
-        redirectUri,
-        appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.X);
-      try {
-        if (!masterConfig) {
-          throw new ZeroXKeyError(
-            "Config is not ready yet!",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!clientId) {
-          throw new ZeroXKeyError(
-            "Twitter Client ID is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!redirectUri) {
-          throw new ZeroXKeyError(
-            "OAuth Redirect URI is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!scheme) {
-          throw new ZeroXKeyError(
-            "Missing appScheme. Please set auth.oauth.appScheme.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const publicKey = await createApiKeyPair();
-        if (!publicKey) {
-          throw new ZeroXKeyError(
-            "Failed to create public key for OAuth.",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-        const nonce = bytesToHex(sha256(publicKey));
-
-        // Generate PKCE challenge pair and store verifier
-        const { verifier, codeChallenge } = await generateChallengePair();
-        await storePKCEVerifier(OAuthProviders.X, verifier);
-
-        // Build OAuth URL (direct X/Twitter URL, not proxy)
-        const twitterAuthUrl = buildOAuthUrl({
-          provider: OAuthProviders.X,
-          clientId,
-          redirectUri,
-          publicKey,
-          nonce,
-          codeChallenge,
-          additionalState: additionalParameters,
-          useOauthProxyOrigin: false,
-        });
-
-        if (!(await InAppBrowser.isAvailable())) {
-          throw new ZeroXKeyError(
-            "InAppBrowser is not available",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const result = await InAppBrowser.openAuth(twitterAuthUrl, scheme, {
-          dismissButtonStyle: "cancel",
-          animated: true,
-          modalPresentationStyle: "fullScreen",
-          modalTransitionStyle: "coverVertical",
-          modalEnabled: true,
-          enableBarCollapsing: false,
-          showTitle: true,
-          enableUrlBarHiding: true,
-          enableDefaultShare: true,
-        });
-
-        if (!result || result.type !== "success" || !result.url) {
-          throw new ZeroXKeyError(
-            "OAuth flow did not complete successfully",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
-        if (!parsed.authCode) {
-          throw new ZeroXKeyError(
-            "Missing authorization code from Twitter OAuth",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Handle PKCE flow: exchange code for token and complete
-        await handlePKCEFlow({
-          provider: OAuthProviders.X,
-          publicKey,
-          authCode: parsed.authCode,
-          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
-          ...(callbacks && { callbacks }),
-          completeOauth,
-          exchangeCodeForToken: async (codeVerifier) => {
-            const resp = await client?.httpClient?.proxyOAuth2Authenticate({
-              provider: "OAUTH2_PROVIDER_X",
-              authCode: parsed.authCode!,
-              redirectUri,
-              codeVerifier,
-              clientId,
-              nonce,
-            });
-            const oidcToken = resp?.oidcToken as string;
-            if (!oidcToken) {
-              throw new ZeroXKeyError(
-                "Missing oidcToken from OAuth exchange",
-                ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-              );
-            }
-            return oidcToken;
-          },
-        });
-        return;
-      } catch (error) {
-        throw error;
-      }
+      await requireOAuthRuntime().start(OAuthProviders.X, params);
     },
-    [client, callbacks, masterConfig, session, user],
+    [],
   );
 
   const handleGoogleOauth = useCallback(
     async (params?: HandleGoogleOauthParams): Promise<void> => {
-      const {} = params || {};
-      const {
-        clientId,
-        redirectUri,
-        appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.GOOGLE);
-
-      try {
-        if (!masterConfig) {
-          throw new ZeroXKeyError(
-            "Config is not ready yet!",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!clientId) {
-          throw new ZeroXKeyError(
-            "Google Client ID is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!redirectUri) {
-          throw new ZeroXKeyError(
-            "OAuth Redirect URI is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!scheme) {
-          throw new ZeroXKeyError(
-            "Missing appScheme. Please set auth.oauth.appScheme.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const finalRedirectUri = `${redirectUri}?scheme=${encodeURIComponent(scheme)}`;
-
-        // Create key pair and generate nonce
-        const publicKey = await createApiKeyPair();
-        if (!publicKey) {
-          throw new ZeroXKeyError(
-            "Failed to create public key for OAuth.",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-        const nonce = bytesToHex(sha256(publicKey));
-
-        // Build OAuth URL using ZeroXKey OAuth proxy
-        const oauthUrl = buildOAuthUrl({
-          provider: OAuthProviders.GOOGLE,
-          clientId,
-          redirectUri: finalRedirectUri,
-          publicKey,
-          nonce,
-          useOauthProxyOrigin: true,
-        });
-
-        if (!(await InAppBrowser.isAvailable())) {
-          throw new ZeroXKeyError(
-            "InAppBrowser is not available",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const result = await InAppBrowser.openAuth(oauthUrl, scheme, {
-          dismissButtonStyle: "cancel",
-          animated: true,
-          modalPresentationStyle: "fullScreen",
-          modalTransitionStyle: "coverVertical",
-          modalEnabled: true,
-          enableBarCollapsing: false,
-          showTitle: true,
-          enableUrlBarHiding: true,
-          enableDefaultShare: true,
-        });
-
-        if (!result || result.type !== "success" || !result.url) {
-          throw new ZeroXKeyError(
-            "OAuth flow did not complete successfully",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
-        if (!parsed.idToken) {
-          throw new ZeroXKeyError(
-            "oidcToken not found in the response",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Complete OAuth flow
-        await completeOAuthFlow({
-          provider: OAuthProviders.GOOGLE,
-          publicKey,
-          oidcToken: parsed.idToken,
-          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
-          ...(callbacks && { callbacks }),
-          completeOauth,
-        });
-        return;
-      } catch (error) {
-        throw error;
-      }
+      await requireOAuthRuntime().start(OAuthProviders.GOOGLE, params);
     },
-    [client, callbacks, masterConfig, session, user],
+    [],
   );
 
   const handleAppleOauth = useCallback(
     async (params?: HandleAppleOauthParams): Promise<void> => {
-      const { additionalState: additionalParameters } = params || {};
-      const {
-        clientId,
-        redirectUri,
-        appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.APPLE);
-
-      try {
-        if (!masterConfig) {
-          throw new ZeroXKeyError(
-            "Config is not ready yet!",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!clientId) {
-          throw new ZeroXKeyError(
-            "Apple Client ID is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!redirectUri) {
-          throw new ZeroXKeyError(
-            "OAuth Redirect URI is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!scheme) {
-          throw new ZeroXKeyError(
-            "Missing appScheme. Please set auth.oauth.appScheme.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const finalRedirectUri = `${redirectUri}?scheme=${encodeURIComponent(scheme)}`;
-
-        // Create key pair and generate nonce
-        const publicKey = await createApiKeyPair();
-        if (!publicKey) {
-          throw new ZeroXKeyError(
-            "Failed to create public key for OAuth.",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-        const nonce = bytesToHex(sha256(publicKey));
-
-        // Build OAuth URL using ZeroXKey OAuth proxy
-        const oauthUrl = buildOAuthUrl({
-          provider: OAuthProviders.APPLE,
-          clientId,
-          redirectUri: finalRedirectUri,
-          publicKey,
-          nonce,
-          additionalState: additionalParameters,
-          useOauthProxyOrigin: true,
-        });
-
-        if (!(await InAppBrowser.isAvailable())) {
-          throw new ZeroXKeyError(
-            "InAppBrowser is not available",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const result = await InAppBrowser.openAuth(oauthUrl, scheme, {
-          dismissButtonStyle: "cancel",
-          animated: true,
-          modalPresentationStyle: "fullScreen",
-          modalTransitionStyle: "coverVertical",
-          modalEnabled: true,
-          enableBarCollapsing: false,
-          showTitle: true,
-          enableUrlBarHiding: true,
-          enableDefaultShare: true,
-        });
-
-        if (!result || result.type !== "success" || !result.url) {
-          throw new ZeroXKeyError(
-            "OAuth flow did not complete successfully",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
-        if (!parsed.idToken) {
-          throw new ZeroXKeyError(
-            "oidcToken not found in the response",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Complete OAuth flow
-        await completeOAuthFlow({
-          provider: OAuthProviders.APPLE,
-          publicKey,
-          oidcToken: parsed.idToken,
-          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
-          ...(callbacks && { callbacks }),
-          completeOauth,
-        });
-        return;
-      } catch (error) {
-        throw error;
-      }
+      await requireOAuthRuntime().start(OAuthProviders.APPLE, params);
     },
-    [client, callbacks, masterConfig, session, user],
+    [],
   );
 
   const handleFacebookOauth = useCallback(
     async (params?: HandleFacebookOauthParams): Promise<void> => {
-      const { additionalState: additionalParameters } = params || {};
-      const {
-        clientId,
-        redirectUri,
-        appScheme: scheme,
-      } = getOauthProviderSettings(OAuthProviders.FACEBOOK);
-
-      try {
-        if (!masterConfig) {
-          throw new ZeroXKeyError(
-            "Config is not ready yet!",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!clientId) {
-          throw new ZeroXKeyError(
-            "Facebook Client ID is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!redirectUri) {
-          throw new ZeroXKeyError(
-            "OAuth Redirect URI is not configured.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        if (!scheme) {
-          throw new ZeroXKeyError(
-            "Missing appScheme. Please set auth.oauth.appScheme.",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const finalRedirectUri = `${redirectUri}?scheme=${encodeURIComponent(scheme)}`;
-
-        // Create key pair and generate nonce
-        const publicKey = await createApiKeyPair();
-        if (!publicKey) {
-          throw new ZeroXKeyError(
-            "Failed to create public key for OAuth.",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-        const nonce = bytesToHex(sha256(publicKey));
-
-        // Generate PKCE challenge pair and store verifier
-        const { verifier, codeChallenge } = await generateChallengePair();
-        await storePKCEVerifier(OAuthProviders.FACEBOOK, verifier);
-
-        // Build OAuth URL using ZeroXKey OAuth proxy
-        const oauthUrl = buildOAuthUrl({
-          provider: OAuthProviders.FACEBOOK,
-          clientId,
-          redirectUri: finalRedirectUri,
-          publicKey,
-          nonce,
-          codeChallenge,
-          additionalState: additionalParameters,
-          useOauthProxyOrigin: true,
-        });
-
-        if (!(await InAppBrowser.isAvailable())) {
-          throw new ZeroXKeyError(
-            "InAppBrowser is not available",
-            ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
-          );
-        }
-
-        const result = await InAppBrowser.openAuth(oauthUrl, scheme, {
-          dismissButtonStyle: "cancel",
-          animated: true,
-          modalPresentationStyle: "fullScreen",
-          modalTransitionStyle: "coverVertical",
-          modalEnabled: true,
-          enableBarCollapsing: false,
-          showTitle: true,
-          enableUrlBarHiding: true,
-          enableDefaultShare: true,
-        });
-
-        if (!result || result.type !== "success" || !result.url) {
-          throw new ZeroXKeyError(
-            "OAuth flow did not complete successfully",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Parse the deep link result
-        const parsed = parseInAppBrowserResult(result.url);
-        if (!parsed.authCode) {
-          throw new ZeroXKeyError(
-            "Missing authorization code from Facebook OAuth",
-            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-          );
-        }
-
-        // Handle PKCE flow: exchange code for token and complete
-        await handlePKCEFlow({
-          provider: OAuthProviders.FACEBOOK,
-          publicKey,
-          authCode: parsed.authCode,
-          ...(parsed.sessionKey && { sessionKey: parsed.sessionKey }),
-          ...(callbacks && { callbacks }),
-          completeOauth,
-          exchangeCodeForToken: async (codeVerifier) => {
-            const tokenData = await exchangeCodeForToken(
-              clientId,
-              finalRedirectUri,
-              parsed.authCode!,
-              codeVerifier,
-            );
-            const idToken = tokenData?.id_token as string;
-            if (!idToken) {
-              throw new ZeroXKeyError(
-                "Missing oidcToken from OAuth exchange",
-                ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
-              );
-            }
-            return idToken;
-          },
-        });
-        return;
-      } catch (error) {
-        throw error;
-      }
+      await requireOAuthRuntime().start(OAuthProviders.FACEBOOK, params);
     },
-    [client, callbacks, masterConfig, session, user],
+    [],
   );
+
+  const notifyOAuthError = (error: ZeroXKeyError) => {
+    try {
+      const result = currentOAuthContextRef.current?.callbacks?.onError?.(
+        error,
+      ) as unknown;
+      if (result instanceof Promise) void result.catch(() => undefined);
+    } catch {
+      // Async OAuth notifications must not create unobserved rejections.
+    }
+  };
+
+  useEffect(() => {
+    const attachment = attachOAuthLinking({
+      linking: Linking,
+      dispatch: async (url) => {
+        const runtime = oauthRuntimeRef.current;
+        if (!runtime || !runtime.isReady()) return "ignored";
+        return runtime.coordinator.handleOAuthCallbackUrl(url);
+      },
+      onError: () => {
+        notifyOAuthError(
+          new ZeroXKeyError(
+            "Failed to handle OAuth callback",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          ),
+        );
+      },
+    });
+    oauthLinkingRef.current = attachment;
+    return () => {
+      if (oauthLinkingRef.current === attachment) {
+        oauthLinkingRef.current = undefined;
+      }
+      attachment.dispose();
+    };
+  }, []);
+
+  useEffect(() => {
+    const runtime = oauthRuntimeRef.current;
+    const ready = runtime?.isReady() === true;
+    oauthLinkingRef.current?.setReady(ready);
+    if (ready) {
+      void runtime.coordinator.retryPendingCleanup().catch(() => {
+        notifyOAuthError(
+          new ZeroXKeyError(
+            "Failed to clean up OAuth resources",
+            ZeroXKeyErrorCodes.OAUTH_SIGNUP_ERROR,
+          ),
+        );
+      });
+    }
+  }, [client, masterConfig, config, callbacks, completeOauth]);
 
   useEffect(() => {
     if (proxyAuthConfigRef.current) return;

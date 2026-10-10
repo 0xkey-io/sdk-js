@@ -35,6 +35,7 @@ export class ZeroXKeySDKClientBase {
 
   // Storage manager
   private storageManager?: StorageBase | undefined;
+  private assertActive?: (() => void) | undefined;
 
   constructor(config: ZeroXKeyHttpClientConfig) {
     this.config = config;
@@ -54,6 +55,7 @@ export class ZeroXKeySDKClientBase {
     if (config.storageManager) {
       this.storageManager = config.storageManager;
     }
+    this.assertActive = config.assertActive;
     if (config.defaultStamperType) {
       this.defaultStamperType = config.defaultStamperType;
     } else {
@@ -222,6 +224,7 @@ export class ZeroXKeySDKClientBase {
       headers[stamp.stampHeaderName] = stamp.stampHeaderValue;
     }
 
+    this.assertActive?.();
     const response = await fetch(fullUrl, {
       method: "POST",
       headers: headers,
@@ -297,6 +300,7 @@ export class ZeroXKeySDKClientBase {
   async authProxyRequest<TBodyType, TResponseType>(
     url: string,
     body: TBodyType,
+    captchaToken?: string,
   ): Promise<TResponseType> {
     if (!this.config.authProxyUrl || !this.config.authProxyConfigId) {
       throw new ZeroXKeyError(
@@ -304,13 +308,54 @@ export class ZeroXKeySDKClientBase {
         ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
       );
     }
-    const fullUrl = this.config.authProxyUrl + url;
+    let fullUrl = this.config.authProxyUrl + url;
     const stringifiedBody = JSON.stringify(body);
     var headers: Record<string, string> = {
       "Content-Type": "application/json",
       "X-Auth-Proxy-Config-ID": this.config.authProxyConfigId,
     };
+    if (captchaToken !== undefined) {
+      if (
+        ![
+          "/v1/otp_init",
+          "/v1/otp_init_v2",
+          "/v1/signup",
+          "/v1/signup_v2",
+        ].includes(url)
+      ) {
+        throw new ZeroXKeyError(
+          "Captcha token is only supported on protected Auth Proxy routes",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+      headers["X-Captcha-Token"] = captchaToken;
+      let baseUrl: URL;
+      try {
+        baseUrl = new URL(this.config.authProxyUrl);
+      } catch (_) {
+        throw new ZeroXKeyError(
+          "Auth Proxy URL is invalid for Captcha request",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+      if (
+        this.config.authProxyUrl.includes("#") ||
+        !["http:", "https:"].includes(baseUrl.protocol)
+      ) {
+        throw new ZeroXKeyError(
+          "Auth Proxy URL is invalid for Captcha request",
+          ZeroXKeyErrorCodes.INVALID_CONFIGURATION,
+        );
+      }
+      baseUrl.pathname = baseUrl.pathname.replace(/\/+$/, "") + url;
+      baseUrl.searchParams.set(
+        "captcha_config_id",
+        this.config.authProxyConfigId,
+      );
+      fullUrl = baseUrl.toString();
+    }
 
+    this.assertActive?.();
     const response = await fetch(fullUrl, {
       method: "POST",
       headers: headers,
@@ -318,14 +363,21 @@ export class ZeroXKeySDKClientBase {
     });
 
     if (!response.ok) {
+      const errorResponse = {
+        status: response.status,
+        retryAfter: response.headers?.get?.("retry-after") ?? undefined,
+      };
       let res: GrpcStatus;
       try {
         res = await response.json();
       } catch (_) {
-        throw new Error(`${response.status} ${response.statusText}`);
+        throw Object.assign(
+          new Error(`${response.status} ${response.statusText}`),
+          errorResponse,
+        );
       }
 
-      throw new ZeroXKeyRequestError(res);
+      throw new ZeroXKeyRequestError(res, errorResponse);
     }
 
     const data = await response.json();
@@ -358,6 +410,7 @@ export class ZeroXKeySDKClientBase {
         signedRequest.stamp.stampHeaderValue,
     };
 
+    this.assertActive?.();
     const response = await fetch(signedRequest.url, {
       method: "POST",
       headers,
@@ -6672,14 +6725,16 @@ export class ZeroXKeySDKClientBase {
 
   proxyInitOtp = async (
     input: SdkTypes.ProxyTInitOtpBody,
+    captchaToken?: string,
   ): Promise<SdkTypes.ProxyTInitOtpResponse> => {
-    return this.authProxyRequest("/v1/otp_init", input);
+    return this.authProxyRequest("/v1/otp_init", input, captchaToken);
   };
 
   proxyInitOtpV2 = async (
     input: SdkTypes.ProxyTInitOtpV2Body,
+    captchaToken?: string,
   ): Promise<SdkTypes.ProxyTInitOtpV2Response> => {
-    return this.authProxyRequest("/v1/otp_init_v2", input);
+    return this.authProxyRequest("/v1/otp_init_v2", input, captchaToken);
   };
 
   proxyOtpLogin = async (
@@ -6708,14 +6763,22 @@ export class ZeroXKeySDKClientBase {
 
   proxySignup = async (
     input: SdkTypes.ProxyTSignupBody,
+    captchaToken?: string,
   ): Promise<SdkTypes.ProxyTSignupResponse> => {
-    return this.authProxyRequest("/v1/signup", input);
+    return this.authProxyRequest("/v1/signup", input, captchaToken);
   };
 
   proxySignupV2 = async (
     input: SdkTypes.ProxyTSignupV2Body,
+    captchaToken?: string,
   ): Promise<SdkTypes.ProxyTSignupV2Response> => {
-    return this.authProxyRequest("/v1/signup_v2", input);
+    return this.authProxyRequest("/v1/signup_v2", input, captchaToken);
+  };
+
+  proxyGetWalletKitClientParams = async (
+    input: SdkTypes.ProxyTGetWalletKitClientParamsBody,
+  ): Promise<SdkTypes.ProxyTGetWalletKitClientParamsResponse> => {
+    return this.authProxyRequest("/v1/wallet_kit_client_params", input);
   };
 
   proxyGetWalletKitConfig = async (

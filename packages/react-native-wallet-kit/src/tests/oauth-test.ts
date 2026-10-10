@@ -181,7 +181,7 @@ describe("OAuth utils", () => {
 
       const parsed = new URL(url);
       expect(url).toBe(
-        "https://oauth-origin.0xkey.com/?provider=google&clientId=client_google&redirectUri=https%3A%2F%2Fexample.com%2Fcallback&nonce=nonce_google&state=provider%3Dgoogle%26flow%3Dredirect%26publicKey%3Dpk_google%26sessionKey%3Dsess_google",
+        "https://oauth-origin.0xkey.io/?provider=google&clientId=client_google&redirectUri=https%3A%2F%2Fexample.com%2Fcallback&nonce=nonce_google&state=provider%3Dgoogle%26flow%3Dredirect%26publicKey%3Dpk_google%26sessionKey%3Dsess_google",
       );
 
       const state = parsed.searchParams.get("state");

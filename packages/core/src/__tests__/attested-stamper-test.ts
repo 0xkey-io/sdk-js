@@ -4,13 +4,15 @@ import { AttestedScheme } from "@0xkey-io/attested-stamper";
 import { ZeroXKeyClient } from "../__clients__/core";
 
 function clientWith(stamper: AttestedStamper) {
-  return new ZeroXKeyClient(
+  const client = new ZeroXKeyClient(
     { organizationId: "org-1" },
     undefined,
     undefined,
     undefined,
     stamper,
   );
+  (client as any).authReady = true;
+  return client;
 }
 
 test("overrideAttestedStamper configures exactly one identity scheme", async () => {

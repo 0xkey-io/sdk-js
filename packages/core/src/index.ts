@@ -15,6 +15,7 @@ export {
 
 export { ZeroXKeyClient, type ZeroXKeyClientMethods } from "./__clients__/core";
 export { type ZeroXKeySDKClientBase } from "./__generated__/sdk-client-base";
+export { getClientParams } from "./client-params";
 
 // Export all types and values from __types__/
 export * from "./__types__/auth";

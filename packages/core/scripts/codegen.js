@@ -1,5 +1,9 @@
 const fs = require("fs");
 const path = require("path");
+const {
+  CAPTCHA_PROTECTED_PATHS,
+  validateCaptchaHeaderContract,
+} = require("./captcha-contract.js");
 
 const SOURCE_DIRECTORY = path.resolve(__dirname, "../src");
 const PUBLIC_API_SWAGGER_PATH = path.resolve(
@@ -249,6 +253,7 @@ const generateSDKClientFromSwagger = async (
     
     // Storage manager
     private storageManager?: StorageBase | undefined;
+    private assertActive?: (() => void) | undefined;
 
     constructor(config: ZeroXKeyHttpClientConfig) {
         this.config = config;
@@ -268,6 +273,7 @@ const generateSDKClientFromSwagger = async (
         if (config.storageManager) {
         this.storageManager = config.storageManager;
         }
+        this.assertActive = config.assertActive;
         if (config.defaultStamperType) {
         this.defaultStamperType = config.defaultStamperType;
         } else{
@@ -420,6 +426,7 @@ const generateSDKClientFromSwagger = async (
         headers[stamp.stampHeaderName] = stamp.stampHeaderValue
         }
 
+        this.assertActive?.();
         const response = await fetch(fullUrl, {
         method: "POST",
         headers: headers,
@@ -480,17 +487,37 @@ const generateSDKClientFromSwagger = async (
     async authProxyRequest<TBodyType, TResponseType>(
         url: string,
         body: TBodyType,
+        captchaToken?: string,
     ): Promise<TResponseType> {
         if (!this.config.authProxyUrl || !this.config.authProxyConfigId) {
         throw new ZeroXKeyError("Auth Proxy URL or ID is not configured.", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
         }
-        const fullUrl = this.config.authProxyUrl + url;
+        let fullUrl = this.config.authProxyUrl + url;
         const stringifiedBody = JSON.stringify(body);
         var headers: Record<string, string> = {
         "Content-Type": "application/json",
         "X-Auth-Proxy-Config-ID": this.config.authProxyConfigId,
         }
+        if (captchaToken !== undefined) {
+        if (!${JSON.stringify(CAPTCHA_PROTECTED_PATHS)}.includes(url)) {
+          throw new ZeroXKeyError("Captcha token is only supported on protected Auth Proxy routes", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
+        }
+        headers["X-Captcha-Token"] = captchaToken;
+        let baseUrl: URL;
+        try {
+          baseUrl = new URL(this.config.authProxyUrl);
+        } catch (_) {
+          throw new ZeroXKeyError("Auth Proxy URL is invalid for Captcha request", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
+        }
+        if (this.config.authProxyUrl.includes("#") || !["http:", "https:"].includes(baseUrl.protocol)) {
+          throw new ZeroXKeyError("Auth Proxy URL is invalid for Captcha request", ZeroXKeyErrorCodes.INVALID_CONFIGURATION);
+        }
+        baseUrl.pathname = baseUrl.pathname.replace(/\\/+$/, "") + url;
+        baseUrl.searchParams.set("captcha_config_id", this.config.authProxyConfigId);
+        fullUrl = baseUrl.toString();
+        }
 
+        this.assertActive?.();
         const response = await fetch(fullUrl, {
         method: "POST",
         headers: headers,
@@ -498,14 +525,18 @@ const generateSDKClientFromSwagger = async (
         });
 
         if (!response.ok) {
+        const errorResponse = {
+            status: response.status,
+            retryAfter: response.headers?.get?.("retry-after") ?? undefined,
+        };
         let res: GrpcStatus;
         try {
             res = await response.json();
         } catch (_) {
-            throw new Error(\`\${response.status} \${response.statusText}\`);
+            throw Object.assign(new Error(\`\${response.status} \${response.statusText}\`), errorResponse);
         }
 
-        throw new ZeroXKeyRequestError(res);
+        throw new ZeroXKeyRequestError(res, errorResponse);
         }
 
         const data = await response.json();
@@ -537,6 +568,7 @@ const generateSDKClientFromSwagger = async (
         [signedRequest.stamp.stampHeaderName]: signedRequest.stamp.stampHeaderValue,
         };
 
+        this.assertActive?.();
         const response = await fetch(signedRequest.url, {
         method: "POST",
         headers,
@@ -752,14 +784,15 @@ const generateSDKClientFromSwagger = async (
 
     const inputType = `ProxyT${operationNameWithoutNamespace}Body`;
     const responseType = `ProxyT${operationNameWithoutNamespace}Response`;
+    const hasCaptchaHeader = CAPTCHA_PROTECTED_PATHS.includes(endpointPath);
 
     codeBuffer.push(
       `\n\t${methodName} = async (input: SdkTypes.${inputType}${
         METHODS_WITH_ONLY_OPTIONAL_PARAMETERS.includes(methodName)
           ? " = {}"
           : ""
-      }): Promise<SdkTypes.${responseType}> => {
-      return this.authProxyRequest("${endpointPath}", input);
+      }${hasCaptchaHeader ? ", captchaToken?: string" : ""}): Promise<SdkTypes.${responseType}> => {
+      return this.authProxyRequest("${endpointPath}", input${hasCaptchaHeader ? ", captchaToken" : ""});
     }`,
     );
   }
@@ -788,9 +821,21 @@ async function main() {
     AUTH_PROXY_SWAGGER_PATH,
     "utf-8",
   );
+  const sdkTypesAuthProxySwaggerSpecFile = await fs.promises.readFile(
+    path.resolve(
+      __dirname,
+      "../../sdk-types/src/__inputs__/auth_proxy.swagger.json",
+    ),
+    "utf-8",
+  );
+
+  if (authProxySwaggerSpecFile !== sdkTypesAuthProxySwaggerSpecFile) {
+    throw new Error("Auth Proxy Swagger inputs differ");
+  }
 
   const swaggerSpec = JSON.parse(swaggerSpecFile);
   const authProxySwaggerSpec = JSON.parse(authProxySwaggerSpecFile);
+  validateCaptchaHeaderContract(authProxySwaggerSpec);
 
   await generateSDKClientFromSwagger(
     swaggerSpec,

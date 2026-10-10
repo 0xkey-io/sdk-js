@@ -2,8 +2,11 @@
 export class ZeroXKeyRequestError extends Error {
   details: any[] | null;
   code: number;
+  status: number | undefined;
+  retryAfter: string | undefined;
+  body: unknown;
 
-  constructor(input: GrpcStatus) {
+  constructor(input: GrpcStatus, response?: ZeroXKeyRequestErrorResponse) {
     let zeroXKeyErrorMessage = `ZeroXKey error ${input.code}: ${input.message}`;
 
     if (input.details != null) {
@@ -15,6 +18,9 @@ export class ZeroXKeyRequestError extends Error {
     this.name = "ZeroXKeyRequestError";
     this.details = input.details ?? null;
     this.code = input.code;
+    this.status = response?.status;
+    this.retryAfter = response?.retryAfter;
+    this.body = input;
   }
 }
 
@@ -23,4 +29,10 @@ export type GrpcStatus = {
   message: string;
   code: number;
   details: unknown[] | null;
+};
+
+/**@internal */
+export type ZeroXKeyRequestErrorResponse = {
+  status: number;
+  retryAfter: string | undefined;
 };

@@ -23,6 +23,10 @@
     },
     {
       "kind": "re-export",
+      "name": "getClientParams"
+    },
+    {
+      "kind": "re-export",
       "name": "getClientSignatureMessageForLogin"
     },
     {

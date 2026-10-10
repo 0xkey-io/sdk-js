@@ -20,7 +20,7 @@ const getInternalAliasEntries = () => [
   },
 ];
 
-const createTypescriptPlugin = (options) => {
+export const createTypescriptPlugin = (options) => {
   let watchMode = false;
   const compiler = {
     ...ts,

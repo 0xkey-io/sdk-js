@@ -3,11 +3,15 @@ import {
   stringToBase64urlString,
   pointEncode,
 } from "@0xkey-io/encoding";
-import type { TStamp, ApiKeyStamperBase } from "../../../__types__";
+import type {
+  TStamp,
+  ApiKeyStamperBase,
+  DeleteKeyPairOptions,
+} from "../../../__types__";
 import { assertValidP256ECDSAKeyPair } from "@utils";
 import { SignatureFormat } from "@0xkey-io/api-key-stamper";
 
-const DB_NAME = "ZeroXKeyStamperDB";
+const DB_NAME = "ZeroXKeyAuthV2";
 const DB_STORE = "KeyStore";
 const stampHeaderName = "X-Stamp";
 
@@ -24,7 +28,7 @@ const stampHeaderName = "X-Stamp";
  * @param ieee the ECDSA signature in IEEE encoding
  * @return ECDSA signature in DER encoding
  */
-function convertEcdsaIeee1363ToDer(ieee: Uint8Array): Uint8Array {
+export function convertEcdsaIeee1363ToDer(ieee: Uint8Array): Uint8Array {
   if (ieee.length % 2 != 0 || ieee.length == 0 || ieee.length > 132) {
     throw new Error(
       "Invalid IEEE P1363 signature encoding. Length: " + ieee.length,
@@ -176,7 +180,10 @@ export class IndexedDbStamper implements ApiKeyStamperBase {
     return compressedHex;
   }
 
-  async deleteKeyPair(publicKeyHex: string): Promise<void> {
+  async deleteKeyPair(
+    publicKeyHex: string,
+    _options?: DeleteKeyPairOptions,
+  ): Promise<void> {
     const db = await this.openDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(DB_STORE, "readwrite");
@@ -186,7 +193,14 @@ export class IndexedDbStamper implements ApiKeyStamperBase {
         db.close();
         resolve();
       };
-      tx.onerror = () => reject(tx.error);
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+      tx.onabort = () => {
+        db.close();
+        reject(tx.error);
+      };
     });
   }
 
