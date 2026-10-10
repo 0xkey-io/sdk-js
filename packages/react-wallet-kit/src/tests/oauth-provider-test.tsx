@@ -266,10 +266,11 @@ async function seedRedirectLogin(input: {
   expectedState: string;
   keyRef: string;
   verifier: string | null;
+  configId?: string;
 }): Promise<void> {
   await persistRedirectTransaction({
     organizationId: baseConfig.organizationId,
-    configId: null,
+    configId: input.configId ?? null,
     apiBaseUrl: baseConfig.apiBaseUrl ?? "https://api.example.test",
     authProxyUrl: baseConfig.authProxyUrl ?? "https://auth.example.test",
     provider: input.provider,
@@ -1600,6 +1601,93 @@ describe("mounted public OAuth handlers", () => {
     expect(window.location.search).toBe("");
     expect(window.location.hash).toBe("");
   });
+
+  it.each([
+    { provider: OAuthProviders.GOOGLE, clientId: "google-A", pkce: false },
+    { provider: OAuthProviders.DISCORD, clientId: "discord-A", pkce: true },
+  ])(
+    "$provider internal redirect return requests Captcha only after Core finds no account",
+    async ({ provider, clientId, pkce }) => {
+      const lookup = deferred<void>();
+      const submitted: Array<string | undefined> = [];
+      const onError = jest.fn();
+      if (pkce)
+        mockSpec.proxy = async () => ({ oidcToken: "synthetic-redirect-oidc" });
+      mockSpec.getSession = async () => undefined;
+      mockSpec.completeOauth = async (_params, gate) => {
+        await lookup.promise;
+        if (!gate) throw new Error("Missing redirect signup gate");
+        const signup = await gate(async (token) => {
+          submitted.push(token);
+          return { sessionToken: "captcha-redirect-session" };
+        });
+        return { ...signup, action: AuthAction.SIGNUP };
+      };
+      mockGetClientParams.mockResolvedValue({ turnstileSiteKey: "site-A" });
+      const state = new URLSearchParams({
+        provider,
+        flow: "redirect",
+        publicKey: `redirect-${provider}-key`,
+        ...(pkce && { nonce: `redirect-${provider}-nonce` }),
+      }).toString();
+      await seedRedirectLogin({
+        provider,
+        clientId,
+        expectedState: state,
+        keyRef: `redirect-${provider}-key`,
+        verifier: pkce ? `redirect-${provider}-verifier` : null,
+        configId: "config-A",
+      });
+      window.history.replaceState(
+        null,
+        document.title,
+        pkce
+          ? `/oauth/callback?${new URLSearchParams({
+              code: "synthetic-redirect-code",
+              state,
+            }).toString()}`
+          : `/oauth/callback#${new URLSearchParams({
+              id_token: "synthetic-redirect-oidc",
+              state,
+            }).toString()}`,
+      );
+
+      mounts.push(
+        await dom.mount(
+          { ...baseConfig, authProxyConfigId: "config-A" },
+          {
+            onError,
+          },
+        ),
+      );
+      await waitFor(
+        () => mockCompleteOauth.mock.calls.length === 1,
+        "redirect completion",
+      );
+      expect(mockGetClientParams).not.toHaveBeenCalled();
+      expect(mockChallengeCalls).toHaveLength(0);
+
+      await act(async () => lookup.resolve());
+      await waitFor(
+        () => mockChallengeCalls.length === 1,
+        "redirect challenge",
+      );
+      expect(mockGetClientParams).toHaveBeenCalledWith(
+        "config-A",
+        "https://auth.example.test",
+      );
+      expect(submitted).toEqual([]);
+      await act(async () => {
+        mockChallengeCalls[0]!.result.resolve({
+          token: "fresh-redirect-token",
+          reset: jest.fn(),
+        });
+      });
+      await waitFor(() => submitted.length === 1, "redirect signup");
+      expect(submitted).toEqual(["fresh-redirect-token"]);
+      expect(onError).not.toHaveBeenCalled();
+    },
+  );
 
   it("[P4 no-modal] Discord seeded add-provider return awaits add and preserves routing precedence", async () => {
     const addition = deferred<string[]>();

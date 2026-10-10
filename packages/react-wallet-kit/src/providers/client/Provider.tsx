@@ -820,7 +820,11 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
                 callbacks,
                 completeOauth: async (params) => {
                   assertCurrent();
-                  const result = await completeOauth(params);
+                  const result = await completeOauthInternal(
+                    params,
+                    undefined,
+                    { assertCurrent },
+                  );
                   assertCurrent();
                   return result;
                 },
@@ -1177,7 +1181,9 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
             callbacks,
             completeOauth: async (params) => {
               assertCurrent();
-              const result = await completeOauth(params);
+              const result = await completeOauthInternal(params, undefined, {
+                assertCurrent,
+              });
               assertCurrent();
               return result;
             },
@@ -3145,6 +3151,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
     async (
       params: CompleteOauthParams,
       popup?: { binding: OAuthPopupBinding; client: ZeroXKeyClient },
+      redirect?: { assertCurrent: () => void },
     ): Promise<BaseAuthResult & { action: AuthAction }> => {
       if (!client) {
         throw new ZeroXKeyError(
@@ -3176,16 +3183,19 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
+      const assertInternal = popup
+        ? () => popup.binding.assertCurrent()
+        : redirect?.assertCurrent;
       const res = await withZeroXKeyErrorHandling(
         () =>
-          popup
+          assertInternal
             ? client.completeOauth(params, async (submit) => {
-                popup.binding.assertCurrent();
+                assertInternal();
                 const result = await runCaptchaProtected(client, (token) => {
-                  popup.binding.assertCurrent();
+                  assertInternal();
                   return submit(token);
                 });
-                popup.binding.assertCurrent();
+                assertInternal();
                 return result;
               })
             : client.completeOauth(params),
