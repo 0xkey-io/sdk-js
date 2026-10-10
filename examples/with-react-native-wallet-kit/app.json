@@ -10,9 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "io.0xkey.passkeyapp",
-      "associatedDomains": ["webcredentials:passkeyapp.0xkey.io"],
-      "appleTeamId": "74V7N6MW3W",
+      "bundleIdentifier": "io.zeroxkey.passkeyapp",
       "entitlements": {
         "com.apple.developer.applesignin": true
       }
@@ -26,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "io.0xkey.passkeyapp"
+      "package": "io.zeroxkey.passkeyapp"
     },
     "web": {
       "output": "static",

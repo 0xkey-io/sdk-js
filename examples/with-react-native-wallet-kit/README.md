@@ -30,57 +30,68 @@ This demo app illustrates how to integrate ZeroXKey's embedded wallet kit into a
 
 ## 📋 Prerequisites
 
-- **Node.js**: Version 18.0 or higher
-- **npm**: Version 9.0 or higher
-- **Expo CLI**: Install globally with `npm install -g expo-cli`
-- **Development Environment**:
-  - For iOS: Xcode and iOS Simulator (macOS only)
-  - For Android: Android Studio and Android Emulator
-  - Or use Expo Go app on physical device
+- **Node.js** 18 or higher, **pnpm** 10.6.3 (SDK monorepo), **npm** 9 or higher (this app)
+- **iOS:** Xcode and an Apple Developer team that can sign the bundle ID
+- **Android:** Android Studio and a device with Google Play services
+- A development build. Expo Go cannot load the native modules this app needs
+  (`react-native-passkey`, `react-native-inappbrowser-reborn`, `react-native-keychain`,
+  `react-native-device-info`).
 
 ## 🚀 Installation & Setup
 
-### 1. Clone the Repository
+This app runs against the SDK packages in this repository, not a published npm
+version. `metro.config.js` resolves every `@0xkey-io/*` import to
+`packages/*/dist` and forces SDK packages to use the app's copy of React,
+React Native, and native modules.
+
+### 1. Build the local SDK packages
+
+From the repository root:
 
 ```bash
-git clone https://github.com/0xkey-io/sdk-js.git
+pnpm install --filter . --filter "@0xkey-io/react-native-wallet-kit..." \
+  --filter @0xkey-io/internal-codec --filter @0xkey-io/internal-crypto-core
+pnpm run build-internal
+pnpm --filter "@0xkey-io/react-native-wallet-kit..." run build
+```
+
+Rebuild after changing SDK source; Metro picks up the new `dist` output.
+
+### 2. Install the app
+
+```bash
 cd examples/with-react-native-wallet-kit
+npm install
+npm test        # config, native identity, resolver and native dependency checks
+npm run typecheck
 ```
 
-### 2. Install Dependencies
+### 3. Configure environment variables
 
 ```bash
-npm install
+cp .env.example .env
 ```
 
-### 3. Configure Environment Variables
+`.env.example` targets 0xkey staging. Fill in the organization ID, Auth Proxy
+config ID, RP ID and your native identity. All `EXPO_PUBLIC_*` values are bundled
+into the app, so never add API keys or other secrets.
 
-Create a `.env` file in the project root or run `cp .env.example .env` to copy the example file:
+| Variable                                             | Purpose                                                                                                                |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `EXPO_PUBLIC_ZEROXKEY_ORGANIZATION_ID`               | Parent organization                                                                                                    |
+| `EXPO_PUBLIC_ZEROXKEY_API_BASE_URL`                  | API base URL (`https://`)                                                                                              |
+| `EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_URL`                | Auth Proxy URL. Required together with the config ID; otherwise the SDK would send the config ID to the default proxy. |
+| `EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_CONFIG_ID`          | Auth Proxy config with email OTP and passkey sign-up enabled                                                           |
+| `EXPO_PUBLIC_ZEROXKEY_RPID`                          | Passkey RP ID, a bare host name. Also becomes the iOS `webcredentials:` associated domain.                             |
+| `EXPO_PUBLIC_APP_SCHEME`                             | Deep link scheme used to return from OAuth                                                                             |
+| `EXPO_PUBLIC_OAUTH_REDIRECT_URI`                     | Optional OAuth relay override (default `https://oauth-redirect.0xkey.io/`)                                             |
+| `EXPO_PUBLIC_GOOGLE_CLIENT_ID`                       | Google **web** client ID. Leave empty to hide Google.                                                                  |
+| `EXPO_PUBLIC_APPLE_SERVICE_ID`, `..._BUNDLE_ID`      | Apple Services ID and bundle ID                                                                                        |
+| `ZEROXKEY_DEMO_APPLE_TEAM_ID`                        | Build time only: your Apple team ID                                                                                    |
+| `ZEROXKEY_DEMO_IOS_BUNDLE_ID`, `..._ANDROID_PACKAGE` | Build time only: override `io.zeroxkey.passkeyapp`                                                                     |
 
-```env
-# ZeroXKey Configuration
-EXPO_PUBLIC_ZEROXKEY_ORGANIZATION_ID=your_organization_id
-EXPO_PUBLIC_ZEROXKEY_API_BASE_URL=https://api.0xkey.com
-# Optional if using Auth Proxy
-EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_CONFIG_ID=your_auth_proxy_config_id
-# Passkey relying party ID (domain)
-EXPO_PUBLIC_ZEROXKEY_RPID=passkeyapp.0xkey.io
-# App scheme for OAuth and deep links
-EXPO_PUBLIC_APP_SCHEME=withreactnativewalletkit
-
-# OAuth Configuration (Optional)
-EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
-EXPO_PUBLIC_APPLE_CLIENT_ID=your_apple_client_id
-EXPO_PUBLIC_FACEBOOK_CLIENT_ID=your_facebook_client_id
-EXPO_PUBLIC_X_CLIENT_ID=your_x_client_id
-EXPO_PUBLIC_DISCORD_CLIENT_ID=your_discord_client_id
-```
-
-### 4. Configure ZeroXKey
-
-You'll need to set up a ZeroXKey organization and obtain your organization ID. Visit [ZeroXKey Dashboard](https://app.0xkey.com) to create an account and organization.
-
-Set `EXPO_PUBLIC_ZEROXKEY_ORGANIZATION_ID` to your organization ID, and adjust other variables above as needed.
+The app throws at startup with the names (never the values) of any missing or
+malformed variables.
 
 ### Polyfills
 
@@ -88,111 +99,63 @@ This example applies `react-native-get-random-values` in `index.js` to support W
 
 ## Passkey Setup
 
-To enable passkeys, configure your app’s associated domains and RP ID.
+Native passkeys only work when the RP ID domain vouches for the app:
 
-### 1. Update `app.json` with associated domains and deep link scheme
+- **iOS:** `https://<RP ID>/.well-known/apple-app-site-association` must be served
+  directly (no redirect) with `application/json` and list
+  `<TEAM_ID>.<bundle ID>` under `webcredentials.apps`. `app.config.js` adds
+  `webcredentials:<RP ID>` to the app's associated domains.
+- **Android:** `https://<RP ID>/.well-known/assetlinks.json` must grant
+  `delegate_permission/common.handle_all_urls` and
+  `delegate_permission/common.get_login_creds` to the package name and the SHA-256
+  fingerprint of the signing certificate you install with.
 
-The example already includes sane defaults tailored to this demo:
-
-```json
-{
-  "expo": {
-    "scheme": "withreactnativewalletkit",
-    "ios": {
-      "bundleIdentifier": "io.0xkey.passkeyapp",
-      "associatedDomains": ["webcredentials:passkeyapp.0xkey.io"]
-    },
-    "android": {
-      "package": "io.0xkey.passkeyapp"
-    }
-  }
-}
-```
-
-If you use a different domain or bundle IDs, update:
-
-- iOS `associatedDomains` to `webcredentials:<your_domain>`
-- iOS `bundleIdentifier` and Android `package`
-- `EXPO_PUBLIC_APP_SCHEME` to your app scheme
-
-For Apple Associated Domains, see Apple docs. For Android Digital Asset Links, create an `assetlinks.json` on your domain to verify association.
-
-### 2. Set the RP ID (relying party ID)
-
-Ensure your `.env` includes the passkey RP ID:
-
-```ini
-EXPO_PUBLIC_ZEROXKEY_RPID="<your_rpid_domain>"
-```
-
-This should match the domain configured in associated domains (e.g. `passkeyapp.0xkey.io`).
+Passkeys created on the web under the same RP ID can be used from the app once
+both files are in place.
 
 ## OAuth Setup
 
-ZeroXKey’s OAuth flows use a fixed origin and redirect service. Configure your provider client IDs and ensure the redirect URI’s `scheme` matches your app.
+The React Native wallet kit opens the provider in an in-app browser. Google
+redirects to the 0xkey OAuth relay, which hands the ID token back to the app
+through `EXPO_PUBLIC_APP_SCHEME`.
 
-### 1. Create a Google Web Client ID
+### Google
 
-- Go to Google Cloud Console and create an OAuth client.
-- Authorized redirect URI (use your app scheme):
+1. In Google Cloud Console, create an OAuth client of type **Web application**.
+2. Add the authorized redirect URI, exactly, including the `/` before `?`:
 
-```
-https://oauth-redirect.0xkey.com/?scheme=withreactnativewalletkit
-```
+   ```
+   https://oauth-redirect.0xkey.io/?scheme=withreactnativewalletkit
+   ```
 
-> **Note**: register the URI exactly as shown, including the `/` before the query string.
+   If you set `EXPO_PUBLIC_OAUTH_REDIRECT_URI`, register that URL with the same
+   `?scheme=` suffix instead.
 
-If you change the scheme, update both `app.json` (`expo.scheme`) and `EXPO_PUBLIC_APP_SCHEME` in `.env`.
+3. Allow that web client ID as an OAuth audience in the Auth Proxy config.
+4. Set `EXPO_PUBLIC_GOOGLE_CLIENT_ID` to the web client ID.
 
-### 2. Set your client IDs in `.env`
-
-```ini
-EXPO_PUBLIC_GOOGLE_CLIENT_ID="<your_google_web_client_id>"
-# Optional: other providers
-EXPO_PUBLIC_APPLE_CLIENT_ID="<your_apple_client_id>"
-EXPO_PUBLIC_FACEBOOK_CLIENT_ID="<your_facebook_client_id>"
-EXPO_PUBLIC_X_CLIENT_ID="<your_x_client_id>"
-EXPO_PUBLIC_DISCORD_CLIENT_ID="<your_discord_client_id>"
-```
+If you change the scheme, update `EXPO_PUBLIC_APP_SCHEME` and the registered
+redirect URI together.
 
 ## 📱 Running the App
 
-### Development Mode
-
-> Note (first-time setup): We recommend generating native projects before your first run, then launching iOS.
->
-> ```bash
-> # First-time only
-> npm run prebuild   # or: npx expo prebuild
->
-> # Then build and run for iOS
-> npm run ios        # or: npx expo run:ios
-> ```
-
-Start the Expo development server:
+### On a device
 
 ```bash
-npm run ios
+npm run prebuild                 # regenerates ios/ and android/ from app.config.js
+npx expo run:ios --device        # pick the connected iPhone
+npx expo run:android --device    # pick the connected Android phone
 ```
 
-This will open the Expo Developer Tools. From here you can:
+Simulators and emulators can run the OTP flow, but passkey and OAuth results
+only count when measured on a physical device.
 
-- Press `i` to open in iOS Simulator
-- Press `a` to open in Android Emulator
-- Scan the QR code with Expo Go app on your phone
+### Staging device checklist
 
-### Platform-Specific Commands
-
-```bash
-# iOS Simulator
-npm run ios            # or: npx expo run:ios
-
-# Android Emulator
-npm run android        # or: npx expo run:android
-
-# Web Browser (Limited functionality)
-npm run web            # or: npx expo start --web
-```
+1. Email OTP sign-up with a new test address, sign out, then log in with OTP again.
+2. Sign up with a passkey, sign out, then log in with the same passkey.
+3. Google: sign in, cancel once, and return from the background mid-flow.
+4. Record the device, OS version, SDK commit and outcome for each step.
 
 ### Production Build
 
@@ -216,7 +179,11 @@ with-react-native-wallet-kit/
 │   └── index.tsx             # Authentication screen
 ├── components/               # Reusable UI components
 ├── constants/               # App configuration
-│   └── 0xkey.ts           # ZeroXKey configuration
+│   ├── 0xkey.ts             # Reads EXPO_PUBLIC_* values
+│   └── config.ts            # Validates them into the provider config
+├── tests/                   # node:test checks (npm test)
+├── app.config.js            # Applies native identity and passkey domain
+├── metro.config.js          # Resolves @0xkey-io/* to the local SDK build
 ├── package.json             # Dependencies and scripts
 └── README.md               # This file
 ```
