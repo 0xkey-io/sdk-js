@@ -5941,30 +5941,28 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
       try {
-        const resPromise = addPasskey({
+        const res = await addPasskey({
           ...(name && { name }),
           ...(displayName && { displayName }),
           userId,
           stampWith,
           ...(organizationId && { organizationId }),
         });
-        resPromise.then(() => {
-          pushPage({
-            key: "Passkey Added",
-            content: (
-              <SuccessPage
-                text="Successfully added passkey!"
-                duration={successPageDuration}
-                onComplete={() => {
-                  closeModal();
-                }}
-              />
-            ),
-            preventBack: true,
-            showTitle: false,
-          });
+        pushPage({
+          key: "Passkey Added",
+          content: (
+            <SuccessPage
+              text="Successfully added passkey!"
+              duration={successPageDuration}
+              onComplete={() => {
+                closeModal();
+              }}
+            />
+          ),
+          preventBack: true,
+          showTitle: false,
         });
-        return await resPromise;
+        return res;
       } catch (error) {
         if (error instanceof ZeroXKeyError) {
           throw error;
