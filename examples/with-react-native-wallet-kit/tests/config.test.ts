@@ -75,6 +75,14 @@ test("requires HTTPS service URLs", () => {
       buildZeroXKeyConfig({ ...staging, oauthRedirectUri: "myapp://callback" }),
     /EXPO_PUBLIC_OAUTH_REDIRECT_URI must be an https:\/\/ URL/,
   );
+  assert.throws(
+    () =>
+      buildZeroXKeyConfig({
+        ...staging,
+        oauthOriginUri: "http://oauth-origin.example/",
+      }),
+    /EXPO_PUBLIC_OAUTH_ORIGIN_URI must be an https:\/\/ URL/,
+  );
 });
 
 test("requires the RP ID to be a bare host name", () => {
@@ -105,6 +113,7 @@ test("disables OAuth providers that have no client ID", () => {
   assert.equal(oauth?.x, false);
   assert.equal(oauth?.discord, false);
   assert.equal(oauth?.redirectUri, undefined);
+  assert.equal(oauth?.originUri, undefined);
 });
 
 test("uses provider-specific primary client IDs instead of the deprecated clientId", () => {
@@ -117,6 +126,7 @@ test("uses provider-specific primary client IDs instead of the deprecated client
     xClientId: "x",
     discordClientId: "discord",
     oauthRedirectUri: "https://oauth-redirect.staging.example/",
+    oauthOriginUri: "https://oauth-origin.staging.example/",
   }).auth?.oauth;
   assert.deepEqual(oauth?.google, {
     primaryClientId: { webClientId: "google-web" },
@@ -131,6 +141,7 @@ test("uses provider-specific primary client IDs instead of the deprecated client
   assert.deepEqual(oauth?.x, { primaryClientId: "x" });
   assert.deepEqual(oauth?.discord, { primaryClientId: "discord" });
   assert.equal(oauth?.redirectUri, "https://oauth-redirect.staging.example/");
+  assert.equal(oauth?.originUri, "https://oauth-origin.staging.example/");
 });
 
 test("enables email OTP and passkeys for the device test", () => {

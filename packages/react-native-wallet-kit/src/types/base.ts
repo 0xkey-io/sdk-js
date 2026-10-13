@@ -105,6 +105,12 @@ export interface ZeroXKeyProviderConfig
     oauth?: {
       /** shared default redirect URI for OAuth providers */
       redirectUri?: string;
+      /**
+       * Hosted OAuth origin page that forwards Google, Apple and Facebook to the
+       * provider. Defaults to `https://oauth-origin.0xkey.io`; must be `https://`
+       * without a query or fragment.
+       */
+      originUri?: string;
       /** application deep link scheme used to complete OAuth in React Native (e.g., "myapp"). */
       appScheme?: string;
       /** provider enablement/configuration (boolean enables; object configures and enables) */

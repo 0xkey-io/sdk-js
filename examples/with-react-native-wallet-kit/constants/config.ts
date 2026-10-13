@@ -8,6 +8,7 @@ export type DemoEnv = {
   passkeyRpId?: string | undefined;
   appScheme?: string | undefined;
   oauthRedirectUri?: string | undefined;
+  oauthOriginUri?: string | undefined;
   googleWebClientId?: string | undefined;
   appleServiceId?: string | undefined;
   appleBundleId?: string | undefined;
@@ -24,6 +25,7 @@ const ENV_NAMES: Record<keyof DemoEnv, string> = {
   passkeyRpId: "EXPO_PUBLIC_ZEROXKEY_RPID",
   appScheme: "EXPO_PUBLIC_APP_SCHEME",
   oauthRedirectUri: "EXPO_PUBLIC_OAUTH_REDIRECT_URI",
+  oauthOriginUri: "EXPO_PUBLIC_OAUTH_ORIGIN_URI",
   googleWebClientId: "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
   appleServiceId: "EXPO_PUBLIC_APPLE_SERVICE_ID",
   appleBundleId: "EXPO_PUBLIC_APPLE_BUNDLE_ID",
@@ -53,6 +55,7 @@ export function buildZeroXKeyConfig(env: DemoEnv): ZeroXKeyProviderConfig {
   const passkeyRpId = value("passkeyRpId");
   const appScheme = value("appScheme");
   const oauthRedirectUri = value("oauthRedirectUri");
+  const oauthOriginUri = value("oauthOriginUri");
 
   const missing: (keyof DemoEnv)[] = [];
   if (!organizationId) missing.push("organizationId");
@@ -74,6 +77,7 @@ export function buildZeroXKeyConfig(env: DemoEnv): ZeroXKeyProviderConfig {
     "apiBaseUrl",
     "authProxyUrl",
     "oauthRedirectUri",
+    "oauthOriginUri",
   ] as const) {
     const url = value(key);
     if (url !== undefined && !isHttpsUrl(url)) {
@@ -109,6 +113,7 @@ export function buildZeroXKeyConfig(env: DemoEnv): ZeroXKeyProviderConfig {
       oauth: {
         appScheme: appScheme!,
         ...(oauthRedirectUri ? { redirectUri: oauthRedirectUri } : {}),
+        ...(oauthOriginUri ? { originUri: oauthOriginUri } : {}),
         google: googleWebClientId
           ? { primaryClientId: { webClientId: googleWebClientId } }
           : false,

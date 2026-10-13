@@ -84,7 +84,8 @@ into the app, so never add API keys or other secrets.
 | `EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_CONFIG_ID`          | Auth Proxy config with email OTP and passkey sign-up enabled                                                           |
 | `EXPO_PUBLIC_ZEROXKEY_RPID`                          | Passkey RP ID, a bare host name. Also becomes the iOS `webcredentials:` associated domain.                             |
 | `EXPO_PUBLIC_APP_SCHEME`                             | Deep link scheme used to return from OAuth                                                                             |
-| `EXPO_PUBLIC_OAUTH_REDIRECT_URI`                     | Optional OAuth relay override (default `https://oauth-redirect.0xkey.io/`)                                             |
+| `EXPO_PUBLIC_OAUTH_ORIGIN_URI`                       | OAuth origin page that forwards to the provider (default `https://oauth-origin.0xkey.io`)                              |
+| `EXPO_PUBLIC_OAUTH_REDIRECT_URI`                     | OAuth relay that returns to the app (default `https://oauth-redirect.0xkey.io/`)                                       |
 | `EXPO_PUBLIC_GOOGLE_CLIENT_ID`                       | Google **web** client ID. Leave empty to hide Google.                                                                  |
 | `EXPO_PUBLIC_APPLE_SERVICE_ID`, `..._BUNDLE_ID`      | Apple Services ID and bundle ID                                                                                        |
 | `ZEROXKEY_DEMO_APPLE_TEAM_ID`                        | Build time only: your Apple team ID                                                                                    |
@@ -115,9 +116,12 @@ both files are in place.
 
 ## OAuth Setup
 
-The React Native wallet kit opens the provider in an in-app browser. Google
-redirects to the 0xkey OAuth relay, which hands the ID token back to the app
-through `EXPO_PUBLIC_APP_SCHEME`.
+The React Native wallet kit opens the 0xkey OAuth origin page
+(`EXPO_PUBLIC_OAUTH_ORIGIN_URI`) in an in-app browser, which forwards to the
+provider. Google redirects to the 0xkey OAuth relay
+(`EXPO_PUBLIC_OAUTH_REDIRECT_URI`), which hands the ID token back to the app
+through `EXPO_PUBLIC_APP_SCHEME`. `.env.example` points both at staging; set
+them together so a staging flow never uses a production page.
 
 ### Google
 
@@ -125,11 +129,10 @@ through `EXPO_PUBLIC_APP_SCHEME`.
 2. Add the authorized redirect URI, exactly, including the `/` before `?`:
 
    ```
-   https://oauth-redirect.0xkey.io/?scheme=withreactnativewalletkit
+   https://oauth-redirect.staging.0xkey.io/?scheme=withreactnativewalletkit
    ```
 
-   If you set `EXPO_PUBLIC_OAUTH_REDIRECT_URI`, register that URL with the same
-   `?scheme=` suffix instead.
+   This is `EXPO_PUBLIC_OAUTH_REDIRECT_URI` plus `?scheme=<EXPO_PUBLIC_APP_SCHEME>`.
 
 3. Allow that web client ID as an OAuth audience in the Auth Proxy config.
 4. Set `EXPO_PUBLIC_GOOGLE_CLIENT_ID` to the web client ID.
@@ -194,6 +197,7 @@ with-react-native-wallet-kit/
 - **`app/index.tsx`**: Authentication entry point
 - **`app/_layout.tsx`**: ZeroXKey provider setup
 - **`constants/0xkey.ts`**: API configuration
+- **`constants/callbacks.ts`**: Development logging that never prints tokens or session keys
 
 ## 🔧 Troubleshooting
 

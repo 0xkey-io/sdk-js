@@ -481,6 +481,8 @@ export interface BuildOAuthUrlParams {
   additionalState?: Record<string, string> | undefined;
   /** If true, uses direct provider URLs; if false, uses ZeroXKey OAuth proxy */
   useOauthProxyOrigin?: boolean;
+  /** Hosted OAuth origin page. Defaults to `ZEROXKEY_OAUTH_ORIGIN_URL`. */
+  oauthOriginUrl?: string;
 }
 
 /**
@@ -500,6 +502,7 @@ export function buildOAuthUrl(params: BuildOAuthUrlParams): string {
     codeChallenge,
     additionalState,
     useOauthProxyOrigin = false,
+    oauthOriginUrl = ZEROXKEY_OAUTH_ORIGIN_URL,
   } = params;
 
   const config = OAUTH_PROVIDER_CONFIGS[provider];
@@ -523,7 +526,7 @@ export function buildOAuthUrl(params: BuildOAuthUrlParams): string {
 
   // If using ZeroXKey Oauth proxy (for Google, Apple, Facebook)
   if (useOauthProxyOrigin) {
-    const url = new URL(ZEROXKEY_OAUTH_ORIGIN_URL);
+    const url = new URL(oauthOriginUrl);
     url.searchParams.set("provider", provider);
     url.searchParams.set("clientId", clientId);
     url.searchParams.set("redirectUri", redirectUri);
