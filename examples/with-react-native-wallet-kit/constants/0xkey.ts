@@ -1,9 +1,8 @@
-import type {
-  ZeroXKeyProviderConfig,
-  ZeroXKeyCallbacks,
-} from "@0xkey-io/react-native-wallet-kit";
+import type { ZeroXKeyProviderConfig } from "@0xkey-io/react-native-wallet-kit";
 
 import { buildZeroXKeyConfig } from "./config";
+
+export { ZEROXKEY_CALLBACKS } from "./callbacks";
 
 // Expo only inlines `process.env.EXPO_PUBLIC_*` when each one is read directly.
 export const ZEROXKEY_CONFIG: ZeroXKeyProviderConfig = buildZeroXKeyConfig({
@@ -22,21 +21,3 @@ export const ZEROXKEY_CONFIG: ZeroXKeyProviderConfig = buildZeroXKeyConfig({
   xClientId: process.env.EXPO_PUBLIC_X_CLIENT_ID,
   discordClientId: process.env.EXPO_PUBLIC_DISCORD_CLIENT_ID,
 });
-
-/**
- * Minimal callbacks for visibility during development. Safe to keep.
- */
-export const ZEROXKEY_CALLBACKS: ZeroXKeyCallbacks = {
-  beforeSessionExpiry: ({ sessionKey }) => {
-    console.log("[ZeroXKey] Session nearing expiry:", sessionKey);
-  },
-  onSessionExpired: ({ sessionKey }) => {
-    console.log("[ZeroXKey] Session expired:", sessionKey);
-  },
-  onAuthenticationSuccess: ({ action, method, identifier }) => {
-    console.log("[ZeroXKey] Auth success:", { action, method, identifier });
-  },
-  onError: (error) => {
-    console.error("[ZeroXKey] Error:", error);
-  },
-};

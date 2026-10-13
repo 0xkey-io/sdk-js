@@ -197,6 +197,7 @@ with-react-native-wallet-kit/
 - **`app/index.tsx`**: Authentication entry point
 - **`app/_layout.tsx`**: ZeroXKey provider setup
 - **`constants/0xkey.ts`**: API configuration
+- **`constants/callbacks.ts`**: Development logging that never prints tokens or session keys
 
 ## 🔧 Troubleshooting
 
