@@ -194,6 +194,26 @@ describe("OAuth utils", () => {
       expect(stateParams.nonce).toBeUndefined();
     });
 
+    it("builds Google URL on a configured OAuth origin page", () => {
+      const url = buildOAuthUrl({
+        provider: OAuthProviders.GOOGLE,
+        clientId: "client_google",
+        redirectUri: "https://example.com/callback",
+        publicKey: "pk_google",
+        nonce: "nonce_google",
+        useOauthProxyOrigin: true,
+        oauthOriginUrl: "https://oauth-origin.staging.example/start",
+      });
+
+      const parsed = new URL(url);
+      expect(parsed.origin).toBe("https://oauth-origin.staging.example");
+      expect(parsed.pathname).toBe("/start");
+      expect(parsed.searchParams.get("clientId")).toBe("client_google");
+      expect(parsed.searchParams.get("redirectUri")).toBe(
+        "https://example.com/callback",
+      );
+    });
+
     it("builds Discord URL with PKCE and nonce in state", () => {
       const url = buildOAuthUrl({
         provider: OAuthProviders.DISCORD,

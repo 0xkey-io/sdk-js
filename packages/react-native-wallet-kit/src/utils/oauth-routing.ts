@@ -1,5 +1,8 @@
 import { OAuthProviders } from "@0xkey-io/sdk-types";
-import { extractOAuthTransactionCallback } from "./oauth";
+import {
+  extractOAuthTransactionCallback,
+  ZEROXKEY_OAUTH_ORIGIN_URL,
+} from "./oauth";
 import type { ResolvedOauthProviderSettings } from "./oauth-provider-settings";
 import type { OAuthTransactionContext } from "./oauth-transaction";
 
@@ -26,6 +29,8 @@ export type OauthRoutingInput = Readonly<{
   >;
   /** Configured category only; per-call closures cannot be reconstructed. */
   completion: CompletionKind;
+  /** Hosted origin page for relay providers; defaults to the 0xkey page. */
+  originUri?: string;
 }>;
 
 /** Internal coordinator input, deliberately not re-exported by the package. */
@@ -36,6 +41,8 @@ export type OauthRoutingSnapshot = Readonly<
     authProxyUrl: string;
     authProxyConfigId: string | null;
     clientId: string;
+    /** Null for direct providers, which never use the origin page. */
+    providerOriginUri: string | null;
     providerRedirectUri: string;
     appReturnTarget: string;
     appScheme: string;
@@ -196,8 +203,10 @@ export function createOauthRoutingSnapshot(
       provider,
       settings,
       completion,
+      originUri,
     } = input;
     const { clientId, redirectUri, appScheme } = settings;
+    if (originUri !== undefined) requireString(originUri);
     for (const value of [organizationId, apiBaseUrl, authProxyUrl])
       requireString(value);
     requireString(clientId);
@@ -241,6 +250,16 @@ export function createOauthRoutingSnapshot(
       providerRedirectUri +=
         separator + new URLSearchParams({ scheme: appScheme }).toString();
     }
+    let providerOriginUri: string | null = null;
+    if (!direct) {
+      providerOriginUri = originUri ?? ZEROXKEY_OAUTH_ORIGIN_URL;
+      // The origin page receives its parameters as the only query string.
+      if (
+        providerOriginUri.includes("?") ||
+        parseRoute(providerOriginUri, "https", true).query
+      )
+        throw new Error(INVALID_CONFIG);
+    }
     const appReturnTarget = direct ? redirectUri : `${appScheme}://`;
     const appRoute = direct
       ? providerRoute.route
@@ -275,6 +294,7 @@ export function createOauthRoutingSnapshot(
       appScheme,
       mode,
       completion,
+      providerOriginUri,
     ]);
     return Object.freeze({
       configId,
@@ -285,6 +305,7 @@ export function createOauthRoutingSnapshot(
       authProxyUrl,
       authProxyConfigId: proxyId,
       clientId,
+      providerOriginUri,
       providerRedirectUri,
       appReturnTarget,
       appScheme,

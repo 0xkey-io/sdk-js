@@ -643,6 +643,36 @@ describe("OAuth exposed handler ownership and completion", () => {
     },
   );
 
+  it.each([
+    ["Google", (context: ClientContextType) => context.handleGoogleOauth()],
+    ["Apple", (context: ClientContextType) => context.handleAppleOauth()],
+    ["Facebook", (context: ClientContextType) => context.handleFacebookOauth()],
+  ])(
+    "opens the configured OAuth origin page for the actual %s handler",
+    async (_provider, start) => {
+      reset();
+      const config = baseConfig();
+      config.auth!.oauth!.originUri = "https://oauth-origin.staging.example/";
+      const browser = deferred<{ type: string }>();
+      mockOpenAuth.mockImplementationOnce(() => browser.promise);
+      const { harness } = await mountReady(config);
+
+      const pending = start(harness.context);
+      await waitFor(() => mockOpenAuth.mock.calls.length === 1);
+      const [url] = mockOpenAuth.mock.calls[0]! as [string, string];
+      const authorization = new URL(url);
+      expect(authorization.origin).toBe("https://oauth-origin.staging.example");
+      expect(authorization.pathname).toBe("/");
+      expect(authorization.searchParams.get("redirectUri")).toBe(
+        "https://oauth.example/callback?static=%2Fkeep&scheme=example",
+      );
+
+      browser.resolve({ type: "cancel" });
+      await expect(pending).rejects.toThrow("OAuth browser cancelled");
+      expect(mockKeychain.size).toBe(0);
+    },
+  );
+
   it("persists and completes all five exposed handlers with exact boundaries and no verifier globals", async () => {
     reset();
     const redirects: unknown[] = [];

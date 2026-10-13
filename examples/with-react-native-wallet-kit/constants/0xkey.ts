@@ -14,6 +14,7 @@ export const ZEROXKEY_CONFIG: ZeroXKeyProviderConfig = buildZeroXKeyConfig({
   passkeyRpId: process.env.EXPO_PUBLIC_ZEROXKEY_RPID,
   appScheme: process.env.EXPO_PUBLIC_APP_SCHEME,
   oauthRedirectUri: process.env.EXPO_PUBLIC_OAUTH_REDIRECT_URI,
+  oauthOriginUri: process.env.EXPO_PUBLIC_OAUTH_ORIGIN_URI,
   googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
   appleServiceId: process.env.EXPO_PUBLIC_APPLE_SERVICE_ID,
   appleBundleId: process.env.EXPO_PUBLIC_APPLE_BUNDLE_ID,

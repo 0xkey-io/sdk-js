@@ -92,6 +92,22 @@ function createSdkResolveRequest({ exampleRoot, sdkRoot }) {
       );
     }
 
+    // WalletConnect only requires ws when no global WebSocket exists, but Metro
+    // still bundles it, and ws's Node entry needs `stream`.
+    if (moduleName === "ws" && platform !== "web") {
+      return context.resolveRequest(
+        {
+          ...context,
+          unstable_conditionNames: [
+            ...(context.unstable_conditionNames || []),
+            "browser",
+          ],
+        },
+        moduleName,
+        platform,
+      );
+    }
+
     return context.resolveRequest(context, moduleName, platform);
   };
 }

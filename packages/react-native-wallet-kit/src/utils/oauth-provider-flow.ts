@@ -175,6 +175,11 @@ function selectCompletion(callbacks: ZeroXKeyCallbacks | undefined): {
   return { category: "internal", callback: undefined, callbacks: undefined };
 }
 
+function originUri(config: ZeroXKeyProviderConfig): { originUri?: string } {
+  const value = config.auth?.oauth?.originUri;
+  return value === undefined ? {} : { originUri: value };
+}
+
 export function createOAuthProviderFlowRuntime(input: {
   client: OAuthProviderClient;
   initializedConfig: ZeroXKeyProviderConfig;
@@ -238,6 +243,7 @@ export function createOAuthProviderFlowRuntime(input: {
       provider,
       settings,
       completion: selectedCompletion.category,
+      ...originUri(current.config),
     });
     const sameRenderedFlow = () => {
       if (!baseIsCurrent()) return false;
@@ -261,6 +267,7 @@ export function createOAuthProviderFlowRuntime(input: {
           provider,
           settings: latestSettings,
           completion: selectCompletion(latest.callbacks).category,
+          ...originUri(latest.config),
         });
         const latestCompletion = selectCompletion(latest.callbacks);
         return (

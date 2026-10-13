@@ -55,8 +55,14 @@ function fakeContext(originModulePath) {
     calls,
     context: {
       originModulePath,
+      unstable_conditionNames: ["require", "import"],
       resolveRequest: (context, moduleName, platform) => {
-        calls.push({ origin: context.originModulePath, moduleName, platform });
+        calls.push({
+          origin: context.originModulePath,
+          moduleName,
+          platform,
+          conditions: context.unstable_conditionNames,
+        });
         return { type: "sourceFile", filePath: `resolved:${moduleName}` };
       },
     },
@@ -140,6 +146,21 @@ test("leaves other modules to Metro's default resolution", () => {
       ["@noble/hashes/sha256", fromSdk],
       ["react-native-passkeys", fromSdk],
       ["@0xkey-io/not-in-monorepo", fromSdk],
+    ],
+  );
+});
+
+test("resolves ws to its browser build on native platforms", () => {
+  const { context, calls } = fakeContext(fromSdk);
+  resolveRequest(context, "ws", "ios");
+  resolveRequest(context, "ws", "android");
+  resolveRequest(context, "ws", "web");
+  assert.deepEqual(
+    calls.map((call) => [call.platform, call.conditions]),
+    [
+      ["ios", ["require", "import", "browser"]],
+      ["android", ["require", "import", "browser"]],
+      ["web", ["require", "import"]],
     ],
   );
 });

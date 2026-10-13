@@ -511,6 +511,42 @@ describe("trusted OAuth routing", () => {
     expect(JSON.parse(original.binding)).toContain("relay");
   });
 
+  it("binds the hosted OAuth origin page for relay providers only", () => {
+    const fallback = createOauthRoutingSnapshot(base);
+    expect(fallback.providerOriginUri).toBe("https://oauth-origin.0xkey.io");
+    const staging = createOauthRoutingSnapshot({
+      ...base,
+      originUri: "https://oauth-origin.staging.example/",
+    });
+    expect(staging.providerOriginUri).toBe(
+      "https://oauth-origin.staging.example/",
+    );
+    expect(staging.binding).not.toBe(fallback.binding);
+    for (const provider of [OAuthProviders.X, OAuthProviders.DISCORD]) {
+      const direct = createOauthRoutingSnapshot({
+        ...base,
+        provider,
+        originUri: "https://oauth-origin.staging.example/",
+        settings: { ...base.settings, redirectUri: "myapp://callback" },
+      });
+      expect(direct.providerOriginUri).toBeNull();
+    }
+  });
+
+  it.each([
+    "",
+    "http://oauth-origin.example/",
+    "oauth-origin.example",
+    "https://user@oauth-origin.example/",
+    "https://oauth-origin.example/?provider=google",
+    "https://oauth-origin.example/#frag",
+    "https://oauth-origin.example/a b",
+  ])("rejects unsafe OAuth origin page %s", (originUri) => {
+    expect(() => createOauthRoutingSnapshot({ ...base, originUri })).toThrow(
+      "Invalid OAuth routing configuration",
+    );
+  });
+
   it.each([
     "organizationId",
     "apiBaseUrl",

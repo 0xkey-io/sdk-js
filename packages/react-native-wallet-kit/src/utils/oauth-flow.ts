@@ -109,6 +109,9 @@ function captureFlow(flow: TrustedOauthFlow): TrustedOauthFlow {
         : { authProxyConfigId: s.authProxyConfigId }),
       provider: s.provider,
       completion: s.completion,
+      ...(s.providerOriginUri === null
+        ? {}
+        : { originUri: s.providerOriginUri }),
       settings: {
         clientId: s.clientId,
         redirectUri: s.providerRedirectUri,
@@ -387,9 +390,12 @@ export function createOAuthFlowCoordinator(
               transactionId,
               additionalState,
               ...(pkce ? { codeChallenge: pkce.codeChallenge } : {}),
-              useOauthProxyOrigin:
-                flow.snapshot.provider !== OAuthProviders.X &&
-                flow.snapshot.provider !== OAuthProviders.DISCORD,
+              ...(flow.snapshot.providerOriginUri === null
+                ? {}
+                : {
+                    useOauthProxyOrigin: true,
+                    oauthOriginUrl: flow.snapshot.providerOriginUri,
+                  }),
             });
             return new URL(launchUrl).searchParams.get("state")!;
           },
