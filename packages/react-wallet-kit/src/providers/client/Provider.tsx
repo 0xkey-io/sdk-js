@@ -792,8 +792,8 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           },
         },
       },
-      importIframeUrl: config.importIframeUrl ?? "https://import.0xkey.com",
-      exportIframeUrl: config.exportIframeUrl ?? "https://export.0xkey.com",
+      importIframeUrl: config.importIframeUrl ?? "https://import.0xkey.io",
+      exportIframeUrl: config.exportIframeUrl ?? "https://export.0xkey.io",
     } as ZeroXKeyProviderConfig;
   };
 

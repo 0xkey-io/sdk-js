@@ -1,6 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
+import { readdirSync, readFileSync } from "fs";
+import { join } from "path";
 import { OAuthProviders } from "@0xkey-io/sdk-types";
 import {
+  ZEROXKEY_OAUTH_ORIGIN_URL,
+  ZEROXKEY_OAUTH_REDIRECT_URL,
   buildOAuthState,
   buildOAuthUrl,
   parseStateParam,
@@ -181,7 +185,7 @@ describe("OAuth utils", () => {
 
       const parsed = new URL(url);
       expect(url).toBe(
-        "https://oauth-origin.0xkey.com/?provider=google&clientId=client_google&redirectUri=https%3A%2F%2Fexample.com%2Fcallback&nonce=nonce_google&state=provider%3Dgoogle%26flow%3Dredirect%26publicKey%3Dpk_google%26sessionKey%3Dsess_google",
+        "https://oauth-origin.0xkey.io/?provider=google&clientId=client_google&redirectUri=https%3A%2F%2Fexample.com%2Fcallback&nonce=nonce_google&state=provider%3Dgoogle%26flow%3Dredirect%26publicKey%3Dpk_google%26sessionKey%3Dsess_google",
       );
 
       const state = parsed.searchParams.get("state");
@@ -267,5 +271,50 @@ describe("OAuth utils", () => {
         nonce: null,
       });
     });
+  });
+});
+
+function shippedSourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return entry.name === "tests" ? [] : shippedSourceFiles(path);
+    }
+    return /\.tsx?$/.test(entry.name) ? [path] : [];
+  });
+}
+
+describe("default hosts", () => {
+  it("uses the 0xkey.io hosted OAuth pages", () => {
+    expect(ZEROXKEY_OAUTH_ORIGIN_URL).toBe("https://oauth-origin.0xkey.io");
+    expect(ZEROXKEY_OAUTH_REDIRECT_URL).toBe(
+      "https://oauth-redirect.0xkey.io/",
+    );
+  });
+
+  it("starts proxied OAuth flows on oauth-origin.0xkey.io", () => {
+    const url = new URL(
+      buildOAuthUrl({
+        provider: OAuthProviders.GOOGLE,
+        clientId: "client_google",
+        redirectUri: `${ZEROXKEY_OAUTH_REDIRECT_URL}?scheme=myapp`,
+        publicKey: "pk_google",
+        nonce: "nonce_google",
+        useOauthProxyOrigin: true,
+      }),
+    );
+
+    expect(url.origin).toBe("https://oauth-origin.0xkey.io");
+    expect(url.searchParams.get("redirectUri")).toBe(
+      "https://oauth-redirect.0xkey.io/?scheme=myapp",
+    );
+  });
+
+  it("ships no 0xkey.com host", () => {
+    const offenders = shippedSourceFiles(join(__dirname, "..")).filter((path) =>
+      /0xkey\.com\b/i.test(readFileSync(path, "utf8")),
+    );
+
+    expect(offenders).toEqual([]);
   });
 });
