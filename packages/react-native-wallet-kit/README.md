@@ -116,14 +116,47 @@ by this configuration layer and must not be treated as enabled capabilities.
 The per-handler `onOauthSuccess` field is also retained for source compatibility
 but is not currently forwarded by the browser handlers.
 
-The candidate default hosted HTTPS callback and the customer App scheme are
-separate routes. With `appScheme: "example"` and no configured `redirectUri`,
-the browser handlers generate the provider callback
-`https://oauth-redirect.0xkey.io/?scheme=example` and return to the app through
-`example://`. Provider registration must match the generated callback bytes
-exactly, including the trailing slash and query. This hosted default is a
-release candidate, not a claim of current availability: DNS, TLS, health, and
-exact provider-callback acceptance remain release gates.
+### Hosted OAuth pages and the callback to register
+
+Google, Apple and Facebook run through two 0xkey-hosted pages:
+
+| Setting                  | Default                            | Role                                                         |
+| ------------------------ | ---------------------------------- | ------------------------------------------------------------ |
+| `auth.oauth.originUri`   | `https://oauth-origin.0xkey.io`    | Opened in the in-app browser; forwards to the provider       |
+| `auth.oauth.redirectUri` | `https://oauth-redirect.0xkey.io/` | Provider callback; hands the result back to `<appScheme>://` |
+
+The handlers append `?scheme=<appScheme>` to the redirect URI. With
+`appScheme: "myapp"` and no configured `redirectUri`, the provider callback is:
+
+```
+https://oauth-redirect.0xkey.io/?scheme=myapp
+```
+
+Register exactly that value as an **Authorized redirect URI** on your Google
+OAuth client of type **Web application** (the same client ID you pass as
+`webClientId`), byte for byte, including the `/` before `?`. No
+authorized JavaScript origin is needed. The Auth Proxy config's
+`oauthRedirectUrl`, when set, replaces the default; an explicit
+`auth.oauth.redirectUri` replaces both. X and Discord use `redirectUri` as a
+direct app-scheme callback and do not use the hosted pages.
+
+The production hosts are not live yet; they are enabled in the production
+release window. Until then, and for any staging build, set both pages
+together so a staging flow never opens a production page:
+
+```tsx
+auth: {
+  oauth: {
+    appScheme: "myapp",
+    originUri: "https://oauth-origin.staging.0xkey.io",
+    redirectUri: "https://oauth-redirect.staging.0xkey.io/",
+  },
+},
+```
+
+and register `https://oauth-redirect.staging.0xkey.io/?scheme=myapp` on the
+staging Google client. `originUri` must be `https://` with no query or
+fragment.
 
 Pending browser OAuth flows for enabled, fully configured providers are kept in
 secure storage and can resume from the app's initial deep link or a later
