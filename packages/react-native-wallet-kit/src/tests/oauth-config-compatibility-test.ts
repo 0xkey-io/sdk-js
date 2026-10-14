@@ -2,7 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { OAuthProviders, ZeroXKeyErrorCodes } from "@0xkey-io/sdk-types";
 import { resolveOauthProviderSettings } from "../utils/oauth-provider-settings";
 
-const defaultRedirectUri = "https://oauth-redirect.0xkey.com/";
+const defaultRedirectUri = "https://oauth-redirect.0xkey.io/";
 
 describe("OAuth provider settings compatibility", () => {
   it.each([
