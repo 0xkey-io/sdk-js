@@ -2,11 +2,11 @@
 
 [![npm](https://img.shields.io/npm/v/@0xkey-io/ethers?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/ethers)
 
-[ZeroXKey](https://0xkey.com) Signer for [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer).
+[ZeroXKey](https://0xkey.io) Signer for [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer).
 
 If you need a lower-level, fully typed HTTP client for interacting with ZeroXKey API, check out [`@0xkey-io/http`](/packages/http/).
 
-API Docs: https://docs.0xkey.com/
+API Docs: https://docs.0xkey.io/
 
 ## Getting started
 
@@ -26,7 +26,7 @@ async function main() {
 
   const zeroXKeyClient = new ZeroXKeyClient(
     {
-      baseUrl: "https://api.0xkey.com",
+      baseUrl: "https://api.0xkey.io",
     },
     // This uses API key credentials.
     // If you're using passkeys, use `@0xkey-io/webauthn-stamper` to collect webauthn signatures:

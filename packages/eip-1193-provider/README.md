@@ -34,7 +34,7 @@ const stamper = new WebauthnStamper({
 
 // Initialize the ZeroXKey HTTP client
 const zeroXKeyClient = new ZeroXKeyClient(
-  { baseUrl: "https://api.0xkey.com" },
+  { baseUrl: "https://api.0xkey.io" },
   stamper,
 );
 

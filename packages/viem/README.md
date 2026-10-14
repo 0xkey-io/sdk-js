@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@0xkey-io/viem?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/viem)
 
-This package contains helpers to use [Viem](https://viem.sh/) with [ZeroXKey](https://0xkey.com).
+This package contains helpers to use [Viem](https://viem.sh/) with [ZeroXKey](https://0xkey.io).
 
 We provide a ZeroXKey [Custom Account](https://viem.sh/docs/accounts/custom.html#custom-account) (signer) which implements the signing APIs expected by Viem clients.
 
@@ -25,7 +25,7 @@ async function main() {
   // Create a ZeroXKey HTTP client with API key credentials
   const httpClient = new ZeroXKeyClient(
     {
-      baseUrl: "https://api.0xkey.com",
+      baseUrl: "https://api.0xkey.io",
     },
     // This uses API key credentials.
     // If you're using passkeys, use `@0xkey-io/webauthn-stamper` to collect webauthn signatures:
