@@ -86,7 +86,7 @@ export async function withZeroXKeyErrorHandling<T>(
       throw tkError;
     }
 
-    // we wrap non-ZeroXKey errors
+    // we wrap non-0xkey errors
     tkError = new ZeroXKeyError(fallbackMessage, fallbackCode, error);
     callbacks?.onError?.(tkError);
     throw tkError;

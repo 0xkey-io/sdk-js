@@ -58,3 +58,53 @@ test("example favicons are the canonical 0xkey mark", () => {
     .map((file) => relative(root, file));
   assert.deepEqual(offenders, []);
 });
+
+// Naming rules: 0xkey-io/docs BRANDING.md.
+const TEXT_EXTENSIONS = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".json",
+  ".md",
+  ".mdx",
+]);
+const TEST_PATH =
+  /(__tests__|\/tests?\/|\.test\.|-test\.|\.spec\.|CHANGELOG\.md$)/i;
+const textFiles = ["examples", "packages"]
+  .flatMap((dir) => listFiles(join(root, dir)))
+  .filter((file) => TEXT_EXTENSIONS.has(extname(file).toLowerCase()));
+
+function offendersMatching(files, pattern) {
+  return files.flatMap((file) =>
+    readFileSync(file, "utf8")
+      .split("\n")
+      .flatMap((line, index) =>
+        pattern.test(line) ? [`${relative(root, file)}:${index + 1}`] : [],
+      ),
+  );
+}
+
+test("sources carry no machine-local absolute paths", () => {
+  assert.deepEqual(offendersMatching(textFiles, /["'`]\/Users\/[^"'`]+/), []);
+});
+
+// In-flight Captcha work owns this file; rename it once that lands.
+const PENDING_RENAME = new Set([
+  "examples/with-react-native-wallet-kit/README.md",
+]);
+
+test("non-test sources use the canonical 0xkey name and 0xkey.io hosts", () => {
+  const files = textFiles.filter((file) => {
+    const path = relative(root, file);
+    return !TEST_PATH.test(path) && !PENDING_RENAME.has(path);
+  });
+  assert.deepEqual(
+    offendersMatching(
+      files,
+      /0xkey\.com|\b0xKey\b|ZeroXKey Passkey|alt="ZeroXKey/,
+    ),
+    [],
+  );
+});

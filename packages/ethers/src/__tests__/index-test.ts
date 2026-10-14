@@ -226,8 +226,8 @@ describe("ZeroXKeySigner", () => {
               "activityId": null,
               "activityStatus": null,
               "activityType": null,
-              "cause": [ZeroXKeyRequestError: ZeroXKey error 7: policy engine denied request explicitly (Details: [])],
-              "message": "Failed to sign: ZeroXKey error 7: policy engine denied request explicitly (Details: [])",
+              "cause": [ZeroXKeyRequestError: 0xkey error 7: policy engine denied request explicitly (Details: [])],
+              "message": "Failed to sign: 0xkey error 7: policy engine denied request explicitly (Details: [])",
             }
           `);
           }

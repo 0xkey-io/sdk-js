@@ -5,14 +5,14 @@ import { refineNonNull } from "./util";
 
 export async function createNewEthereumPrivateKey() {
   const zeroXKeyClient = new ZeroXKeySDKServer({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
   });
 
   console.log(
-    "`process.env.PRIVATE_KEY_ID_{INDEX}` not found; creating a new Ethereum private key on ZeroXKey...\n",
+    "`process.env.PRIVATE_KEY_ID_{INDEX}` not found; creating a new Ethereum private key on 0xkey...\n",
   );
   const privateKeyName = `ETH Key ${crypto.randomBytes(2).toString("hex")}`;
 

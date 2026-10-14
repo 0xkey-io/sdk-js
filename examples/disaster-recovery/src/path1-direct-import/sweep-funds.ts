@@ -93,9 +93,9 @@ async function main() {
 
   const networkConfig = NETWORKS[network as keyof typeof NETWORKS];
 
-  // Initialize ZeroXKey client
+  // Initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.com",
+    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: organizationId,
@@ -107,9 +107,9 @@ async function main() {
     transport: http(networkConfig.rpcUrl),
   });
 
-  // Create ZeroXKey account for signing
+  // Create 0xkey account for signing
   console.log();
-  console.log("Creating ZeroXKey signing account...");
+  console.log("Creating 0xkey signing account...");
   const zeroXKeyAccount = await createAccount({
     client: zeroXKeyClient.apiClient(),
     organizationId,

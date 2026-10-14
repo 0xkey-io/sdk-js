@@ -1,6 +1,6 @@
 # Example: `with-nonce-manager`
 
-This example shows how to construct and broadcast a transaction using [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer) with ZeroXKey.
+This example shows how to construct and broadcast a transaction using [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer) with 0xkey.
 
 ## Getting started
 
@@ -19,11 +19,11 @@ $ cd examples/with-nonce-manager/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet account (address), private key address, or a private key ID
+- A 0xkey wallet account (address), private key address, or a private key ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 
@@ -37,12 +37,12 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` -- a ZeroXKey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
+- `SIGN_WITH` -- a 0xkey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
 - `INFURA_KEY` -- if this is not set, it will default to using the Community Infura key
 
 ### 3/ Running the scripts
 
-The following scripts will construct transactions via ZeroXKey and broadcast via Infura. If a script exits because your account isn't funded, you can request funds on https://goerlifaucet.com/, https://faucet.paradigm.xyz/, or Coinbase Wallet.
+The following scripts will construct transactions via 0xkey and broadcast via Infura. If a script exits because your account isn't funded, you can request funds on https://goerlifaucet.com/, https://faucet.paradigm.xyz/, or Coinbase Wallet.
 
 ```bash
 $ pnpm start-simple-sequential

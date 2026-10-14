@@ -505,7 +505,7 @@ export async function verifyBootProof(
  * (or that declared different PCRs than what's actually running) would
  * still pass. Delegating to `verifyBootProof` closes that gap.
  *
- *  For more information, check out https://whitepaper.0xkey.com/foundations
+ *  For more information, check out https://whitepaper.0xkey.io/foundations
  */
 export async function verify(
   appProof: v1AppProof,

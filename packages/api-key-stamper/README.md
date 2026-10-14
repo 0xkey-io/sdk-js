@@ -6,7 +6,7 @@ title: "API Key Stamper"
 
 [![npm](https://img.shields.io/npm/v/@0xkey-io/api-key-stamper?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/api-key-stamper)
 
-This package contains functions to stamp a ZeroXKey request. It is meant to be used with [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http)
+This package contains functions to stamp a 0xkey request. It is meant to be used with [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http)
 
 Usage:
 
@@ -20,7 +20,7 @@ const stamper = new ApiKeyStamper({
 });
 
 const httpClient = new ZeroXKeyClient(
-  { baseUrl: "https://api.0xkey.com" },
+  { baseUrl: "https://api.0xkey.io" },
   stamper,
 );
 ```

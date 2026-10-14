@@ -87,7 +87,7 @@ export class CrossPlatformPasskeyStamper implements TStamper {
     // https://www.w3.org/TR/webauthn-2/#sctn-sample-registration
     //
     // All pubkey algorithms can be found here: https://www.iana.org/assignments/cose/cose.xhtml#algorithms
-    // ZeroXKey only supports ES256 (-7) and RS256 (-257)
+    // 0xkey only supports ES256 (-7) and RS256 (-257)
     //
     // The pubkey type only supports one value, "public-key"
     // See https://www.w3.org/TR/webauthn-2/#enumdef-publickeycredentialtype for more details

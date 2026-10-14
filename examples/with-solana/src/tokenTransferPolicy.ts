@@ -74,7 +74,7 @@ main().catch((error) => {
 
 /*
  * The setup command creates the onchain state (new token mint, sending and receiving token address etc) required for this example
- * It also creates SOME of the ZeroXKey setup state required (new ZeroXKey managed Solana wallet (owner of the sending token address) and non-root user
+ * It also creates SOME of the 0xkey setup state required (new 0xkey managed Solana wallet (owner of the sending token address) and non-root user
  * NOTE: The setup command DOES NOT create the policy that allows the non root user to send SPL tokens to the correct associated token address
  * ^ the policy is created when you call create-token-policy
  */
@@ -91,7 +91,7 @@ async function setup() {
     defaultOrganizationId: organizationId,
   });
 
-  // Root user ZeroXKey signer
+  // Root user 0xkey signer
   const rootUserSigner = new ZeroXKeySigner({
     organizationId,
     client: rootUserClient.apiClient(),
@@ -192,7 +192,7 @@ async function setup() {
   console.log(
     "Setup complete -- token mint and token accounts created, non root user created",
   );
-  console.log(`ZeroXKey Solana wallet address: ${solAddress}`);
+  console.log(`0xkey Solana wallet address: ${solAddress}`);
   console.log(`Token Mint public key: ${mintAuthority.publicKey}`);
   console.log(`Non root user created with user id: ${nonRootUserID}`);
 }
@@ -266,7 +266,7 @@ async function attemptTransferToken() {
   });
 
   // Transfer token from primary to example recipient associated token account\
-  // This call uses ZeroXKey's sign transaction endpoint which passes the transaction through the policy engine
+  // This call uses 0xkey's sign transaction endpoint which passes the transaction through the policy engine
   await createTokenTransferSignTransaction(
     nonRootUserSigner,
     connection,

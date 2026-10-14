@@ -1,6 +1,6 @@
 # Example: `with-gnosis`
 
-This example shows how to create new Ethereum addresses via ZeroXKey, configure a 3/3 Gnosis safe, and create, sign, and execute a transaction from it.
+This example shows how to create new Ethereum addresses via 0xkey, configure a 3/3 Gnosis safe, and create, sign, and execute a transaction from it.
 
 ## NOTE:
 
@@ -23,9 +23,9 @@ $ cd examples/with-gnosis/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 - Three wallet account addresses, private key addresses, or private keys
 
@@ -41,7 +41,7 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH_1 / 2 / 3` -- 3 ZeroXKey wallet account addresses, private key addresses, or private key IDs. If you leave any of these blank, we'll create a wallet with 3 wallet accounts for you.
+- `SIGN_WITH_1 / 2 / 3` -- 3 0xkey wallet account addresses, private key addresses, or private key IDs. If you leave any of these blank, we'll create a wallet with 3 wallet accounts for you.
 - `INFURA_KEY` -- if this is not set, it will default to using the Community Infura key
 
 ### 3/ Running the scripts

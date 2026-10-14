@@ -1,6 +1,6 @@
 # Example: `with-viem`
 
-This example shows how to construct and sign a transaction using ZeroXKey's [`@0xkey-io/viem`](https://www.npmjs.com/package/@0xkey-io/viem) signer, **using API keys**.
+This example shows how to construct and sign a transaction using 0xkey's [`@0xkey-io/viem`](https://www.npmjs.com/package/@0xkey-io/viem) signer, **using API keys**.
 
 If you want to see a demo with passkeys, head to the example [`with-viem-and-passkeys`](https://github.com/0xkey-io/demo-viem-passkeys) to see a NextJS app using passkeys.
 
@@ -21,9 +21,9 @@ $ cd examples/with-viem/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 - A (crypto) private key ID
 
@@ -50,7 +50,7 @@ $ pnpm start
 This script will do the following:
 
 1. construct a new transaction
-2. sign it with ZeroXKey
+2. sign it with 0xkey
 3. broadcast it via Infura
 
 Sample output from a successful execution:
@@ -72,7 +72,7 @@ Source address
 Transaction
         https://sepolia.etherscan.io/tx/0xf21c98e02dc987c1987da06cab7523c0de6cb3a275064c918001907d9adfc11d
 
-ZeroXKey-powered signature:
+0xkey-powered signature:
         0x83d002f3b5b0de4f4532c402efdc8544a1986c73207e63e6b743900ac1387125012b39c0918fafb9cde4293480f670c007c84c6c63e149cb0c8ca9409a36ca351b
 
 Recovered address:

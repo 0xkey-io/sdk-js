@@ -2,10 +2,10 @@
 
 This example walks through the following:
 
-- Creation of a new ZeroXKey wallet with a new Tron account
+- Creation of a new 0xkey wallet with a new Tron account
 - Obtaining Nile testnet TRX and USDT from a faucet to use for the rest of the examples
 - Signing a TRX transaction
-- Create a ZeroXKey policy to parse and guard Tron TRX and TRC-20 transactions
+- Create a 0xkey policy to parse and guard Tron TRX and TRC-20 transactions
 
 ## Getting started
 
@@ -24,9 +24,9 @@ $ cd examples/with-tron/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
@@ -42,10 +42,10 @@ Now open `.env.local` and add the missing environment variables:
 - `BASE_URL`
 - `ORGANIZATION_ID`
 
-You can specify an existing ZeroXKey Tron address if you have one already:
+You can specify an existing 0xkey Tron address if you have one already:
 
 ```
-TRON_ADDRESS=<your ZeroXKey Tron address>
+TRON_ADDRESS=<your 0xkey Tron address>
 ```
 
 Note that this is optional: the script gives you a fresh one if you don't specify one in your `.env.local` file.
@@ -56,7 +56,7 @@ There are 4 scripts that are meant to be run in order that will create a Tron wa
 
 #### createTronWallet
 
-Start with the creating a Tron wallet script: `pnpm run createTronWallet`. This will give you a fresh Tron wallet secured by ZeroXKey. It will output a wallet address. Note: if this script is run multiple times it will fail because of a duplicate wallet name, you can change the wallet name in the code, or delete it from your dashboard at [app.0xkey.com/dashboard/wallets](https://app.0xkey.com/dashboard/wallets).
+Start with the creating a Tron wallet script: `pnpm run createTronWallet`. This will give you a fresh Tron wallet secured by 0xkey. It will output a wallet address. Note: if this script is run multiple times it will fail because of a duplicate wallet name, you can change the wallet name in the code, or delete it from your dashboard at [app.0xkey.io/dashboard/wallets](https://app.0xkey.io/dashboard/wallets).
 
 #### Obtaining testnet tokens
 
@@ -72,7 +72,7 @@ The next example you can run is the `pnpm run signRawPayload`. This example demo
 
 #### transferTRXPolicy
 
-The following example demonstrates creating policies for guarding `TransferContract` transactions, typically known as TRX transfers. Note: if this script is run multiple times it will fail because of a duplicate policy, you can change the policy name in the code, or delete it from your dashboard at [app.0xkey.com/dashboard/security](https://app.0xkey.com/dashboard/security). Run `pnpm run transferTRXPolicy`
+The following example demonstrates creating policies for guarding `TransferContract` transactions, typically known as TRX transfers. Note: if this script is run multiple times it will fail because of a duplicate policy, you can change the policy name in the code, or delete it from your dashboard at [app.0xkey.io/dashboard/security](https://app.0xkey.io/dashboard/security). Run `pnpm run transferTRXPolicy`
 
 #### transferTRC20Policy
 
@@ -81,4 +81,4 @@ The final example demonstrates how to create Tron policies for `TriggerSmartCont
 ## Notes on the policy conditions
 
 - Both policies use the singular `tron.tx.contract[0].*` accessor (aligned with Turnkey's policy examples). This alias requires an enclave/policy-engine release that includes the Tron `contract` singular alias — if you're running against an older 0xkey deployment that only exposes the plural `tron.tx.contracts[0].*` form, rewrite the condition accordingly.
-- The policy language has **no** substring slicing (`data[0..8]`). To match a function selector, use `tron.tx.contract[0].data.startsWith('a9059cbb')` instead. See [the policy language docs](https://docs.0xkey.com/concepts/policies/language#grammar) for the full list of supported string methods.
+- The policy language has **no** substring slicing (`data[0..8]`). To match a function selector, use `tron.tx.contract[0].data.startsWith('a9059cbb')` instead. See [the policy language docs](https://docs.0xkey.io/concepts/policies/language#grammar) for the full list of supported string methods.

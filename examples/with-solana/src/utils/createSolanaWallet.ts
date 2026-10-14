@@ -5,9 +5,7 @@ import {
 import * as crypto from "crypto";
 
 export async function createNewSolanaWallet(client: ZeroXKeyApiClient) {
-  console.log(
-    "creating a new Solana wallet in your ZeroXKey organization...\n",
-  );
+  console.log("creating a new Solana wallet in your 0xkey organization...\n");
 
   const walletName = `Solana Wallet ${crypto.randomBytes(2).toString("hex")}`;
 

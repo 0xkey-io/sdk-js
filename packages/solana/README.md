@@ -2,11 +2,11 @@
 
 [![npm](https://img.shields.io/npm/v/@0xkey-io/solana?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/solana)
 
-[ZeroXKey](https://0xkey.com) Solana signer for [`@solana/web3js`](https://solana-labs.github.io/solana-web3.js/):
+[ZeroXKey](https://0xkey.io) Solana signer for [`@solana/web3js`](https://solana-labs.github.io/solana-web3.js/):
 
-If you need a lower-level, fully typed HTTP client for interacting with ZeroXKey API, check out [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http).
+If you need a lower-level, fully typed HTTP client for interacting with 0xkey API, check out [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http).
 
-API Docs: https://docs.0xkey.com/
+API Docs: https://docs.0xkey.io/
 
 ## Getting started
 

@@ -1,6 +1,6 @@
-# ZeroXKey Gas Station SDK
+# 0xkey Gas Station SDK
 
-A reusable SDK for implementing gasless transactions using EIP-7702, ZeroXKey wallet management, and your own paymaster. This package provides clean abstractions and utility methods to quickly integrate with ZeroXKey's contracts for sponsored transaction execution.
+A reusable SDK for implementing gasless transactions using EIP-7702, 0xkey wallet management, and your own paymaster. This package provides clean abstractions and utility methods to quickly integrate with 0xkey's contracts for sponsored transaction execution.
 
 ## What is This?
 
@@ -18,7 +18,7 @@ Perfect for building dApps where users don't need ETH for gas, enabling seamless
 1. **EIP-7702 Authorization**: One-time setup where an EOA authorizes a gas station contract
 2. **EIP-712 Signed Intents**: User signs off-chain intents for what they want to execute
 3. **Paymaster Execution**: Your paymaster submits the transaction and pays for gas
-4. **ZeroXKey Integration**: All signatures handled securely through ZeroXKey
+4. **0xkey Integration**: All signatures handled securely through 0xkey
 
 ## Quick Start
 
@@ -33,8 +33,8 @@ pnpm install @0xkey-io/gas-station @0xkey-io/sdk-server @0xkey-io/viem viem
 Create `.env.local`:
 
 ```bash
-# ZeroXKey Configuration
-BASE_URL=https://api.0xkey.com
+# 0xkey Configuration
+BASE_URL=https://api.0xkey.io
 API_PRIVATE_KEY=your_0xkey_api_private_key
 API_PUBLIC_KEY=your_0xkey_api_public_key
 ORGANIZATION_ID=your_0xkey_organization_id
@@ -76,7 +76,7 @@ const zeroXKeyClient = new ZeroXKey({
   defaultOrganizationId: process.env.ORGANIZATION_ID!,
 });
 
-// Create ZeroXKey accounts
+// Create 0xkey accounts
 const userAccount = await createAccount({
   client: zeroXKeyClient.apiClient(),
   organizationId: process.env.ORGANIZATION_ID!,
@@ -146,7 +146,7 @@ Main client for gas station operations. Each client instance wraps a viem wallet
 
 ```typescript
 new GasStationClient({
-  walletClient: WalletClient,          // Viem wallet client (e.g., with ZeroXKey account)
+  walletClient: WalletClient,          // Viem wallet client (e.g., with 0xkey account)
   delegateContract?: `0x${string}`,    // Optional: defaults to deterministic address
   executionContract?: `0x${string}`,   // Optional: defaults to deterministic address
 })
@@ -328,11 +328,11 @@ const userClient = new GasStationClient({
 - **EIP-712 Signed Intents**: All executions require valid typed signatures
 - **EIP-7702 Scoping**: Authorization is per-EOA and can be revoked
 - **Deadline Enforcement**: Each transaction includes a deadline (Unix timestamp) to prevent replay attacks; signatures expire after this time
-- **ZeroXKey Integration**: Private keys never leave ZeroXKey's secure infrastructure
+- **0xkey Integration**: Private keys never leave 0xkey's secure infrastructure
 
 ### Security Policies
 
-ZeroXKey policies provide additional security layers by restricting what transactions can be signed and executed. The Gas Station SDK includes helpers for creating these policies.
+0xkey policies provide additional security layers by restricting what transactions can be signed and executed. The Gas Station SDK includes helpers for creating these policies.
 
 #### EOA Intent Signing Policies
 
@@ -421,7 +421,7 @@ const paymasterPolicy = buildPaymasterExecutionPolicy({
 // }
 ```
 
-**Note:** The `ensureGasStationInterface()` function uploads the Gas Station ABI to ZeroXKey's Smart Contract Interface feature. This enables ZeroXKey's policy engine to parse the ABI-encoded transaction data and directly compare the `_ethAmount` parameter as a uint256 value, rather than raw bytes. The function checks if the ABI already exists before uploading to avoid duplicates.
+**Note:** The `ensureGasStationInterface()` function uploads the Gas Station ABI to 0xkey's Smart Contract Interface feature. This enables 0xkey's policy engine to parse the ABI-encoded transaction data and directly compare the `_ethAmount` parameter as a uint256 value, rather than raw bytes. The function checks if the ABI already exists before uploading to avoid duplicates.
 
 #### Defense in Depth
 
@@ -461,7 +461,7 @@ const paymasterPolicy = buildPaymasterExecutionPolicy({
 
 ### Advanced: Writing Custom Paymaster Policies
 
-When using `buildPaymasterExecutionPolicy`, the SDK creates ZeroXKey policies that parse the transaction calldata to enforce restrictions. Understanding the transaction structure allows you to write custom policies for advanced use cases.
+When using `buildPaymasterExecutionPolicy`, the SDK creates 0xkey policies that parse the transaction calldata to enforce restrictions. Understanding the transaction structure allows you to write custom policies for advanced use cases.
 
 #### Transaction Data Structure
 
@@ -480,7 +480,7 @@ When the paymaster signs an execution transaction calling `execute(address _targ
 | `[492..500]`            | 8 chars   | Deadline (4 bytes)     | `6ac7d340` (Unix timestamp)                       |
 | `[500+]`                | Variable  | Call data              | Encoded function call for target contract         |
 
-**Important:** ZeroXKey's `eth.tx.data` includes the `0x` prefix, so positions start at index 2 (after `0x`).
+**Important:** 0xkey's `eth.tx.data` includes the `0x` prefix, so positions start at index 2 (after `0x`).
 
 **Note:** The deadline is a Unix timestamp that prevents replay attacks by expiring signatures after a specified time. The SDK defaults to 1 hour, customizable with `withDeadline()`.
 

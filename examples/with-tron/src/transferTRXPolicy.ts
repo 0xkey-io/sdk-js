@@ -11,9 +11,9 @@ import createUser from "./requests/createUser";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
-  // initialize ZeroXKey client
+  // initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
@@ -49,7 +49,7 @@ async function main() {
 
   // create a new client for the new user with their credentials
   const newUserZeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: keypair.privateKey,
     apiPublicKey: keypair.publicKey,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
@@ -60,7 +60,7 @@ async function main() {
     fullHost: "https://nile.trongrid.io/", // testnet
   });
 
-  const zeroXKeyAddress = process.env.TRON_ADDRESS!; // your Tron address in ZeroXKey
+  const zeroXKeyAddress = process.env.TRON_ADDRESS!; // your Tron address in 0xkey
   const recipientAddress = "TY1jfzP3s94oSzYECC89EFn17iA8S4imVZ";
   // use an amount where the policy will deny
   const amount = 101; // amount in SUN (1 TRX = 1,000,000 SUN)

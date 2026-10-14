@@ -19,7 +19,7 @@ await stamper.init();
 
 // Once initialized, the stamper is ready to be passed into the ZeroXKeyClient.
 const httpClient = new ZeroXKeyClient(
-  { baseUrl: "https://api.0xkey.com" },
+  { baseUrl: "https://api.0xkey.io" },
   stamper,
 );
 ```

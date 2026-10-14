@@ -14,7 +14,7 @@ export async function validatePolicyAction(
   cases: { label: string; unsignedTx: string }[],
 ) {
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.ZEROXKEY_DA_PRIVATE_KEY!,
     apiPublicKey: process.env.ZEROXKEY_DA_PUBLIC_KEY!,
     defaultOrganizationId: subOrgId,

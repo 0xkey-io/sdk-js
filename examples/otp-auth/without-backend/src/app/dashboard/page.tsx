@@ -36,7 +36,7 @@ function safeStringify(x: unknown) {
   );
 }
 
-// Build a Solana v0 **unsigned** tx and return HEX (ZeroXKey expects hex for SOL)
+// Build a Solana v0 **unsigned** tx and return HEX (0xkey expects hex for SOL)
 async function buildUnsignedSolanaTxHex(fromAddress: string, rpcUrl?: string) {
   const connection = new Connection(
     rpcUrl || clusterApiUrl("devnet"),

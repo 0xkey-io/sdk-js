@@ -1,6 +1,6 @@
 # Example: `sweeper`
 
-This example shows how to sweep funds (tokens + native ETH) from one address to another, built on top of [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer) with ZeroXKey. Gas sponsorship through ZeroXKey is available as an option for the sweeps.
+This example shows how to sweep funds (tokens + native ETH) from one address to another, built on top of [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer) with 0xkey. Gas sponsorship through 0xkey is available as an option for the sweeps.
 
 ## Getting started
 
@@ -19,11 +19,11 @@ $ cd examples/sweeper/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet account (address), private key address, or a private key ID
+- A 0xkey wallet account (address), private key address, or a private key ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 
@@ -37,7 +37,7 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` -- a ZeroXKey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
+- `SIGN_WITH` -- a 0xkey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
 - `DESTINATION_ADDRESS` -- Destination address for sweeping tokens
 
 ### 3/ Running the script
@@ -46,7 +46,7 @@ Now open `.env.local` and add the missing environment variables:
 $ pnpm start
 ```
 
-The script constructs and signs a and sends series of sweep transactions via ZeroXKey. If the script exits because your account isn't funded, you can request funds on https://cloud.google.com/application/web3/faucet/ethereum/sepolia or use ZeroXKey's gas sponsorship feature. By default, this utility will sweep USDC, UNI, and ETH.
+The script constructs and signs a and sends series of sweep transactions via 0xkey. If the script exits because your account isn't funded, you can request funds on https://cloud.google.com/application/web3/faucet/ethereum/sepolia or use 0xkey's gas sponsorship feature. By default, this utility will sweep USDC, UNI, and ETH.
 
 ```
 Network:
@@ -60,7 +60,7 @@ Balance:
 
 Address: 0x2A5111A1b0c0da37750b595b89BBaf1E6B7a8a27
 Balance: 0.094678708129562482
-? Use ZeroXKey gas sponsorship for sweep transactions? › (y/N)
+? Use 0xkey gas sponsorship for sweep transactions? › (y/N)
 
 ✔ Please confirm: transfer 0.05 UNI (token address 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984) to 0x4A7937B14bb850bd706053e279Db9D9a784A1eF2? … yes
 Sent 0.05 UNI (token address 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984) to 0x4A7937B14bb850bd706053e279Db9D9a784A1eF2:

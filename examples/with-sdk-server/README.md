@@ -19,9 +19,9 @@ $ cd examples/with-sdk-server/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `config.json` file. Notice that your API private key should be securely managed and **_never_** be committed to git.
@@ -38,7 +38,7 @@ Now open `config.json` and add the missing values: `apiPublicKey`, `apiPrivateKe
 $ pnpm run start
 ```
 
-This will simply make a [`Whoami request`](https://docs.0xkey.com/api#tag/Sessions/operation/GetWhoami). If it's successful you should see something like the following:
+This will simply make a [`Whoami request`](https://docs.0xkey.io/api#tag/Sessions/operation/GetWhoami). If it's successful you should see something like the following:
 
 ```
 Successfully called ZeroXKey. Whoami response:  {

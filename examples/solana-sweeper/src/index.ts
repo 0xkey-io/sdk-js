@@ -77,7 +77,7 @@ async function main() {
   const { useSponsor } = await prompts({
     type: "confirm",
     name: "useSponsor",
-    message: "Use ZeroXKey gas sponsorship for sweep transactions?",
+    message: "Use 0xkey gas sponsorship for sweep transactions?",
     initial: false,
   });
   sponsor = !!useSponsor;

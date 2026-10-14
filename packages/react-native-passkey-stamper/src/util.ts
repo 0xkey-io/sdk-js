@@ -18,8 +18,8 @@ export function getChallengeFromPayload(payload: string): string {
 // signature to register an authenticator they don't own. However:
 // - we are creating a brand new authenticator here, which means keygen is happening right as we call this library
 //   (this makes the replay attack hard-to-impossible)
-// - even if a replay attack went through, the authenticator wouldn't be usable given ZeroXKey has anti-replay in place in activity payloads
-//   (there is a `timestampMs` in activity payloads, see https://docs.0xkey.com/api-introduction#queries-and-submissions)
+// - even if a replay attack went through, the authenticator wouldn't be usable given 0xkey has anti-replay in place in activity payloads
+//   (there is a `timestampMs` in activity payloads, see https://docs.0xkey.io/api-introduction#queries-and-submissions)
 // ----
 // As for "why Math.random in the first place?": it lets us avoid a dependency on webcrypto + associated polyfills
 // (in react-native webcrypto isn't available)

@@ -164,5 +164,5 @@ export {
   DEFAULT_TON_V4R2_ACCOUNTS,
 } from "./0xkey-helpers";
 
-// Base ZeroXKey API
+// Base 0xkey API
 export { ZeroXKeyApi };

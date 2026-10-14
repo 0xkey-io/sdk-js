@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@0xkey-io/iframe-stamper?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/iframe-stamper)
 
-This package contains functions to stamp a ZeroXKey request through credentials contained in an iframe. It is meant to be used with [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http) to build flows. To stamp the request, use the Recovery and Auth flows to request and inject a credential bundle.
+This package contains functions to stamp a 0xkey request through credentials contained in an iframe. It is meant to be used with [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http) to build flows. To stamp the request, use the Recovery and Auth flows to request and inject a credential bundle.
 
 Usage:
 
@@ -29,7 +29,7 @@ const injected = await iframeStamper.injectCredentialBundle(credentialBundle);
 
 // New HTTP client able to sign with the credentials inside of the iframe
 const httpClient = new ZeroXKeyClient(
-  { baseUrl: "https://api.0xkey.com" },
+  { baseUrl: "https://api.0xkey.io" },
   iframeStamper,
 );
 ```

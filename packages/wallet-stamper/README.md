@@ -1,10 +1,10 @@
-# ZeroXKey Wallet Stamper
+# 0xkey Wallet Stamper
 
 The `@0xkey-io/wallet-stamper` package provides a mechanism to stamp requests using a wallet public key and signature. This package supports both Solana and Ethereum wallets, allowing for seamless integration with various blockchain applications.
 
 ## Installation
 
-Before you start using the ZeroXKey Wallet Stamper, make sure to install the necessary packages in your project. This guide assumes you have a Node.js environment ready for development.
+Before you start using the 0xkey Wallet Stamper, make sure to install the necessary packages in your project. This guide assumes you have a Node.js environment ready for development.
 
 Install the required packages using NPM, Yarn, or PNPM:
 

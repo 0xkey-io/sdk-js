@@ -1,14 +1,14 @@
-# Disaster Recovery with ZeroXKey
+# Disaster Recovery with 0xkey
 
-This example provides runnable code for implementing wallet disaster recovery using ZeroXKey's secure infrastructure. It covers two primary solution paths:
+This example provides runnable code for implementing wallet disaster recovery using 0xkey's secure infrastructure. It covers two primary solution paths:
 
-1. **Path 1: Direct Wallet Import (Recommended)** - Import existing wallet private keys directly into ZeroXKey's secure enclaves for immediate operational capability
-2. **Path 2: Encryption Key Escrow** - Use ZeroXKey to store encryption keys that protect externally-stored recovery bundles
+1. **Path 1: Direct Wallet Import (Recommended)** - Import existing wallet private keys directly into 0xkey's secure enclaves for immediate operational capability
+2. **Path 2: Encryption Key Escrow** - Use 0xkey to store encryption keys that protect externally-stored recovery bundles
 
 ## Prerequisites
 
 - Node.js v18+
-- A ZeroXKey organization with API credentials
+- A 0xkey organization with API credentials
 - For Path 1 sweep operations: An Ethereum wallet with funds (use Sepolia testnet for testing)
 
 ## Quick Start
@@ -20,7 +20,7 @@ pnpm install
 # Copy environment template
 cp .env.local.example .env.local
 
-# Edit .env.local with your ZeroXKey credentials
+# Edit .env.local with your 0xkey credentials
 
 # Launch the interactive CLI
 pnpm start
@@ -38,13 +38,13 @@ You can also run individual scripts directly (see below).
 
 ```bash
 # Required for all operations
-API_PUBLIC_KEY="<ZeroXKey API public key>"
-API_PRIVATE_KEY="<ZeroXKey API private key>"
-BASE_URL="https://api.0xkey.com"
-ORGANIZATION_ID="<Your ZeroXKey organization ID>"
+API_PUBLIC_KEY="<0xkey API public key>"
+API_PRIVATE_KEY="<0xkey API private key>"
+BASE_URL="https://api.0xkey.io"
+ORGANIZATION_ID="<Your 0xkey organization ID>"
 
 # Required for import operations (Path 1)
-USER_ID="<ZeroXKey user ID>"
+USER_ID="<0xkey user ID>"
 
 # Required for fund sweeping (Path 1)
 SIGN_WITH="<Ethereum address of imported wallet>"
@@ -79,7 +79,7 @@ This will:
 2. Fund it with Sepolia testnet ETH from a faucet:
    - https://sepoliafaucet.com
    - https://www.alchemy.com/faucets/ethereum-sepolia
-3. Import the wallet into ZeroXKey using `pnpm run path1:import-wallet`
+3. Import the wallet into 0xkey using `pnpm run path1:import-wallet`
 4. Test sweeping funds with `pnpm run path1:sweep-funds`
 
 ---
@@ -92,14 +92,14 @@ This will:
 
 | Benefit            | Description                                                                 |
 | ------------------ | --------------------------------------------------------------------------- |
-| Immediate Recovery | Keys are operational within ZeroXKey instantly—no decryption ceremonies     |
+| Immediate Recovery | Keys are operational within 0xkey instantly—no decryption ceremonies        |
 | Asset Agnostic     | Single path for Bitcoin, Ethereum, Solana, and any SECP256k1/Ed25519 chains |
 | Fund Sweeping      | SDK enables rapid fund movement without custom tooling                      |
 | Policy Controls    | Full access to quorum policies, whitelisting, and transaction limits        |
 
 ### Import HD Wallet (Mnemonic)
 
-Import a BIP-39 mnemonic seed phrase into ZeroXKey:
+Import a BIP-39 mnemonic seed phrase into 0xkey:
 
 ```bash
 pnpm run path1:import-wallet
@@ -107,10 +107,10 @@ pnpm run path1:import-wallet
 
 This will:
 
-1. Initialize an import bundle (temporary encryption key from ZeroXKey's enclave)
+1. Initialize an import bundle (temporary encryption key from 0xkey's enclave)
 2. Prompt for your mnemonic seed phrase
-3. Encrypt the mnemonic to ZeroXKey's ephemeral public key
-4. Import the encrypted wallet into ZeroXKey
+3. Encrypt the mnemonic to 0xkey's ephemeral public key
+4. Import the encrypted wallet into 0xkey
 
 ### Import Raw Private Key
 
@@ -152,7 +152,7 @@ Features:
 │                    OFFLINE CEREMONY                              │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
 │  │  Export Key  │───▶│  Encrypt to  │───▶│  Transport   │       │
-│  │  from Current│    │  ZeroXKey TEK │    │  Encrypted   │       │
+│  │  from Current│    │  0xkey TEK │    │  Encrypted   │       │
 │  │  Provider    │    │              │    │  Bundle      │       │
 │  └──────────────┘    └──────────────┘    └──────────────┘       │
 └─────────────────────────────────────────────────────────────────┘
@@ -174,11 +174,11 @@ Features:
 
 ## Path 2: Encryption Key Escrow
 
-**Best for:** Keeping wallet material outside ZeroXKey while using ZeroXKey for authenticated access to encryption keys.
+**Best for:** Keeping wallet material outside 0xkey while using 0xkey for authenticated access to encryption keys.
 
 ### When to Use This Approach
 
-- Wallet recovery for non-custodial products kept separate from ZeroXKey
+- Wallet recovery for non-custodial products kept separate from 0xkey
 - Backing up non-wallet material (API keys, secrets, credentials)
 - Compliance requires key material separation from infrastructure provider
 
@@ -192,10 +192,10 @@ This will:
 
 1. Create a P-256 encryption keypair in ZeroXKey (for encryption only, not on-chain)
 2. Prompt for your recovery material (mnemonic, credentials, or custom data)
-3. Encrypt the bundle with ZeroXKey's public key
+3. Encrypt the bundle with 0xkey's public key
 4. Save the encrypted bundle locally (you move this to your secure storage)
 
-**Important:** The encrypted bundle should be stored in YOUR infrastructure, not on ZeroXKey. This creates a 2-of-2 security model.
+**Important:** The encrypted bundle should be stored in YOUR infrastructure, not on 0xkey. This creates a 2-of-2 security model.
 
 ### Recovery: Export Key and Decrypt Bundle
 
@@ -217,8 +217,8 @@ This will:
 
 | Scenario                       | Impact                                                                              |
 | ------------------------------ | ----------------------------------------------------------------------------------- |
-| Customer infrastructure breach | Attacker gets encrypted blobs but cannot decrypt without ZeroXKey authentication    |
-| ZeroXKey user breach           | Attacker could access the encryption keypair but doesn't have the encrypted bundles |
+| Customer infrastructure breach | Attacker gets encrypted blobs but cannot decrypt without 0xkey authentication       |
+| 0xkey user breach              | Attacker could access the encryption keypair but doesn't have the encrypted bundles |
 | Both breached                  | Both parties must be compromised simultaneously for full recovery                   |
 
 ### Architecture
@@ -250,9 +250,9 @@ This will:
 │  │  Encrypted Recovery Bundle Storage                        │   │
 │  │  (Your servers, AWS S3, third-party vault, etc.)         │   │
 │  │                                                           │   │
-│  │  • ZeroXKey never sees this data                          │   │
+│  │  • 0xkey never sees this data                          │   │
 │  │  • You control storage location and policies             │   │
-│  │  • Bundle is useless without ZeroXKey authentication      │   │
+│  │  • Bundle is useless without 0xkey authentication      │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -261,15 +261,15 @@ This will:
 
 ## Comparison: Path 1 vs Path 2
 
-| Factor            | Path 1: Direct Import                    | Path 2: Encryption Escrow                |
-| ----------------- | ---------------------------------------- | ---------------------------------------- |
-| Recovery Speed    | Immediate—keys operational in ZeroXKey   | Requires decryption ceremony             |
-| Fund Sweeping     | Built-in SDK support                     | Requires wallet tooling after decryption |
-| Key Storage       | ZeroXKey holds wallet keys in enclave    | ZeroXKey holds only encryption keys      |
-| Material Location | ZeroXKey secure enclave                  | Your storage (encrypted)                 |
-| Complexity        | Lower                                    | Higher                                   |
-| Best For          | Enterprise DR, treasury backup           | User recovery, compliance separation     |
-| Security Model    | Single party (authorized ZeroXKey users) | 2-of-2 (ZeroXKey auth + bundle access)   |
+| Factor            | Path 1: Direct Import                  | Path 2: Encryption Escrow                |
+| ----------------- | -------------------------------------- | ---------------------------------------- |
+| Recovery Speed    | Immediate—keys operational in ZeroXKey | Requires decryption ceremony             |
+| Fund Sweeping     | Built-in SDK support                   | Requires wallet tooling after decryption |
+| Key Storage       | 0xkey holds wallet keys in enclave     | 0xkey holds only encryption keys         |
+| Material Location | 0xkey secure enclave                   | Your storage (encrypted)                 |
+| Complexity        | Lower                                  | Higher                                   |
+| Best For          | Enterprise DR, treasury backup         | User recovery, compliance separation     |
+| Security Model    | Single party (authorized 0xkey users)  | 2-of-2 (0xkey auth + bundle access)      |
 
 ---
 
@@ -308,7 +308,7 @@ disaster-recovery/
 ├── .env.local.example
 └── src/
     ├── shared/
-    │   ├── 0xkey.ts          # ZeroXKey client initialization
+    │   ├── 0xkey.ts          # 0xkey client initialization
     │   └── crypto-helpers.ts   # Encryption/decryption utilities
     ├── path1-direct-import/
     │   ├── import-wallet.ts    # Import HD wallet (mnemonic)
@@ -329,7 +329,7 @@ Ensure all required variables are set in `.env.local`. Copy from `.env.local.exa
 
 ### "Quorum approval required"
 
-Your ZeroXKey organization has policies requiring multiple approvers. Coordinate with other key holders.
+Your 0xkey organization has policies requiring multiple approvers. Coordinate with other key holders.
 
 ### "Not enough ETH to sweep"
 
@@ -343,7 +343,7 @@ Ensure you're using a valid BIP-39 mnemonic (12 or 24 words) or correctly format
 
 ## Resources
 
-- [ZeroXKey Documentation](https://docs.0xkey.com)
-- [ZeroXKey SDK Server](https://www.npmjs.com/package/@0xkey-io/sdk-server)
-- [ZeroXKey Crypto](https://www.npmjs.com/package/@0xkey-io/crypto)
-- [ZeroXKey CLI](https://github.com/0xkey-io/tkcli)
+- [0xkey Documentation](https://docs.0xkey.io)
+- [0xkey SDK Server](https://www.npmjs.com/package/@0xkey-io/sdk-server)
+- [0xkey Crypto](https://www.npmjs.com/package/@0xkey-io/crypto)
+- [0xkey CLI](https://github.com/0xkey-io/tkcli)

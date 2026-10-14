@@ -82,7 +82,7 @@ export function ExportWallet(props: ExportWalletProps) {
               <li>
                 <p>
                   You have read and agree to{" "}
-                  <a href="https://www.0xkey.com/files/terms-of-service.pdf">
+                  <a href="https://0xkey.io/files/terms-of-service.pdf">
                     ZeroXKey{"'"}s Terms of Service
                   </a>
                   , including the risks related to exporting your private key

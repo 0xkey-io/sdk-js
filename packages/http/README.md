@@ -2,11 +2,11 @@
 
 [![npm](https://img.shields.io/npm/v/@0xkey-io/http?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/http)
 
-A lower-level, fully typed HTTP client for interacting with [ZeroXKey](https://0xkey.com) API.
+A lower-level, fully typed HTTP client for interacting with [ZeroXKey](https://0xkey.io) API.
 
 For signing transactions and messages, check out the higher-level [`@0xkey-io/ethers`](https://www.npmjs.com/package/@0xkey-io/ethers) or [`@0xkey-io/viem`](https://www.npmjs.com/package/@0xkey-io/viem) signers.
 
-ZeroXKey API documentation lives here: https://docs.0xkey.com.
+0xkey API documentation lives here: https://docs.0xkey.io.
 
 ## Getting started
 
@@ -24,11 +24,11 @@ const stamper = new ApiKeyStamper({
   apiPrivateKey: "...",
 });
 
-// The ZeroXKey client uses the passed in stamper to produce signed requests
-// and sends them to ZeroXKey
+// The 0xkey client uses the passed in stamper to produce signed requests
+// and sends them to 0xkey
 const client = new ZeroXKeyClient(
   {
-    baseUrl: "https://api.0xkey.com",
+    baseUrl: "https://api.0xkey.io",
   },
   stamper,
 );
@@ -41,13 +41,13 @@ const data = await client.getWhoami({
 
 ## HTTP fetchers
 
-`@0xkey-io/http` provides fully typed http fetchers for interacting with the ZeroXKey API. You can find all available methods [here](/packages/http/src/__generated__/services/coordinator/public/v1/public_api.fetcher.ts). The types of input parameters and output responses are also exported for convenience.
+`@0xkey-io/http` provides fully typed http fetchers for interacting with the 0xkey API. You can find all available methods [here](/packages/http/src/__generated__/services/coordinator/public/v1/public_api.fetcher.ts). The types of input parameters and output responses are also exported for convenience.
 
 The OpenAPI spec that generates all fetchers is also [included](/packages/http/src/__generated__/services/coordinator/public/v1/public_api.swagger.json) in the package.
 
 ## `withAsyncPolling(...)` helper
 
-All ZeroXKey mutation endpoints are asynchronous (with the exception of private key-related signing endpoints, e.g. `/submit/sign_transaction`, `/submit/sign_raw_payload`). To help you simplify async mutations, `@0xkey-io/http` provides a `withAsyncPolling(...)` wrapper. Here's a quick example:
+All 0xkey mutation endpoints are asynchronous (with the exception of private key-related signing endpoints, e.g. `/submit/sign_transaction`, `/submit/sign_raw_payload`). To help you simplify async mutations, `@0xkey-io/http` provides a `withAsyncPolling(...)` wrapper. Here's a quick example:
 
 ```typescript
 import { withAsyncPolling, ZeroXKeyActivityError } from "@0xkey-io/http";
@@ -90,5 +90,5 @@ See [`createNewEthereumPrivateKey.ts`](/examples/with-ethers/src/createNewEthere
 
 ## See also
 
-- [`@0xkey-io/ethers`](https://www.npmjs.com/package/@0xkey-io/ethers): ZeroXKey Signer for [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer)
-- [`@0xkey-io/viem`](https://www.npmjs.com/package/@0xkey-io/viem): ZeroXKey Custom Account for [`Viem`](https://viem.sh/docs/accounts/custom.html)
+- [`@0xkey-io/ethers`](https://www.npmjs.com/package/@0xkey-io/ethers): 0xkey Signer for [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer)
+- [`@0xkey-io/viem`](https://www.npmjs.com/package/@0xkey-io/viem): 0xkey Custom Account for [`Viem`](https://viem.sh/docs/accounts/custom.html)

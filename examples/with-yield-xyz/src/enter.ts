@@ -8,15 +8,15 @@ import { ZeroXKey as ZeroXKeyServerSDK } from "@0xkey-io/sdk-server";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
-  // Initialize the ZeroXKey client
+  // Initialize the 0xkey client
   const zeroXKeyClient = new ZeroXKeyServerSDK({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPublicKey: process.env.NONROOT_API_PUBLIC_KEY!,
     apiPrivateKey: process.env.NONROOT_API_PRIVATE_KEY!,
     defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID!,
   });
 
-  // Initialize the ZeroXKey Signer
+  // Initialize the 0xkey Signer
   const zeroXKeySigner = new ZeroXKeySigner({
     client: zeroXKeyClient.apiClient(),
     organizationId: process.env.ZEROXKEY_ORGANIZATION_ID!,

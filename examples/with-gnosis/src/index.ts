@@ -25,7 +25,7 @@ async function main() {
       process.env.SIGN_WITH_3
     )
   ) {
-    // You're missing a private key ID. We'll create one for you via calling the ZeroXKey API.
+    // You're missing a private key ID. We'll create one for you via calling the 0xkey API.
     console.log("One or more local private keys not found.");
     await createNewEthereumPrivateKey();
     return;
@@ -41,7 +41,7 @@ async function main() {
     }),
   );
 
-  // Initialize a ZeroXKey Signer
+  // Initialize a 0xkey Signer
   const zeroXKeySigner1 = new ZeroXKeySigner({
     client: zeroXKeyClient,
     organizationId: process.env.ORGANIZATION_ID!,

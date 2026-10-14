@@ -510,7 +510,7 @@ export class IframeStamper {
 
   /**
    * Function to extract an encrypted bundle from the iframe
-   * The bundle should be encrypted to ZeroXKey's Signer enclave's initial public key
+   * The bundle should be encrypted to 0xkey's Signer enclave's initial public key
    * Encryption should be performed with HPKE (RFC 9180).
    * This is used during the wallet import flow.
    * @returns {Promise<string>} The encrypted wallet bundle
@@ -523,7 +523,7 @@ export class IframeStamper {
 
   /**
    * Function to extract an encrypted bundle from the iframe
-   * The bundle should be encrypted to ZeroXKey's Signer enclave's initial public key
+   * The bundle should be encrypted to 0xkey's Signer enclave's initial public key
    * Encryption should be performed with HPKE (RFC 9180).
    * The key format to encode the private key in before it's encrypted and imported: HEXADECIMAL or SOLANA. Defaults to HEXADECIMAL.
    * This is used during the private key import flow.

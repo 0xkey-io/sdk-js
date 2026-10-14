@@ -8,7 +8,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.ZEROXKEY_API_PRIVATE_KEY!,
     apiPublicKey: process.env.ZEROXKEY_API_PUBLIC_KEY!,
     defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID!,

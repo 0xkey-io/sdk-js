@@ -38,7 +38,7 @@ export default function AuthPage() {
     }
   }, [authState, router]);
 
-  // 2) When the ZeroXKey client is ready, create the API keypair once.
+  // 2) When the 0xkey client is ready, create the API keypair once.
   //    - Save its *public key* in a ref.
   //    - Compute Google nonce = sha256(pubkey) and show the Google button.
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function AuthPage() {
     })();
   }, [clientState, createApiKeyPair]);
 
-  // 3) Google success -> exchange OIDC + same pubkey for ZeroXKey session and store it
+  // 3) Google success -> exchange OIDC + same pubkey for 0xkey session and store it
   const handleGoogleSuccess = async (resp: any) => {
     const pubKey = pubKeyRef.current; // must be the exact one we hashed for nonce
     if (!pubKey)
@@ -91,10 +91,10 @@ export default function AuthPage() {
   return (
     <main className="relative min-h-screen bg-gray-50">
       <header className="absolute top-5 left-5">
-        <a href="https://www.0xkey.com" target="_blank" rel="noreferrer">
+        <a href="https://0xkey.io" target="_blank" rel="noreferrer">
           <Image
             src="/logo.svg"
-            alt="ZeroXKey"
+            alt="0xkey"
             width={100}
             height={24}
             priority

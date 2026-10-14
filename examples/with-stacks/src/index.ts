@@ -14,7 +14,7 @@ import * as dotenv from "dotenv";
 // Load environment variables from `.env.local`
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
-// Define the ZeroXKey API client
+// Define the 0xkey API client
 const client = new ZeroXKeyServerSDK({
   apiBaseUrl: process.env.ZEROXKEY_BASE_URL!,
   apiPrivateKey: process.env.ZEROXKEY_API_PRIVATE_KEY!,

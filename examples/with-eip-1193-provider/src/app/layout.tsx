@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ZeroXKey EIP-1193 Provider App",
+  title: "0xkey EIP-1193 Provider App",
   description:
     "Example showcasing how to use the @0xkey-io/eip-1193-provider package.",
 };

@@ -1,6 +1,6 @@
 # Example: `with-balances`
 
-Demonstrates the ZeroXKey balance and asset APIs: fetch token balances for a wallet address, or list supported assets on a network.
+Demonstrates the 0xkey balance and asset APIs: fetch token balances for a wallet address, or list supported assets on a network.
 
 > **Note:** The `getWalletAddressBalances` and `listSupportedAssets` APIs are currently in beta and not available for general use.
 
@@ -25,7 +25,7 @@ Create a `.env.local` file in this directory:
 cp .env.local.example .env.local
 ```
 
-Fill in your API credentials and organization ID. See the [ZeroXKey Quickstart](https://docs.0xkey.com/getting-started/quickstart) for help.
+Fill in your API credentials and organization ID. See the [0xkey Quickstart](https://docs.0xkey.io/getting-started/quickstart) for help.
 
 ### 3/ Running the examples
 

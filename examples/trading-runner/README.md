@@ -31,9 +31,9 @@ $ cd examples/trading-runner/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
@@ -61,7 +61,7 @@ pnpm cli setup
 
 ### 4/ Pre-Fund
 
-Before executing any txns using ZeroXKey, you'll first need the "Trading" address to have some funds. In the ZeroXKey dashboard, look up the address for "Trading" and then send some funds to it from an external wallet or directly from a [faucet](https://goerlifaucet.com/).
+Before executing any txns using 0xkey, you'll first need the "Trading" address to have some funds. In the 0xkey dashboard, look up the address for "Trading" and then send some funds to it from an external wallet or directly from a [faucet](https://goerlifaucet.com/).
 
 ### 5/ Trade
 
@@ -105,7 +105,7 @@ pnpm cli sweep --asset=USDC --amount=1 --key=bob --destination=0xf0609e87Dfa4DA1
 
 ## Understanding policies
 
-First, see our [Policies docs](https://docs.0xkey.com/managing-policies/overview) for a primer on how policies work and are written. You'll notice that the policies used in this demo make use of directly accessing the transaction data of the Ethereum transactions. For example, let's break down the transaction data for an ERC20 `transfer`, specifically USDC ([Etherscan link](https://goerli.etherscan.io/tx/0x11a4f4c0778ddbf7731cab1b07d7db577918397c47bf3270ea9016237c8d4d11)):
+First, see our [Policies docs](https://docs.0xkey.io/managing-policies/overview) for a primer on how policies work and are written. You'll notice that the policies used in this demo make use of directly accessing the transaction data of the Ethereum transactions. For example, let's break down the transaction data for an ERC20 `transfer`, specifically USDC ([Etherscan link](https://goerli.etherscan.io/tx/0x11a4f4c0778ddbf7731cab1b07d7db577918397c47bf3270ea9016237c8d4d11)):
 
 ```
 0xa9059cbb000000000000000000000000d3b433723858612da3260eac465758c7ddfa5e5000000000000000000000000000000000000000000000000000000000000f4240

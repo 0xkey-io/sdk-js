@@ -1,6 +1,6 @@
 # Example: `with-paymaster`
 
-This example shows how to send an erc-20 token on evm networks using ZeroXKey's paymaster (gas sponsorship).
+This example shows how to send an erc-20 token on evm networks using 0xkey's paymaster (gas sponsorship).
 
 See these for more paymaster examples:
 
@@ -24,9 +24,9 @@ $ cd examples/with-paymaster/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 - A (crypto) private key ID
 
@@ -57,5 +57,5 @@ You will see the sender, recipient, amount, and whether gas is sponsored. Confir
 
 - Builds a USDC `transfer` call on Base (`eip155:8453`)
 - Checks the sender's USDC balance
-- Requests ZeroXKey sponsorship by setting `sponsor: true` and `gasStationNonce`
+- Requests 0xkey sponsorship by setting `sponsor: true` and `gasStationNonce`
 - Polls transaction status until included and prints the hash

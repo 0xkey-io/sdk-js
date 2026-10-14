@@ -92,9 +92,9 @@ async function main() {
   // Get the signing message
   const signingMessage = TransactionBuilder.getSigningMessage(rawTxn);
 
-  // Sign the payload using ZeroXKey with HASH_FUNCTION_NOT_APPLICABLE
+  // Sign the payload using 0xkey with HASH_FUNCTION_NOT_APPLICABLE
   // Note: unlike ECDSA, EdDSA's API does not support signing raw digests (see RFC 8032).
-  // ZeroXKey's signer requires an explicit value to be passed here to minimize ambiguity.
+  // 0xkey's signer requires an explicit value to be passed here to minimize ambiguity.
   const txSignResult = await zeroXKeyClient.apiClient().signRawPayload({
     signWith: aptosAddress,
     payload: bytesToHex(signingMessage),

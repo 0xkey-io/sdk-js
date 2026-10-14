@@ -1,11 +1,11 @@
 # Kitchen Sink
 
-A playground and example bank for making ZeroXKey requests in various ways:
+A playground and example bank for making 0xkey requests in various ways:
 
-- `src/http`: create ZeroXKey requests in the most primitive way, using `@0xkey-io/http` and a stamper (e.g. `@0xkey-io/api-key-stamper`)
+- `src/http`: create 0xkey requests in the most primitive way, using `@0xkey-io/http` and a stamper (e.g. `@0xkey-io/api-key-stamper`)
   - [advanced] a sub-folder named `with-poller` is included to demonstrate how to make requests with an activity poller. Requests will almost always complete synchronously, but if you plan on making many concurrent requests and have no tolerance for unfinished requests, then we recommend using the poller, which will wait until the activity completes.
-- `src/sdk-server`: create ZeroXKey requests using `@0xkey-io/sdk-server`, which abstracts away some of the internals in the above method. This is the preferred way to use ZeroXKey.
-- 🚧 WIP `src/sdk-browser`: create ZeroXKey requests using `@0xkey-io/sdk-browser`, which also abstracts away some of the internals from the `@0xkey-io/http` approach. Note that `@0xkey-io/sdk-browser` has an interface identical to `@0xkey-io/sdk-server`
+- `src/sdk-server`: create 0xkey requests using `@0xkey-io/sdk-server`, which abstracts away some of the internals in the above method. This is the preferred way to use ZeroXKey.
+- 🚧 WIP `src/sdk-browser`: create 0xkey requests using `@0xkey-io/sdk-browser`, which also abstracts away some of the internals from the `@0xkey-io/http` approach. Note that `@0xkey-io/sdk-browser` has an interface identical to `@0xkey-io/sdk-server`
 
 ## Getting started
 
@@ -24,9 +24,9 @@ $ cd examples/kitchen-sink/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.

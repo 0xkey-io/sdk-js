@@ -1,6 +1,6 @@
 # Example: `with-solana-paymaster`
 
-This example shows how to send an SPL token on Solana using ZeroXKey's paymaster (fee sponsorship).
+This example shows how to send an SPL token on Solana using 0xkey's paymaster (fee sponsorship).
 
 ## Getting started
 
@@ -19,9 +19,9 @@ $ cd examples/with-solana-paymaster/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 - A Solana wallet address
 
@@ -52,5 +52,5 @@ You will be prompted for a recipient address and USDC amount (default 0.1). The 
 - Derives the sender's and recipient's Associated Token Accounts (ATAs) for USDC
 - Optionally creates the recipient's ATA if it doesn't exist yet (rent covered by the paymaster)
 - Builds a V0 `VersionedTransaction` locally using `@solana/web3.js`
-- Requests ZeroXKey fee sponsorship by setting `sponsor: true` in `solSendTransaction`
+- Requests 0xkey fee sponsorship by setting `sponsor: true` in `solSendTransaction`
 - Polls transaction status until included and prints the transaction signature

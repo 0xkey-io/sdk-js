@@ -10,7 +10,7 @@ interface RootLayoutProps {
 }
 
 export const metadata: Metadata = {
-  title: "ZeroXKey Wallet Stamper Demo",
+  title: "0xkey Wallet Stamper Demo",
   description: "Demonstrates the usage of the @0xkey-io/wallet-stamper package",
 };
 

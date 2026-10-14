@@ -13,7 +13,7 @@ This example includes API stubs to make `whoami` requests and export wallets and
 
 ### DevEx Summary
 
-1. Get iframe public key from export-and-sign iframe (located at export-and-sign.0xkey.com) via `iframeStamper.publicKey()` OR `await iframeStamper.getEmbeddedPublicKey()`. Generally, the latter is recommended. If it does not exist, you can initialize one via `await iframeStamper.initEmbeddedKey()`.
+1. Get iframe public key from export-and-sign iframe (located at export-and-sign.0xkey.io) via `iframeStamper.publicKey()` OR `await iframeStamper.getEmbeddedPublicKey()`. Generally, the latter is recommended. If it does not exist, you can initialize one via `await iframeStamper.initEmbeddedKey()`.
 2. Use iframe public key in any `export` activity (e.g. `exportWalletAccount`).
 3. Inject resulting bundle from (2) into the iframe via `await iframeStamper.injectKeyExportBundle()`. Note that the `address` param is optional, though recommended in case you would like multiple keys to live in the iframe at a time.
 
@@ -38,9 +38,9 @@ $ cd examples/wallet-import-export/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your API private key should be securely managed and **_never_** be committed to git.

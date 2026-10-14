@@ -613,7 +613,7 @@ export function splitSignature(
     const s = uint8ArrayToHexString(raw.slice(32, 64));
 
     // DER signatures do not have a v component
-    // so we return 00 to match what ZeroXKey does
+    // so we return 00 to match what 0xkey does
     const v = "00";
     return { r, s, v };
   }
@@ -630,7 +630,7 @@ export function splitSignature(
     const s = hex.slice(64, 128);
 
     // solana signatures do not have a v component
-    // so we return 00 to match what ZeroXKey does
+    // so we return 00 to match what 0xkey does
     return { r, s, v: "00" };
   }
 
@@ -795,7 +795,7 @@ export function buildSignUpBody(params: {
 }
 
 /**
- * Extracts the public key from a ZeroXKey stamp header value.
+ * Extracts the public key from a 0xkey stamp header value.
  * @param stampHeaderValue - The base64url encoded stamp header value
  * @returns The public key as a hex string
  */
@@ -989,7 +989,7 @@ export async function getAuthProxyConfig(
 }
 
 /**
- * Submits a signed request to ZeroXKey.
+ * Submits a signed request to 0xkey.
  *
  * You can pass in the SignedRequest returned by any of the SDK's
  * stamping methods (stampStampLogin, stampGetPolicies, etc.).
@@ -998,7 +998,7 @@ export async function getAuthProxyConfig(
  * automatic activity polling and result extraction.
  *
  * @param signedRequest A SignedRequest object returned by a stamping method.
- * @returns The parsed JSON response from ZeroXKey.
+ * @returns The parsed JSON response from 0xkey.
  * @throws ZeroXKeyNetworkError if the request fails.
  */
 // TODO: (breaking change) remove this function

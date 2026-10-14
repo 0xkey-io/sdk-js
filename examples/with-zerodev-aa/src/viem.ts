@@ -1,4 +1,4 @@
-// Note: this is a ZeroXKey-specific adaptation of https://github.com/zerodevapp/zerodev-examples/blob/9d348ae55000fb8417551361bc15ea7a3971aaaf/tutorial/completed.ts
+// Note: this is a 0xkey-specific adaptation of https://github.com/zerodevapp/zerodev-examples/blob/9d348ae55000fb8417551361bc15ea7a3971aaaf/tutorial/completed.ts
 // Following along in the tutorial here: https://docs.zerodev.app/sdk/getting-started/tutorial
 import * as path from "path";
 import * as dotenv from "dotenv";
@@ -44,12 +44,12 @@ const zeroXKeyClient = new ZeroXKeyServerSDK({
 
 const main = async () => {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the 0xkey API.
     await createNewWallet();
     return;
   }
 
-  // Initialize a ZeroXKey-powered Viem Account
+  // Initialize a 0xkey-powered Viem Account
   const zeroXKeyAccount = await createAccount({
     client: zeroXKeyClient.apiClient(),
     organizationId: process.env.ORGANIZATION_ID!,

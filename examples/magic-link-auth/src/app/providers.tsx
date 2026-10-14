@@ -24,7 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           router.push("/dashboard");
         },
         onError: (error) => {
-          console.error("ZeroXKey error:", error);
+          console.error("0xkey error:", error);
         },
       }}
     >

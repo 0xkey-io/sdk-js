@@ -673,9 +673,7 @@ export function WalletConnectScreen(props: WalletConnectScreenProps) {
         >
           <QRCodeDisplay
             uri={
-              provider?.isLoading
-                ? "https://www.0xkey.com/"
-                : (provider?.uri ?? "")
+              provider?.isLoading ? "https://0xkey.io/" : (provider?.uri ?? "")
             }
             icon={provider?.info.icon ?? ""}
             isLoading={!!provider?.isLoading}

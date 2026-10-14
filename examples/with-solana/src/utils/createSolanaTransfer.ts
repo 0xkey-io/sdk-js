@@ -80,7 +80,7 @@ export async function createTransfer(input: {
 }
 
 /**
- * Creates a Solana transfer and signs it with ZeroXKey.
+ * Creates a Solana transfer and signs it with 0xkey.
  * @param signer
  * @param fromAddress
  * @param toAddress

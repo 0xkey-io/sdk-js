@@ -28,7 +28,7 @@ export enum AuthenticatorTransport {
 }
 
 /**
- * Authenticator params expected by the ZeroXKey API (for authenticator, user, or sub-organization creation)
+ * Authenticator params expected by the 0xkey API (for authenticator, user, or sub-organization creation)
  */
 export type ZeroXKeyAuthenticatorParams =
   ZeroXKeyApiTypes["v1AuthenticatorParamsV2"];
@@ -53,7 +53,7 @@ export type TPasskeyRegistrationConfig = {
     displayName: string;
   };
 
-  // Name of the authenticator (affects ZeroXKey only, won't be shown on passkey prompts)
+  // Name of the authenticator (affects 0xkey only, won't be shown on passkey prompts)
   // TODO: document restrictions on character sets
   authenticatorName: string;
 

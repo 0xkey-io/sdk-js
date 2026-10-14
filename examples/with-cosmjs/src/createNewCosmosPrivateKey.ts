@@ -12,7 +12,7 @@ export async function createNewCosmosPrivateKey() {
   });
 
   console.log(
-    "`process.env.PRIVATE_KEY_ID` not found; creating a new Cosmos private key on ZeroXKey...\n",
+    "`process.env.PRIVATE_KEY_ID` not found; creating a new Cosmos private key on 0xkey...\n",
   );
 
   const privateKeyName = `Cosmos Key ${crypto.randomBytes(2).toString("hex")}`;

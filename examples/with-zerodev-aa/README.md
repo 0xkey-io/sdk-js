@@ -1,6 +1,6 @@
 # Example: `with-zerodev-aa`
 
-This example shows how to construct and broadcast a transaction using ZeroXKey with [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer) (WIP), [`Viem`](https://viem.sh/docs/clients/wallet.html), and [`Zerodev`](https://docs.zerodev.app/sdk/getting-started/quickstart).
+This example shows how to construct and broadcast a transaction using 0xkey with [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer) (WIP), [`Viem`](https://viem.sh/docs/clients/wallet.html), and [`Zerodev`](https://docs.zerodev.app/sdk/getting-started/quickstart).
 
 If you want to see a demo with passkeys, it's coming 🔜™️!
 
@@ -21,11 +21,11 @@ $ cd examples/with-zerodev-aa/
 
 ### 2a/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet account (address), private key address, or a private key ID
+- A 0xkey wallet account (address), private key address, or a private key ID
 
 ### 2b/ Setting up ZeroDev
 
@@ -43,14 +43,14 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` -- a ZeroXKey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
+- `SIGN_WITH` -- a 0xkey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
 - `ZERODEV_RPC`
 
 ### 3/ Running the scripts
 
 Note: only Viem is supported in this example at this time. Ethers is currently a WIP.
 
-These scripts construct transactions via ZeroXKey and broadcast them via Infura. If the scripts exit because your account isn't funded, you can request funds on https://sepoliafaucet.com/, via Coinbase Wallet, etc.
+These scripts construct transactions via 0xkey and broadcast them via Infura. If the scripts exit because your account isn't funded, you can request funds on https://sepoliafaucet.com/, via Coinbase Wallet, etc.
 
 #### Viem
 
@@ -60,7 +60,7 @@ $ pnpm start-viem
 
 This script will do the following:
 
-1. instantiate a ZeroXKey Viem wallet client
+1. instantiate a 0xkey Viem wallet client
 2. instantiate a Viem public client (to be used to fetch onchain data)
 3. create a ZeroDev Validator
 4. create a ZeroDev Kernel Client (with Paymaster support)

@@ -1,13 +1,13 @@
 # Example: `with-stacks`
 
-A sample script that is showing how to sign a [Stacks](https://docs.hiro.so/stacks/stacks.js) transaction with ZeroXKey.
+A sample script that is showing how to sign a [Stacks](https://docs.hiro.so/stacks/stacks.js) transaction with 0xkey.
 Stacks uses the secp256k1 curve for transaction signing but there is some specific data formatting that takes place for the [signing process](https://github.com/stacksgov/sips/blob/main/sips/sip-005/sip-005-blocks-and-transactions.md#transaction-signing-and-verifying).
 
 Simplified step-by-step process of what this example script is showing:
 
 1. Generate sigHash from unsigned transaction
 2. Generate preSignSigHash
-3. ECDSA sign preSignSigHash with a ZeroXKey private key
+3. ECDSA sign preSignSigHash with a 0xkey private key
 4. Concatenate outputted raw signature (from step 3) components in the order of V + R + S
 5. The resulting signature of step 4 will be the nextSig
 6. Reassign spendingCondition.signature with nextSig
@@ -31,9 +31,9 @@ $ cd examples/with-stacks/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey parent organization
+- A public/private API key pair for 0xkey parent organization
 - A public/private API key pair for the Delegated account
 - An organization ID
 

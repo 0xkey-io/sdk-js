@@ -7,7 +7,7 @@ mode: wide
 Out of the box, it supports `{ signTransaction | signMessage | signTypedData }`. See full implementation [here](https://github.com/0xkey-io/sdk-js/tree/main/packages/ethers) for more details and examples. Note that you must **bring your own provider and connect it** to the ZeroXKeySigner.
 
 ```js
-// Initialize a ZeroXKey Signer
+// Initialize a 0xkey Signer
 const zeroXKeySigner = new ZeroXKeySigner({
   ...
 });

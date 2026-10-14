@@ -131,10 +131,10 @@ export default function AuthPage() {
   return (
     <main className="relative min-h-screen bg-gray-50">
       <header className="absolute top-5 left-5">
-        <a href="https://www.0xkey.com" target="_blank" rel="noreferrer">
+        <a href="https://0xkey.io" target="_blank" rel="noreferrer">
           <Image
             src="/logo.svg"
-            alt="ZeroXKey"
+            alt="0xkey"
             width={100}
             height={24}
             priority

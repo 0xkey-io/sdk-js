@@ -1,6 +1,6 @@
 # Example: `deployer`
 
-This example shows how to deploy a smart contract using [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer) with ZeroXKey.
+This example shows how to deploy a smart contract using [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer) with 0xkey.
 
 ## Getting started
 
@@ -19,9 +19,9 @@ $ cd examples/deployer/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 - A (crypto) private key ID
 
@@ -37,7 +37,7 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `PRIVATE_KEY_ID` -- if you leave it blank, we'll create one for you via calling the ZeroXKey API
+- `PRIVATE_KEY_ID` -- if you leave it blank, we'll create one for you via calling the 0xkey API
 - `INFURA_KEY` -- if this is not set, it will default to using the Community Infura key
 
 ### 3/ Running the scripts
@@ -49,7 +49,7 @@ $ pnpm start
 This script will do the following:
 
 1. Compile the contract specified in `compile.ts`
-2. Deploy the contract via ZeroXKey signer
+2. Deploy the contract via 0xkey signer
 
 Notes:
 

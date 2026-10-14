@@ -4,7 +4,7 @@ title: "WebauthnStamper"
 
 ## Introduction
 
-The [`@0xkey-io/webauthn-stamper`](https://www.npmjs.com/package/@0xkey-io/webauthn-stamper) package is used for stamping requests made to ZeroXKey's API with WebAuthn credentials, but specifically for use with passkeys.
+The [`@0xkey-io/webauthn-stamper`](https://www.npmjs.com/package/@0xkey-io/webauthn-stamper) package is used for stamping requests made to 0xkey's API with WebAuthn credentials, but specifically for use with passkeys.
 
 For more information on passkeys and WebAuthn refer to [this section](/authentication/passkeys/introduction).
 
@@ -124,7 +124,7 @@ const stamper = new WebAuthnStamper({
 
 // New HTTP client able to sign with passkeys!
 const httpClient = new ZeroXKeyClient(
-  { baseUrl: "https://api.0xkey.com" },
+  { baseUrl: "https://api.0xkey.io" },
   stamper,
 );
 ```
@@ -144,7 +144,7 @@ required
 
 >
 
-The ZeroXKey activity request, or query to be sent to ZeroXKey's API.
+The 0xkey activity request, or query to be sent to 0xkey's API.
 </ParamField>
 
 #### Types

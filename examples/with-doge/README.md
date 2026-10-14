@@ -3,7 +3,7 @@
 This script shows how to send Dogecoin on testnet using:
 
 - [bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib) for transaction building.
-- ZeroXKey for signing raw payload digests (secp256k1).
+- 0xkey for signing raw payload digests (secp256k1).
 - [Electrs Testnet API](https://doge-electrs-testnet-demo.qed.me/) for UTXO lookup & broadcasting.
 
 **1.Network Parameters**
@@ -59,8 +59,8 @@ async function zeroXKeySignDigestHex(digestHex: string): Promise<string> { ... }
 ```
 
 - Bitcoin-style txs use a sighash digest (32 bytes) per input
-- We send that digest to ZeroXKey via signRawPayload
-- ZeroXKey returns { r, s }
+- We send that digest to 0xkey via signRawPayload
+- 0xkey returns { r, s }
 - We normalize s into the “low-S” range (required by Bitcoin/Dogecoin standardness rules)
 - Convert (r, s) into a DER signature for scriptSig
 
@@ -112,7 +112,7 @@ for (let i = 0; i < UTXOS.length; i++) {
 ```
 
 - Compute sighash digest for each input
-- Ask ZeroXKey to sign → DER sig
+- Ask 0xkey to sign → DER sig
 - Append 0x01 (SIGHASH_ALL flag)
 - Build scriptSig = [sig, pubkey]
 
@@ -126,7 +126,7 @@ To recap the full flow:
 1. Fetch UTXOs (unspent coins)
 2. Select enough inputs to cover send+fee
 3. Build transaction (inputs, outputs, change)
-4. Compute sighashes & sign with ZeroXKey
+4. Compute sighashes & sign with 0xkey
 5. Insert signatures & pubkeys into inputs
 6. Serialize (toHex) and broadcast via Electrs
 7. Poll for confirmation
@@ -148,13 +148,13 @@ $ cd examples/with-doge/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet
+- A 0xkey wallet
 
-Create a ZeroXKey new wallet account on Dogecoin testnet and use a [faucet](https://faucet.triangleplatform.com/dogecoin/testnet) to get some test DOGE.
+Create a 0xkey new wallet account on Dogecoin testnet and use a [faucet](https://faucet.triangleplatform.com/dogecoin/testnet) to get some test DOGE.
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 
@@ -168,8 +168,8 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGNER_ADDRESS`: ZeroXKey wallet Doge address (testnet)
-- `SIGNER_ADDRESS_PUBKEY`: ZeroXKey wallet address public key
+- `SIGNER_ADDRESS`: 0xkey wallet Doge address (testnet)
+- `SIGNER_ADDRESS_PUBKEY`: 0xkey wallet address public key
 - `DEST_ADDRESS`: Doge testnet destination address (for simplicity you can send it to yourself)
 
 ### 3/ Running the scripts

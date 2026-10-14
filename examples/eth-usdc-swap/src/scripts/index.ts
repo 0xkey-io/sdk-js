@@ -22,7 +22,7 @@ export async function main() {
   const { sponsored } = await prompts({
     type: "confirm",
     name: "sponsored",
-    message: "Use ZeroXKey gas sponsorship?",
+    message: "Use 0xkey gas sponsorship?",
   });
 
   const ethBalance = await provider.getBalance(wallet);

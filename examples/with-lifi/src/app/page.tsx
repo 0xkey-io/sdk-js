@@ -176,7 +176,7 @@ export default function BridgePage() {
           }),
         );
 
-        // create a ZeroXKey Solana signer
+        // create a 0xkey Solana signer
         const zeroXKeySolSigner = new ZeroXKeySigner({
           organizationId: walletAccountResponse[0].organizationId,
           client: httpClient!,

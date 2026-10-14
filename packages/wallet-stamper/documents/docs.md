@@ -4,7 +4,7 @@ title: "WalletStamper"
 
 ## Introduction
 
-The [`@0xkey-io/wallet-stamper`](https://www.npmjs.com/package/@0xkey-io/wallet-stamper) package provides a flexible mechanism for using your Solana or EVM wallet to stamp and approve activity requests for ZeroXKey's API. This stamping process leverages your wallet's signature key to authenticate requests securely.
+The [`@0xkey-io/wallet-stamper`](https://www.npmjs.com/package/@0xkey-io/wallet-stamper) package provides a flexible mechanism for using your Solana or EVM wallet to stamp and approve activity requests for 0xkey's API. This stamping process leverages your wallet's signature key to authenticate requests securely.
 
 ## Installing
 
@@ -103,7 +103,7 @@ export type WalletInterface = SolanaWalletInterface | EvmWalletInterface;
 
 ### `stamp: (input: string) => Promise<TStamp>`
 
-Signs the payload using the wallet's private key and returns the stamp to be used in the HTTP headers for authenticating requests to ZeroXKey's API.
+Signs the payload using the wallet's private key and returns the stamp to be used in the HTTP headers for authenticating requests to 0xkey's API.
 
 #### Parameters
 
@@ -114,7 +114,7 @@ required
 
 >
 
-The payload that to be stamped. This is the stringified JSON request body that you want to send to ZeroXKey's API.
+The payload that to be stamped. This is the stringified JSON request body that you want to send to 0xkey's API.
 </ParamField>
 
 #### Types
@@ -138,7 +138,7 @@ interface TStamper {
 
 ## Example
 
-The example below shows how to initialize and use the `WalletStamper` with the `ZeroXKeyClient` to make a request to ZeroXKey's [`/public/v1/query/whoami`](/api-reference/sessions/who-am-i) endpoint:
+The example below shows how to initialize and use the `WalletStamper` with the `ZeroXKeyClient` to make a request to 0xkey's [`/public/v1/query/whoami`](/api-reference/sessions/who-am-i) endpoint:
 
 ```js
 // Import the dependencies for the Solana
@@ -175,9 +175,9 @@ const walletStamper = new WalletStamper(new SolanaWallet());
 // Instantiate the ZeroXKeyClient with the WalletStamper
 const client = new ZeroXKeyClient({ baseUrl: BASE_URL }, walletStamper);
 
-// You're now ready to make requests to ZeroXKey's API 🎉
+// You're now ready to make requests to 0xkey's API 🎉
 ```
 
 ## Conclusion
 
-The `WalletStamper` class provides a seamless integration with ZeroXKey's API, enabling you to leverage your existing wallet for secure, authenticated requests. By following this guide, you can quickly set up and start using `WalletStamper` in your projects.
+The `WalletStamper` class provides a seamless integration with 0xkey's API, enabling you to leverage your existing wallet for secure, authenticated requests. By following this guide, you can quickly set up and start using `WalletStamper` in your projects.

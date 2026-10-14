@@ -1,12 +1,12 @@
 # Example: `with-offline`
 
-This example shows how to sign a ZeroXKey request in offline contexts. Note that "offline" doesn't need to mean _actually_ offline. Producing a signed request without sending it to ZeroXKey has many different use cases:
+This example shows how to sign a 0xkey request in offline contexts. Note that "offline" doesn't need to mean _actually_ offline. Producing a signed request without sending it to 0xkey has many different use cases:
 
 - produce a signature on an actually offline laptop, then export that signed request to an online machine which has internet connectivity
-- produce a signed ZeroXKey requests in a sandboxed browser environment (service worker, Chrome extension) which has access to API keys but isn't able to make direct network requests to ZeroXKey's API for security reasons. Instead, signed requests are forwarded to a backend component before hitting the ZeroXKey API. This emulates the setup from the previous bullet point
-- produce signed ZeroXKey requests in browser contexts that can be forwarded to a backend application connected to ZeroXKey's API. While ZeroXKey allows browsers to POST directly to its API (open CORS policy), proxying to a backend has advantages: collecting metrics, feature toggle or circuit breakers, etc.
+- produce a signed 0xkey requests in a sandboxed browser environment (service worker, Chrome extension) which has access to API keys but isn't able to make direct network requests to 0xkey's API for security reasons. Instead, signed requests are forwarded to a backend component before hitting the 0xkey API. This emulates the setup from the previous bullet point
+- produce signed 0xkey requests in browser contexts that can be forwarded to a backend application connected to 0xkey's API. While 0xkey allows browsers to POST directly to its API (open CORS policy), proxying to a backend has advantages: collecting metrics, feature toggle or circuit breakers, etc.
 
-This example is similar, in spirit, to running our CLI (`0xkey request`) with the `--no-post` option set. When called with `--no-post`, [ZeroXKey's CLI](https://github.com/0xkey-io/tkcli) produces a stamp and displays the cURL command to use. We show the same thing here, but do it with TypeScript and rely on the ZeroXKey SDK typed helpers to generate the signed request components.
+This example is similar, in spirit, to running our CLI (`0xkey request`) with the `--no-post` option set. When called with `--no-post`, [0xkey's CLI](https://github.com/0xkey-io/tkcli) produces a stamp and displays the cURL command to use. We show the same thing here, but do it with TypeScript and rely on the 0xkey SDK typed helpers to generate the signed request components.
 
 ## Getting started
 
@@ -25,9 +25,9 @@ $ cd examples/with-offline/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
@@ -61,18 +61,18 @@ Here's a sample output:
 $ pnpm start
 
 Configuration loaded!
-Creating a new Private Key for organization b8d8fa59-e1b7-4897-866a-551c32d061fa using the configured ZeroXKey API key...
+Creating a new Private Key for organization b8d8fa59-e1b7-4897-866a-551c32d061fa using the configured 0xkey API key...
 ? New Private Key Name: Hello
 Your signed request details:
 ✅ Request URL:
-        https://api.0xkey.com/public/v1/submit/create_private_keys
+        https://api.0xkey.io/public/v1/submit/create_private_keys
 ✅ Stamp header name and value
         X-Stamp: eyJwdWJsaWNLZXkiOiIwM2JmMTYyNTc2ZWI4ZGZlY2YzM2Q5Mjc1ZDA5NTk1Mjg0ZjZjNGRmMGRiNjE1NmMzYzU4Mjc3Nzg4NmEwZWUwYWMiLCJzY2hlbWUiOiJTSUdOQVRVUkVfU0NIRU1FX1RLX0FQSV9QMjU2Iiwic2lnbmF0dXJlIjoiMzA0NTAyMjAxOGNkNzVhYzUyZjhhMGQzMzdkZTZjMzJjOGNhODUyNDdlODQwYzQ2MDIxZWY1MjQ0MTJlYzFhNGFlNTAyNDMxMDIyMTAwZjRlZWQwZTJlMzExYTkyMDAzZmQ4MmFkMmQ2MTRkMDI2NGI2ZjUxNjkwNzA5MWFmMmFmZGNmOGZiOTVlY2IxMSJ9
 ✅ POST body:
         {"timestampMs":"1692804998969","type":"ACTIVITY_TYPE_CREATE_PRIVATE_KEYS_V2","organizationId":"b8d8fa59-e1b7-4897-866a-551c32d061fa","parameters":{"privateKeys":[{"privateKeyName":"Hello","curve":"CURVE_SECP256K1","addressFormats":["ADDRESS_FORMAT_ETHEREUM"],"privateKeyTags":[]}]}}
 
-For example, you can send this request to ZeroXKey by running the following cURL command:
-        curl -X POST -d'{"timestampMs":"1692804998969","type":"ACTIVITY_TYPE_CREATE_PRIVATE_KEYS_V2","organizationId":"b8d8fa59-e1b7-4897-866a-551c32d061fa","parameters":{"privateKeys":[{"privateKeyName":"Hello","curve":"CURVE_SECP256K1","addressFormats":["ADDRESS_FORMAT_ETHEREUM"],"privateKeyTags":[]}]}}' -H'X-Stamp:eyJwdWJsaWNLZXkiOiIwM2JmMTYyNTc2ZWI4ZGZlY2YzM2Q5Mjc1ZDA5NTk1Mjg0ZjZjNGRmMGRiNjE1NmMzYzU4Mjc3Nzg4NmEwZWUwYWMiLCJzY2hlbWUiOiJTSUdOQVRVUkVfU0NIRU1FX1RLX0FQSV9QMjU2Iiwic2lnbmF0dXJlIjoiMzA0NTAyMjAxOGNkNzVhYzUyZjhhMGQzMzdkZTZjMzJjOGNhODUyNDdlODQwYzQ2MDIxZWY1MjQ0MTJlYzFhNGFlNTAyNDMxMDIyMTAwZjRlZWQwZTJlMzExYTkyMDAzZmQ4MmFkMmQ2MTRkMDI2NGI2ZjUxNjkwNzA5MWFmMmFmZGNmOGZiOTVlY2IxMSJ9' -v 'https://api.0xkey.com/public/v1/submit/create_private_keys'
+For example, you can send this request to 0xkey by running the following cURL command:
+        curl -X POST -d'{"timestampMs":"1692804998969","type":"ACTIVITY_TYPE_CREATE_PRIVATE_KEYS_V2","organizationId":"b8d8fa59-e1b7-4897-866a-551c32d061fa","parameters":{"privateKeys":[{"privateKeyName":"Hello","curve":"CURVE_SECP256K1","addressFormats":["ADDRESS_FORMAT_ETHEREUM"],"privateKeyTags":[]}]}}' -H'X-Stamp:eyJwdWJsaWNLZXkiOiIwM2JmMTYyNTc2ZWI4ZGZlY2YzM2Q5Mjc1ZDA5NTk1Mjg0ZjZjNGRmMGRiNjE1NmMzYzU4Mjc3Nzg4NmEwZWUwYWMiLCJzY2hlbWUiOiJTSUdOQVRVUkVfU0NIRU1FX1RLX0FQSV9QMjU2Iiwic2lnbmF0dXJlIjoiMzA0NTAyMjAxOGNkNzVhYzUyZjhhMGQzMzdkZTZjMzJjOGNhODUyNDdlODQwYzQ2MDIxZWY1MjQ0MTJlYzFhNGFlNTAyNDMxMDIyMTAwZjRlZWQwZTJlMzExYTkyMDAzZmQ4MmFkMmQ2MTRkMDI2NGI2ZjUxNjkwNzA5MWFmMmFmZGNmOGZiOTVlY2IxMSJ9' -v 'https://api.0xkey.io/public/v1/submit/create_private_keys'
 
 Important note: this request is only valid for 24hrs. After that, a new request needs to be generated.
 ```

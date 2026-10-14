@@ -1,6 +1,6 @@
 # Example: `with-uniswap`
 
-This example shows how to construct and broadcast Uniswap-related transactions, built on top of our [`@0xkey-io/ethers` signer](https://www.npmjs.com/package/@0xkey-io/ethers) with ZeroXKey.
+This example shows how to construct and broadcast Uniswap-related transactions, built on top of our [`@0xkey-io/ethers` signer](https://www.npmjs.com/package/@0xkey-io/ethers) with 0xkey.
 
 ## Getting started
 
@@ -19,11 +19,11 @@ $ cd examples/with-uniswap/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet account (address), private key address, or a private key ID
+- A 0xkey wallet account (address), private key address, or a private key ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 
@@ -37,8 +37,8 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` -- a ZeroXKey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
-- `PRIVATE_KEY_ID` -- if you leave it blank, we'll create one for you via calling the ZeroXKey API
+- `SIGN_WITH` -- a 0xkey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
+- `PRIVATE_KEY_ID` -- if you leave it blank, we'll create one for you via calling the 0xkey API
 - `INFURA_KEY` (replace it with your own if you don't want to use the community key)
 
 ### 3/ Running the script
@@ -53,7 +53,7 @@ Configure your trade via `config.ts`, namely `UniV3SwapConfig`. Ensure you have 
 $ pnpm start
 ```
 
-The script constructs a transaction via ZeroXKey and broadcasts via Infura. If the script exits because your account isn't funded, you can request funds on https://goerlifaucet.com/.
+The script constructs a transaction via 0xkey and broadcasts via Infura. If the script exits because your account isn't funded, you can request funds on https://goerlifaucet.com/.
 
 Visit the Etherscan link to view your transaction; you have successfully made your first transaction with ZeroXKey!
 

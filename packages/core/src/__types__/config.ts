@@ -22,9 +22,9 @@ export interface MfaContext {
 }
 
 /**
- * ZeroXKeyHttpClientConfig defines the configuration for the ZeroXKey HTTP client.
+ * ZeroXKeyHttpClientConfig defines the configuration for the 0xkey HTTP client.
  * @interface ZeroXKeyHttpClientConfig
- * @property apiBaseUrl - base URL for the ZeroXKey API.
+ * @property apiBaseUrl - base URL for the 0xkey API.
  * @property organizationId - ID of the organization.
  * @property authProxyUrl - URL for the auth proxy.
  * @property authProxyConfigId - ID for the auth proxy configuration.
@@ -35,8 +35,8 @@ export interface MfaContext {
  * @property storageManager - storage manager for session management.
  * @property defaultStamperType - default stamper type to be used for requests.
  * @remarks
- * This interface is used to configure the ZeroXKey HTTP client, which is responsible for making API
- * requests to ZeroXKey. It includes options for custom API key stamping, passkey stamping, wallet stamping,
+ * This interface is used to configure the 0xkey HTTP client, which is responsible for making API
+ * requests to 0xkey. It includes options for custom API key stamping, passkey stamping, wallet stamping,
  * and session management through a storage manager.
  * The `activityPoller` configuration allows for setting up a polling mechanism for activities, with options for the polling interval and number of retries.
  */
@@ -60,23 +60,23 @@ export interface ZeroXKeyHttpClientConfig {
 }
 
 /**
- * ZeroXKeySDKClientConfig defines the configuration for the ZeroXKey SDK client.
+ * ZeroXKeySDKClientConfig defines the configuration for the 0xkey SDK client.
  * @interface ZeroXKeySDKClientConfig
- * @property apiBaseUrl - base URL for the ZeroXKey API.
+ * @property apiBaseUrl - base URL for the 0xkey API.
  * @property authProxyUrl - URL for the auth proxy.
  * @property authProxyConfigId - ID for the auth proxy configuration.
  * @property organizationId - ID of the organization.
  * @property passkeyConfig - configuration for the passkey stamper.
  * @property walletConfig - configuration for the wallet manager.
  * @remarks
- * This interface is used to configure the ZeroXKey SDK client, which is responsible for managing
- * interactions with the ZeroXKey API and handling user authentication and wallet management.
- * The `apiBaseUrl` is the endpoint for the ZeroXKey API, while `authProxyUrl` and `authProxyConfigId` are used for authentication proxy configurations.
+ * This interface is used to configure the 0xkey SDK client, which is responsible for managing
+ * interactions with the 0xkey API and handling user authentication and wallet management.
+ * The `apiBaseUrl` is the endpoint for the 0xkey API, while `authProxyUrl` and `authProxyConfigId` are used for authentication proxy configurations.
  * The `organizationId` is required to identify the parent organization.
  * The `passkeyConfig` allows for configuring the passkey stamper, which is used for user authentication via passkeys.
  */
 export interface ZeroXKeySDKClientConfig {
-  /** base URL for the ZeroXKey API. */
+  /** base URL for the 0xkey API. */
   apiBaseUrl?: string | undefined;
   /** URL for the auth proxy. */
   authProxyUrl?: string | undefined;

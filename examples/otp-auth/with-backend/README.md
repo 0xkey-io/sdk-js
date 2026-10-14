@@ -1,15 +1,15 @@
 # Example: `otp-auth-with-backend`
 
-This is a minimal Next.js app showing how to implement [email OTP authentication](https://docs.0xkey.com/authentication/email) with ZeroXKey using the [@0xkey-io/react-wallet-kit](https://docs.0xkey.com/sdks/react), wired up to **your own backend** via Next.js Server Actions (see: [Advanced backend authentication](https://docs.0xkey.com/sdks/react/advanced-backend-authentication)).
+This is a minimal Next.js app showing how to implement [email OTP authentication](https://docs.0xkey.io/authentication/email) with 0xkey using the [@0xkey-io/react-wallet-kit](https://docs.0xkey.io/sdks/react), wired up to **your own backend** via Next.js Server Actions (see: [Advanced backend authentication](https://docs.0xkey.io/sdks/react/advanced-backend-authentication)).
 
-> Using your own backend is **optional** — it’s an alternative to the ZeroXKey [Auth Proxy](https://docs.0xkey.com/reference/auth-proxy) for teams that prefer to manage authentication themselves.
+> Using your own backend is **optional** — it’s an alternative to the ZeroXKey [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy) for teams that prefer to manage authentication themselves.
 
 ### What this demo shows
 
 A high-level summary of the user experience and what appears on screen:
 
 - Authenticate with email OTP into a sub-organization.
-- Automatically create or access a ZeroXKey sub-organization / embedded wallet tied to the user's email address.
+- Automatically create or access a 0xkey sub-organization / embedded wallet tied to the user's email address.
 
 Once logged in, access a dashboard with two panels:
 
@@ -33,15 +33,15 @@ Once logged in, access a dashboard with two panels:
    After a successful verification, look up the sub-organization associated with the user’s email:
 
 - Call `getSuborgsAction({ filterValue: email })`.
-- If no result then call `createSuborgAction({ email })`. The new sub-organization will automatically include a **ZeroXKey wallet** containing one **Ethereum** and one **Solana** account.
+- If no result then call `createSuborgAction({ email })`. The new sub-organization will automatically include a **0xkey wallet** containing one **Ethereum** and one **Solana** account.
 
 4. **Complete the login**
    Call `otpLogin` in the backend with the `verificationToken`, the `suborgID` from step 3, and the `publicKey` that was securely generated client-side using `createApiKeyPair` before initiating the OTP.
-   Under the hood, `otpLogin` associates this publicKey with the user’s sub-organization in ZeroXKey, effectively registering it as the active session key.
+   Under the hood, `otpLogin` associates this publicKey with the user’s sub-organization in 0xkey, effectively registering it as the active session key.
    The call returns a new `session JWT` that references this keypair stored in the client’s indexedDb, which will be used to sign all subsequent authenticated requests.
 
-> **Note:** The session JWT is a signed piece of metadata issued by ZeroXKey that references the client-side API keypair stored in indexedDb. It’s useful for server-side verification or associating user metadata, but cannot be used to authenticate or stamp API requests.
-> Only the client-stored session keypair can create valid x-stamp signatures for ZeroXKey API calls — the JWT alone is not sufficient outside the client context.
+> **Note:** The session JWT is a signed piece of metadata issued by 0xkey that references the client-side API keypair stored in indexedDb. It’s useful for server-side verification or associating user metadata, but cannot be used to authenticate or stamp API requests.
+> Only the client-stored session keypair can create valid x-stamp signatures for 0xkey API calls — the JWT alone is not sufficient outside the client context.
 
 5. **Store the session**
    Use `storeSession()` to persist the session in the browser. The SDK automatically handles authentication state and lifecycle management for you.
@@ -68,9 +68,9 @@ $ cd examples/otp-auth/with-backend
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your API private key should be securely managed and **_never_** be committed to git.

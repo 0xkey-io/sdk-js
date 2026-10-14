@@ -5,13 +5,13 @@
  * disaster recovery. The workflow:
  *
  * 1. Create an encryption keypair in ZeroXKey (for encryption only, not on-chain)
- * 2. Get the public key from ZeroXKey
+ * 2. Get the public key from 0xkey
  * 3. Encrypt your recovery bundle with the public key
  * 4. Store the encrypted bundle in YOUR infrastructure (not ZeroXKey)
  *
  * Security Properties:
- * - ZeroXKey never sees your recovery material
- * - Recovery requires BOTH ZeroXKey authentication AND access to your stored bundle
+ * - 0xkey never sees your recovery material
+ * - Recovery requires BOTH 0xkey authentication AND access to your stored bundle
  * - This is a 2-of-2 security model
  *
  * Usage: pnpm run path2:setup
@@ -62,13 +62,13 @@ async function main() {
   console.log();
   console.log("This will:");
   console.log("1. Create an encryption keypair in ZeroXKey");
-  console.log("2. Encrypt your recovery material with ZeroXKey's public key");
+  console.log("2. Encrypt your recovery material with 0xkey's public key");
   console.log("3. Save the encrypted bundle locally (you store this securely)");
   console.log();
   console.log(
     "Note: The encrypted bundle should be stored in YOUR infrastructure,",
   );
-  console.log("not on ZeroXKey. This creates a 2-of-2 security model.");
+  console.log("not on 0xkey. This creates a 2-of-2 security model.");
   console.log();
 
   // Validate environment variables
@@ -78,9 +78,9 @@ async function main() {
     throw new Error("Missing required environment variable: ORGANIZATION_ID");
   }
 
-  // Initialize ZeroXKey client
+  // Initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.com",
+    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: organizationId,

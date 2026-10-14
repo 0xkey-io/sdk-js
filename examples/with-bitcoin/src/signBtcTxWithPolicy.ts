@@ -17,7 +17,7 @@ async function main() {
   const psbtCreateInfo = await createUnsignedPsbt();
   const unsignedPsbtHex = psbtCreateInfo.psbt.toHex();
 
-  // initialize ZeroXKey client
+  // initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
     apiBaseUrl: process.env.BASE_URL!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,

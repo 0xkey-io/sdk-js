@@ -22,7 +22,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the 0xkey API.
     await createNewWallet();
     return;
   }
@@ -66,7 +66,7 @@ async function main() {
     signature,
   });
 
-  print("ZeroXKey-powered signature - raw hex message:", `${signature}`);
+  print("0xkey-powered signature - raw hex message:", `${signature}`);
   assertEqual(address, recoveredAddress);
 
   // 2. Sign a raw bytes message
@@ -79,7 +79,7 @@ async function main() {
     signature,
   });
 
-  print("ZeroXKey-powered signature - raw bytes message:", `${signature}`);
+  print("0xkey-powered signature - raw bytes message:", `${signature}`);
   assertEqual(address, recoveredAddress);
 
   // 3. Sign typed data (EIP-712)
@@ -127,7 +127,7 @@ async function main() {
     signature,
   });
 
-  print("ZeroXKey-powered signature - typed data (EIP-712):", `${signature}`);
+  print("0xkey-powered signature - typed data (EIP-712):", `${signature}`);
   assertEqual(address, recoveredAddress);
 }
 

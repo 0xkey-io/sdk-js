@@ -55,7 +55,7 @@ function RootLayout({ children }: RootLayoutProps) {
               walletConnect: {
                 projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
                 appMetadata: {
-                  name: "ZeroXKey Wallet",
+                  name: "0xkey Wallet",
                   description: "A wallet for ZeroXKey",
                   url: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_URL!,
                   icons: ["/favicon.svg"],

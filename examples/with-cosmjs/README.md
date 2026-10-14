@@ -1,6 +1,6 @@
 # Example: `with-cosmjs`
 
-This example shows how to sign and broadcast a Cosmos transaction (on Celestia testnet) using [`CosmJS`](https://github.com/cosmos/cosmjs) with ZeroXKey.
+This example shows how to sign and broadcast a Cosmos transaction (on Celestia testnet) using [`CosmJS`](https://github.com/cosmos/cosmjs) with 0xkey.
 
 ## Getting started
 
@@ -19,9 +19,9 @@ $ cd examples/with-cosmjs/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
@@ -36,7 +36,7 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` -- if you leave it blank, we'll create a wallet for you via calling the ZeroXKey API
+- `SIGN_WITH` -- if you leave it blank, we'll create a wallet for you via calling the 0xkey API
 
 ### 3/ Running the script
 
@@ -44,7 +44,7 @@ Now open `.env.local` and add the missing environment variables:
 $ pnpm start
 ```
 
-The script signs your transaction via ZeroXKey and broadcasts on Celestia testnet. If the script exits because your account isn't funded, you can request funds via the [Celestia Discord](https://discord.gg/celestiacommunity), or https://faucet.celestia-arabica-11.com/.
+The script signs your transaction via 0xkey and broadcasts on Celestia testnet. If the script exits because your account isn't funded, you can request funds via the [Celestia Discord](https://discord.gg/celestiacommunity), or https://faucet.celestia-arabica-11.com/.
 
 Visit the explorer links to view your transaction; you have successfully sent your first transaction with ZeroXKey!
 

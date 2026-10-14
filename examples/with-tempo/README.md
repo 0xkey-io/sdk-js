@@ -1,6 +1,6 @@
 # Example: `with-tempo`
 
-This example shows how to construct and broadcast a transaction on the Tempo testnet using ZeroXKey.
+This example shows how to construct and broadcast a transaction on the Tempo testnet using 0xkey.
 
 ## Getting started
 
@@ -19,11 +19,11 @@ $ cd examples/with-tempo/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet account (address), private key address, or a private key ID
+- A 0xkey wallet account (address), private key address, or a private key ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 
@@ -37,8 +37,8 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` -- a ZeroXKey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
-- `SPONSOR_WITH` -- (optional) a ZeroXKey wallet address to sponsor transaction fees. If not set, the public sponsor endpoint will be used when sponsoring is enabled.
+- `SIGN_WITH` -- a 0xkey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
+- `SPONSOR_WITH` -- (optional) a 0xkey wallet address to sponsor transaction fees. If not set, the public sponsor endpoint will be used when sponsoring is enabled.
 
 ### 3/ Running the scripts
 
@@ -53,7 +53,7 @@ This script will do the following:
 1. connect to and check your testnet balance
 2. send some TIP-20 token via a type 2 EIP-1559 transaction
 
-The script constructs a transaction, signs it with ZeroXKey and broadcasts through Tempo's client RPC.
+The script constructs a transaction, signs it with 0xkey and broadcasts through Tempo's client RPC.
 If the script exits because your account isn't funded, you can request funds on https://docs.tempo.xyz/guide/use-accounts/add-funds.
 
 Visit the explorer link to view your transaction; you have successfully sent your first transaction with ZeroXKey!

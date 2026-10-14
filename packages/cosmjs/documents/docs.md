@@ -5,7 +5,7 @@ mode: wide
 ---
 
 ```js
-// Initialize a ZeroXKey Signer
+// Initialize a 0xkey Signer
 const zeroXKeySigner = await ZeroXKeyDirectWallet.init({
   config: {
     ...

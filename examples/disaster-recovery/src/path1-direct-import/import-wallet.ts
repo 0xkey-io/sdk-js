@@ -2,7 +2,7 @@
  * Path 1: Direct Wallet Import - Import HD Wallet (Mnemonic)
  *
  * This example demonstrates how to import an HD wallet (BIP-39 mnemonic)
- * into ZeroXKey's secure enclaves for disaster recovery.
+ * into 0xkey's secure enclaves for disaster recovery.
  *
  * Security Note: In production, perform the encryption step on an air-gapped
  * machine and transport only the encrypted bundle.
@@ -40,9 +40,9 @@ async function main() {
     );
   }
 
-  // Initialize ZeroXKey client
+  // Initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.com",
+    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: organizationId,
@@ -51,16 +51,16 @@ async function main() {
   console.log("Step 1: Initialize import bundle from ZeroXKey");
   console.log("-".repeat(40));
   console.log(
-    "This creates a temporary public key in ZeroXKey's enclave for encrypting your mnemonic.",
+    "This creates a temporary public key in 0xkey's enclave for encrypting your mnemonic.",
   );
   console.log();
 
-  // Step 1: Initialize the import - get a temporary encryption key from ZeroXKey
+  // Step 1: Initialize the import - get a temporary encryption key from 0xkey
   const initResult = await zeroXKeyClient.apiClient().initImportWallet({
     userId,
   });
 
-  console.log("Import bundle received from ZeroXKey enclave.");
+  console.log("Import bundle received from 0xkey enclave.");
   console.log();
 
   // Step 2: Get the mnemonic from user (in production, this would be done offline)
@@ -96,7 +96,7 @@ async function main() {
     initial: `DR-Wallet-${Date.now()}`,
   });
 
-  // Encrypt the mnemonic to ZeroXKey's ephemeral public key
+  // Encrypt the mnemonic to 0xkey's ephemeral public key
   console.log();
   console.log("Encrypting wallet material...");
   const encryptedBundle = await encryptWalletToBundle({
@@ -109,7 +109,7 @@ async function main() {
   console.log("Wallet material encrypted successfully.");
   console.log();
 
-  // Step 3: Import the encrypted wallet into ZeroXKey
+  // Step 3: Import the encrypted wallet into 0xkey
   console.log("Step 3: Import encrypted wallet to ZeroXKey");
   console.log("-".repeat(40));
 

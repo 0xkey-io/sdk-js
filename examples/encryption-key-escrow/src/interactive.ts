@@ -3,16 +3,16 @@
  * Encryption Key Escrow Interactive CLI
  *
  * Demonstrates how to use ZeroXKey as a secure key storage and retrieval
- * service rather than relying on ZeroXKey for signing operations directly.
+ * service rather than relying on 0xkey for signing operations directly.
  *
  * The Pattern (2-of-2 Security Model):
- * - Encrypted data: Stored in YOUR infrastructure (ZeroXKey never sees it)
- * - Encryption key: Stored in ZeroXKey's secure enclave
+ * - Encrypted data: Stored in YOUR infrastructure (0xkey never sees it)
+ * - Encryption key: Stored in 0xkey's secure enclave
  * - Both components required to decrypt
  *
  * Use Cases:
  * - High-performance multi-wallet signing (export key once, sign locally)
- * - User-controlled backup & recovery (like World App's ZeroXKey integration)
+ * - User-controlled backup & recovery (like World App's 0xkey integration)
  * - Distributed trust models (key material separated from encrypted data)
  *
  * Usage: pnpm start
@@ -87,14 +87,14 @@ let activeSession: {
 };
 
 // ============================================================================
-// ZeroXKey Client
+// 0xkey Client
 // ============================================================================
 
 function getZeroXKeyClient(): ZeroXKey {
   const apiPublicKey = process.env.API_PUBLIC_KEY;
   const apiPrivateKey = process.env.API_PRIVATE_KEY;
   const organizationId = process.env.ORGANIZATION_ID;
-  const baseUrl = process.env.BASE_URL ?? "https://api.0xkey.com";
+  const baseUrl = process.env.BASE_URL ?? "https://api.0xkey.io";
 
   if (!apiPublicKey || !apiPrivateKey || !organizationId) {
     throw new Error(
@@ -125,10 +125,8 @@ async function mainMenu(): Promise<void> {
   console.log("╚════════════════════════════════════════════════════════════╝");
   console.log();
   console.log("2-of-2 Security Model:");
-  console.log(
-    "  • Encrypted data → Your infrastructure (ZeroXKey never sees it)",
-  );
-  console.log("  • Encryption key → ZeroXKey secure enclave");
+  console.log("  • Encrypted data → Your infrastructure (0xkey never sees it)");
+  console.log("  • Encryption key → 0xkey secure enclave");
   console.log();
 
   while (true) {
@@ -148,7 +146,7 @@ async function mainMenu(): Promise<void> {
         },
         {
           title: "Create Encryption Key in ZeroXKey",
-          description: "P-256 keypair stored in ZeroXKey's secure enclave",
+          description: "P-256 keypair stored in 0xkey's secure enclave",
           value: "create-key",
         },
         {
@@ -168,7 +166,7 @@ async function mainMenu(): Promise<void> {
         },
         {
           title: "Export Key & Decrypt Data",
-          description: "Retrieve decryption key from ZeroXKey, decrypt locally",
+          description: "Retrieve decryption key from 0xkey, decrypt locally",
           value: "start-session",
         },
         {
@@ -190,7 +188,7 @@ async function mainMenu(): Promise<void> {
         },
         {
           title: "View Encrypted Store",
-          description: "Inspect encrypted bundles (ZeroXKey never sees this)",
+          description: "Inspect encrypted bundles (0xkey never sees this)",
           value: "view-store",
         },
         { title: "Exit", value: "exit" },
@@ -259,9 +257,9 @@ async function mainMenu(): Promise<void> {
     console.log();
     console.log("2-of-2 Security Model:");
     console.log(
-      "  • Encrypted data → Your infrastructure (ZeroXKey never sees it)",
+      "  • Encrypted data → Your infrastructure (0xkey never sees it)",
     );
-    console.log("  • Encryption key → ZeroXKey secure enclave");
+    console.log("  • Encryption key → 0xkey secure enclave");
     console.log();
   }
 }
@@ -275,12 +273,12 @@ async function createEncryptionKey(): Promise<void> {
   console.log("CREATE ENCRYPTION KEY IN ZEROXKEY");
   console.log("─".repeat(60));
   console.log();
-  console.log("This creates a P-256 keypair in ZeroXKey's secure enclave.");
+  console.log("This creates a P-256 keypair in 0xkey's secure enclave.");
   console.log();
   console.log("How it works:");
   console.log("  • Public key: You use this to encrypt data locally");
-  console.log("  • Private key: Stays in ZeroXKey, exported only on-demand");
-  console.log("  • ZeroXKey never sees your encrypted data");
+  console.log("  • Private key: Stays in 0xkey, exported only on-demand");
+  console.log("  • 0xkey never sees your encrypted data");
   console.log();
 
   const existingKeyId = process.env.ENCRYPTION_KEY_ID;
@@ -311,7 +309,7 @@ async function createEncryptionKey(): Promise<void> {
   if (!keyName) return;
 
   console.log();
-  console.log("Creating P-256 encryption keypair in ZeroXKey...");
+  console.log("Creating P-256 encryption keypair in 0xkey...");
 
   const { privateKeys } = await zeroXKeyClient.apiClient().createPrivateKeys({
     privateKeys: [
@@ -354,15 +352,13 @@ async function generateAndEncryptWallets(): Promise<void> {
   console.log("─".repeat(60));
   console.log();
   console.log(
-    "This demonstrates encrypting sensitive data with ZeroXKey's public key.",
+    "This demonstrates encrypting sensitive data with 0xkey's public key.",
   );
   console.log(
     "In production, this could be: wallets, recovery bundles, credentials, etc.",
   );
   console.log();
-  console.log(
-    "Key point: ZeroXKey NEVER sees the plaintext or encrypted data.",
-  );
+  console.log("Key point: 0xkey NEVER sees the plaintext or encrypted data.");
   console.log("You store the encrypted bundles in YOUR infrastructure.");
   console.log();
 
@@ -378,7 +374,7 @@ async function generateAndEncryptWallets(): Promise<void> {
   const zeroXKeyClient = getZeroXKeyClient();
 
   // Get the encryption public key
-  console.log("Fetching encryption public key from ZeroXKey...");
+  console.log("Fetching encryption public key from 0xkey...");
   const { privateKey: encryptionKey } = await zeroXKeyClient
     .apiClient()
     .getPrivateKey({
@@ -523,12 +519,10 @@ async function generateAndEncryptWallets(): Promise<void> {
   console.log("Security Model Now Active:");
   console.log("─".repeat(60));
   console.log("  ✓ Encrypted bundles: YOUR infrastructure (this file)");
-  console.log("  ✓ Decryption key:    ZeroXKey secure enclave");
-  console.log("  ✓ ZeroXKey never saw: The plaintext data");
+  console.log("  ✓ Decryption key:    0xkey secure enclave");
+  console.log("  ✓ 0xkey never saw: The plaintext data");
   console.log();
-  console.log(
-    "To decrypt, you must authenticate to ZeroXKey and export the key.",
-  );
+  console.log("To decrypt, you must authenticate to 0xkey and export the key.");
 }
 
 // ============================================================================
@@ -540,10 +534,8 @@ async function encryptCustomData(): Promise<void> {
   console.log("ENCRYPT CUSTOM DATA");
   console.log("─".repeat(60));
   console.log();
-  console.log("Encrypt any data you choose with the ZeroXKey escrow key.");
-  console.log(
-    "The encrypted bundle is stored locally — ZeroXKey never sees it.",
-  );
+  console.log("Encrypt any data you choose with the 0xkey escrow key.");
+  console.log("The encrypted bundle is stored locally — 0xkey never sees it.");
   console.log();
 
   const encryptionKeyId = process.env.ENCRYPTION_KEY_ID;
@@ -575,7 +567,7 @@ async function encryptCustomData(): Promise<void> {
   const zeroXKeyClient = getZeroXKeyClient();
 
   console.log();
-  console.log("Fetching encryption public key from ZeroXKey...");
+  console.log("Fetching encryption public key from 0xkey...");
   const { privateKey: encryptionKey } = await zeroXKeyClient
     .apiClient()
     .getPrivateKey({
@@ -634,12 +626,12 @@ async function startSession(): Promise<void> {
   console.log("EXPORT KEY & DECRYPT DATA");
   console.log("─".repeat(60));
   console.log();
-  console.log("This retrieves the decryption key from ZeroXKey and decrypts");
+  console.log("This retrieves the decryption key from 0xkey and decrypts");
   console.log("your locally-stored encrypted bundles.");
   console.log();
   console.log("After this step, you can use the decrypted data locally");
   console.log("(sign transactions, access credentials, etc.) with NO further");
-  console.log("ZeroXKey API calls required.");
+  console.log("0xkey API calls required.");
   console.log();
 
   if (activeSession.decryptionKey) {
@@ -671,7 +663,7 @@ async function startSession(): Promise<void> {
   const { confirm } = await prompts({
     type: "confirm",
     name: "confirm",
-    message: "Export decryption key from ZeroXKey and start session?",
+    message: "Export decryption key from 0xkey and start session?",
     initial: true,
   });
 
@@ -683,7 +675,7 @@ async function startSession(): Promise<void> {
   console.log("Step 1: Generate target keypair for key export...");
   const targetKeyPair = generateP256KeyPair();
 
-  console.log("Step 2: Export decryption key from ZeroXKey...");
+  console.log("Step 2: Export decryption key from 0xkey...");
   const startExport = Date.now();
 
   const exportResult = await zeroXKeyClient.apiClient().exportPrivateKey({
@@ -754,7 +746,7 @@ async function startSession(): Promise<void> {
   console.log();
   console.log("Performance:");
   console.log(
-    `  ZeroXKey API call:  ${exportTime}ms (single request to export key)`,
+    `  0xkey API call:  ${exportTime}ms (single request to export key)`,
   );
   console.log(
     `  Local decryption:  ${decryptTime}ms (${store.bundles.length} bundles)`,
@@ -764,7 +756,7 @@ async function startSession(): Promise<void> {
   console.log(`${decryptedWallets.length} items now available in memory.`);
   console.log();
   console.log("From this point forward:");
-  console.log("  • All operations are LOCAL (no ZeroXKey API calls)");
+  console.log("  • All operations are LOCAL (no 0xkey API calls)");
   console.log("  • Sign transactions, access data, etc. with zero latency");
   console.log("  • When done, clear sensitive data from memory");
 }
@@ -779,7 +771,7 @@ async function signDemo(): Promise<void> {
   console.log("─".repeat(60));
   console.log();
   console.log("This demonstrates using the decrypted wallet data to sign");
-  console.log("a message. Note: NO ZeroXKey API calls are made here.");
+  console.log("a message. Note: NO 0xkey API calls are made here.");
   console.log();
 
   if (
@@ -854,8 +846,8 @@ async function signDemo(): Promise<void> {
   console.log("Key Insight:");
   console.log("─".repeat(60));
   console.log("  This signature was created entirely LOCAL.");
-  console.log("  Zero ZeroXKey API calls. Zero network latency.");
-  console.log("  ZeroXKey was only used to retrieve the decryption key.");
+  console.log("  Zero 0xkey API calls. Zero network latency.");
+  console.log("  0xkey was only used to retrieve the decryption key.");
 }
 
 // ============================================================================
@@ -919,10 +911,10 @@ function endSession(): void {
   console.log("  ✓ Decryption key:   Cleared from memory");
   console.log("  ✓ Decrypted data:   Cleared from memory");
   console.log("  ✓ Encrypted store:  Still in YOUR infrastructure (safe)");
-  console.log("  ✓ ZeroXKey enclave:  Still holds the encryption key");
+  console.log("  ✓ 0xkey enclave:  Still holds the encryption key");
   console.log();
   console.log(
-    "To access data again, authenticate to ZeroXKey and export the key.",
+    "To access data again, authenticate to 0xkey and export the key.",
   );
 }
 
@@ -936,7 +928,7 @@ async function viewEncryptedStore(): Promise<void> {
   console.log("─".repeat(60));
   console.log();
   console.log("This shows the encrypted data stored in YOUR infrastructure.");
-  console.log("ZeroXKey has NEVER seen this data - only the encryption key.");
+  console.log("0xkey has NEVER seen this data - only the encryption key.");
   console.log();
 
   const storePath = path.resolve(process.cwd(), "encrypted-wallet-store.json");
@@ -976,8 +968,8 @@ async function viewEncryptedStore(): Promise<void> {
   console.log("Security Status:");
   console.log("─".repeat(60));
   console.log("  ✓ Data encrypted with P-256 ECIES");
-  console.log("  ✓ Decryption key held in ZeroXKey enclave");
-  console.log("  ✓ Without ZeroXKey authentication, this data is useless");
+  console.log("  ✓ Decryption key held in 0xkey enclave");
+  console.log("  ✓ Without 0xkey authentication, this data is useless");
 }
 
 // ============================================================================

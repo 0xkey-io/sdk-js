@@ -179,9 +179,9 @@ export interface ClientContextType
    * - The `state` parameter encodes the provider name, flow type, ephemeral public key, and any additional key-value pairs provided in `additionalState`.
    * - If `openInPage` is true, the current page is redirected to the OAuth URL and the function returns a promise that resolves on redirect or rejects after 5 minutes if no redirect occurs.
    * - If `openInPage` is false, a popup window is opened for the OAuth flow, and the function returns a promise that resolves when the OAuth code is captured or rejects if the popup is closed or times out.
-   * - On receiving an authorization code, the function exchanges it for an OIDC token via the ZeroXKey proxy (`proxyOAuth2Authenticate`) using the PKCE verifier, redirect URI, and nonce.
+   * - On receiving an authorization code, the function exchanges it for an OIDC token via the 0xkey proxy (`proxyOAuth2Authenticate`) using the PKCE verifier, redirect URI, and nonce.
    * - On successful authentication, the function either calls the provided `onOauthSuccess` callback, triggers the `onOauthRedirect` callback from provider callbacks, or completes the OAuth flow internally by calling `completeOauth`.
-   * - Handles error cases such as missing configuration, popup failures, missing PKCE verifier, or ZeroXKey proxy failures, throwing a `ZeroXKeyError` with appropriate error codes.
+   * - Handles error cases such as missing configuration, popup failures, missing PKCE verifier, or 0xkey proxy failures, throwing a `ZeroXKeyError` with appropriate error codes.
    *
    * @param params.clientId - The Discord Client ID to use (defaults to the client ID from configuration).
    * @param params.openInPage - Whether to open the OAuth flow in the current page (redirect) or a popup window (default: false).
@@ -189,7 +189,7 @@ export interface ClientContextType
    * @param params.onOauthSuccess - Callback function to handle the successful OAuth response (receives `{ oidcToken, providerName }`).
    *
    * onOauthSuccess params:
-   * - oidcToken: The OIDC token issued by ZeroXKey after exchanging the auth code.
+   * - oidcToken: The OIDC token issued by 0xkey after exchanging the auth code.
    * - providerName: The name of the OAuth provider ("discord").
    *
    * @returns A promise that resolves when the OAuth flow is successfully initiated and completed, or rejects on error or timeout.
@@ -208,9 +208,9 @@ export interface ClientContextType
    * - The `state` parameter encodes the provider name, flow type, ephemeral public key, and any additional key-value pairs provided in `additionalState`.
    * - If `openInPage` is true, the current page is redirected to the OAuth URL and the function returns a promise that resolves on redirect or rejects after 5 minutes if no redirect occurs.
    * - If `openInPage` is false, a popup window is opened for the OAuth flow, and the function returns a promise that resolves when the OAuth code is captured or rejects if the popup is closed or times out.
-   * - On receiving an authorization code, the function exchanges it for an OIDC token via the ZeroXKey proxy (`proxyOAuth2Authenticate`) using the PKCE verifier, redirect URI, and nonce.
+   * - On receiving an authorization code, the function exchanges it for an OIDC token via the 0xkey proxy (`proxyOAuth2Authenticate`) using the PKCE verifier, redirect URI, and nonce.
    * - On successful authentication, the function either calls the provided `onOauthSuccess` callback, triggers the `onOauthRedirect` callback from provider callbacks, or completes the OAuth flow internally by calling `completeOauth`.
-   * - Handles error cases such as missing configuration, popup failures, missing PKCE verifier, or ZeroXKey proxy failures, throwing a `ZeroXKeyError` with appropriate error codes.
+   * - Handles error cases such as missing configuration, popup failures, missing PKCE verifier, or 0xkey proxy failures, throwing a `ZeroXKeyError` with appropriate error codes.
    *
    * @param params.clientId - The Twitter (X) Client ID to use (defaults to the client ID from configuration).
    * @param params.openInPage - Whether to open the OAuth flow in the current page (redirect) or a popup window (default: false).
@@ -218,7 +218,7 @@ export interface ClientContextType
    * @param params.onOauthSuccess - Callback function to handle the successful OAuth response (receives `{ oidcToken, providerName }`).
    *
    * onOauthSuccess params:
-   * - oidcToken: The OIDC token issued by ZeroXKey after exchanging the auth code.
+   * - oidcToken: The OIDC token issued by 0xkey after exchanging the auth code.
    * - providerName: The name of the OAuth provider ("twitter").
    *
    * @returns A promise that resolves when the OAuth flow is successfully initiated and completed, or rejects on error or timeout.
@@ -312,9 +312,9 @@ export interface ClientContextType
    * Handles the export wallet flow.
    *
    * - This function opens a modal with the ExportComponent for exporting a wallet.
-   * - Uses ZeroXKey's export iframe flow to securely export wallet material.
+   * - Uses 0xkey's export iframe flow to securely export wallet material.
    * - The export process encrypts the exported bundle to a target public key, which is generated and managed inside the iframe for maximum security.
-   * - A request is made to the ZeroXKey API to export the wallet, encrypted to the target public key.
+   * - A request is made to the 0xkey API to export the wallet, encrypted to the target public key.
    * - The resulting export bundle is injected into the iframe, where it is decrypted and displayed to the user.
    * - If a custom iframe URL is used, a target public key can be provided explicitly.
    * - Optionally allows specifying the stamper to use for the export (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet) for granular authentication control.
@@ -334,9 +334,9 @@ export interface ClientContextType
    * handles the export private key flow.
    *
    * - This function opens a modal with the ExportComponent for exporting a private key.
-   * - Uses ZeroXKey's export iframe flow to securely export private key material.
+   * - Uses 0xkey's export iframe flow to securely export private key material.
    * - The export process encrypts the exported bundle to a target public key, which is generated and managed inside the iframe for maximum security.
-   * - A request is made to the ZeroXKey API to export the private key, encrypted to the target public key.
+   * - A request is made to the 0xkey API to export the private key, encrypted to the target public key.
    * - The resulting export bundle is injected into the iframe, where it is decrypted and displayed to the user.
    * - If a custom iframe URL is used, a target public key can be provided explicitly.
    * - Hexadecimal and Solana address formats are supported for wallet account exports - defaulting to Hexadecimal if not specified.
@@ -359,9 +359,9 @@ export interface ClientContextType
    * Handles the export wallet account flow.
    *
    * - This function opens a modal with the ExportComponent for exporting a wallet account.
-   * - Uses ZeroXKey's export iframe flow to securely export wallet account material.
+   * - Uses 0xkey's export iframe flow to securely export wallet account material.
    * - The export process encrypts the exported bundle to a target public key, which is generated and managed inside the iframe for maximum security.
-   * - A request is made to the ZeroXKey API to export the wallet account, encrypted to the target public key.
+   * - A request is made to the 0xkey API to export the wallet account, encrypted to the target public key.
    * - The resulting export bundle is injected into the iframe, where it is decrypted and displayed to the user.
    * - If a custom iframe URL is used, a target public key can be provided explicitly.
    * - Hexadecimal and Solana address formats are supported for wallet account exports - defaulting to Hexadecimal if not specified.
@@ -660,7 +660,7 @@ export interface ClientContextType
    * Handles the signing of a message by displaying a modal for user interaction.
    *
    * - This function opens a modal with the SignMessageModal component, prompting the user to review and approve the message signing request.
-   * - Supports signing with any wallet account managed by ZeroXKey, including externally connected wallets.
+   * - Supports signing with any wallet account managed by 0xkey, including externally connected wallets.
    * - Allows for optional overrides of the encoding and hash function used for the payload, enabling advanced use cases or compatibility with specific blockchains.
    * - Optionally displays a subtext in the modal for additional context or instructions to the user.
    * - Returns a promise that resolves to a `v1SignRawPayloadResult` object containing the signed message, signature, and metadata.
@@ -682,13 +682,13 @@ export interface ClientContextType
   ) => Promise<v1SignRawPayloadResult>;
 
   /**
-   * Handles the connecting of an external wallet account to the user's ZeroXKey account.
+   * Handles the connecting of an external wallet account to the user's 0xkey account.
    *
    * - This function opens a modal with the ConnectWalletModal component, allowing the user to select and connect an external wallet provider (such as MetaMask, Phantom, etc.).
    * - It fetches the list of available wallet providers (for all supported chains) and passes them to the modal for user selection.
    * - After a successful wallet connection, the provider state is refreshed to include the newly connected wallet account.
    * - Optionally, a success page is shown for the specified duration after connecting (default: 2000ms).
-   * - Supports both Ethereum and Solana wallet providers, and can be extended to additional chains as supported by ZeroXKey.
+   * - Supports both Ethereum and Solana wallet providers, and can be extended to additional chains as supported by 0xkey.
    * - Handles all error cases and throws a ZeroXKeyError with appropriate error codes if the client is not initialized or no active session is found.
    *
    * @param params.successPageDuration - duration (in ms) for the success page after connecting (default: 2000ms).
@@ -706,7 +706,7 @@ export interface ClientContextType
   }> | void;
 
   /**
-   * Handles the removal of a user's email address from their ZeroXKey account.
+   * Handles the removal of a user's email address from their 0xkey account.
    *
    * - Opens a modal with the RemoveUserEmail component, allowing the user to confirm and remove their email address.
    * - Supports optional overrides for userId, organizationId, and stamper type.
@@ -726,7 +726,7 @@ export interface ClientContextType
   ) => Promise<string>;
 
   /**
-   * Handles the removal of a user's phone number from their ZeroXKey account.
+   * Handles the removal of a user's phone number from their 0xkey account.
    *
    * - Opens a modal with the RemovePhoneNumber component, allowing the user to confirm and remove their phone number.
    * - Supports optional overrides for userId, organizationId, and stamper type.
@@ -809,13 +809,13 @@ export interface ClientContextType
   /**
    * Handles signing and sending an EVM or Solana transaction.
    *
-   * - Submits a send-transaction intent to ZeroXKey for signing and execution.
+   * - Submits a send-transaction intent to 0xkey for signing and execution.
    * - Automatically polls the transaction status until it reaches a terminal state.
    * - Displays a modal showing progress and a success page upon completion.
    * - Supports EVM (EIP-1559 or sponsored Gas Station meta-transactions) and Solana.
    *
    * @param params.transaction - The EVM or Solana transaction to sign and send.
-   * @param params.organizationId - Optional ZeroXKey organization or sub-organization ID
+   * @param params.organizationId - Optional 0xkey organization or sub-organization ID
    *   (defaults to the active session).
    * @param params.stampWith - Optional stamper override (e.g. Passkey, API key, Wallet).
    * @param params.successPageDuration - Optional duration (in ms) to display the success page
@@ -830,12 +830,12 @@ export interface ClientContextType
   /**
    * Handles signing and sending an ERC20 `transfer(address,uint256)` transaction.
    *
-   * - Submits an ERC20 transfer intent to ZeroXKey for signing and execution.
+   * - Submits an ERC20 transfer intent to 0xkey for signing and execution.
    * - Automatically polls the transaction status until it reaches a terminal state.
    * - Displays a modal showing progress and a success page upon completion.
    *
    * @param params.transfer - ERC20 transfer fields (`from`, `tokenAddress`, `to`, `amount`, `caip2`).
-   * @param params.organizationId - Optional ZeroXKey organization or sub-organization ID
+   * @param params.organizationId - Optional 0xkey organization or sub-organization ID
    *   (defaults to the active session).
    * @param params.stampWith - Optional stamper override (e.g. Passkey, API key, Wallet).
    * @param params.successPageDuration - Optional duration (in ms) to display the success page

@@ -525,7 +525,7 @@ describe("withZeroXKeyErrorHandling", () => {
     it("catches global error message while throwing in a message map", async () => {
       const globalError = new ZeroXKeyRequestError({
         message:
-          "ZeroXKey error 16: could not find public key in organization or its parent organization",
+          "0xkey error 16: could not find public key in organization or its parent organization",
         code: 16,
         details: null,
       });
@@ -557,7 +557,7 @@ describe("withZeroXKeyErrorHandling", () => {
     it("catches second global error but without a message map passed in", async () => {
       const globalError2 = new ZeroXKeyRequestError({
         message:
-          "ZeroXKey error 17: Unauthenticated desc = expired api key publicKey",
+          "0xkey error 17: Unauthenticated desc = expired api key publicKey",
         code: 17,
         details: null,
       });

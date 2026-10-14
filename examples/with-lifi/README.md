@@ -1,12 +1,12 @@
 # Example: `with-lifi`
 
-This demo application demonstrates EVM and SVM bridging with ZeroXKey and Li.Fi between ETH and SOL.
+This demo application demonstrates EVM and SVM bridging with 0xkey and Li.Fi between ETH and SOL.
 
-This example contains uses `@0xkey-io/react-wallet-kit`, `@0xkey-io/viem`, and `@0xkey-io/solana` to handle authentication and signing with ZeroXKey wallets. To streamline authentication this example uses the ZeroXKey [Auth Proxy](https://docs.0xkey.com/reference/auth-proxy) to serve as the backend for authentication purposes. To obtain prices/quotes for the swap as well as building the swap transaction the server queries `LiFi`. This example also uses `viem`, `wagmi`, and `@solana/web3.js` to obtain wallet balances, and broadcast transactions.
+This example contains uses `@0xkey-io/react-wallet-kit`, `@0xkey-io/viem`, and `@0xkey-io/solana` to handle authentication and signing with 0xkey wallets. To streamline authentication this example uses the ZeroXKey [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy) to serve as the backend for authentication purposes. To obtain prices/quotes for the swap as well as building the swap transaction the server queries `LiFi`. This example also uses `viem`, `wagmi`, and `@solana/web3.js` to obtain wallet balances, and broadcast transactions.
 
 This example loosely follows this LiFi guide: https://docs.li.fi/introduction/user-flows-and-examples/end-to-end-example.
 
-Note: To utilize this example fund your ZeroXKey wallet with a reasonable amount of ETH or SOL, ~$5 USD, to cover gas fees and swap into the opposite token.
+Note: To utilize this example fund your 0xkey wallet with a reasonable amount of ETH or SOL, ~$5 USD, to cover gas fees and swap into the opposite token.
 
 ## Getting started
 
@@ -25,11 +25,11 @@ $ cd examples/with-lifi/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
 - An organization ID
 
-After you've set up your ZeroXKey account you need to enable [Auth Proxy](https://docs.0xkey.com/reference/auth-proxy). Visit [Wallet Kit](https://app.0xkey.com/dashboard/walletKit) and enable Auth Proxy. Configure any authentication methods you'd like, for this example, I've used passkeys and numeric 6-digit email OTP. Save your Auth Proxy config ID.
+After you've set up your 0xkey account you need to enable [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy). Visit [Wallet Kit](https://app.0xkey.io/dashboard/walletKit) and enable Auth Proxy. Configure any authentication methods you'd like, for this example, I've used passkeys and numeric 6-digit email OTP. Save your Auth Proxy config ID.
 
 - Auth Proxy Config ID
 

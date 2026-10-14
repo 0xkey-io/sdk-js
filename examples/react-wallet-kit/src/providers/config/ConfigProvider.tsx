@@ -211,7 +211,7 @@ export function ZeroXKeyConfigProvider({
             Config
           </Button>
 
-          <a href="https://0xkey.com" target="_blank">
+          <a href="https://0xkey.io" target="_blank">
             <ZeroXKeySVG
               className="transition-all duration-250 h-full w-32"
               style={{

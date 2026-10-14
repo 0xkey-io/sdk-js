@@ -7,7 +7,7 @@ if (typeof crypto === "undefined") {
 
 /**
  * Encrypts data using ECIES with a P-256 public key.
- * Used to encrypt wallet bundles with ZeroXKey's escrow public key.
+ * Used to encrypt wallet bundles with 0xkey's escrow public key.
  */
 export async function encryptWithPublicKey(
   publicKeyHex: string,
@@ -85,7 +85,7 @@ export async function encryptWithPublicKey(
 
 /**
  * Decrypts data using ECIES with a P-256 private key.
- * Used to decrypt wallet bundles after exporting the decryption key from ZeroXKey.
+ * Used to decrypt wallet bundles after exporting the decryption key from 0xkey.
  */
 export async function decryptWithPrivateKey(
   privateKeyHex: string,

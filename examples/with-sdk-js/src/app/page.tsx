@@ -355,18 +355,12 @@ export default function AuthPage() {
     <main className="p-4 flex flex-col gap-4">
       <div className="flex items-center relative mb-4">
         <a
-          href="https://www.0xkey.com"
+          href="https://0xkey.io"
           target="_blank"
           rel="noopener noreferrer"
           className="absolute top-1/2 -translate-y-1/2"
         >
-          <Image
-            src="/logo.svg"
-            alt="ZeroXKey Logo"
-            width={100}
-            height={24}
-            priority
-          />
+          <Image src="/logo.svg" alt="0xkey" width={100} height={24} priority />
         </a>
         <h1 className="w-full text-center text-lg">
           ZeroXKey react-wallet-kit playground

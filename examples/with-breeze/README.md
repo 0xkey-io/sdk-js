@@ -1,6 +1,6 @@
 # with-breeze
 
-An example app that integrates [ZeroXKey](https://0xkey.com) with [Breeze](https://breeze.baby) to demonstrate Solana-based USDC staking and yield management directly from a ZeroXKey-managed wallet.
+An example app that integrates [ZeroXKey](https://0xkey.io) with [Breeze](https://breeze.baby) to demonstrate Solana-based USDC staking and yield management directly from a 0xkey-managed wallet.
 
 This project shows how to:
 
@@ -46,10 +46,10 @@ This project shows how to:
    Create a `.env.local` file with:
 
    ```env
-   NEXT_PUBLIC_ORGANIZATION_ID="<ZeroXKey organization ID>"
+   NEXT_PUBLIC_ORGANIZATION_ID="<0xkey organization ID>"
    BREEZE_API_KEY="<Breeze API key>"
    NEXT_PUBLIC_FUND_ID="<Breeze Fund ID>"
-   NEXT_PUBLIC_AUTH_PROXY_ID="<ZeroXKey Auth Proxy ID>"
+   NEXT_PUBLIC_AUTH_PROXY_ID="<0xkey Auth Proxy ID>"
    ```
 
 3. **Run the app**
@@ -60,7 +60,7 @@ This project shows how to:
    npm run dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) and log in with ZeroXKey.
+4. Open [http://localhost:3000](http://localhost:3000) and log in with 0xkey.
    - Select a Solana wallet account
    - Deposit or withdraw 1 USDC via Breeze
    - View balances and yield in real time
@@ -96,7 +96,7 @@ with-breeze/
 
 1. **User logs in with ZeroXKey** → loads Solana wallets
 2. **Select wallet** → picks one associated with their org
-3. **Deposit 1 USDC** → transaction built by Breeze, signed by ZeroXKey
+3. **Deposit 1 USDC** → transaction built by Breeze, signed by 0xkey
 4. **Confirm on-chain** → modal shows real-time confirmation
 5. **Track yield** → app fetches updated balance and APY from Breeze
 6. **View on Solscan** → click transaction hash to verify on-chain

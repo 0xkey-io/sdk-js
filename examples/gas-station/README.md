@@ -1,6 +1,6 @@
-# Example: Gas Station with ZeroXKey
+# Example: Gas Station with 0xkey
 
-This example demonstrates how to implement gasless transactions using the ZeroXKey Gas Station SDK with EIP-7702 authorization. Users can execute on-chain transactions without holding ETH for gas - your paymaster covers the cost.
+This example demonstrates how to implement gasless transactions using the 0xkey Gas Station SDK with EIP-7702 authorization. Users can execute on-chain transactions without holding ETH for gas - your paymaster covers the cost.
 
 For complete API documentation, architecture details, and security best practices, see the **[@0xkey-io/gas-station package README](https://github.com/0xkey-io/sdk-js/tree/main/packages/gas-station)**.
 
@@ -8,8 +8,8 @@ For complete API documentation, architecture details, and security best practice
 
 - **ETH Transfer**: Gasless ETH transfer from user wallet to recipient
 - **USDC Transfer**: Gasless ERC-20 token transfer using EIP-7702 delegation
-- **ZeroXKey Integration**: Secure key management for both user and paymaster wallets
-- **Policy Enforcement**: Tests demonstrating ZeroXKey policy restrictions
+- **0xkey Integration**: Secure key management for both user and paymaster wallets
+- **Policy Enforcement**: Tests demonstrating 0xkey policy restrictions
 
 ## Getting Started
 
@@ -29,8 +29,8 @@ cd examples/gas-station/
 Create `.env.local`:
 
 ```bash
-# ZeroXKey Configuration
-BASE_URL=https://api.0xkey.com
+# 0xkey Configuration
+BASE_URL=https://api.0xkey.io
 API_PRIVATE_KEY=your_0xkey_api_private_key
 API_PUBLIC_KEY=your_0xkey_api_public_key
 ORGANIZATION_ID=your_0xkey_organization_id
@@ -116,7 +116,7 @@ Gas usage
 
 Demonstrates a complete flow for gasless ETH transfers:
 
-1. **Initialize ZeroXKey clients** for user and paymaster
+1. **Initialize 0xkey clients** for user and paymaster
 2. **One-time authorization** via EIP-7702 (if not already authorized)
 3. **Create and sign intent** off-chain using EIP-712
 4. **Execute transaction** with paymaster covering gas costs
@@ -157,7 +157,7 @@ await paymasterClient.execute(intent);
 
 ### Policy Enforcement Tests (`src/__tests__/policyEnforcement.test.ts`)
 
-Demonstrates how ZeroXKey policies restrict what transactions can be signed:
+Demonstrates how 0xkey policies restrict what transactions can be signed:
 
 - **EOA policies**: Restrict which contracts and amounts the user can sign
 - **Paymaster policies**: Restrict which transactions the paymaster can execute
@@ -182,7 +182,7 @@ Target Contract (Transfer ETH/USDC/etc)
 ## Key Features
 
 - **No ETH Required**: Users don't need ETH to execute transactions
-- **Secure**: All keys managed by ZeroXKey, signatures validated on-chain
+- **Secure**: All keys managed by 0xkey, signatures validated on-chain
 - **Flexible**: Works with any contract call, not just transfers
 
 ## Chain Support
@@ -196,13 +196,13 @@ This example works on:
 
 - **Full Documentation**: See the [@0xkey-io/gas-station README](https://github.com/0xkey-io/sdk-js/tree/main/packages/gas-station)
 - **API Reference**: Complete method documentation in the package README
-- **Security Policies**: Learn how to write custom ZeroXKey policies
+- **Security Policies**: Learn how to write custom 0xkey policies
 - **Advanced Use Cases**: Token swaps, NFT minting, and more
 
 ## Support
 
 For questions and support:
 
-- [ZeroXKey Documentation](https://docs.0xkey.com)
-- [ZeroXKey Discord](https://discord.gg/0xkey)
+- [0xkey Documentation](https://docs.0xkey.io)
+- [0xkey Discord](https://discord.gg/0xkey)
 - [GitHub Issues](https://github.com/0xkey-io/sdk-js/issues)

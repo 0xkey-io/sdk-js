@@ -10,7 +10,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
   if (!process.env.MOVEMENT_ADDRESS || !process.env.MOVEMENT_PUBLIC_KEY) {
-    // If you don't specify a `MOVEMENT ADDRESS` or you don't specify a MOVEMENT_PUBLIC_KEY, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `MOVEMENT ADDRESS` or you don't specify a MOVEMENT_PUBLIC_KEY, we'll create a new wallet for you via calling the 0xkey API.
     await createNewWallet();
     return;
   }
@@ -102,9 +102,9 @@ async function main() {
   // Get the signing message
   const signingMessage = TransactionBuilder.getSigningMessage(rawTxn);
 
-  // Sign the payload using ZeroXKey with HASH_FUNCTION_NOT_APPLICABLE
+  // Sign the payload using 0xkey with HASH_FUNCTION_NOT_APPLICABLE
   // Note: unlike ECDSA, EdDSA's API does not support signing raw digests (see RFC 8032).
-  // ZeroXKey's signer requires an explicit value to be passed here to minimize ambiguity.
+  // 0xkey's signer requires an explicit value to be passed here to minimize ambiguity.
   const txSignResult = await zeroXKeyClient.apiClient().signRawPayload({
     signWith: movementAddress,
     payload: bytesToHex(signingMessage),

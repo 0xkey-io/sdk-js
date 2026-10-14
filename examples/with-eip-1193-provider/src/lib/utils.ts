@@ -65,14 +65,14 @@ export const registerPassKey = async (
   const challenge = generateRandomBuffer();
   const authenticatorUserId = generateRandomBuffer();
   const user = email.split("@")[0];
-  const username = `${user}'s ZeroXKey EIP-1193 Demo - ${humanReadableDateTime()}`;
+  const username = `${user}'s 0xkey EIP-1193 Demo - ${humanReadableDateTime()}`;
   // An example of possible options can be found here:
   // https://www.w3.org/TR/webauthn-2/#sctn-sample-registration
   const attestation = await getWebAuthnAttestation({
     publicKey: {
       rp: {
         id: process.env.NEXT_PUBLIC_WEBAUTHN_RPID,
-        name: "ZeroXKey EIP-1193 Demo Wallet",
+        name: "0xkey EIP-1193 Demo Wallet",
       },
       challenge,
       pubKeyCredParams: [

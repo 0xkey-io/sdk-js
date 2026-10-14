@@ -27,10 +27,9 @@ const createSubOrgParams: CreateSubOrgParams = {
 const zeroXKeyConfig: ZeroXKeyProviderConfig = {
   organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
   authProxyConfigId: process.env.NEXT_PUBLIC_AUTH_PROXY_CONFIG_ID!,
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.0xkey.com",
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.0xkey.io",
   authProxyUrl:
-    process.env.NEXT_PUBLIC_AUTH_PROXY_BASE_URL ||
-    "https://authproxy.0xkey.com",
+    process.env.NEXT_PUBLIC_AUTH_PROXY_BASE_URL || "https://authproxy.0xkey.io",
   auth: {
     createSuborgParams: {
       passkeyAuth: createSubOrgParams,
@@ -58,7 +57,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <ZeroXKeyProvider
           config={zeroXKeyConfig}
           callbacks={{
-            onError: (error) => console.error("ZeroXKey error:", error),
+            onError: (error) => console.error("0xkey error:", error),
           }}
         >
           {children}

@@ -1,4 +1,4 @@
-# ZeroXKey Client Side Signing Escrow Key Injection Example
+# 0xkey Client Side Signing Escrow Key Injection Example
 
 An example for the ZeroXKey `export-and-sign` injected embedded key flow.
 
@@ -21,7 +21,7 @@ $ cd examples/with-export-and-sign-escrow/
 
 ## 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
 - An organization ID
 - An auth proxy config ID

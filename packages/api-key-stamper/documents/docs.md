@@ -4,7 +4,7 @@ title: "ApiKeyStamper"
 
 ## Introduction
 
-The [`@0xkey-io/api-key-stamper`](https://www.npmjs.com/package/@0xkey-io/api-key-stamper) package simplifies the process of using your public/private API keys and passkeys to stamp and approve activity requests for ZeroXKey's API. This stamping mechanism is central to the API's security, ensuring that each request is authenticated and authorized. For an in-depth understanding of API keys see [this section](/faq#why-do-you-require-a-public--private-key-pair-to-access-0xkey-api).
+The [`@0xkey-io/api-key-stamper`](https://www.npmjs.com/package/@0xkey-io/api-key-stamper) package simplifies the process of using your public/private API keys and passkeys to stamp and approve activity requests for 0xkey's API. This stamping mechanism is central to the API's security, ensuring that each request is authenticated and authorized. For an in-depth understanding of API keys see [this section](/faq#why-do-you-require-a-public--private-key-pair-to-access-0xkey-api).
 
 ## Installing
 
@@ -49,7 +49,7 @@ required
 
 >
 
-Your ZeroXKey API private key.
+Your 0xkey API private key.
 </ParamField>
 
 <ParamField
@@ -59,7 +59,7 @@ required
 
 >
 
-Your ZeroXKey API public key.
+Your 0xkey API public key.
 </ParamField>
 
 ### Types
@@ -83,21 +83,21 @@ interface TStamper {
 
 #### Example
 
-The example below shows how to initialize and use the `ApiKeyStamper` with the `ZeroXKeyClient` to make a request to ZeroXKey's [`/public/v1/query/whoami`](/api-reference/sessions/who-am-i) endpoint:
+The example below shows how to initialize and use the `ApiKeyStamper` with the `ZeroXKeyClient` to make a request to 0xkey's [`/public/v1/query/whoami`](/api-reference/sessions/who-am-i) endpoint:
 
 ```js
 import { ZeroXKeyClient } from "@0xkey-io/http";
 import { ApiKeyStamper } from "@0xkey-io/api-key-stamper";
 
 // Following best practices, define parameters in your .env file
-const baseUrl = process.env.ZEROXKEY_BASE_URL || "https://api.0xkey.com";
+const baseUrl = process.env.ZEROXKEY_BASE_URL || "https://api.0xkey.io";
 const apiPublicKey = process.env.ZEROXKEY_API_PUBLIC_KEY;
 const apiPrivateKey = process.env.ZEROXKEY_API_PRIVATE_KEY;
 
 // Initialize the API key stamper
 const stamper = new ApiKeyStamper({ apiPublicKey, apiPrivateKey });
 
-// Initialize the ZeroXKey client
+// Initialize the 0xkey client
 const tk = new ZeroXKeyClient({ baseUrl }, stamper);
 
 // Now you can make authenticated requests using the APIKeyStamper

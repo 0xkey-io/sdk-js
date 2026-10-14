@@ -1,5 +1,5 @@
 /**
- * USDC → WETH Swap Example using ZeroXKey Gas Station
+ * USDC → WETH Swap Example using 0xkey Gas Station
  *
  * This example demonstrates a gasless token swap using the Gas Station pattern
  * with EIP-7702 authorization. It's ideal for users who hold USDC but no ETH.
@@ -14,16 +14,16 @@
  * Prerequisites:
  *   - EOA wallet with USDC balance on Base mainnet
  *   - Paymaster wallet with ETH for gas
- *   - Both wallets accessible via ZeroXKey
+ *   - Both wallets accessible via 0xkey
  *
  * Usage:
  *   pnpm tsx src/swapUSDCForETH.ts [--amount <USDC_AMOUNT>]
  *
  * Environment variables required (in .env.local):
- *   - BASE_URL: ZeroXKey API base URL
- *   - API_PRIVATE_KEY: ZeroXKey API private key
- *   - API_PUBLIC_KEY: ZeroXKey API public key
- *   - ORGANIZATION_ID: ZeroXKey organization ID
+ *   - BASE_URL: 0xkey API base URL
+ *   - API_PRIVATE_KEY: 0xkey API private key
+ *   - API_PUBLIC_KEY: 0xkey API public key
+ *   - ORGANIZATION_ID: 0xkey organization ID
  *   - EOA_ADDRESS: User wallet address (holds USDC)
  *   - PAYMASTER_ADDRESS: Paymaster wallet address (pays gas)
  *   - BASE_RPC_URL: Base mainnet RPC endpoint
@@ -73,7 +73,7 @@ const SWAP_AMOUNT_USDC = args.amount!;
 
 // Environment validation
 const envSchema = z.object({
-  BASE_URL: z.string().url("BASE_URL must be a valid ZeroXKey API URL"),
+  BASE_URL: z.string().url("BASE_URL must be a valid 0xkey API URL"),
   API_PRIVATE_KEY: z.string().min(1, "API_PRIVATE_KEY is required"),
   API_PUBLIC_KEY: z.string().min(1, "API_PUBLIC_KEY is required"),
   ORGANIZATION_ID: z.string().min(1, "ORGANIZATION_ID is required"),
@@ -200,14 +200,14 @@ function buildPermit2ApproveCalldata(
 // ============================================================================
 
 async function main(): Promise<void> {
-  print("🔄 ZeroXKey Gas Station: USDC → WETH Swap", "");
+  print("🔄 0xkey Gas Station: USDC → WETH Swap", "");
   print("Network", "Base Mainnet");
   print("Swap Amount", `${SWAP_AMOUNT_USDC} USDC`);
   print("User Wallet", env.EOA_ADDRESS);
   print("Paymaster", env.PAYMASTER_ADDRESS);
   print("", "");
 
-  // Initialize ZeroXKey SDK
+  // Initialize 0xkey SDK
   const zeroXKeyClient = new ZeroXKeyServerSDK({
     apiBaseUrl: env.BASE_URL,
     apiPrivateKey: env.API_PRIVATE_KEY,

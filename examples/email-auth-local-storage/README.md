@@ -2,14 +2,14 @@
 
 > **Note:** This example demonstrates storing keys in **localStorage for educational purposes only**.
 >
-> For production applications, use **IndexedDB-based storage** with unextractable keys via **[`@0xkey-io/react-wallet-kit`](https://docs.0xkey.com/sdks/react/getting-started)** or **[`@0xkey-io/core`](https://github.com/0xkey-io/sdk-js/tree/main/packages/core)**.
+> For production applications, use **IndexedDB-based storage** with unextractable keys via **[`@0xkey-io/react-wallet-kit`](https://docs.0xkey.io/sdks/react/getting-started)** or **[`@0xkey-io/core`](https://github.com/0xkey-io/sdk-js/tree/main/packages/core)**.
 
 This example shows a complete email auth flow using a locally stored target embedded key. It contains a NextJS app with:
 
 - a frontend application
 - a backend application
 
-For general information about email auth, [check out our documentation](https://docs.0xkey.com/authentication/email).
+For general information about email auth, [check out our documentation](https://docs.0xkey.io/authentication/email).
 
 This example contains an auth page and enables you to create wallets using an email auth credential. Unlike our other [email auth example](https://github.com/0xkey-io/sdk-js/tree/main/examples/email-auth), this does not use an iframe. Instead of being in an iframe, the target embedded key is created within the application itself and stored in local storage.
 
@@ -36,9 +36,9 @@ $ cd examples/email-auth-local-storage/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your API private key should be securely managed and **_never_** be committed to git.
@@ -57,7 +57,7 @@ Now open `.env.local` and add the missing environment variables:
 If you would like to test this with a standalone, parent organization, you will have to enable your parent organization to perform email auth. You can set the feature flag with the following via [tkcli](https://github.com/0xkey-io/tkcli):
 
 ```bash
-0xkey request --host api.0xkey.com --path /public/v1/submit/set_organization_feature --body '{
+0xkey request --host api.0xkey.io --path /public/v1/submit/set_organization_feature --body '{
     "timestampMs": "'"$(date +%s)"'000",
     "type": "ACTIVITY_TYPE_SET_ORGANIZATION_FEATURE",
     "organizationId": "<your organization ID>",
@@ -83,9 +83,9 @@ Example Link: https://stackblitz.com/edit/stackblitz-starters-pyyw59
 
 To use the example you need the following
 
-- ZeroXKey Organization
+- 0xkey Organization
 - API key for the root user (both public and private key needed)
-- ZeroXKey Suborg with an email user
+- 0xkey Suborg with an email user
 
 #### Set Env Variables
 
@@ -94,7 +94,7 @@ Set the following environment variables in the `.env.local` file
 - `API_PUBLIC_KEY` --> Set this to be the public key of the API key for the root user for the org you've created
 - `API_PRIVATE_KEY` --> Set this to be the private key of the API key for the root user for the org you've created
 - `NEXT_PUBLIC_ORGANIZATION_ID` --> Set this to be the Org ID of the org you've created
-- `NEXT_PUBLIC_BASE_URL` --> This will be preset with https://api.0xkey.com
+- `NEXT_PUBLIC_BASE_URL` --> This will be preset with https://api.0xkey.io
 
 #### Directions to use
 

@@ -7,9 +7,9 @@ import * as path from "path";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
-  // Initialize ZeroXKey client
+  // Initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
@@ -20,7 +20,7 @@ async function main() {
     fullHost: "https://nile.trongrid.io/", // Testnet
   });
 
-  const zeroXKeyAddress = process.env.TRON_ADDRESS!; // Your Tron address in ZeroXKey
+  const zeroXKeyAddress = process.env.TRON_ADDRESS!; // Your Tron address in 0xkey
   const recipientAddress = "TY1jfzP3s94oSzYECC89EFn17iA8S4imVZ";
   const amount = 100; // Amount in SUN (1 TRX = 1,000,000 SUN)
 
@@ -31,7 +31,7 @@ async function main() {
     zeroXKeyAddress,
   );
 
-  // Sign with ZeroXKey
+  // Sign with 0xkey
   const { r, s, v } = await zeroXKeyClient.apiClient().signRawPayload({
     organizationId: process.env.ORGANIZATION_ID!,
     signWith: zeroXKeyAddress,

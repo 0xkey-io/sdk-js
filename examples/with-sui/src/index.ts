@@ -30,7 +30,7 @@ function toSerializedSignature({
 
 async function main() {
   // load the variables from .env
-  // SUI_ADDRESS and SUI_PUBLIC_KEY of the ZeroXKey signer
+  // SUI_ADDRESS and SUI_PUBLIC_KEY of the 0xkey signer
   const {
     ORGANIZATION_ID,
     API_PRIVATE_KEY,
@@ -53,7 +53,7 @@ async function main() {
   const amount = 1_000_000n; // 0.001 SUI
 
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: API_PRIVATE_KEY!,
     apiPublicKey: API_PUBLIC_KEY!,
     defaultOrganizationId: ORGANIZATION_ID!,

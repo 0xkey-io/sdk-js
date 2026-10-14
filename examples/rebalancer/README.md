@@ -1,6 +1,6 @@
 # Example: `rebalancer`
 
-A demo application which showcases an example of how to use ZeroXKey for managing multiple types of keys & users.
+A demo application which showcases an example of how to use 0xkey for managing multiple types of keys & users.
 
 **Note:** This example uses the Sepolia testnet!
 
@@ -37,9 +37,9 @@ $ cd examples/rebalancer/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
@@ -67,7 +67,7 @@ pnpm cli setup
 
 ### 4/ Pre-Fund
 
-Before executing any txns using ZeroXKey, you'll first need the "Distribution" address to have some funds. In the ZeroXKey dashboard, look up the address for "Distribution" and then send some funds to it from an external wallet or directly from a [faucet](https://sepoliafaucet.com/).
+Before executing any txns using 0xkey, you'll first need the "Distribution" address to have some funds. In the 0xkey dashboard, look up the address for "Distribution" and then send some funds to it from an external wallet or directly from a [faucet](https://sepoliafaucet.com/).
 
 ### 5/ Fund
 
@@ -107,7 +107,7 @@ Lastly, use the "recycle" command to move the funds stored in the "Long Term Sto
 pnpm cli recycle --key=bob
 ```
 
-We're using "Bob", who is tagged as a "manager", to execucute this transaction. The policy associated with the "Long Term Storage" address ensures that a "manager" can initiate a transaction from "Long Term Storage" but it must be approved by another "manager" or "admin" in order to actually be signed by ZeroXKey.
+We're using "Bob", who is tagged as a "manager", to execucute this transaction. The policy associated with the "Long Term Storage" address ensures that a "manager" can initiate a transaction from "Long Term Storage" but it must be approved by another "manager" or "admin" in order to actually be signed by 0xkey.
 
 If successful, you'll receive a message like:
 

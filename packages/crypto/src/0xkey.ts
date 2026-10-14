@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-// ZeroXKey-specific cryptographic utilities
+// 0xkey-specific cryptographic utilities
 import { bs58check } from "@0xkey-io/encoding";
 import { bs58 } from "@0xkey-io/encoding";
 import {
@@ -196,16 +196,16 @@ export const decryptExportBundle = async ({
 };
 
 /**
- * Verifies a signature from a ZeroXKey stamp using ECDSA and SHA-256.
+ * Verifies a signature from a 0xkey stamp using ECDSA and SHA-256.
  *
  * @param {string} publicKey - The public key of the authenticator (e.g. WebAuthn or P256 API key).
  * @param {string} signature - The ECDSA signature in DER format.
- * @param {string} signedData - The data that was signed (e.g. JSON-stringified ZeroXKey request body).
+ * @param {string} signedData - The data that was signed (e.g. JSON-stringified 0xkey request body).
  * @returns {Promise<boolean>} - Returns true if the signature is valid, otherwise throws an error.
  *
  * @example
  *
- * const stampedRequest = await 0xkeyClient.stampGetWhoami(...);
+ * const stampedRequest = await zeroXKeyClient.stampGetWhoami(...);
  * const decodedStampContents = atob(stampedRequest.stamp.stampHeaderValue);
  * const parsedStampContents = JSON.parse(decodedStampContents);
  * const signature = parsedStampContents.signature;
@@ -232,7 +232,7 @@ export const verifyStampSignature = async (
 };
 
 /**
- * Verifies a signature from a ZeroXKey enclave using ECDSA and SHA-256.
+ * Verifies a signature from a 0xkey enclave using ECDSA and SHA-256.
  *
  * @param {string} enclaveQuorumPublic - The public key of the enclave signer.
  * @param {string} publicSignature - The ECDSA signature in DER format.
@@ -543,7 +543,7 @@ export const encryptOauth2ClientSecret = async (
 /**
  * Helper function used specifically to encrypt your on ramp private/secret api keys
  * to the on ramp encryption public key. This is used before uploading your on ramp
- * credentials to ZeroXKey via the CreateFiatOnRampCredential activity
+ * credentials to 0xkey via the CreateFiatOnRampCredential activity
  *
  * @param secret The private/secret api key issued by the on ramp provider
  * @param dangerouslyOverrideOnRampEncryptionPublicKey *(optional)* Hex-encoded

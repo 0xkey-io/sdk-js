@@ -152,11 +152,11 @@ interface ZeroXKeyProviderProps {
 }
 
 /**
- * Provides ZeroXKey client authentication, session management, wallet operations, and user profile management
+ * Provides 0xkey client authentication, session management, wallet operations, and user profile management
  * for the React Native Wallet Kit SDK. This context provider encapsulates all core authentication flows (Passkey, OTP, OAuth),
  * session lifecycle (creation, expiration, refresh), wallet import/export, and user profile updates (email, phone, name).
  *
- * The provider automatically initializes the ZeroXKey client, fetches configuration (including proxy auth config if needed),
+ * The provider automatically initializes the 0xkey client, fetches configuration (including proxy auth config if needed),
  * and synchronizes session and authentication state. It exposes a comprehensive set of methods for authentication flows,
  * wallet management, and user profile operations, as well as UI handlers for modal-driven flows.
  *
@@ -171,7 +171,7 @@ interface ZeroXKeyProviderProps {
  * Usage:
  * Wrap your application with `ZeroXKeyProvider` to enable authentication and wallet features via context.
  *
- * @param config - The ZeroXKey provider configuration object.
+ * @param config - The 0xkey provider configuration object.
  * @param children - React children to be rendered within the provider.
  * @param callbacks - Optional callbacks for error handling and session events.
  *
@@ -254,7 +254,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
     if (proxyAuthConfig) {
       if (config.auth?.sessionExpirationSeconds) {
         console.warn(
-          "ZeroXKey SDK warning. You have set sessionExpirationSeconds directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure session expiration in the ZeroXKey dashboard.",
+          "0xkey SDK warning. You have set sessionExpirationSeconds directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure session expiration in the 0xkey dashboard.",
         );
       }
       if (
@@ -262,12 +262,12 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         shouldFetchWalletKitConfig
       ) {
         console.warn(
-          "ZeroXKey SDK warning. You have set otpAlphanumeric directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure OTP settings in the ZeroXKey dashboard.",
+          "0xkey SDK warning. You have set otpAlphanumeric directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure OTP settings in the 0xkey dashboard.",
         );
       }
       if (config.auth?.otp?.length && shouldFetchWalletKitConfig) {
         console.warn(
-          "ZeroXKey SDK warning. You have set otpLength directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure OTP settings in the ZeroXKey dashboard.",
+          "0xkey SDK warning. You have set otpLength directly in the ZeroXKeyProvider. This setting will be ignored because you are using an auth proxy. Please configure OTP settings in the 0xkey dashboard.",
         );
       }
     }
@@ -319,7 +319,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
   };
 
   /**
-   * Initializes the ZeroXKey client with the provided configuration.
+   * Initializes the 0xkey client with the provided configuration.
    * This function sets up the client, fetches the proxy auth config if needed,
    * and prepares the client for use in authentication and wallet operations.
    *
@@ -376,7 +376,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
       } else {
         callbacks?.onError?.(
           new ZeroXKeyError(
-            `Failed to initialize ZeroXKey client`,
+            `Failed to initialize 0xkey client`,
             ZeroXKeyErrorCodes.INITIALIZE_CLIENT_ERROR,
             error,
           ),
@@ -2750,11 +2750,11 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         httpClient: client?.httpClient,
         createHttpClient,
         overrideAttestedStamper: async (params) => {
-          if (!client) throw new Error("0xKey client is not initialized");
+          if (!client) throw new Error("0xkey client is not initialized");
           return client.overrideAttestedStamper(params);
         },
         setMfaHandler: (handler) => {
-          if (!client) throw new Error("0xKey client is not initialized");
+          if (!client) throw new Error("0xkey client is not initialized");
           client.setMfaHandler(handler);
         },
         createPasskey,

@@ -10,7 +10,7 @@ import * as crypto from "crypto";
 import { refineNonNull } from "../utils";
 
 async function main() {
-  console.log("creating a new wallet on ZeroXKey...\n");
+  console.log("creating a new wallet on 0xkey...\n");
 
   const walletName = `ETH Wallet ${crypto.randomBytes(2).toString("hex")}`;
 

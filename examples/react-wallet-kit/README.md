@@ -8,7 +8,7 @@ A comprehensive reference application demonstrating [`@0xkey-io/react-wallet-kit
   - [Prerequisites](#prerequisites)
   - [Environment Setup](#environment-setup)
   - [Run](#run)
-- [How the ZeroXKey Integration Works](#how-the-0xkey-integration-works)
+- [How the 0xkey Integration Works](#how-the-0xkey-integration-works)
   - [Architecture Overview](#architecture-overview)
   - [System Context Diagram](#system-context-diagram)
   - [Component Hierarchy](#component-hierarchy)
@@ -34,8 +34,8 @@ A comprehensive reference application demonstrating [`@0xkey-io/react-wallet-kit
 ### Prerequisites
 
 - Node.js 18+
-- A [ZeroXKey](https://app.0xkey.com) organization
-- An Auth Proxy configuration (created in the ZeroXKey Dashboard under **Auth**)
+- A [ZeroXKey](https://app.0xkey.io) organization
+- An Auth Proxy configuration (created in the 0xkey Dashboard under **Auth**)
 
 ### Environment Setup
 
@@ -47,10 +47,10 @@ cp .env.local.example .env.local
 
 | Variable                                | Required | Description                                                                                             |
 | --------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_ORGANIZATION_ID`           | Yes      | Your ZeroXKey organization ID (from Dashboard)                                                          |
+| `NEXT_PUBLIC_ORGANIZATION_ID`           | Yes      | Your 0xkey organization ID (from Dashboard)                                                             |
 | `NEXT_PUBLIC_AUTH_PROXY_ID`             | Yes      | Auth Proxy config ID (from Dashboard > Auth)                                                            |
-| `NEXT_PUBLIC_BASE_URL`                  | No       | ZeroXKey API base URL (defaults to `https://api.0xkey.com`)                                             |
-| `NEXT_PUBLIC_AUTH_PROXY_URL`            | No       | Auth Proxy URL (defaults to `https://authproxy.0xkey.com`)                                              |
+| `NEXT_PUBLIC_BASE_URL`                  | No       | 0xkey API base URL (defaults to `https://api.0xkey.io`)                                                 |
+| `NEXT_PUBLIC_AUTH_PROXY_URL`            | No       | Auth Proxy URL (defaults to `https://authproxy.0xkey.io`)                                               |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`  | No       | [WalletConnect](https://cloud.walletconnect.com/) project ID (required for external wallet connections) |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_URL` | No       | Your application URL for WalletConnect metadata                                                         |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID`          | No       | Google OAuth client ID (for Google social login)                                                        |
@@ -69,7 +69,7 @@ The app launches at `http://localhost:3000`.
 
 ---
 
-## How the ZeroXKey Integration Works
+## How the 0xkey Integration Works
 
 ### Architecture Overview
 
@@ -102,7 +102,7 @@ The integration is layered into three tiers:
 
 ### System Context Diagram
 
-Shows how the browser app communicates with external services. All private key operations happen server-side in ZeroXKey's secure enclaves — the browser never touches key material directly (except through sandboxed import/export iframes).
+Shows how the browser app communicates with external services. All private key operations happen server-side in 0xkey's secure enclaves — the browser never touches key material directly (except through sandboxed import/export iframes).
 
 ```mermaid
 flowchart LR
@@ -116,14 +116,14 @@ flowchart LR
 
     subgraph ZeroXKey
         direction TB
-        API["ZeroXKey API<br/>api.0xkey.com"]
+        API["0xkey API<br/>api.0xkey.io"]
         SE["Secure Enclaves<br/>(key storage & signing)"]
         API --> SE
     end
 
-    AP["Auth Proxy<br/>authproxy.0xkey.com"]
+    AP["Auth Proxy<br/>authproxy.0xkey.io"]
     OAuth["OAuth Providers<br/>(Google, Apple, etc.)"]
-    Iframes["Sandboxed Iframes<br/>import.0xkey.com<br/>export.0xkey.com"]
+    Iframes["Sandboxed Iframes<br/>import.0xkey.io<br/>export.0xkey.io"]
     WC["WalletConnect<br/>(MetaMask, Phantom, etc.)"]
     MP["MoonPay<br/>(sandbox)"]
 
@@ -242,17 +242,17 @@ The `ZeroXKeyProviderConfig` object controls everything the SDK does. Here's how
 #### API Endpoints
 
 ```ts
-apiBaseUrl: "https://api.0xkey.com",       // ZeroXKey API (wallet ops, signing)
-authProxyUrl: "https://authproxy.0xkey.com", // Auth Proxy (OTP, OAuth — no backend needed)
+apiBaseUrl: "https://api.0xkey.io",       // 0xkey API (wallet ops, signing)
+authProxyUrl: "https://authproxy.0xkey.io", // Auth Proxy (OTP, OAuth — no backend needed)
 authProxyConfigId: "...",                      // Ties to your Dashboard auth config
 organizationId: "...",                         // Your parent organization
-importIframeUrl: "https://import.0xkey.com", // Secure iframe for wallet import
-exportIframeUrl: "https://export.0xkey.com", // Secure iframe for wallet export
+importIframeUrl: "https://import.0xkey.io", // Secure iframe for wallet import
+exportIframeUrl: "https://export.0xkey.io", // Secure iframe for wallet export
 ```
 
-The **Auth Proxy** is ZeroXKey's managed service that handles OTP delivery (email/SMS) and OAuth token exchange without requiring you to build a backend. It's configured in the ZeroXKey Dashboard (allowed origins, session lifetimes, email templates, etc.) and referenced here by its config ID.
+The **Auth Proxy** is 0xkey's managed service that handles OTP delivery (email/SMS) and OAuth token exchange without requiring you to build a backend. It's configured in the 0xkey Dashboard (allowed origins, session lifetimes, email templates, etc.) and referenced here by its config ID.
 
-The **import/export iframes** are ZeroXKey-hosted secure contexts used for wallet import and export operations. Private key material never leaves these sandboxed iframes.
+The **import/export iframes** are 0xkey-hosted secure contexts used for wallet import and export operations. Private key material never leaves these sandboxed iframes.
 
 #### Authentication Methods
 
@@ -278,7 +278,7 @@ The `methodOrder` array controls the display order of auth methods in the login 
 
 #### Sub-Organization & Wallet Creation on Signup
 
-When a user authenticates for the first time, ZeroXKey creates a **sub-organization** under your parent org. The `createSuborgParams` config defines what wallets and accounts are provisioned at signup:
+When a user authenticates for the first time, 0xkey creates a **sub-organization** under your parent org. The `createSuborgParams` config defines what wallets and accounts are provisioned at signup:
 
 ```ts
 auth: {
@@ -332,7 +332,7 @@ walletConfig: {
   },
   walletConnect: {
     projectId: "...",
-    appMetadata: { name: "ZeroXKey Wallet", description: "...", url: "...", icons: [...] },
+    appMetadata: { name: "0xkey Wallet", description: "...", url: "...", icons: [...] },
   },
 }
 ```
@@ -407,7 +407,7 @@ sequenceDiagram
     actor User as Browser (App)
     participant SDK as ZeroXKeyProvider (SDK)
     participant AP as Auth Proxy
-    participant API as ZeroXKey API
+    participant API as 0xkey API
 
     User->>SDK: handleLogin()
     SDK-->>User: Show auth modal (email/passkey/OAuth)
@@ -438,7 +438,7 @@ sequenceDiagram
     actor User as Browser (App)
     participant SDK as ZeroXKeyProvider (SDK)
     participant AP as Auth Proxy
-    participant API as ZeroXKey API
+    participant API as 0xkey API
 
     User->>SDK: App mounts
     Note over SDK: Check stored session (expired or missing)<br/>clientState = Ready, authState = Unauthenticated
@@ -550,7 +550,7 @@ sequenceDiagram
     actor User
     participant DP as DemoPanel
     participant SDK as useZeroXKey()
-    participant API as ZeroXKey API
+    participant API as 0xkey API
     participant Utils as utils.ts
 
     User->>DP: Click "Sign Message"
@@ -584,7 +584,7 @@ The SDK exposes wallets through the `Wallet` type:
 {
   walletId: string;
   walletName: string;
-  source: WalletSource;   // "Embedded" (ZeroXKey-managed) or "Connected" (external)
+  source: WalletSource;   // "Embedded" (0xkey-managed) or "Connected" (external)
   accounts: WalletAccount[];
   exported: boolean;       // Whether the wallet has been exported
 }
@@ -596,15 +596,15 @@ The `DemoPanel` distinguishes between embedded and connected wallets — export/
 
 ### Wallet Export Sequence
 
-Export uses a ZeroXKey-hosted sandboxed iframe (`export.0xkey.com`) so that decrypted key material is rendered inside the iframe and never exposed to the parent application's JavaScript context.
+Export uses a 0xkey-hosted sandboxed iframe (`export.0xkey.io`) so that decrypted key material is rendered inside the iframe and never exposed to the parent application's JavaScript context.
 
 ```mermaid
 sequenceDiagram
     actor User
     participant DP as DemoPanel
     participant SDK as useZeroXKey()
-    participant API as ZeroXKey API
-    participant Iframe as export.0xkey.com
+    participant API as 0xkey API
+    participant Iframe as export.0xkey.io
 
     User->>DP: Click "Export Wallet"
     DP->>SDK: handleExportWallet({ walletId })
@@ -731,9 +731,9 @@ src/
 
 ## Learn More
 
-- [React Wallet Kit — Getting Started](https://docs.0xkey.com/sdks/react/getting-started)
-- [Authentication Overview](https://docs.0xkey.com/sdks/react/auth)
-- [Using Embedded Wallets](https://docs.0xkey.com/sdks/react/using-embedded-wallets)
-- [Signing](https://docs.0xkey.com/sdks/react/signing)
-- [EWK Reference](https://docs.0xkey.com/reference/embedded-wallet-kit)
-- [Auth Proxy Reference](https://docs.0xkey.com/reference/auth-proxy)
+- [React Wallet Kit — Getting Started](https://docs.0xkey.io/sdks/react/getting-started)
+- [Authentication Overview](https://docs.0xkey.io/sdks/react/auth)
+- [Using Embedded Wallets](https://docs.0xkey.io/sdks/react/using-embedded-wallets)
+- [Signing](https://docs.0xkey.io/sdks/react/signing)
+- [EWK Reference](https://docs.0xkey.io/reference/embedded-wallet-kit)
+- [Auth Proxy Reference](https://docs.0xkey.io/reference/auth-proxy)

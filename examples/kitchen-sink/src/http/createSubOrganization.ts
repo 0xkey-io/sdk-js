@@ -9,7 +9,7 @@ import { ApiKeyStamper } from "@0xkey-io/api-key-stamper";
 import { refineNonNull } from "../utils";
 
 async function main() {
-  console.log("creating a new sub-organization on ZeroXKey...\n");
+  console.log("creating a new sub-organization on 0xkey...\n");
 
   const apiKeyName = "<API key name>";
   const publicKey = "<API public key>";

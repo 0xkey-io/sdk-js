@@ -50,7 +50,7 @@ async function createWalletTransferV4WithZeroXKey(args: {
 
   const signingMessage = signingMessageBuilder.endCell().hash();
 
-  // Sign message using ZeroXKey
+  // Sign message using 0xkey
   const txSignResult = await args.zeroXKeyClient.apiClient().signRawPayload({
     signWith: args.walletAddress,
     payload: bytesToHex(signingMessage),

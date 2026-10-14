@@ -16,7 +16,7 @@
   "description": "Encryption, decryption, and key related utility functions",
   "author": {
     "name": "0xkey",
-    "url": "https://0xkey.com/"
+    "url": "https://0xkey.io/"
   },
   "homepage": "https://github.com/0xkey-io/sdk-js/tree/main/packages/crypto",
   "bugs": {

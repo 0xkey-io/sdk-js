@@ -11,17 +11,17 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 async function main() {
   if (!process.env.ORGANIZATION_ID) {
     console.error(
-      "ORGANIZATION_ID is not set. Please create .env.local and populate it with `ORGANIZATION_ID=<your ZeroXKey organization ID>`",
+      "ORGANIZATION_ID is not set. Please create .env.local and populate it with `ORGANIZATION_ID=<your 0xkey organization ID>`",
     );
   }
   if (!process.env.API_PUBLIC_KEY) {
     console.error(
-      "API_PUBLIC_KEY is not set. Please create .env.local and populate it with `API_PUBLIC_KEY=<your ZeroXKey API public key>`",
+      "API_PUBLIC_KEY is not set. Please create .env.local and populate it with `API_PUBLIC_KEY=<your 0xkey API public key>`",
     );
   }
   if (!process.env.API_PRIVATE_KEY) {
     console.error(
-      "API_PRIVATE_KEY is not set. Please create .env.local and populate it with `API_PRIVATE_KEY=<your ZeroXKey API private key>`",
+      "API_PRIVATE_KEY is not set. Please create .env.local and populate it with `API_PRIVATE_KEY=<your 0xkey API private key>`",
     );
   }
   if (
@@ -47,7 +47,7 @@ async function main() {
   const organizationId = process.env.ORGANIZATION_ID;
 
   console.log(
-    `Creating a new Private Key for organization ${organizationId} using the configured ZeroXKey API key...`,
+    `Creating a new Private Key for organization ${organizationId} using the configured 0xkey API key...`,
   );
 
   const { privateKeyName } = await prompts([
@@ -85,7 +85,7 @@ async function main() {
   console.log(`\t${signedRequest.body}`);
 
   console.log(
-    "\nFor example, you can send this request to ZeroXKey by running the following cURL command:",
+    "\nFor example, you can send this request to 0xkey by running the following cURL command:",
   );
   console.log(
     `\tcurl -X POST -d'${signedRequest.body}' -H'${signedRequest.stamp.stampHeaderName}:${signedRequest.stamp.stampHeaderValue}' -v '${signedRequest.url}'`,

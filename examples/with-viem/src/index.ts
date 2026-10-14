@@ -29,7 +29,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the 0xkey API.
     await createNewWallet();
     return;
   }
@@ -62,8 +62,8 @@ async function main() {
   //
   // -----
   //
-  // const 0xkeyAccount = createAccountWithAddress({
-  //   client: 0xkeyClient.apiClient(),
+  // const zeroXKeyAccount = createAccountWithAddress({
+  //   client: zeroXKeyClient.apiClient(),
   //   organizationId: process.env.ORGANIZATION_ID!,
   //   signWith: process.env.SIGN_WITH!,
   //   ethereumAddress: process.env.ETHEREUM_ADDRESS!,
@@ -110,7 +110,7 @@ async function main() {
     signature,
   });
 
-  print("ZeroXKey-powered signature:", `${signature}`);
+  print("0xkey-powered signature:", `${signature}`);
   print("Recovered address:", `${recoveredAddress}`);
   assertEqual(address, recoveredAddress);
 
@@ -159,7 +159,7 @@ async function main() {
 
   async function handleActivityError(error: any) {
     if (isZeroXKeyActivityConsensusNeededError(error)) {
-      // ZeroXKey-specific error details may be wrapped by higher level errors
+      // 0xkey-specific error details may be wrapped by higher level errors
       const activityId = error["activityId"] || error["cause"]["activityId"];
       let activityStatus =
         error["activityStatus"] || error["cause"]["activityId"];

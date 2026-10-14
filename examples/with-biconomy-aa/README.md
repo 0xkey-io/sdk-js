@@ -1,6 +1,6 @@
 # Example: `with-biconomy-aa`
 
-This example shows how to construct and broadcast a transaction using ZeroXKey with [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer), [`Viem`](https://viem.sh/docs/clients/wallet.html), and [`Biconomy`](https://docs.biconomy.io/account).
+This example shows how to construct and broadcast a transaction using 0xkey with [`Ethers`](https://docs.ethers.org/v6/api/providers/#Signer), [`Viem`](https://viem.sh/docs/clients/wallet.html), and [`Biconomy`](https://docs.biconomy.io/account).
 
 If you want to see a demo with passkeys, it's coming 🔜™️!
 
@@ -21,11 +21,11 @@ $ cd examples/with-biconomy-aa/
 
 ### 2a/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet account (address), private key address, or a private key ID
+- A 0xkey wallet account (address), private key address, or a private key ID
 
 ### 2b/ Setting up Biconomy
 
@@ -46,7 +46,7 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` -- a ZeroXKey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
+- `SIGN_WITH` -- a 0xkey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
 - `INFURA_KEY` -- if this is not set, it will default to using the Community Infura key
 - `BICONOMY_BUNDLER_URL`
 - `BICONOMY_PAYMASTER_API_KEY`
@@ -56,7 +56,7 @@ Now open `.env.local` and add the missing environment variables:
 
 Note: there are two included — one for Viem and another for Ethers. See `package.json` for more details.
 
-These scripts construct transactions via ZeroXKey and broadcast them via Infura. If the scripts exit because your account isn't funded, you can request funds on https://sepoliafaucet.com/ or https://faucet.paradigm.xyz/.
+These scripts construct transactions via 0xkey and broadcast them via Infura. If the scripts exit because your account isn't funded, you can request funds on https://sepoliafaucet.com/ or https://faucet.paradigm.xyz/.
 
 #### Viem
 
@@ -66,7 +66,7 @@ $ pnpm start-viem
 
 This script will do the following:
 
-1. instantiate a ZeroXKey Viem wallet client
+1. instantiate a 0xkey Viem wallet client
 2. instantiate a Viem public client (to be used to fetch onchain data)
 3. connect the wallet client to the Biconomy paymaster
 4. send ETH (via type 2 EIP-1559 transaction)
@@ -109,7 +109,7 @@ $ pnpm start-viem-nexus
 
 This script will do the following:
 
-1. instantiate a ZeroXKey Viem wallet client
+1. instantiate a 0xkey Viem wallet client
 2. instantiate a Viem public client (to be used to fetch onchain data)
 3. connect the wallet client to Biconomy Nexus
 4. send ETH (via type 2 EIP-1559 transaction)
@@ -152,7 +152,7 @@ $ pnpm start-ethers
 
 This script will do the following:
 
-1. instantiate a ZeroXKey Ethers wallet client
+1. instantiate a 0xkey Ethers wallet client
 2. instantiate a Ethers provider (to be used to fetch onchain data)
 3. connect the wallet client to the Biconomy paymaster
 4. send ETH (via type 2 EIP-1559 transaction)

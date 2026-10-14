@@ -100,7 +100,7 @@ test("requests return grpc status details as part of their errors", async () => 
     });
   } catch (e: any) {
     expect(e.message).toEqual(
-      `ZeroXKey error 1: invalid request (Details: [{\"@type\":\"type.googleapis.com/google.rpc.BadRequest\",\"fieldViolations\":[{\"field\":\"privateKeys.0.privateKeyName\",\"description\":\"This field must be unique.\"}]}])`,
+      `0xkey error 1: invalid request (Details: [{\"@type\":\"type.googleapis.com/google.rpc.BadRequest\",\"fieldViolations\":[{\"field\":\"privateKeys.0.privateKeyName\",\"description\":\"This field must be unique.\"}]}])`,
     );
 
     expect(e.details.length).toEqual(1);

@@ -282,7 +282,7 @@ export class ZeroXKeyBrowserClient extends ZeroXKeyBaseClient {
   };
 
   /**
-   * Log in with a session returns from ZeroXKey. This method uses a session from server actions and stores it and the active client in local storage
+   * Log in with a session returns from 0xkey. This method uses a session from server actions and stores it and the active client in local storage
    * To be used in conjunction with an `indexeDbStamper`.
    *
    * @param session
@@ -676,7 +676,7 @@ export class ZeroXKeyPasskeyClient extends ZeroXKeyBrowserClient {
     // https://www.w3.org/TR/webauthn-2/#sctn-sample-registration
     //
     // All pubkey algorithms can be found here: https://www.iana.org/assignments/cose/cose.xhtml#algorithms
-    // ZeroXKey only supports ES256 (-7) and RS256 (-257)
+    // 0xkey only supports ES256 (-7) and RS256 (-257)
     //
     // The pubkey type only supports one value, "public-key"
     // See https://www.w3.org/TR/webauthn-2/#enumdef-publickeycredentialtype for more details
@@ -731,7 +731,7 @@ export class ZeroXKeyPasskeyClient extends ZeroXKeyBrowserClient {
 }
 
 /**
- * ZeroXKeyIframeClient is a client that uses an iframe to interact with the ZeroXKey API.
+ * ZeroXKeyIframeClient is a client that uses an iframe to interact with the 0xkey API.
  * It is used to create read-write sessions, and to inject credential bundles into the iframe.
  * It is also used to extract encrypted credential bundles from the iframe.
  * @extends ZeroXKeyBrowserClient
@@ -829,7 +829,7 @@ export class ZeroXKeyWalletClient extends ZeroXKeyBrowserClient {
 }
 
 /**
- * ZeroXKeyIndexedDbClient is a client that uses IndexedDb to interact with the ZeroXKey API.
+ * ZeroXKeyIndexedDbClient is a client that uses IndexedDb to interact with the 0xkey API.
  * @extends ZeroXKeyBrowserClient
  */
 export class ZeroXKeyIndexedDbClient extends ZeroXKeyBrowserClient {

@@ -1,6 +1,6 @@
 # Example: `with-bitcoin`
 
-This example shows how to construct, sign, and broadcast a Bitcoin transaction using ZeroXKey. This example is compatible with P2TR and P2WPKH
+This example shows how to construct, sign, and broadcast a Bitcoin transaction using 0xkey. This example is compatible with P2TR and P2WPKH
 
 ## Getting started
 
@@ -19,11 +19,11 @@ $ cd examples/with-bitcoin/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- Two ZeroXKey wallet addresses:
+- Two 0xkey wallet addresses:
   - one with `COMPRESSED` format (in `SOURCE_COMPRESSED_PUBLIC_KEY`)
   - one in either `P2TR` or `P2WPKH` (in `SOURCE_BITCOIN_ADDRESS`)
   - you can create a wallet with `pnpm run create-wallet` if you do not have one already
@@ -40,8 +40,8 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SOURCE_COMPRESSED_PUBLIC_KEY`: ZeroXKey wallet address (`COMPRESSED` format)
-- `SOURCE_BITCOIN_ADDRESS`: ZeroXKey wallet address (`P2TR` or `P2WPKH` format)
+- `SOURCE_COMPRESSED_PUBLIC_KEY`: 0xkey wallet address (`COMPRESSED` format)
+- `SOURCE_BITCOIN_ADDRESS`: 0xkey wallet address (`P2TR` or `P2WPKH` format)
 
 ### 3/ Running the scripts
 
@@ -109,7 +109,7 @@ Fetching UTXOs...
 $ pnpm with-policy
 ```
 
-Documentation on our Bitcoin policy engine, and policy-enabled Bitcoin transaction signing can be found here: https://docs.0xkey.com/networks/bitcoin#policy-enabled-bitcoin-transaction-signing
+Documentation on our Bitcoin policy engine, and policy-enabled Bitcoin transaction signing can be found here: https://docs.0xkey.io/networks/bitcoin#policy-enabled-bitcoin-transaction-signing
 
 To use our policy-enabled Bitcoin transaction signing flow, this example will use the `SIGN_TRANSACTION` endpoint with the transaction type `TRANSACTION_TYPE_BITCOIN`, and will pass in a hex serialized PSBT (Partially Signed Bitcoin Transaction).
 

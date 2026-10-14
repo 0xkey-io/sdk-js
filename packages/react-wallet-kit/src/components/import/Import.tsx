@@ -64,7 +64,7 @@ export function ImportComponent(props: {
 
   if (!config) {
     throw new ZeroXKeyError(
-      "ZeroXKey SDK is not properly configured. Please check your configuration.",
+      "0xkey SDK is not properly configured. Please check your configuration.",
       ZeroXKeyErrorCodes.CONFIG_NOT_INITIALIZED,
     );
   }

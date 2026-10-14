@@ -7,10 +7,10 @@ import { hashMessage } from "viem";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
-  // Initializing the ZeroXKey client used by the Delegated account activities
+  // Initializing the 0xkey client used by the Delegated account activities
   // Notice the subOrganizationId created above
   const zeroXKeyDelegated = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.DELEGATED_API_PRIVATE_KEY!,
     apiPublicKey: process.env.DELEGATED_API_PUBLIC_KEY!,
     defaultOrganizationId: process.env.DELEGATED_SUBORG_ID!,
@@ -36,13 +36,13 @@ async function main() {
   //generate a tx https://build.tx.xyz/ from your sub-org wallet address to the RECIPIENT_ADDRESS
   const valid_tx = "<unsigned_tx>";
   const invalid_tx = "<unsigned_tx>";
-  // this activity should be allowed by the ZeroXKey Policy engine
+  // this activity should be allowed by the 0xkey Policy engine
   await signTx(valid_tx, "Policy Tx Allow");
-  // this activity should be denied by the ZeroXKey Policy engine
+  // this activity should be denied by the 0xkey Policy engine
   await signTx(invalid_tx, "Policy Tx Deny");
 
   // let's try a different activity like signRawPayload
-  // this activity should be denied by the ZeroXKey Policy engine
+  // this activity should be denied by the 0xkey Policy engine
   const message = "test message to be signed";
   try {
     const { r, s, v } = await zeroXKeyDelegated.signRawPayload({

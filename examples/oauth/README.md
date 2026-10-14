@@ -1,21 +1,21 @@
 # Example: `oauth`
 
-This is a minimal Next.js app showing how to implement **OAuth login (Google)** with ZeroXKey using the `@0xkey-io/react-wallet-kit`, wired up to **your own backend** via Next.js Server Actions (see: [Advanced backend authentication](https://docs.0xkey.com/sdks/react/advanced-backend-authentication)).
+This is a minimal Next.js app showing how to implement **OAuth login (Google)** with 0xkey using the `@0xkey-io/react-wallet-kit`, wired up to **your own backend** via Next.js Server Actions (see: [Advanced backend authentication](https://docs.0xkey.io/sdks/react/advanced-backend-authentication)).
 
 ### What this demo shows
 
 After visiting the app, the user can:
 
 - Log in with Google OAuth (via `@react-oauth/google`)
-- Authenticate with ZeroXKey by exchanging the Google credential through your own backend, implemented here using Next.js Server Actions.
-- Automatically create or access a ZeroXKey sub-organization with an embedded wallet that holds both an Ethereum and a Solana account.
+- Authenticate with 0xkey by exchanging the Google credential through your own backend, implemented here using Next.js Server Actions.
+- Automatically create or access a 0xkey sub-organization with an embedded wallet that holds both an Ethereum and a Solana account.
 
 Once logged in, the dashboard is split into two main panels:
 
 - **Left side — actions:**
   - **Sign Message** — sign an arbitrary message with any EVM or Solana account (`signRawPayload`). Automatically selects `HASH_FUNCTION_SHA256` for secp256k1 (EVM) keys and `HASH_FUNCTION_NOT_APPLICABLE` for ed25519 (Solana) keys.
-  - **Send ETH** — submit a Gas Station–sponsored Ethereum transfer on Sepolia or Mainnet via `ethSendTransaction`, then poll for the tx hash with `pollTransactionStatus`. Fetches the updated ETH balance afterwards via `getWalletAddressBalances`. See [Transaction Management](https://docs.0xkey.com/concepts/transaction-management).
-  - **Send SOL** — submit a Gas Station–sponsored Solana transfer on Devnet or Mainnet via `solSendTransaction`, then poll for the transaction signature with `pollTransactionStatus`. Fetches the updated SOL balance afterwards via `getWalletAddressBalances`. See [Transaction Management](https://docs.0xkey.com/concepts/transaction-management).
+  - **Send ETH** — submit a Gas Station–sponsored Ethereum transfer on Sepolia or Mainnet via `ethSendTransaction`, then poll for the tx hash with `pollTransactionStatus`. Fetches the updated ETH balance afterwards via `getWalletAddressBalances`. See [Transaction Management](https://docs.0xkey.io/concepts/transaction-management).
+  - **Send SOL** — submit a Gas Station–sponsored Solana transfer on Devnet or Mainnet via `solSendTransaction`, then poll for the transaction signature with `pollTransactionStatus`. Fetches the updated SOL balance afterwards via `getWalletAddressBalances`. See [Transaction Management](https://docs.0xkey.io/concepts/transaction-management).
 - **Right side** — displays the raw embedded wallet data and the sub-organization ID.
 
 ## How it works
@@ -24,8 +24,8 @@ Once logged in, the dashboard is split into two main panels:
 2. The Google button is rendered with a `nonce = sha256(publicKey)`.
 3. After Google returns an OIDC token, the client calls your Server Actions to:
 
-- Find (`getSubOrgIds`) or create (`createSubOrganization`) a ZeroXKey sub-organization with an embedded wallet containing both Ethereum and Solana accounts bound to that OIDC identity.
-- Create a ZeroXKey read-write session JWT (`oauthLogin`) bound to the IndexedDB keypair (see: [Sessions](https://docs.0xkey.com/authentication/sessions#read-write-sessions)).
+- Find (`getSubOrgIds`) or create (`createSubOrganization`) a 0xkey sub-organization with an embedded wallet containing both Ethereum and Solana accounts bound to that OIDC identity.
+- Create a 0xkey read-write session JWT (`oauthLogin`) bound to the IndexedDB keypair (see: [Sessions](https://docs.0xkey.io/authentication/sessions#read-write-sessions)).
 
 4. On the dashboard, the session is used to:
    - Sign messages with `signRawPayload` using the selected EVM or Solana account.
@@ -52,9 +52,9 @@ $ cd examples/oauth/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your API private key should be securely managed and **_never_** be committed to git.

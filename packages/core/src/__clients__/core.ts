@@ -736,7 +736,7 @@ export class ZeroXKeyClient {
    * By default, it uses the configuration provided during the ZeroXKeyClient initialization.
    *
    * @param params - Optional configuration parameters to override the default client configuration.
-   * @param params.apiBaseUrl - The base URL of the ZeroXKey API (defaults to `https://api.0xkey.io` if not provided).
+   * @param params.apiBaseUrl - The base URL of the 0xkey API (defaults to `https://api.0xkey.io` if not provided).
    * @param params.organizationId - The organization ID to associate requests with.
    * @param params.authProxyUrl - The base URL of the Auth Proxy (defaults to `https://authproxy.0xkey.io` if not provided).
    * @param params.authProxyConfigId - The configuration ID to use when making Auth Proxy requests.
@@ -887,7 +887,7 @@ export class ZeroXKeyClient {
    *
    * - This function generates a new passkey attestation and challenge, suitable for registration with the user's device.
    * - Handles both web and React Native environments, automatically selecting the appropriate passkey creation flow.
-   * - The resulting attestation and challenge can be used to register the passkey with ZeroXKey.
+   * - The resulting attestation and challenge can be used to register the passkey with 0xkey.
    *
    * @param params.name - display name for the passkey (defaults to a generated name based on the current timestamp).
    * @param params.challenge - challenge string to use for passkey registration. If not provided, a new challenge will be generated.
@@ -1425,15 +1425,15 @@ export class ZeroXKeyClient {
   };
 
   /**
-   * Builds and signs a wallet login request without submitting it to ZeroXKey.
+   * Builds and signs a wallet login request without submitting it to 0xkey.
    *
    * - This function prepares a signed request for wallet authentication, which can later be used
-   *   to log in or sign up a user with ZeroXKey.
+   *   to log in or sign up a user with 0xkey.
    * - It initializes the wallet stamper, ensures a valid session public key (generating one if needed),
    *   and signs the login intent with the connected wallet.
    * - For Ethereum wallets, derives the public key from the stamped request header.
    * - For Solana wallets, retrieves the public key directly from the connected wallet.
-   * - The signed request is not sent to ZeroXKey immediately; it is meant to be used in a subsequent flow
+   * - The signed request is not sent to 0xkey immediately; it is meant to be used in a subsequent flow
    *   (e.g., `loginOrSignupWithWallet`) where sub-organization existence is verified or created first.
    *
    * @param params.walletProvider - the wallet provider used for authentication and signing.
@@ -1478,9 +1478,9 @@ export class ZeroXKeyClient {
           walletProvider,
         );
 
-        // here we sign the request with the wallet, but we don't send it to ZeroXKey yet
+        // here we sign the request with the wallet, but we don't send it to 0xkey yet
         // this is because we need to check if the subOrg exists first, and create one if it doesn't
-        // once we have the subOrg for the publicKey, we then can send the request to ZeroXKey
+        // once we have the subOrg for the publicKey, we then can send the request to 0xkey
         const signedRequest = await withZeroXKeyErrorHandling(
           async () => {
             return this.httpClient.stampStampLogin(
@@ -1697,7 +1697,7 @@ export class ZeroXKeyClient {
           );
         }
 
-        // now we can send the stamped request to ZeroXKey
+        // now we can send the stamped request to 0xkey
         const sessionResponse =
           await this.httpClient.sendSignedRequest<TStampLoginResponse>(
             signedRequest,
@@ -1785,7 +1785,7 @@ export class ZeroXKeyClient {
         captchaTarget?.assertUnchanged();
 
         // here we check if the subOrg exists and create one
-        // then we send off the stamped request to ZeroXKey
+        // then we send off the stamped request to 0xkey
 
         const accountRes = await (
           captchaTarget?.client ?? this.httpClient
@@ -1837,7 +1837,7 @@ export class ZeroXKeyClient {
           }
         }
 
-        // now we can send the stamped request to ZeroXKey
+        // now we can send the stamped request to 0xkey
         const sessionResponse =
           await this.httpClient.sendSignedRequest<TStampLoginResponse>(
             signedRequest,
@@ -2923,7 +2923,7 @@ export class ZeroXKeyClient {
   /**
    * Fetches all accounts for a specific wallet, including both embedded and connected wallet accounts.
    *
-   * - For embedded wallets, retrieves accounts from the ZeroXKey API, supporting pagination (defaults to the first page with a limit of 100 accounts).
+   * - For embedded wallets, retrieves accounts from the 0xkey API, supporting pagination (defaults to the first page with a limit of 100 accounts).
    * - For connected wallets (e.g., browser extensions or external providers), constructs account objects for each connected address from the provided or discovered wallet providers.
    * - Automatically determines the account type and populates relevant fields such as address, curve, and signing capability.
    * - Optionally allows filtering by a specific set of wallet providers and supports custom pagination options.
@@ -2956,7 +2956,7 @@ export class ZeroXKeyClient {
 
     return withZeroXKeyErrorHandling(
       async () => {
-        // this is an embedded wallet so we fetch accounts from ZeroXKey
+        // this is an embedded wallet so we fetch accounts from 0xkey
         if (wallet.source === WalletSource.Embedded) {
           const embedded: EmbeddedWalletAccount[] = [];
 
@@ -3126,7 +3126,7 @@ export class ZeroXKeyClient {
   /**
    * Fetches all private keys for the current user.
    *
-   * - Retrieves private keys from the ZeroXKey API.
+   * - Retrieves private keys from the 0xkey API.
    * - Supports stamping the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
    *
    * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
@@ -3190,7 +3190,7 @@ export class ZeroXKeyClient {
    *   - *Other chains*: follows the native connected wallet behavior.
    *
    * - **Embedded wallets**
-   *   - Uses the ZeroXKey API to sign the message directly.
+   *   - Uses the 0xkey API to sign the message directly.
    *   - Supports optional `addEthereumPrefix`:
    *     - If `true` (default for Ethereum), the message is prefixed before signing.
    *     - If `false`, the raw message is signed without any prefix.
@@ -3309,8 +3309,8 @@ export class ZeroXKeyClient {
    *   - Other chains: not supported; will throw an error.
    *
    * - **Embedded wallets**
-   *   - Delegates signing to the ZeroXKey API, which returns the signed transaction.
-   *   - Supports all ZeroXKey-supported transaction types (e.g., Ethereum/EVM, Solana, Tron).
+   *   - Delegates signing to the 0xkey API, which returns the signed transaction.
+   *   - Supports all 0xkey-supported transaction types (e.g., Ethereum/EVM, Solana, Tron).
    *   - BSC and other EVM-compatible chains use `TRANSACTION_TYPE_ETHEREUM`; the chain is identified by the unsigned transaction's `chainId`.
    *   - Optionally allows stamping with a specific stamper (`StamperType.Passkey`, `StamperType.ApiKey`, or `StamperType.Wallet`).
    *   - Note: For embedded Ethereum wallets, the returned signature doesn’t include the `0x` prefix. You should add `0x` before
@@ -3394,8 +3394,8 @@ export class ZeroXKeyClient {
    *   - Other chains: not supported; will throw an error.
    *
    * - **Embedded wallets**
-   *   - Signs the transaction using the ZeroXKey API.
-   *   - Requires an `rpcUrl` to broadcast the signed transaction, since ZeroXKey does not broadcast directly.
+   *   - Signs the transaction using the 0xkey API.
+   *   - Requires an `rpcUrl` to broadcast the signed transaction, since 0xkey does not broadcast directly.
    *   - Broadcasts the transaction using a JSON-RPC client and returns the resulting transaction hash/signature.
    *   - Optionally allows stamping with a specific stamper (`StamperType.Passkey`, `StamperType.ApiKey`, or `StamperType.Wallet`).
    *
@@ -3405,7 +3405,7 @@ export class ZeroXKeyClient {
    * @param params.transactionType - type of transaction (e.g., `"TRANSACTION_TYPE_SOLANA"`, `"TRANSACTION_TYPE_ETHEREUM"`).
    * @param params.rpcUrl - JSON-RPC endpoint used for broadcasting (required for Solana connected wallets and all embedded wallets).
    * @param params.stampWith - optional stamper to use when signing (`StamperType.Passkey`, `StamperType.ApiKey`, or `StamperType.Wallet`).
-   * @param params.organizationId - **Only for ZeroXKey embedded wallets**: organization ID to target (defaults to the session's organization ID).
+   * @param params.organizationId - **Only for 0xkey embedded wallets**: organization ID to target (defaults to the session's organization ID).
    * @returns A promise that resolves to a transaction signature or hash.
    * @throws {ZeroXKeyError} If the wallet type is unsupported, or if signing/broadcasting fails.
    */
@@ -3462,7 +3462,7 @@ export class ZeroXKeyClient {
         // this is an embedded wallet account
 
         // embedded wallet requires an RPC URL to broadcast
-        // since ZeroXKey does not broadcast transactions directly
+        // since 0xkey does not broadcast transactions directly
         if (!rpcUrl) {
           throw new ZeroXKeyError(
             "Missing rpcUrl: embedded wallets require an RPC URL to broadcast transactions.",
@@ -3505,7 +3505,7 @@ export class ZeroXKeyClient {
    * * **API subject to change**
    *
    * Signs and submits an ERC20 `transfer(address,uint256)` as an Ethereum transaction
-   * using a ZeroXKey-managed (embedded) wallet.
+   * using a 0xkey-managed (embedded) wallet.
    *
    * This is a convenience wrapper around `ethSendTransaction`:
    * - Encodes ERC20 transfer calldata.
@@ -3517,7 +3517,7 @@ export class ZeroXKeyClient {
    * @param params.stampWith - Optional stamper to authorize signing (e.g., passkey).
    * @param params.transfer - ERC20 transfer parameters.
    * @returns A promise resolving to the `sendTransactionStatusId`.
-   * @throws {ZeroXKeyError} If amount encoding fails or ZeroXKey rejects the transaction.
+   * @throws {ZeroXKeyError} If amount encoding fails or 0xkey rejects the transaction.
    */
   ethSendErc20Transfer = async (
     params: EthSendErc20TransferParams,
@@ -3586,7 +3586,7 @@ export class ZeroXKeyClient {
    * @beta
    * * **API subject to change**
    *
-   * Signs and submits an Ethereum transaction using a ZeroXKey-managed (embedded) wallet.
+   * Signs and submits an Ethereum transaction using a 0xkey-managed (embedded) wallet.
    *
    * This method performs **authorization and signing**, and submits the transaction
    * to ZeroXKey’s coordinator. It **does not perform any polling** — callers must use
@@ -3599,9 +3599,9 @@ export class ZeroXKeyClient {
    *   - They must instead use `signAndSendTransaction`.
    *
    * - **Embedded wallets**
-   *   - Constructs the payload for ZeroXKey's `eth_send_transaction` endpoint.
-   *   - Forwards transaction fields directly to ZeroXKey's coordinator.
-   *   - Signs and submits the transaction through ZeroXKey.
+   *   - Constructs the payload for 0xkey's `eth_send_transaction` endpoint.
+   *   - Forwards transaction fields directly to 0xkey's coordinator.
+   *   - Signs and submits the transaction through 0xkey.
    *   - Returns a `sendTransactionStatusId`, which the caller must pass to
    *     `pollTransactionStatus` to obtain the final result (tx hash + status).
    *
@@ -3614,7 +3614,7 @@ export class ZeroXKeyClient {
    * @returns A promise resolving to the `sendTransactionStatusId`.
    *          This ID must be passed to `pollTransactionStatus`.
    *
-   * @throws {ZeroXKeyError} If the transaction is invalid or ZeroXKey rejects it.
+   * @throws {ZeroXKeyError} If the transaction is invalid or 0xkey rejects it.
    */
   ethSendTransaction = async (
     params: EthSendTransactionParams,
@@ -3655,7 +3655,7 @@ export class ZeroXKeyClient {
     return withZeroXKeyErrorHandling(
       async () => {
         //
-        // Build ZeroXKey intent
+        // Build 0xkey intent
         //
         const intent: TEthSendTransactionBody = {
           from,
@@ -3678,7 +3678,7 @@ export class ZeroXKeyClient {
         }
 
         //
-        // Submit to ZeroXKey
+        // Submit to 0xkey
         //
         const resp = await this.httpClient.ethSendTransaction({
           ...intent,
@@ -3706,7 +3706,7 @@ export class ZeroXKeyClient {
    * @beta
    * * **API subject to change**
    *
-   * Signs and submits a Solana transaction using a ZeroXKey-managed (embedded) wallet.
+   * Signs and submits a Solana transaction using a 0xkey-managed (embedded) wallet.
    *
    * This method performs **authorization and signing**, and submits the transaction
    * to ZeroXKey’s coordinator. It **does not perform any polling** — callers must use
@@ -3719,8 +3719,8 @@ export class ZeroXKeyClient {
    *   - They must instead use `signAndSendTransaction`.
    *
    * - **Embedded wallets**
-   *   - Constructs the payload for ZeroXKey's `sol_send_transaction` endpoint.
-   *   - Signs and submits the transaction through ZeroXKey.
+   *   - Constructs the payload for 0xkey's `sol_send_transaction` endpoint.
+   *   - Signs and submits the transaction through 0xkey.
    *   - Returns a `sendTransactionStatusId`, which the caller must pass to
    *     `pollTransactionStatus` to obtain the final result (signature + status).
    *
@@ -3730,7 +3730,7 @@ export class ZeroXKeyClient {
    * @param params.transaction - The Solana transaction details.
    * @returns A promise resolving to the `sendTransactionStatusId`.
    *          This ID must be passed to `pollTransactionStatus`.
-   * @throws {ZeroXKeyError} If the transaction is invalid or ZeroXKey rejects it.
+   * @throws {ZeroXKeyError} If the transaction is invalid or 0xkey rejects it.
    */
   solSendTransaction = async (
     params: SolSendTransactionParams,
@@ -3871,7 +3871,7 @@ export class ZeroXKeyClient {
    * @beta
    * **API subject to change**
    *
-   * Polls ZeroXKey for the final result of a previously submitted transaction.
+   * Polls 0xkey for the final result of a previously submitted transaction.
    *
    * This function repeatedly calls `getSendTransactionStatus` until the transaction
    * reaches a terminal state.
@@ -3882,9 +3882,9 @@ export class ZeroXKeyClient {
    *
    * Behavior:
    *
-   * - Queries ZeroXKey every 500ms.
+   * - Queries 0xkey every 500ms.
    * - Stops polling automatically when a terminal state is reached.
-   * - Returns the full status payload from ZeroXKey.
+   * - Returns the full status payload from 0xkey.
    * - When available, Ethereum transaction details are exposed at `resp.eth.txHash`.
    *
    * @param params.organizationId - Organization ID under which the transaction was submitted.
@@ -3972,7 +3972,7 @@ export class ZeroXKeyClient {
   /**
    * Fetches the user details for the current session or a specified user.
    *
-   * - Retrieves user details from the ZeroXKey API using the provided userId and organizationId, or defaults to those from the active session.
+   * - Retrieves user details from the 0xkey API using the provided userId and organizationId, or defaults to those from the active session.
    * - If no userId is provided, the userId from the current session is used.
    * - If no organizationId is provided, the organizationId from the current session is used.
    * - Optionally allows stamping the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
@@ -4275,7 +4275,7 @@ export class ZeroXKeyClient {
         const newlyCreatedPolicies = missingPolicies.map((p, idx) => ({
           ...p,
 
-          // we can safely assert the ID exists because we know ZeroXKey's api
+          // we can safely assert the ID exists because we know 0xkey's api
           // will return one ID for each created policy or throw an error
           policyId: createPoliciesResponse.policyIds[idx]!,
         }));
@@ -4699,7 +4699,7 @@ export class ZeroXKeyClient {
           );
         }
 
-        // parse the oidc token so we can get the email. Pass it in to updateUser then call createOauthProviders. This will be verified by ZeroXKey.
+        // parse the oidc token so we can get the email. Pass it in to updateUser then call createOauthProviders. This will be verified by 0xkey.
         const { email: oidcEmail, iss } = jwtDecode<any>(oidcToken) || {};
 
         if (iss === googleISS) {
@@ -4847,7 +4847,7 @@ export class ZeroXKeyClient {
    * - The passkey's name and display name can be customized; if not provided, defaults are generated.
    * - The resulting passkey attestation and challenge are registered with ZeroXKey as a new authenticator.
    *
-   * @param params.name - name of the passkey (defaults to "ZeroXKey Passkey-`timestamp`").
+   * @param params.name - name of the passkey (defaults to "0xkey Passkey-`timestamp`").
    * @param params.displayName - display name of the passkey (defaults to the value of `name`).
    * @param params.userId - user ID to add the passkey for a specific user (defaults to the current session's userId).
    * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
@@ -4858,7 +4858,7 @@ export class ZeroXKeyClient {
   addPasskey = async (params?: AddPasskeyParams): Promise<string[]> => {
     const { stampWith = this.config.defaultStamperType, organizationId } =
       params || {};
-    const name = params?.name || `ZeroXKey Passkey-${Date.now()}`;
+    const name = params?.name || `0xkey Passkey-${Date.now()}`;
 
     return withZeroXKeyErrorHandling(
       async () => {
@@ -5664,7 +5664,7 @@ export class ZeroXKeyClient {
    * - This function refreshes the session and updates the session token and key pair associated with the given session key.
    * - If a sessionKey is provided, it will refresh the session under that key; otherwise, it will use the current active session key.
    * - Optionally allows specifying a new expiration time for the session, a custom public key, and whether to invalidate the existing session after refreshing.
-   * - Makes a request to the ZeroXKey API to stamp a new login and stores the refreshed session token.
+   * - Makes a request to the 0xkey API to stamp a new login and stores the refreshed session token.
    * - Automatically manages key pair cleanup and session storage to ensure consistency.
    * - Optionally allows stamping the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
    *
@@ -5947,7 +5947,7 @@ export class ZeroXKeyClient {
   /**
    * Fetches the WalletKit proxy authentication configuration from the auth proxy.
    *
-   * - This function makes a request to the ZeroXKey auth proxy to retrieve the current WalletKit configuration,
+   * - This function makes a request to the 0xkey auth proxy to retrieve the current WalletKit configuration,
    *   including supported authentication methods, OAuth providers, and any custom proxy settings.
    * - Useful for dynamically configuring the client UI or authentication flows based on the proxy's capabilities.
    * - Ensures that the client is aware of the latest proxy-side configuration, which may affect available login/signup options.

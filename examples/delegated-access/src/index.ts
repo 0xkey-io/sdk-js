@@ -6,10 +6,10 @@ import * as path from "path";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
-  // Initialize a ZeroXKey client using the parent organization
+  // Initialize a 0xkey client using the parent organization
   // used to create the sub-organization with the two users in it
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.ZEROXKEY_API_PRIVATE_KEY!,
     apiPublicKey: process.env.ZEROXKEY_API_PUBLIC_KEY!,
     defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID!,
@@ -64,7 +64,7 @@ async function main() {
   // Initializing the Turkey client used by the Delegated account activities
   // Notice the subOrganizationId created above
   const zeroXKeyDelegated = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.DELEGATED_API_PRIVATE_KEY!,
     apiPublicKey: process.env.DELEGATED_API_PUBLIC_KEY!,
     defaultOrganizationId: subOrg.subOrganizationId,

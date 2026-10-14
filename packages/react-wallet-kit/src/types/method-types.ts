@@ -292,7 +292,7 @@ export type HandleOnRampParams = {
   countrySubdivisionCode?: string; // ISO 3166-2 subdivision code, e.g., NY
   sandboxMode: boolean; // Whether to use sandbox (test) mode. Must be explicit.
   urlForSignature?: string; // MoonPay Widget URL to sign
-  organizationId?: string; // Organization context (ZeroXKey suborg)
+  organizationId?: string; // Organization context (0xkey suborg)
   userId?: string; // Optional end user ID
   stampWith?: StamperType; // Stamper type (passkey, api key, wallet, etc.)
   successPageDuration?: number; // Duration for success page in ms (0 disables it)
@@ -314,7 +314,7 @@ export type HandleOnRampParams = {
 };
 
 export type HandleSendTransactionParams = {
-  // Required ZeroXKey context
+  // Required 0xkey context
   organizationId?: string;
 
   // EVM or Solana transaction

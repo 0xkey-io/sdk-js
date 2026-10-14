@@ -1,13 +1,13 @@
 # Example: `foundry`
 
-This example shows how to set up and broadcast a smart contract from a ZeroXKey wallet using Foundry & Forge.
+This example shows how to set up and broadcast a smart contract from a 0xkey wallet using Foundry & Forge.
 
 ## Getting started
 
 ### 0 / Foundry versioning
 
 Make sure you have [Foundry](https://getfoundry.sh/introduction/installation) installed locally.
-ZeroXKey support was introduced with v1.5.0.
+0xkey support was introduced with v1.5.0.
 
 ```bash
 $ curl -L https://foundry.paradigm.xyz | bash
@@ -24,11 +24,11 @@ $ forge install foundry-rs/forge-std --no-git
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet account (address), private key address, or a private key ID
+- A 0xkey wallet account (address), private key address, or a private key ID
 
 Once you've gathered these values, add them to a new `.env` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 
@@ -40,14 +40,14 @@ Now open `.env` and add the missing environment variables:
 
 - `ZEROXKEY_API_PRIVATE_KEY`
 - `ZEROXKEY_ORGANIZATION_ID`
-- `ZEROXKEY_ADDRESS` -- a ZeroXKey wallet account address, private key address, or private key ID
+- `ZEROXKEY_ADDRESS` -- a 0xkey wallet account address, private key address, or private key ID
 
 For convenience we have hardcoded several popular chains and RPCs in `foundry.toml`, but you're welcome to change for different values.
 
 ### 3/ Running the sample deploy script
 
 The following command will compile and broadcast Foundry's demo `Counter.sol` contract to the Sepolia network.
-You will need some SepoliaETH in your ZeroXKey wallet address.
+You will need some SepoliaETH in your 0xkey wallet address.
 
 ```bash
 $ forge script script/Counter.s.sol --rpc-url sepolia --0xkey --broadcast

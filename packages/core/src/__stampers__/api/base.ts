@@ -13,7 +13,7 @@ import { SignatureFormat } from "@0xkey-io/api-key-stamper";
 /**
  * Cross-platform API key stamper.
  *
- * - This stamper uses indexedDB on web and keychain on react-native to securely stamp ZeroXKey requests.
+ * - This stamper uses indexedDB on web and keychain on react-native to securely stamp 0xkey requests.
  * - ***Only supports P-256 ECDSA key pairs.***
  */
 export class CrossPlatformApiKeyStamper implements TStamper {

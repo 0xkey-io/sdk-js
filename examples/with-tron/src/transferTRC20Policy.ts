@@ -11,9 +11,9 @@ import createUser from "./requests/createUser";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
-  // initialize ZeroXKey client
+  // initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
@@ -53,7 +53,7 @@ async function main() {
 
   // create a new client for the new user with their credentials
   const newUserZeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: keypair.privateKey,
     apiPublicKey: keypair.publicKey,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,

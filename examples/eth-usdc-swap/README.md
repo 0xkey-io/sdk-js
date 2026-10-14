@@ -1,6 +1,6 @@
 # Example: `eth-usdc-swap`
 
-This example shows how to swap native ETH for USDC on **Base mainnet** using Uniswap’s Universal Router, built on top of [`ethers`](https://docs.ethers.org/v6/) and executed via ZeroXKey.
+This example shows how to swap native ETH for USDC on **Base mainnet** using Uniswap’s Universal Router, built on top of [`ethers`](https://docs.ethers.org/v6/) and executed via 0xkey.
 
 The script supports both **sponsored** and **non-sponsored** transactions.
 
@@ -25,11 +25,11 @@ $ cd examples/eth-usdc-swap/
 
 ### 2/ Setting up ZeroXKey
 
-Follow the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) to create:
+Follow the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) to create:
 
-- A ZeroXKey API key pair
+- A 0xkey API key pair
 - An organization ID
-- A ZeroXKey wallet account
+- A 0xkey wallet account
 
 Once ready, create a `.env.local` file:
 
@@ -43,7 +43,7 @@ Fill in the following values:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` — ZeroXKey wallet account address (the ETH source)
+- `SIGN_WITH` — 0xkey wallet account address (the ETH source)
 
 If using the non-sponsored path, ensure your wallet is funded with ETH on Base.
 
@@ -55,7 +55,7 @@ If using the non-sponsored path, ensure your wallet is funded with ETH on Base.
 $ pnpm start
 ```
 
-You will be prompted to choose whether to use ZeroXKey gas sponsorship.
+You will be prompted to choose whether to use 0xkey gas sponsorship.
 The script will then:
 
 1. Wrap ETH into WETH inside the Universal Router
