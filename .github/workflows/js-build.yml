@@ -42,6 +42,9 @@ jobs:
       - name: Captcha CI contract
         run: node --test internal/acceptance/js-build-captcha-ci.test.mjs
 
+      - name: Brand assets
+        run: node --test internal/acceptance/brand-assets.test.mjs
+
       - name: Auth Proxy codegen drift
         run: |
           pnpm --filter @0xkey-io/core codegen
