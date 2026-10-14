@@ -77,8 +77,7 @@ function classify(error: unknown): string {
     return "turnstile-unavailable";
   }
   if (has("Captcha") || has("Turnstile")) return "captcha-failed";
-  if (has("Permission denied") || has("ZeroXKey error 7"))
-    return "otp-rejected";
+  if (has("Permission denied") || has("0xkey error 7")) return "otp-rejected";
   return "unclassified";
 }
 

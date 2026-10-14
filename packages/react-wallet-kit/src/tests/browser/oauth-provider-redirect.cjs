@@ -7,16 +7,13 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 
-const NODE_PATH =
-  "/Users/torben/codes/0xkey-workspace/.work/oauth-turnkey-parity/npm-cache/_npx/f6c81a5e22bed22a/node_modules/node/bin/node";
-const PLAYWRIGHT_ROOT =
-  "/Users/torben/codes/0xkey-workspace/.work/iterations/0xkey-v2026.09.0/workspace/repos/web/node_modules/.pnpm/playwright-core@1.61.1/node_modules/playwright-core";
-const ESBUILD_BIN =
-  "/Users/torben/codes/0xkey-workspace/.work/iterations/0xkey-v2026.09.0/workspace/repos/web/node_modules/@esbuild/darwin-arm64/bin/esbuild";
-const ESBUILD_PACKAGE =
-  "/Users/torben/codes/0xkey-workspace/.work/iterations/0xkey-v2026.09.0/workspace/repos/web/node_modules/esbuild/package.json";
-const BROWSER_PATH =
-  "/Users/torben/codes/0xkey-workspace/.work/oauth-turnkey-parity/browser-runtime-20260923/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell";
+const browserEnv = require("./browser-env.cjs");
+
+const NODE_PATH = browserEnv.nodePath();
+const PLAYWRIGHT_ROOT = browserEnv.playwrightCoreRoot();
+const ESBUILD_BIN = browserEnv.esbuildBinary();
+const ESBUILD_PACKAGE = browserEnv.esbuildPackageJson();
+const BROWSER_PATH = browserEnv.chromiumExecutable();
 const PACKAGE_ROOT = path.resolve(__dirname, "../../..");
 const FIXTURE_PATH = path.join(__dirname, "provider-redirect-fixture.tsx");
 const SHIM_PATH = path.join(__dirname, "provider-redirect-process-shim.js");
