@@ -90,16 +90,10 @@ test("sources carry no machine-local absolute paths", () => {
   assert.deepEqual(offendersMatching(textFiles, /["'`]\/Users\/[^"'`]+/), []);
 });
 
-// In-flight Captcha work owns this file; rename it once that lands.
-const PENDING_RENAME = new Set([
-  "examples/with-react-native-wallet-kit/README.md",
-]);
-
 test("non-test sources use the canonical 0xkey name and 0xkey.io hosts", () => {
-  const files = textFiles.filter((file) => {
-    const path = relative(root, file);
-    return !TEST_PATH.test(path) && !PENDING_RENAME.has(path);
-  });
+  const files = textFiles.filter(
+    (file) => !TEST_PATH.test(relative(root, file)),
+  );
   assert.deepEqual(
     offendersMatching(
       files,
@@ -107,4 +101,9 @@ test("non-test sources use the canonical 0xkey name and 0xkey.io hosts", () => {
     ),
     [],
   );
+});
+
+test("no source or test references 0xkey.com, a domain 0xkey does not own", () => {
+  const files = textFiles.filter((file) => !/CHANGELOG\.md$/i.test(file));
+  assert.deepEqual(offendersMatching(files, /0xkey\.com\b/i), []);
 });

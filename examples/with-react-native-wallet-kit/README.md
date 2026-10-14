@@ -1,6 +1,6 @@
 # ZeroXKey React Native Wallet Kit Demo
 
-A comprehensive demonstration app showcasing the capabilities of [ZeroXKey's React Native Wallet Kit](https://www.0xkey.com/) for building embedded wallets in React Native applications.
+A comprehensive demonstration app showcasing the capabilities of [ZeroXKey's React Native Wallet Kit](https://0xkey.io/) for building embedded wallets in React Native applications.
 
 ## 🎯 Overview
 
@@ -255,4 +255,4 @@ Contributions are welcome! Please feel free to submit issues and pull requests t
 
 ---
 
-Built with ❤️ by [ZeroXKey](https://www.0xkey.com)
+Built with ❤️ by [ZeroXKey](https://0xkey.io)

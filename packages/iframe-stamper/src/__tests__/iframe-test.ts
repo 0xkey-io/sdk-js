@@ -4,7 +4,7 @@ import { IframeStamper } from "../index";
 test("throws when instantiated outside of a browser environment", async function () {
   expect(() => {
     new IframeStamper({
-      iframeUrl: "https://recovery.0xkey.com",
+      iframeUrl: "https://recovery.example.test",
       iframeContainer: null,
       iframeElementId: "my-iframe-id",
     });
