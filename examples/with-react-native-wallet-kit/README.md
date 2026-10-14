@@ -76,20 +76,21 @@ cp .env.example .env
 config ID, RP ID and your native identity. All `EXPO_PUBLIC_*` values are bundled
 into the app, so never add API keys or other secrets.
 
-| Variable                                             | Purpose                                                                                                                |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `EXPO_PUBLIC_ZEROXKEY_ORGANIZATION_ID`               | Parent organization                                                                                                    |
-| `EXPO_PUBLIC_ZEROXKEY_API_BASE_URL`                  | API base URL (`https://`)                                                                                              |
-| `EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_URL`                | Auth Proxy URL. Required together with the config ID; otherwise the SDK would send the config ID to the default proxy. |
-| `EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_CONFIG_ID`          | Auth Proxy config with email OTP and passkey sign-up enabled                                                           |
-| `EXPO_PUBLIC_ZEROXKEY_RPID`                          | Passkey RP ID, a bare host name. Also becomes the iOS `webcredentials:` associated domain.                             |
-| `EXPO_PUBLIC_APP_SCHEME`                             | Deep link scheme used to return from OAuth                                                                             |
-| `EXPO_PUBLIC_OAUTH_ORIGIN_URI`                       | OAuth origin page that forwards to the provider (default `https://oauth-origin.0xkey.io`)                              |
-| `EXPO_PUBLIC_OAUTH_REDIRECT_URI`                     | OAuth relay that returns to the app (default `https://oauth-redirect.0xkey.io/`)                                       |
-| `EXPO_PUBLIC_GOOGLE_CLIENT_ID`                       | Google **web** client ID. Leave empty to hide Google.                                                                  |
-| `EXPO_PUBLIC_APPLE_SERVICE_ID`, `..._BUNDLE_ID`      | Apple Services ID and bundle ID                                                                                        |
-| `ZEROXKEY_DEMO_APPLE_TEAM_ID`                        | Build time only: your Apple team ID                                                                                    |
-| `ZEROXKEY_DEMO_IOS_BUNDLE_ID`, `..._ANDROID_PACKAGE` | Build time only: override `io.zeroxkey.passkeyapp`                                                                     |
+| Variable                                             | Purpose                                                                                                                                                |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EXPO_PUBLIC_ZEROXKEY_ORGANIZATION_ID`               | Parent organization                                                                                                                                    |
+| `EXPO_PUBLIC_ZEROXKEY_API_BASE_URL`                  | API base URL (`https://`)                                                                                                                              |
+| `EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_URL`                | Auth Proxy URL. Required together with the config ID; otherwise the SDK would send the config ID to the default proxy.                                 |
+| `EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_CONFIG_ID`          | Auth Proxy config with email OTP and passkey sign-up enabled                                                                                           |
+| `EXPO_PUBLIC_ZEROXKEY_RPID`                          | Passkey RP ID, a bare host name. Also becomes the iOS `webcredentials:` associated domain.                                                             |
+| `EXPO_PUBLIC_APP_SCHEME`                             | Deep link scheme used to return from OAuth                                                                                                             |
+| `EXPO_PUBLIC_ZEROXKEY_SIGNER_ENVIRONMENT`            | `staging` or `prod` (default). Selects the pinned enclave Signer key that export and import bundles are verified against; must match the API base URL. |
+| `EXPO_PUBLIC_OAUTH_ORIGIN_URI`                       | OAuth origin page that forwards to the provider (default `https://oauth-origin.0xkey.io`)                                                              |
+| `EXPO_PUBLIC_OAUTH_REDIRECT_URI`                     | OAuth relay that returns to the app (default `https://oauth-redirect.0xkey.io/`)                                                                       |
+| `EXPO_PUBLIC_GOOGLE_CLIENT_ID`                       | Google **web** client ID. Leave empty to hide Google.                                                                                                  |
+| `EXPO_PUBLIC_APPLE_SERVICE_ID`, `..._BUNDLE_ID`      | Apple Services ID and bundle ID                                                                                                                        |
+| `ZEROXKEY_DEMO_APPLE_TEAM_ID`                        | Build time only: your Apple team ID                                                                                                                    |
+| `ZEROXKEY_DEMO_IOS_BUNDLE_ID`, `..._ANDROID_PACKAGE` | Build time only: override `io.zeroxkey.passkeyapp`                                                                                                     |
 
 The app throws at startup with the names (never the values) of any missing or
 malformed variables.
@@ -158,7 +159,8 @@ only count when measured on a physical device.
 1. Email OTP sign-up with a new test address, sign out, then log in with OTP again.
 2. Sign up with a passkey, sign out, then log in with the same passkey.
 3. Google: sign in, cancel once, and return from the background mid-flow.
-4. Record the device, OS version, SDK commit and outcome for each step.
+4. Export a wallet and an account; both show a success alert.
+5. Record the device, OS version, SDK commit and outcome for each step.
 
 ### Production Build
 

@@ -20,4 +20,5 @@ export const ZEROXKEY_CONFIG: ZeroXKeyProviderConfig = buildZeroXKeyConfig({
   facebookClientId: process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID,
   xClientId: process.env.EXPO_PUBLIC_X_CLIENT_ID,
   discordClientId: process.env.EXPO_PUBLIC_DISCORD_CLIENT_ID,
+  signerEnvironment: process.env.EXPO_PUBLIC_ZEROXKEY_SIGNER_ENVIRONMENT,
 });
