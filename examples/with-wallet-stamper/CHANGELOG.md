@@ -1,5 +1,13 @@
 # @0xkey-io/with-wallet-stamper
 
+## 0.1.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/solana@0.1.3
+  - @0xkey-io/viem@0.1.3
+
 ## 0.1.9
 
 ### Patch Changes

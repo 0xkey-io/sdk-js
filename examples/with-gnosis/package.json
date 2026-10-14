@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/example-with-gnosis",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "scripts": {
     "start": "pnpm -w run build-all && tsx src/index.ts",

@@ -1,5 +1,27 @@
 # @0xkey-io/react-wallet-kit
 
+## 0.2.0
+
+### Minor Changes
+
+- [#4](https://github.com/0xkey-io/sdk-js/pull/4) [`30c62f3`](https://github.com/0xkey-io/sdk-js/commit/30c62f366b8cf82b1525cc7b794e3f8b74a26a90) Author [@torbensen](https://github.com/torbensen) - Add a headless fiat on-ramp module with MoonPay URL signing.
+
+  `@0xkey-io/core` gains `buildMoonPayOnRampUrl` / `appendMoonPaySignature`,
+  `initOnRampFlow` (returning a structured `OnRampFlowResult` with status, signed
+  URL, provider and sandbox mode), `pollOnRampTransactionStatus` (timeout,
+  max-consecutive-error and `AbortSignal` handling plus an `onStatusUpdate`
+  per-poll callback), typed `OnRampError` / `OnRampErrorCode`, and provider
+  capability guards (MoonPay-only runtime in phase 1; Coinbase config-only).
+
+  `@0xkey-io/react-wallet-kit` `handleOnRamp` now consumes the core helpers:
+  explicit required `sandboxMode`, structured result return, `openMode`
+  strategies, `onStatusChange` wiring, and early unsupported-provider rejection.
+
+### Patch Changes
+
+- Updated dependencies [[`30c62f3`](https://github.com/0xkey-io/sdk-js/commit/30c62f366b8cf82b1525cc7b794e3f8b74a26a90)]:
+  - @0xkey-io/core@0.2.0
+
 ## 0.1.2
 
 ### Patch Changes

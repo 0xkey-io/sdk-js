@@ -1,1 +1,1 @@
-export const VERSION = "@0xkey-io/eip-1193-provider@3.4.27";
+export const VERSION = "@0xkey-io/eip-1193-provider@0.1.3";

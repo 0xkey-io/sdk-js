@@ -1,5 +1,12 @@
 # @0xkey-io/example-trading-runner
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/ethers@0.1.3
+
 ## 0.0.3
 
 ### Patch Changes
