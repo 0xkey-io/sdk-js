@@ -18,7 +18,7 @@ import type { ZeroXKey as ZeroXKeyServerSDK } from "@0xkey-io/sdk-server";
  *     bitcoin.crypto.taggedHash('TapTweak', xOnlyPublicKey),
  *   );
  *   psbt.signInput(0, tweakedChildNode);
- * Luckily you won't have to worry about this with ZeroXKey. Our API tweaks the private key correctly
+ * Luckily you won't have to worry about this with 0xkey. Our API tweaks the private key correctly
  * at signing time if the address type is P2TR. See BIP141 for a more thorough explainer on taproot!
  * -------------------------------------------------------
  */
@@ -29,7 +29,7 @@ export class ZeroXKeySigner {
 
   /**
    * @param client The 0xkey SDK client
-   * @param address The ZeroXKey-derived address in bech32 format (e.g. bc1pdyzj6qxu6q40jdkcslh0uqmnppx4vtg0l0a7kfdccr5833wfjwqqnp949w)
+   * @param address The 0xkey-derived address in bech32 format (e.g. bc1pdyzj6qxu6q40jdkcslh0uqmnppx4vtg0l0a7kfdccr5833wfjwqqnp949w)
    * @param publicKey public key buffer. To sign P2TR outputs it needs to be the decoded address (`bitcoin.address.fromBech32(address).data`).
    *                  For P2WPKH it should be the key pair's underlying public key buffer, uncompressed.
    */

@@ -2,7 +2,7 @@
 
 This example demonstrates the following:
 
-- Programmatic import of a private key or wallet into your ZeroXKey organization
+- Programmatic import of a private key or wallet into your 0xkey organization
 - Verification of enclave signature during import
 - Encryption of sensitive data using HPKE (Hybrid Public Key Encryption)
 
@@ -23,9 +23,9 @@ $ cd examples/import-in-node/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.

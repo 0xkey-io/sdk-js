@@ -525,8 +525,8 @@ export function AuthComponent({
           <DeveloperError
             developerTitle="No Auth Methods Enabled"
             developerMessages={[
-              "You are using ZeroXKey's Auth Proxy, but no auth methods are enabled.",
-              "To use this modal, you must enable auth methods within the ZeroXKey dashboard.",
+              "You are using 0xkey's Auth Proxy, but no auth methods are enabled.",
+              "To use this modal, you must enable auth methods within the 0xkey dashboard.",
               "If you disabled autoFetchWalletKitConfig in the ZeroXKeyProvider, please ensure that you are passing in the correct auth methods in the ZeroXKeyProvider's auth config.",
             ]}
             userMessages={["No authentication methods are available."]}
@@ -537,8 +537,8 @@ export function AuthComponent({
           developerTitle="Proxy not Enabled"
           developerMessages={[
             "You have not passed in authProxyConfigId into the ZeroXKeyProvider.",
-            "To use this modal, you must be using ZeroXKey's Auth Proxy.",
-            "Please enable it in the ZeroXKey dashboard and pass in the authProxyConfigId into the ZeroXKeyProvider.",
+            "To use this modal, you must be using 0xkey's Auth Proxy.",
+            "Please enable it in the 0xkey dashboard and pass in the authProxyConfigId into the ZeroXKeyProvider.",
           ]}
           // Users should never see this message ever. We should give a reward for anyone who does see this.
           userMessages={["You touched fuzzy.... and got dizzy."]}

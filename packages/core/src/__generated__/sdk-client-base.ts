@@ -385,7 +385,7 @@ export class ZeroXKeySDKClientBase {
   }
 
   /**
-   * Submit a pre-signed request to ZeroXKey.
+   * Submit a pre-signed request to 0xkey.
    *
    * Use this method to execute any TSignedRequest returned by the SDK's
    * stamping methods (stampCreateApiKeys, stampGetPolicies, stampGetWallets, etc.).

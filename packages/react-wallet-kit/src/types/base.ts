@@ -137,7 +137,7 @@ export interface ZeroXKeyProviderConfig extends ZeroXKeySDKClientConfig {
     /** whether to render the modal in the provider. */
     renderModalInProvider?: boolean; // If true, the modal will be rendered as a child of the ZeroXKeyProvider instead of a sibling to the body. This is useful for font inheritance, and css manipulations to modals.
     /** whether to suppress missing styles error. */
-    supressMissingStylesError?: boolean; // If true, the ZeroXKey styles missing error will no longer show. It's possible that styles can be imported but not detected properly. This will suppress the error in that case.
+    supressMissingStylesError?: boolean; // If true, the 0xkey styles missing error will no longer show. It's possible that styles can be imported but not detected properly. This will suppress the error in that case.
   };
 }
 

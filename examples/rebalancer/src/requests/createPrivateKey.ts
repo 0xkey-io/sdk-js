@@ -7,7 +7,7 @@ export default async function createPrivateKey(
   privateKeyName: string,
   privateKeyTags: string[],
 ): Promise<string> {
-  console.log("creating a new Ethereum private key on ZeroXKey...\n");
+  console.log("creating a new Ethereum private key on 0xkey...\n");
 
   try {
     const activity = await zeroXKeyClient.apiClient().createPrivateKeys({

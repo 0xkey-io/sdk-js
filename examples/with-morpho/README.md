@@ -1,14 +1,14 @@
 # Example: `with-morpho`
 
 [Morpho Vaults](https://docs.morpho.org/build/earn/getting-started?) are smart contracts that allow users to deposit assets into yield-generating vaults built on top of Morpho's lending protocol.
-This examples shows how to sign transactions to Morpho's Steakhouse USDC Vault on Base Mainnet using ZeroXKey. It provides the following scripts:
+This examples shows how to sign transactions to Morpho's Steakhouse USDC Vault on Base Mainnet using 0xkey. It provides the following scripts:
 
 - `deposit.ts` shows how to approve and deposit USDC
 - `balance.ts` is checking the user vault share balance and the vault data
 - `withdraw.ts` is withdrawing an USDC amount from the vault
 - `redeem.ts` is getting all shares out from the vault
 
-On top of it we showcase the power of the ZeroXKey policy engine by allowing a non-root ZeroXKey user to only sign the specific transactions with the USDC and Morpho's vault addresses:
+On top of it we showcase the power of the 0xkey policy engine by allowing a non-root 0xkey user to only sign the specific transactions with the USDC and Morpho's vault addresses:
 
 - `createPolicy.ts` uses an organization root user (RootQuorum) to create a specific policies for a non-root user that will be used to sign the transactions to Morpho.
 
@@ -29,14 +29,14 @@ $ cd examples/with-morpho/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A root user with a public/private API key pair within the ZeroXKey parent organization
+- A root user with a public/private API key pair within the 0xkey parent organization
 - An organization ID
 
-The next step is to create another user within the organization with a different API key and remove it from the root quorum. You can do this from the ZeroXKey [dashboard](https://app.0xkey.com/dashboard/security/updateRootQuorum) or [API](https://docs.0xkey.com/api-reference/activities/update-root-quorum). Here's a simple [script](https://github.com/0xkey-io/sdk-js/blob/main/examples/kitchen-sink/src/sdk-server/updateRootQuorum.ts) that shows how to update the root quorum using `@0xkey-io/sdk-server`.
+The next step is to create another user within the organization with a different API key and remove it from the root quorum. You can do this from the ZeroXKey [dashboard](https://app.0xkey.io/dashboard/security/updateRootQuorum) or [API](https://docs.0xkey.io/api-reference/activities/update-root-quorum). Here's a simple [script](https://github.com/0xkey-io/sdk-js/blob/main/examples/kitchen-sink/src/sdk-server/updateRootQuorum.ts) that shows how to update the root quorum using `@0xkey-io/sdk-server`.
 
-Finally, make sure you have a [wallet](https://app.0xkey.com/dashboard/wallets) with an Ethereum wallet account created within this organization and have it funded with some ETH and USDC on Base Mainnet.
+Finally, make sure you have a [wallet](https://app.0xkey.io/dashboard/wallets) with an Ethereum wallet account created within this organization and have it funded with some ETH and USDC on Base Mainnet.
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 

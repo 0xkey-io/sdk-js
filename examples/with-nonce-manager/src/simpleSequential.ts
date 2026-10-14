@@ -13,19 +13,19 @@ import { print } from "./util";
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the 0xkey API.
     await createNewEthereumWallet();
     return;
   }
 
   const zeroXKeyClient = new ZeroXKeySDKServer({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
   });
 
-  // Initialize a ZeroXKey Signer
+  // Initialize a 0xkey Signer
   const zeroXKeySigner = new ZeroXKeySigner({
     client: zeroXKeyClient.apiClient(),
     organizationId: process.env.ORGANIZATION_ID!,

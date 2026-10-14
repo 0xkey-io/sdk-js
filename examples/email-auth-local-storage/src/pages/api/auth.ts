@@ -39,7 +39,7 @@ export default async function auth(
       // This is simple in the case of a single organization.
       // If you use sub-organizations for each user, this needs to be replaced by the user's specific sub-organization.
       emailCustomization: {
-        appName: "ZeroXKey Wallet",
+        appName: "0xkey Wallet",
       },
       organizationId:
         request.suborgID || process.env.NEXT_PUBLIC_ORGANIZATION_ID!,

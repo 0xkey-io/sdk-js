@@ -23,7 +23,7 @@ const WETH_TOKEN_ADDRESS_SEPOLIA = "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9";
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the 0xkey API.
     await createNewWallet();
     return;
   }
@@ -45,7 +45,7 @@ async function main() {
     // },
   });
 
-  // Initialize a ZeroXKey Signer
+  // Initialize a 0xkey Signer
   const zeroXKeySigner = new ZeroXKeySigner({
     client: zeroXKeyClient.apiClient(),
     organizationId: process.env.ORGANIZATION_ID!,
@@ -97,7 +97,7 @@ async function main() {
 
   const recoveredAddress = ethers.verifyMessage(message, signature);
 
-  print("ZeroXKey-powered signature:", `${signature}`);
+  print("0xkey-powered signature:", `${signature}`);
   print("Recovered address:", `${recoveredAddress}`);
   assertEqual(recoveredAddress, address);
 
@@ -140,7 +140,7 @@ async function main() {
     );
   }
 
-  print("ZeroXKey-signed transaction:", `${signedTx}`);
+  print("0xkey-signed transaction:", `${signedTx}`);
 
   while (balance === 0) {
     console.log(

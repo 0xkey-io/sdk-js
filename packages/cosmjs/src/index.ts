@@ -23,7 +23,7 @@ import type { SignDoc } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 
 type TConfig = {
   /**
-   * ZeroXKey client
+   * 0xkey client
    */
   client:
     | ZeroXKeyClient
@@ -31,11 +31,11 @@ type TConfig = {
     | ZeroXKeyServerClient
     | ZeroXKeySDKClientBase;
   /**
-   * ZeroXKey organization ID
+   * 0xkey organization ID
    */
   organizationId: string;
   /**
-   * ZeroXKey wallet account public key or private key ID
+   * 0xkey wallet account public key or private key ID
    */
   signWith: string;
 };

@@ -16,7 +16,7 @@ const ENDPOINT = "https://rpc.celestia-arabica-11.com/";
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create one for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create one for you via calling the 0xkey API.
     await createNewCosmosWallet();
     return;
   }
@@ -28,7 +28,7 @@ async function main() {
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
   });
 
-  // Initialize a ZeroXKey Signer
+  // Initialize a 0xkey Signer
   const zeroXKeySigner = await ZeroXKeyDirectWallet.init({
     config: {
       client: zeroXKeyClient.apiClient(),

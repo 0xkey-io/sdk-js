@@ -27,7 +27,7 @@ export const nOOPCodegenAnchor = () =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `NOOPCodegenAnchor` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `NOOPCodegenAnchor` request, ready to be POSTed to 0xkey.
  *
  * See {@link NOOPCodegenAnchor}
  */
@@ -68,7 +68,7 @@ export const getActivity = (input: TGetActivityInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetActivity` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetActivity` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetActivity}
  */
@@ -114,7 +114,7 @@ export const getApiKey = (input: TGetApiKeyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetApiKey` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetApiKey` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetApiKey}
  */
@@ -160,7 +160,7 @@ export const getApiKeys = (input: TGetApiKeysInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetApiKeys` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetApiKeys` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetApiKeys}
  */
@@ -214,7 +214,7 @@ export const getAttestationDocument = (input: TGetAttestationDocumentInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetAttestationDocument` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetAttestationDocument` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetAttestationDocument}
  */
@@ -266,7 +266,7 @@ export const getAuthenticator = (input: TGetAuthenticatorInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetAuthenticator` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetAuthenticator` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetAuthenticator}
  */
@@ -318,7 +318,7 @@ export const getAuthenticators = (input: TGetAuthenticatorsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetAuthenticators` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetAuthenticators` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetAuthenticators}
  */
@@ -364,7 +364,7 @@ export const getBootProof = (input: TGetBootProofInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetBootProof` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetBootProof` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetBootProof}
  */
@@ -410,7 +410,7 @@ export const getGasUsage = (input: TGetGasUsageInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetGasUsage` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetGasUsage` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetGasUsage}
  */
@@ -462,7 +462,7 @@ export const getLatestBootProof = (input: TGetLatestBootProofInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetLatestBootProof` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetLatestBootProof` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetLatestBootProof}
  */
@@ -508,7 +508,7 @@ export const getMfaPolicies = (input: TGetMfaPoliciesInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetMfaPolicies` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetMfaPolicies` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetMfaPolicies}
  */
@@ -554,7 +554,7 @@ export const getMfaPolicy = (input: TGetMfaPolicyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetMfaPolicy` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetMfaPolicy` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetMfaPolicy}
  */
@@ -600,7 +600,7 @@ export const getMfaStatus = (input: TGetMfaStatusInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetMfaStatus` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetMfaStatus` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetMfaStatus}
  */
@@ -646,7 +646,7 @@ export const getNonces = (input: TGetNoncesInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetNonces` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetNonces` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetNonces}
  */
@@ -698,7 +698,7 @@ export const getOauth2Credential = (input: TGetOauth2CredentialInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetOauth2Credential` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetOauth2Credential` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetOauth2Credential}
  */
@@ -750,7 +750,7 @@ export const getOauthProviders = (input: TGetOauthProvidersInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetOauthProviders` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetOauthProviders` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetOauthProviders}
  */
@@ -806,7 +806,7 @@ export const getOnRampTransactionStatus = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetOnRampTransactionStatus` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetOnRampTransactionStatus` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetOnRampTransactionStatus}
  */
@@ -860,7 +860,7 @@ export const getOrganizationConfigs = (input: TGetOrganizationConfigsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetOrganizationConfigs` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetOrganizationConfigs` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetOrganizationConfigs}
  */
@@ -906,7 +906,7 @@ export const getPolicy = (input: TGetPolicyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetPolicy` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetPolicy` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetPolicy}
  */
@@ -958,7 +958,7 @@ export const getPolicyEvaluations = (input: TGetPolicyEvaluationsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetPolicyEvaluations` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetPolicyEvaluations` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetPolicyEvaluations}
  */
@@ -1004,7 +1004,7 @@ export const getPrivateKey = (input: TGetPrivateKeyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetPrivateKey` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetPrivateKey` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetPrivateKey}
  */
@@ -1060,7 +1060,7 @@ export const getSendTransactionStatus = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetSendTransactionStatus` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetSendTransactionStatus` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetSendTransactionStatus}
  */
@@ -1112,7 +1112,7 @@ export const getSessionProfile = (input: TGetSessionProfileInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetSessionProfile` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetSessionProfile` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetSessionProfile}
  */
@@ -1164,7 +1164,7 @@ export const getSessionProfiles = (input: TGetSessionProfilesInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetSessionProfiles` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetSessionProfiles` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetSessionProfiles}
  */
@@ -1220,7 +1220,7 @@ export const getSmartContractInterface = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetSmartContractInterface` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetSmartContractInterface` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetSmartContractInterface}
  */
@@ -1266,7 +1266,7 @@ export const getUser = (input: TGetUserInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetUser` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetUser` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetUser}
  */
@@ -1312,7 +1312,7 @@ export const getWallet = (input: TGetWalletInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetWallet` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetWallet` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetWallet}
  */
@@ -1364,7 +1364,7 @@ export const getWalletAccount = (input: TGetWalletAccountInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetWalletAccount` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetWalletAccount` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetWalletAccount}
  */
@@ -1410,7 +1410,7 @@ export const getActivities = (input: TGetActivitiesInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetActivities` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetActivities` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetActivities}
  */
@@ -1456,7 +1456,7 @@ export const getAppProofs = (input: TGetAppProofsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetAppProofs` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetAppProofs` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetAppProofs}
  */
@@ -1512,7 +1512,7 @@ export const listFiatOnRampCredentials = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ListFiatOnRampCredentials` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ListFiatOnRampCredentials` request, ready to be POSTed to 0xkey.
  *
  * See {@link ListFiatOnRampCredentials}
  */
@@ -1564,7 +1564,7 @@ export const listOauth2Credentials = (input: TListOauth2CredentialsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ListOauth2Credentials` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ListOauth2Credentials` request, ready to be POSTed to 0xkey.
  *
  * See {@link ListOauth2Credentials}
  */
@@ -1610,7 +1610,7 @@ export const getPolicies = (input: TGetPoliciesInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetPolicies` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetPolicies` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetPolicies}
  */
@@ -1662,7 +1662,7 @@ export const listPrivateKeyTags = (input: TListPrivateKeyTagsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ListPrivateKeyTags` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ListPrivateKeyTags` request, ready to be POSTed to 0xkey.
  *
  * See {@link ListPrivateKeyTags}
  */
@@ -1708,7 +1708,7 @@ export const getPrivateKeys = (input: TGetPrivateKeysInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetPrivateKeys` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetPrivateKeys` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetPrivateKeys}
  */
@@ -1764,7 +1764,7 @@ export const getSmartContractInterfaces = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetSmartContractInterfaces` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetSmartContractInterfaces` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetSmartContractInterfaces}
  */
@@ -1810,7 +1810,7 @@ export const getSubOrgIds = (input: TGetSubOrgIdsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetSubOrgIds` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetSubOrgIds` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetSubOrgIds}
  */
@@ -1856,7 +1856,7 @@ export const listUserTags = (input: TListUserTagsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ListUserTags` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ListUserTags` request, ready to be POSTed to 0xkey.
  *
  * See {@link ListUserTags}
  */
@@ -1902,7 +1902,7 @@ export const getUsers = (input: TGetUsersInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetUsers` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetUsers` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetUsers}
  */
@@ -1954,7 +1954,7 @@ export const getVerifiedSubOrgIds = (input: TGetVerifiedSubOrgIdsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetVerifiedSubOrgIds` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetVerifiedSubOrgIds` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetVerifiedSubOrgIds}
  */
@@ -2006,7 +2006,7 @@ export const getWalletAccounts = (input: TGetWalletAccountsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetWalletAccounts` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetWalletAccounts` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetWalletAccounts}
  */
@@ -2052,7 +2052,7 @@ export const getWallets = (input: TGetWalletsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetWallets` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetWallets` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetWallets}
  */
@@ -2098,7 +2098,7 @@ export const getWhoami = (input: TGetWhoamiInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `GetWhoami` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `GetWhoami` request, ready to be POSTed to 0xkey.
  *
  * See {@link GetWhoami}
  */
@@ -2144,7 +2144,7 @@ export const approveActivity = (input: TApproveActivityInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ApproveActivity` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ApproveActivity` request, ready to be POSTed to 0xkey.
  *
  * See {@link ApproveActivity}
  */
@@ -2190,7 +2190,7 @@ export const createApiKeys = (input: TCreateApiKeysInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateApiKeys` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateApiKeys` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateApiKeys}
  */
@@ -2242,7 +2242,7 @@ export const createAuthenticators = (input: TCreateAuthenticatorsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateAuthenticators` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateAuthenticators` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateAuthenticators}
  */
@@ -2298,7 +2298,7 @@ export const createFiatOnRampCredential = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateFiatOnRampCredential` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateFiatOnRampCredential` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateFiatOnRampCredential}
  */
@@ -2350,7 +2350,7 @@ export const createInvitations = (input: TCreateInvitationsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateInvitations` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateInvitations` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateInvitations}
  */
@@ -2396,7 +2396,7 @@ export const createMfaPolicy = (input: TCreateMfaPolicyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateMfaPolicy` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateMfaPolicy` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateMfaPolicy}
  */
@@ -2450,7 +2450,7 @@ export const createOauth2Credential = (input: TCreateOauth2CredentialInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateOauth2Credential` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateOauth2Credential` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateOauth2Credential}
  */
@@ -2502,7 +2502,7 @@ export const createOauthProviders = (input: TCreateOauthProvidersInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateOauthProviders` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateOauthProviders` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateOauthProviders}
  */
@@ -2548,7 +2548,7 @@ export const createPolicies = (input: TCreatePoliciesInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreatePolicies` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreatePolicies` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreatePolicies}
  */
@@ -2594,7 +2594,7 @@ export const createPolicy = (input: TCreatePolicyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreatePolicy` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreatePolicy` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreatePolicy}
  */
@@ -2646,7 +2646,7 @@ export const createPrivateKeyTag = (input: TCreatePrivateKeyTagInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreatePrivateKeyTag` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreatePrivateKeyTag` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreatePrivateKeyTag}
  */
@@ -2698,7 +2698,7 @@ export const createPrivateKeys = (input: TCreatePrivateKeysInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreatePrivateKeys` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreatePrivateKeys` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreatePrivateKeys}
  */
@@ -2750,7 +2750,7 @@ export const createReadOnlySession = (input: TCreateReadOnlySessionInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateReadOnlySession` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateReadOnlySession` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateReadOnlySession}
  */
@@ -2804,7 +2804,7 @@ export const createReadWriteSession = (input: TCreateReadWriteSessionInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateReadWriteSession` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateReadWriteSession` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateReadWriteSession}
  */
@@ -2856,7 +2856,7 @@ export const createSessionProfile = (input: TCreateSessionProfileInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateSessionProfile` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateSessionProfile` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateSessionProfile}
  */
@@ -2912,7 +2912,7 @@ export const createSmartContractInterface = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateSmartContractInterface` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateSmartContractInterface` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateSmartContractInterface}
  */
@@ -2964,7 +2964,7 @@ export const createSubOrganization = (input: TCreateSubOrganizationInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateSubOrganization` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateSubOrganization` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateSubOrganization}
  */
@@ -3010,7 +3010,7 @@ export const createUserTag = (input: TCreateUserTagInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateUserTag` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateUserTag` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateUserTag}
  */
@@ -3056,7 +3056,7 @@ export const createUsers = (input: TCreateUsersInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateUsers` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateUsers` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateUsers}
  */
@@ -3102,7 +3102,7 @@ export const createWallet = (input: TCreateWalletInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateWallet` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateWallet` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateWallet}
  */
@@ -3154,7 +3154,7 @@ export const createWalletAccounts = (input: TCreateWalletAccountsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `CreateWalletAccounts` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `CreateWalletAccounts` request, ready to be POSTed to 0xkey.
  *
  * See {@link CreateWalletAccounts}
  */
@@ -3200,7 +3200,7 @@ export const deleteApiKeys = (input: TDeleteApiKeysInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteApiKeys` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteApiKeys` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteApiKeys}
  */
@@ -3252,7 +3252,7 @@ export const deleteAuthenticators = (input: TDeleteAuthenticatorsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteAuthenticators` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteAuthenticators` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteAuthenticators}
  */
@@ -3308,7 +3308,7 @@ export const deleteFiatOnRampCredential = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteFiatOnRampCredential` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteFiatOnRampCredential` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteFiatOnRampCredential}
  */
@@ -3360,7 +3360,7 @@ export const deleteInvitation = (input: TDeleteInvitationInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteInvitation` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteInvitation` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteInvitation}
  */
@@ -3406,7 +3406,7 @@ export const deleteMfaPolicy = (input: TDeleteMfaPolicyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteMfaPolicy` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteMfaPolicy` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteMfaPolicy}
  */
@@ -3460,7 +3460,7 @@ export const deleteOauth2Credential = (input: TDeleteOauth2CredentialInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteOauth2Credential` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteOauth2Credential` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteOauth2Credential}
  */
@@ -3512,7 +3512,7 @@ export const deleteOauthProviders = (input: TDeleteOauthProvidersInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteOauthProviders` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteOauthProviders` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteOauthProviders}
  */
@@ -3558,7 +3558,7 @@ export const deletePolicies = (input: TDeletePoliciesInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeletePolicies` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeletePolicies` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeletePolicies}
  */
@@ -3604,7 +3604,7 @@ export const deletePolicy = (input: TDeletePolicyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeletePolicy` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeletePolicy` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeletePolicy}
  */
@@ -3656,7 +3656,7 @@ export const deletePrivateKeyTags = (input: TDeletePrivateKeyTagsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeletePrivateKeyTags` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeletePrivateKeyTags` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeletePrivateKeyTags}
  */
@@ -3708,7 +3708,7 @@ export const deletePrivateKeys = (input: TDeletePrivateKeysInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeletePrivateKeys` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeletePrivateKeys` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeletePrivateKeys}
  */
@@ -3764,7 +3764,7 @@ export const deleteSmartContractInterface = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteSmartContractInterface` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteSmartContractInterface` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteSmartContractInterface}
  */
@@ -3816,7 +3816,7 @@ export const deleteSubOrganization = (input: TDeleteSubOrganizationInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteSubOrganization` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteSubOrganization` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteSubOrganization}
  */
@@ -3862,7 +3862,7 @@ export const deleteUserTags = (input: TDeleteUserTagsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteUserTags` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteUserTags` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteUserTags}
  */
@@ -3908,7 +3908,7 @@ export const deleteUsers = (input: TDeleteUsersInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteUsers` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteUsers` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteUsers}
  */
@@ -3960,7 +3960,7 @@ export const deleteWalletAccounts = (input: TDeleteWalletAccountsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteWalletAccounts` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteWalletAccounts` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteWalletAccounts}
  */
@@ -4006,7 +4006,7 @@ export const deleteWallets = (input: TDeleteWalletsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `DeleteWallets` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `DeleteWallets` request, ready to be POSTed to 0xkey.
  *
  * See {@link DeleteWallets}
  */
@@ -4052,7 +4052,7 @@ export const emailAuth = (input: TEmailAuthInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `EmailAuth` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `EmailAuth` request, ready to be POSTed to 0xkey.
  *
  * See {@link EmailAuth}
  */
@@ -4104,7 +4104,7 @@ export const ethSendTransaction = (input: TEthSendTransactionInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `EthSendTransaction` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `EthSendTransaction` request, ready to be POSTed to 0xkey.
  *
  * See {@link EthSendTransaction}
  */
@@ -4156,7 +4156,7 @@ export const exportPrivateKey = (input: TExportPrivateKeyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ExportPrivateKey` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ExportPrivateKey` request, ready to be POSTed to 0xkey.
  *
  * See {@link ExportPrivateKey}
  */
@@ -4202,7 +4202,7 @@ export const exportWallet = (input: TExportWalletInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ExportWallet` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ExportWallet` request, ready to be POSTed to 0xkey.
  *
  * See {@link ExportWallet}
  */
@@ -4254,7 +4254,7 @@ export const exportWalletAccount = (input: TExportWalletAccountInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ExportWalletAccount` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ExportWalletAccount` request, ready to be POSTed to 0xkey.
  *
  * See {@link ExportWalletAccount}
  */
@@ -4306,7 +4306,7 @@ export const importPrivateKey = (input: TImportPrivateKeyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ImportPrivateKey` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ImportPrivateKey` request, ready to be POSTed to 0xkey.
  *
  * See {@link ImportPrivateKey}
  */
@@ -4352,7 +4352,7 @@ export const importWallet = (input: TImportWalletInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `ImportWallet` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `ImportWallet` request, ready to be POSTed to 0xkey.
  *
  * See {@link ImportWallet}
  */
@@ -4398,7 +4398,7 @@ export const initFiatOnRamp = (input: TInitFiatOnRampInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `InitFiatOnRamp` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `InitFiatOnRamp` request, ready to be POSTed to 0xkey.
  *
  * See {@link InitFiatOnRamp}
  */
@@ -4450,7 +4450,7 @@ export const initImportPrivateKey = (input: TInitImportPrivateKeyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `InitImportPrivateKey` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `InitImportPrivateKey` request, ready to be POSTed to 0xkey.
  *
  * See {@link InitImportPrivateKey}
  */
@@ -4502,7 +4502,7 @@ export const initImportWallet = (input: TInitImportWalletInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `InitImportWallet` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `InitImportWallet` request, ready to be POSTed to 0xkey.
  *
  * See {@link InitImportWallet}
  */
@@ -4548,7 +4548,7 @@ export const initOtp = (input: TInitOtpInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `InitOtp` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `InitOtp` request, ready to be POSTed to 0xkey.
  *
  * See {@link InitOtp}
  */
@@ -4594,7 +4594,7 @@ export const initOtpAuth = (input: TInitOtpAuthInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `InitOtpAuth` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `InitOtpAuth` request, ready to be POSTed to 0xkey.
  *
  * See {@link InitOtpAuth}
  */
@@ -4646,7 +4646,7 @@ export const initUserEmailRecovery = (input: TInitUserEmailRecoveryInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `InitUserEmailRecovery` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `InitUserEmailRecovery` request, ready to be POSTed to 0xkey.
  *
  * See {@link InitUserEmailRecovery}
  */
@@ -4692,7 +4692,7 @@ export const oauth = (input: TOauthInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `Oauth` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `Oauth` request, ready to be POSTed to 0xkey.
  *
  * See {@link Oauth}
  */
@@ -4744,7 +4744,7 @@ export const oauth2Authenticate = (input: TOauth2AuthenticateInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `Oauth2Authenticate` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `Oauth2Authenticate` request, ready to be POSTed to 0xkey.
  *
  * See {@link Oauth2Authenticate}
  */
@@ -4790,7 +4790,7 @@ export const oauthLogin = (input: TOauthLoginInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `OauthLogin` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `OauthLogin` request, ready to be POSTed to 0xkey.
  *
  * See {@link OauthLogin}
  */
@@ -4836,7 +4836,7 @@ export const otpAuth = (input: TOtpAuthInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `OtpAuth` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `OtpAuth` request, ready to be POSTed to 0xkey.
  *
  * See {@link OtpAuth}
  */
@@ -4882,7 +4882,7 @@ export const otpLogin = (input: TOtpLoginInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `OtpLogin` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `OtpLogin` request, ready to be POSTed to 0xkey.
  *
  * See {@link OtpLogin}
  */
@@ -4928,7 +4928,7 @@ export const recoverUser = (input: TRecoverUserInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `RecoverUser` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `RecoverUser` request, ready to be POSTed to 0xkey.
  *
  * See {@link RecoverUser}
  */
@@ -4974,7 +4974,7 @@ export const rejectActivity = (input: TRejectActivityInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `RejectActivity` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `RejectActivity` request, ready to be POSTed to 0xkey.
  *
  * See {@link RejectActivity}
  */
@@ -5030,7 +5030,7 @@ export const removeOrganizationFeature = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `RemoveOrganizationFeature` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `RemoveOrganizationFeature` request, ready to be POSTed to 0xkey.
  *
  * See {@link RemoveOrganizationFeature}
  */
@@ -5084,7 +5084,7 @@ export const setOrganizationFeature = (input: TSetOrganizationFeatureInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `SetOrganizationFeature` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `SetOrganizationFeature` request, ready to be POSTed to 0xkey.
  *
  * See {@link SetOrganizationFeature}
  */
@@ -5130,7 +5130,7 @@ export const signRawPayload = (input: TSignRawPayloadInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `SignRawPayload` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `SignRawPayload` request, ready to be POSTed to 0xkey.
  *
  * See {@link SignRawPayload}
  */
@@ -5176,7 +5176,7 @@ export const signRawPayloads = (input: TSignRawPayloadsInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `SignRawPayloads` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `SignRawPayloads` request, ready to be POSTed to 0xkey.
  *
  * See {@link SignRawPayloads}
  */
@@ -5222,7 +5222,7 @@ export const signTransaction = (input: TSignTransactionInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `SignTransaction` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `SignTransaction` request, ready to be POSTed to 0xkey.
  *
  * See {@link SignTransaction}
  */
@@ -5274,7 +5274,7 @@ export const solSendTransaction = (input: TSolSendTransactionInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `SolSendTransaction` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `SolSendTransaction` request, ready to be POSTed to 0xkey.
  *
  * See {@link SolSendTransaction}
  */
@@ -5320,7 +5320,7 @@ export const stampLogin = (input: TStampLoginInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `StampLogin` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `StampLogin` request, ready to be POSTed to 0xkey.
  *
  * See {@link StampLogin}
  */
@@ -5372,7 +5372,7 @@ export const tronSendTransaction = (input: TTronSendTransactionInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `TronSendTransaction` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `TronSendTransaction` request, ready to be POSTed to 0xkey.
  *
  * See {@link TronSendTransaction}
  */
@@ -5428,7 +5428,7 @@ export const updateFiatOnRampCredential = (
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateFiatOnRampCredential` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateFiatOnRampCredential` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateFiatOnRampCredential}
  */
@@ -5474,7 +5474,7 @@ export const updateMfaPolicy = (input: TUpdateMfaPolicyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateMfaPolicy` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateMfaPolicy` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateMfaPolicy}
  */
@@ -5528,7 +5528,7 @@ export const updateOauth2Credential = (input: TUpdateOauth2CredentialInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateOauth2Credential` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateOauth2Credential` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateOauth2Credential}
  */
@@ -5582,7 +5582,7 @@ export const updateOrganizationName = (input: TUpdateOrganizationNameInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateOrganizationName` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateOrganizationName` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateOrganizationName}
  */
@@ -5628,7 +5628,7 @@ export const updatePolicy = (input: TUpdatePolicyInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdatePolicy` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdatePolicy` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdatePolicy}
  */
@@ -5680,7 +5680,7 @@ export const updatePrivateKeyTag = (input: TUpdatePrivateKeyTagInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdatePrivateKeyTag` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdatePrivateKeyTag` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdatePrivateKeyTag}
  */
@@ -5732,7 +5732,7 @@ export const updateRootQuorum = (input: TUpdateRootQuorumInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateRootQuorum` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateRootQuorum` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateRootQuorum}
  */
@@ -5778,7 +5778,7 @@ export const updateUser = (input: TUpdateUserInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateUser` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateUser` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateUser}
  */
@@ -5824,7 +5824,7 @@ export const updateUserEmail = (input: TUpdateUserEmailInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateUserEmail` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateUserEmail` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateUserEmail}
  */
@@ -5870,7 +5870,7 @@ export const updateUserName = (input: TUpdateUserNameInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateUserName` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateUserName` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateUserName}
  */
@@ -5922,7 +5922,7 @@ export const updateUserPhoneNumber = (input: TUpdateUserPhoneNumberInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateUserPhoneNumber` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateUserPhoneNumber` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateUserPhoneNumber}
  */
@@ -5968,7 +5968,7 @@ export const updateUserTag = (input: TUpdateUserTagInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateUserTag` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateUserTag` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateUserTag}
  */
@@ -6014,7 +6014,7 @@ export const updateWallet = (input: TUpdateWalletInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `UpdateWallet` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `UpdateWallet` request, ready to be POSTed to 0xkey.
  *
  * See {@link UpdateWallet}
  */
@@ -6060,7 +6060,7 @@ export const verifyOtp = (input: TVerifyOtpInput) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed `VerifyOtp` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed `VerifyOtp` request, ready to be POSTed to 0xkey.
  *
  * See {@link VerifyOtp}
  */

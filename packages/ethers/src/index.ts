@@ -35,7 +35,7 @@ type TPayloadEncoding = ZeroXKeyApiTypes["v1PayloadEncoding"];
 
 type TConfig = {
   /**
-   * ZeroXKey client
+   * 0xkey client
    */
   client:
     | ZeroXKeyClient
@@ -43,11 +43,11 @@ type TConfig = {
     | ZeroXKeyServerClient
     | ZeroXKeySDKClientBase;
   /**
-   * ZeroXKey organization ID
+   * 0xkey organization ID
    */
   organizationId: string;
   /**
-   * ZeroXKey wallet account address, private key address, or private key ID
+   * 0xkey wallet account address, private key address, or private key ID
    */
   signWith: string;
 };
@@ -82,7 +82,7 @@ export class ZeroXKeySigner extends AbstractSigner implements ethers.Signer {
   }
 
   // If the configured `signWith` is an Ethereum address, use it.
-  // Otherwise, if it's a ZeroXKey Private Key ID, fetch the corresponding
+  // Otherwise, if it's a 0xkey Private Key ID, fetch the corresponding
   // private key's address.
   async getAddress(): Promise<string> {
     let ethereumAddress;

@@ -20,7 +20,7 @@ async function main() {
     }),
   );
 
-  console.log("creating a new Solana private key on ZeroXKey...");
+  console.log("creating a new Solana private key on 0xkey...");
 
   const privateKeyName = `SOL Key ${crypto.randomBytes(2).toString("hex")}`;
 

@@ -7,7 +7,7 @@ import { refineNonNull } from "./util";
 
 export async function createNewEthereumWallet() {
   const zeroXKeyClient = new ZeroXKeySDKServer({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,

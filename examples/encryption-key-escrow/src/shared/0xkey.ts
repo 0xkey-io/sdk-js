@@ -6,13 +6,13 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 /**
- * Creates and returns a configured ZeroXKey client instance.
+ * Creates and returns a configured 0xkey client instance.
  */
 export function getZeroXKeyClient(): ZeroXKey {
   const apiPublicKey = process.env.API_PUBLIC_KEY;
   const apiPrivateKey = process.env.API_PRIVATE_KEY;
   const organizationId = process.env.ORGANIZATION_ID;
-  const baseUrl = process.env.BASE_URL ?? "https://api.0xkey.com";
+  const baseUrl = process.env.BASE_URL ?? "https://api.0xkey.io";
 
   if (!apiPublicKey || !apiPrivateKey || !organizationId) {
     throw new Error(

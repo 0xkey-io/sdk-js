@@ -73,14 +73,10 @@ export default function WalletDetailsPage() {
     <main className={styles.main}>
       {/* Header */}
       <div className={styles.header}>
-        <a
-          href="https://www.0xkey.com"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a href="https://0xkey.io" target="_blank" rel="noopener noreferrer">
           <Image
             src="/logo.svg"
-            alt="ZeroXKey Logo"
+            alt="0xkey"
             className={styles.zeroXKeyLogo}
             width={100}
             height={24}

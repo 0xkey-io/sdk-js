@@ -11,7 +11,7 @@
  * 5. Decrypt the recovery bundle locally
  *
  * Security Properties:
- * - Both ZeroXKey authentication AND access to your stored bundle are required
+ * - Both 0xkey authentication AND access to your stored bundle are required
  * - The decrypted material only exists momentarily on your device
  * - Quorum policies can require multiple approvers
  *
@@ -87,9 +87,9 @@ async function main() {
     throw new Error("Missing required environment variable: ORGANIZATION_ID");
   }
 
-  // Initialize ZeroXKey client
+  // Initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.com",
+    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: organizationId,

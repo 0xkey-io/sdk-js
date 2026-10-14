@@ -6,10 +6,10 @@ import {
 } from "@0xkey-io/encoding";
 
 /**
- * Converts a ZeroXKey API key pair into a JSON Web Key (JWK) format.
+ * Converts a 0xkey API key pair into a JSON Web Key (JWK) format.
  * This function accepts P-256 API keys only.
  *
- * @param {Object} input - The ZeroXKey API key components.
+ * @param {Object} input - The 0xkey API key components.
  * @param {string} input.uncompressedPrivateKeyHex - Hexadecimal-encoded uncompressed private key (32-byte scalar).
  * @param {string} input.compressedPublicKeyHex - Hexadecimal-encoded compressed public key (33 bytes).
  * @returns {JsonWebKey} A JSON Web Key object representing the EC P-256 key.

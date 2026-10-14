@@ -19,7 +19,7 @@ const stampHeaderName = "X-Stamp";
  * `SubtleCrypto.sign(...)` outputs signature in IEEE P1363 format:
  * - https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/sign#ecdsa
  *
- * ZeroXKey expects the signature encoding to be DER-encoded ASN.1.
+ * 0xkey expects the signature encoding to be DER-encoded ASN.1.
  *
  * Code modified from https://github.com/google/tink/blob/6f74b99a2bfe6677e3670799116a57268fd067fa/javascript/subtle/elliptic_curves.ts#L114
  *

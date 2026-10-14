@@ -14,7 +14,7 @@ export async function completeAuth({
   publicKey,
 }: CompleteAuthParams) {
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     defaultOrganizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,

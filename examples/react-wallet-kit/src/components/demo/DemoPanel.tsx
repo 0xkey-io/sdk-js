@@ -349,7 +349,7 @@ export default function DemoPanel() {
           <Button
             onClick={async () => {
               if (!selectedWalletAccount) return;
-              const messageToSign = "Signing within ZeroXKey Demo.";
+              const messageToSign = "Signing within 0xkey Demo.";
 
               try {
                 const res = await handleSignMessage({

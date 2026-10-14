@@ -41,7 +41,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     authProxyConfigId: process.env.NEXT_PUBLIC_AUTH_PROXY_CONFIG_ID!,
     authProxyUrl:
       process.env.NEXT_PUBLIC_AUTH_PROXY_BASE_URL ||
-      "https://authproxy.0xkey.com",
+      "https://authproxy.0xkey.io",
     auth: {
       methods: {
         emailOtpAuthEnabled: false,
@@ -86,7 +86,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           router.push("/dashboard");
         },
         onError: (error) => {
-          console.error("ZeroXKey error:", error);
+          console.error("0xkey error:", error);
         },
       }}
     >

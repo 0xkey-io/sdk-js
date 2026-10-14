@@ -1,23 +1,23 @@
-// Policy utilities for ZeroXKey gas station restrictions
+// Policy utilities for 0xkey gas station restrictions
 
 import type { ZeroXKeyApiClient } from "@0xkey-io/sdk-server";
 import { gasStationAbi } from "./abi/gas-station";
 import type { Hex } from "viem";
 
 /**
- * Build a ZeroXKey policy to restrict what EIP-712 intents an EOA can sign
+ * Build a 0xkey policy to restrict what EIP-712 intents an EOA can sign
  * This protects at the signing layer - EOA cannot create signatures outside policy
  *
  * @param config - Policy configuration
- * @param config.organizationId - ZeroXKey organization ID
- * @param config.eoaUserId - ZeroXKey user ID for the EOA (primary approver)
+ * @param config.organizationId - 0xkey organization ID
+ * @param config.eoaUserId - 0xkey user ID for the EOA (primary approver)
  * @param config.additionalApprovers - Optional additional user IDs that must also approve (creates AND condition)
  * @param config.customConsensus - Optional custom consensus expression (overrides eoaUserId and additionalApprovers)
  * @param config.restrictions - Signing restrictions
  * @param config.restrictions.allowedContracts - Whitelist of contract addresses EOA can sign intents for
  * @param config.restrictions.disallowEthTransfer - Whether to disallow ETH transfers (if true, value must be 0)
  * @param config.policyName - Optional policy name
- * @returns Policy object ready to submit to ZeroXKey createPolicy API
+ * @returns Policy object ready to submit to 0xkey createPolicy API
  *
  * @example
  * // Simple: single user approval, token-only transfers
@@ -82,7 +82,7 @@ import type { Hex } from "viem";
  *   },
  * });
  *
- * await 0xkeyClient.apiClient().createPolicy(policy);
+ * await zeroXKeyClient.apiClient().createPolicy(policy);
  */
 export function buildIntentSigningPolicy(config: {
   organizationId: string;
@@ -151,17 +151,17 @@ export function buildIntentSigningPolicy(config: {
 }
 
 /**
- * Build a ZeroXKey policy to restrict what the paymaster can execute on-chain.
+ * Build a 0xkey policy to restrict what the paymaster can execute on-chain.
  * This protects at the execution layer - paymaster cannot submit transactions outside policy.
  *
- * This function uses ZeroXKey's Smart Contract Interface feature to parse the
+ * This function uses 0xkey's Smart Contract Interface feature to parse the
  * execute(address _targetEoA, address _to, uint256 ethAmount, bytes _data) ABI.
  * Before using this function, ensure the Gas Station ABI is uploaded via
  * ensureGasStationInterface() - this is typically handled automatically.
  *
  * @param config - Policy configuration
- * @param config.organizationId - ZeroXKey organization ID
- * @param config.paymasterUserId - ZeroXKey user ID for the paymaster (primary approver)
+ * @param config.organizationId - 0xkey organization ID
+ * @param config.paymasterUserId - 0xkey user ID for the paymaster (primary approver)
  * @param config.additionalApprovers - Optional additional user IDs that can approve (creates OR condition)
  * @param config.customConsensus - Optional custom consensus expression (overrides paymasterUserId and additionalApprovers)
  * @param config.executionContractAddress - Gas station execution contract address
@@ -172,7 +172,7 @@ export function buildIntentSigningPolicy(config: {
  * @param config.restrictions.maxGasPrice - Maximum gas price in wei
  * @param config.restrictions.maxGasLimit - Maximum gas limit
  * @param config.policyName - Optional policy name
- * @returns Policy object ready to submit to ZeroXKey createPolicy API
+ * @returns Policy object ready to submit to 0xkey createPolicy API
  *
  * @example
  * // Simple: single paymaster approval with ETH amount limit
@@ -246,7 +246,7 @@ export function buildIntentSigningPolicy(config: {
  *   restrictions: { ... },
  * });
  *
- * await 0xkeyClient.apiClient().createPolicy(policy);
+ * await zeroXKeyClient.apiClient().createPolicy(policy);
  */
 export function buildPaymasterExecutionPolicy(config: {
   organizationId: string;
@@ -270,7 +270,7 @@ export function buildPaymasterExecutionPolicy(config: {
   ];
 
   // Check output contract address using ABI parsing
-  // ZeroXKey parses execute(address _target, address _to, uint256 _ethAmount, bytes _data)
+  // 0xkey parses execute(address _target, address _to, uint256 _ethAmount, bytes _data)
   // and exposes arguments via eth.tx.contract_call_args
   if (
     config.restrictions?.allowedContracts &&
@@ -360,7 +360,7 @@ export async function getSmartContractInterface({
   organizationId: string;
   contractAddress: Hex;
 }): Promise<string | undefined> {
-  // Query ZeroXKey for existing interfaces
+  // Query 0xkey for existing interfaces
   const response = await client.getSmartContractInterfaces({
     organizationId,
   });
@@ -425,15 +425,15 @@ export async function uploadGasStationInterface({
 }
 
 /**
- * Ensures that a Gas Station ABI is registered with ZeroXKey for the given contract.
+ * Ensures that a Gas Station ABI is registered with 0xkey for the given contract.
  * Checks if an interface already exists; if not, uploads it automatically.
  * Returns the interface ID (existing or newly created).
  *
  * This function is called automatically by policy builders to enable ABI-based
  * policy conditions that can directly access and compare function arguments.
  *
- * @param client - ZeroXKey API client (from 0xkeySDK.apiClient())
- * @param organizationId - ZeroXKey organization ID
+ * @param client - 0xkey API client (from zeroXKeySDK.apiClient())
+ * @param organizationId - 0xkey organization ID
  * @param contractAddress - Gas station contract address
  * @param label - Optional custom label for the interface
  * @param chainName - Optional chain name for labeling (e.g., "Base Mainnet")
@@ -441,7 +441,7 @@ export async function uploadGasStationInterface({
  *
  * @example
  * const interfaceId = await ensureGasStationInterface({
- *   client: 0xkeyClient.apiClient(),
+ *   client: zeroXKeyClient.apiClient(),
  *   organizationId: "a5b89e4f-1234-5678-9abc-def012345678",
  *   contractAddress: "0x00000000008c57a1CE37836a5e9d36759D070d8c",
  *   chainName: "Base Sepolia"

@@ -50,7 +50,7 @@ export function ExportComponent(params: {
 
   if (!config) {
     throw new ZeroXKeyError(
-      "ZeroXKey SDK is not properly configured. Please check your configuration.",
+      "0xkey SDK is not properly configured. Please check your configuration.",
       ZeroXKeyErrorCodes.CONFIG_NOT_INITIALIZED,
     );
   }
@@ -63,7 +63,7 @@ export function ExportComponent(params: {
 
   if (!exportIframeUrl) {
     throw new ZeroXKeyError(
-      "Export iframe URL is not configured. Please set it in the ZeroXKey configuration.",
+      "Export iframe URL is not configured. Please set it in the 0xkey configuration.",
       ZeroXKeyErrorCodes.NOT_FOUND,
     );
   }

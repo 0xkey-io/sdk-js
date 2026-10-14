@@ -239,7 +239,7 @@ export function ModalRoot(props: ModalRootProps) {
                   >
                     {clientState === ClientState.Error ? (
                       <DeveloperError
-                        developerTitle="ZeroXKey SDK failed to initialize."
+                        developerTitle="0xkey SDK failed to initialize."
                         developerMessages={[
                           "Check your config and ensure you're connected to the internet.",
                           "Try attaching an onError callback to the ZeroXKeyProvider's callbacks to see more details.",

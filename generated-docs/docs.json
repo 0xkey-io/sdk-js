@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "ZeroXKey",
+  "name": "0xkey",
   "colors": {
     "primary": "#6a5bf5",
     "light": "#6a5bf5",
@@ -30,12 +30,12 @@
         {
           "anchor": "Blog",
           "icon": "newspaper",
-          "href": "https://www.0xkey.com/blog"
+          "href": "https://0xkey.io/blog"
         },
         {
           "anchor": "Contact us",
           "icon": "headset",
-          "href": "https://www.0xkey.com/contact-us"
+          "href": "https://0xkey.io/contact-us"
         }
       ]
     },
@@ -890,7 +890,7 @@
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg",
-    "href": "https://www.0xkey.com/"
+    "href": "https://0xkey.io/"
   },
   "styling": {
     "codeblocks": "system"
@@ -899,17 +899,17 @@
     "links": [
       {
         "label": "Demo",
-        "href": "https://wallets.0xkey.com/"
+        "href": "https://0xkey.io/embedded-wallets"
       },
       {
         "label": "Login",
-        "href": "https://app.0xkey.com/dashboard/auth/login?step=1"
+        "href": "https://app.0xkey.io/"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Get started",
-      "href": "https://app.0xkey.com/dashboard/auth/initial"
+      "href": "https://app.0xkey.io/"
     }
   },
   "footer": {

@@ -12,7 +12,7 @@ import { createNewWallet } from "./createNewWallet";
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the 0xkey API.
     await createNewWallet();
     return;
   }
@@ -27,7 +27,7 @@ async function main() {
     }),
   );
 
-  // Initialize a ZeroXKey Signer
+  // Initialize a 0xkey Signer
   const zeroXKeySigner = new ZeroXKeySigner({
     client: zeroXKeyClient,
     organizationId: process.env.ORGANIZATION_ID!,
@@ -49,7 +49,7 @@ async function main() {
   let signature = await connectedSigner.signMessage(hexMessage);
   let recoveredAddress = ethers.verifyMessage(hexMessage, signature);
 
-  print("ZeroXKey-powered signature - raw hex message:", `${signature}`);
+  print("0xkey-powered signature - raw hex message:", `${signature}`);
   assertEqual(recoveredAddress, address);
 
   // 2. Sign a raw bytes message
@@ -57,7 +57,7 @@ async function main() {
   signature = await connectedSigner.signMessage(bytesMessage);
   recoveredAddress = ethers.verifyMessage(bytesMessage, signature);
 
-  print("ZeroXKey-powered signature - raw bytes message:", `${signature}`);
+  print("0xkey-powered signature - raw bytes message:", `${signature}`);
   assertEqual(recoveredAddress, address);
 
   // 3. Sign typed data (EIP-712)
@@ -93,7 +93,7 @@ async function main() {
     signature,
   );
 
-  print("ZeroXKey-powered signature - typed data (EIP-712):", `${signature}`);
+  print("0xkey-powered signature - typed data (EIP-712):", `${signature}`);
   assertEqual(recoveredAddress, address);
 }
 

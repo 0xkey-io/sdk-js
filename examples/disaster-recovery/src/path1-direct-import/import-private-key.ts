@@ -2,7 +2,7 @@
  * Path 1: Direct Wallet Import - Import Raw Private Key
  *
  * This example demonstrates how to import a raw private key
- * into ZeroXKey's secure enclaves for disaster recovery.
+ * into 0xkey's secure enclaves for disaster recovery.
  *
  * Supports:
  * - Ethereum/EVM (SECP256K1)
@@ -69,9 +69,9 @@ async function main() {
     );
   }
 
-  // Initialize ZeroXKey client
+  // Initialize 0xkey client
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.com",
+    apiBaseUrl: process.env.BASE_URL ?? "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: organizationId,
@@ -105,7 +105,7 @@ async function main() {
     userId,
   });
 
-  console.log("Import bundle received from ZeroXKey enclave.");
+  console.log("Import bundle received from 0xkey enclave.");
   console.log();
 
   // Step 2: Get the private key from user
@@ -154,7 +154,7 @@ async function main() {
   console.log("Private key material encrypted successfully.");
   console.log();
 
-  // Step 3: Import the encrypted key into ZeroXKey
+  // Step 3: Import the encrypted key into 0xkey
   console.log("Step 3: Import encrypted key to ZeroXKey");
   console.log("-".repeat(40));
 

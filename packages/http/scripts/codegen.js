@@ -100,7 +100,7 @@ export const ${op.methodName} = (input: ${tInput}) =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed \`${op.suffix}\` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed \`${op.suffix}\` request, ready to be POSTed to 0xkey.
  *
  * See {@link ${op.suffix}}
  */
@@ -130,7 +130,7 @@ export const ${op.methodName} = () =>
   });
 
 /**
- * Request a WebAuthn assertion and return a signed \`${op.suffix}\` request, ready to be POSTed to ZeroXKey.
+ * Request a WebAuthn assertion and return a signed \`${op.suffix}\` request, ready to be POSTed to 0xkey.
  *
  * See {@link ${op.suffix}}
  */

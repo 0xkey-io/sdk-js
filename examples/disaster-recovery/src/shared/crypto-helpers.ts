@@ -7,10 +7,10 @@ if (typeof crypto === "undefined") {
 
 /**
  * Encrypts data using ECIES with a P-256 public key.
- * This is used for Path 2 to encrypt recovery bundles with ZeroXKey's public key.
+ * This is used for Path 2 to encrypt recovery bundles with 0xkey's public key.
  *
  * Note: This is a simplified example. In production, use a well-tested
- * ECIES library or ZeroXKey's crypto package for encryption.
+ * ECIES library or 0xkey's crypto package for encryption.
  */
 export async function encryptWithPublicKey(
   publicKeyHex: string,
@@ -89,7 +89,7 @@ export async function encryptWithPublicKey(
 /**
  * Decrypts data using ECIES with a P-256 private key.
  * This is used for Path 2 to decrypt recovery bundles after exporting
- * the encryption key from ZeroXKey.
+ * the encryption key from 0xkey.
  */
 export async function decryptWithPrivateKey(
   privateKeyHex: string,
@@ -103,7 +103,7 @@ export async function decryptWithPrivateKey(
   const ciphertext = encryptedData.slice(77);
 
   // Import the private key
-  // Note: Private key from ZeroXKey export is typically in a specific format
+  // Note: Private key from 0xkey export is typically in a specific format
   // This example assumes raw 32-byte private key
   const privateKeyBytes = hexToBytes(privateKeyHex);
 

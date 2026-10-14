@@ -2,11 +2,11 @@
 
 [![npm](https://img.shields.io/npm/v/@0xkey-io/viem?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/viem)
 
-This package contains helpers to use [Viem](https://viem.sh/) with [ZeroXKey](https://0xkey.com).
+This package contains helpers to use [Viem](https://viem.sh/) with [ZeroXKey](https://0xkey.io).
 
 We provide a ZeroXKey [Custom Account](https://viem.sh/docs/accounts/custom.html#custom-account) (signer) which implements the signing APIs expected by Viem clients.
 
-If you need a lower-level, fully typed HTTP client for interacting with ZeroXKey API, check out [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http).
+If you need a lower-level, fully typed HTTP client for interacting with 0xkey API, check out [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http).
 
 ## Getting started
 
@@ -22,10 +22,10 @@ import { createWalletClient, http } from "viem";
 import { sepolia } from "viem/chains";
 
 async function main() {
-  // Create a ZeroXKey HTTP client with API key credentials
+  // Create a 0xkey HTTP client with API key credentials
   const httpClient = new ZeroXKeyClient(
     {
-      baseUrl: "https://api.0xkey.com",
+      baseUrl: "https://api.0xkey.io",
     },
     // This uses API key credentials.
     // If you're using passkeys, use `@0xkey-io/webauthn-stamper` to collect webauthn signatures:
@@ -41,7 +41,7 @@ async function main() {
     client: httpClient,
     organizationId: "...",
     signWith: "...",
-    // optional; will be fetched from ZeroXKey if not provided
+    // optional; will be fetched from 0xkey if not provided
     ethereumAddress: "...",
   });
 
@@ -104,10 +104,10 @@ main().catch((error) => {
 ## See also
 
 - [`@0xkey-io/example-with-viem`](https://github.com/0xkey-io/sdk-js/tree/main/examples/with-viem): example using this package to create, sign, and broadcast a transaction on Sepolia (Ethereum testnet)
-- [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http): lower-level fully typed HTTP client for interacting with ZeroXKey API
-- [`@0xkey-io/api-key-stamper`](https://www.npmjs.com/package/@0xkey-io/api-key-stamper): package to authenticate to ZeroXKey using API key credentials
-- [`@0xkey-io/webauthn-stamper`](https://www.npmjs.com/package/@0xkey-io/webauthn-stamper): package to authenticate to ZeroXKey using Webauthn/passkeys.
+- [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http): lower-level fully typed HTTP client for interacting with 0xkey API
+- [`@0xkey-io/api-key-stamper`](https://www.npmjs.com/package/@0xkey-io/api-key-stamper): package to authenticate to 0xkey using API key credentials
+- [`@0xkey-io/webauthn-stamper`](https://www.npmjs.com/package/@0xkey-io/webauthn-stamper): package to authenticate to 0xkey using Webauthn/passkeys.
 
 ## Transaction types supported
 
-- ZeroXKey's Viem implementation now supports all transaction types: legacy, EIP-2930 (Type 1), EIP-1559 (Type 2), EIP-4844 (Type 3), and EIP-7702 (Type 4). See [with-viem](https://github.com/0xkey-io/sdk-js/tree/main/examples/with-viem/) for examples of scripts that sign using those various types.
+- 0xkey's Viem implementation now supports all transaction types: legacy, EIP-2930 (Type 1), EIP-1559 (Type 2), EIP-4844 (Type 3), and EIP-7702 (Type 4). See [with-viem](https://github.com/0xkey-io/sdk-js/tree/main/examples/with-viem/) for examples of scripts that sign using those various types.

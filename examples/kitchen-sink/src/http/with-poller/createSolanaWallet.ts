@@ -11,7 +11,7 @@ import { ApiKeyStamper } from "@0xkey-io/api-key-stamper";
 import { refineNonNull } from "../../utils";
 
 async function main() {
-  console.log("creating a new wallet on ZeroXKey...\n");
+  console.log("creating a new wallet on 0xkey...\n");
 
   const walletName = `SOL Wallet ${crypto.randomBytes(2).toString("hex")}`;
 

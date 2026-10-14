@@ -4,7 +4,7 @@ import type { ZeroXKeySigner } from "@0xkey-io/solana";
 
 import { solanaNetwork } from ".";
 
-// This method creates, signs and broadcasts an SPL token transfer using ZeroXKey's Sign Raw Payload endpoint for signing
+// This method creates, signs and broadcasts an SPL token transfer using 0xkey's Sign Raw Payload endpoint for signing
 export async function createTokenTransferAddSignature(
   zeroXKeySigner: ZeroXKeySigner,
   connection: Connection,
@@ -38,7 +38,7 @@ export async function createTokenTransferAddSignature(
   await solanaNetwork.broadcast(connection, transferTx);
 }
 
-// This method creates, signs and broadcasts an SPL token transfer using ZeroXKey's Sign Transaction endpoint for signing
+// This method creates, signs and broadcasts an SPL token transfer using 0xkey's Sign Transaction endpoint for signing
 // Note: Sign Transaction passes the transaction through the policy engine, allowing Solana related policies to apply!
 export async function createTokenTransferSignTransaction(
   zeroXKeySigner: ZeroXKeySigner,
@@ -56,7 +56,7 @@ export async function createTokenTransferSignTransaction(
     solAddress,
   );
 
-  // Use ZeroXKey's sign transaction endpoint that passes the created transaction through the policy engine
+  // Use 0xkey's sign transaction endpoint that passes the created transaction through the policy engine
   let signedTx = await zeroXKeySigner.signTransaction(transferTx, solAddress);
 
   console.log("Broadcasting token transfer transaction...");

@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@0xkey-io/telegram-cloud-storage-stamper?color=%234C48FF)](https://www.npmjs.com/package/@0xkey-io/telegram-cloud-storage-stamper)
 
-This package contains functions to store ZeroXKey API public/private keys and arbitrary data within [Telegram Cloud Storage](https://core.telegram.org/bots/webapps#cloudstorage). This package also handles stamping a ZeroXKey request with an API key. It is meant to be used with [`@0xkey-io/sdk-browser`](https://www.npmjs.com/package/@0xkey-io/sdk-browser).
+This package contains functions to store 0xkey API public/private keys and arbitrary data within [Telegram Cloud Storage](https://core.telegram.org/bots/webapps#cloudstorage). This package also handles stamping a 0xkey request with an API key. It is meant to be used with [`@0xkey-io/sdk-browser`](https://www.npmjs.com/package/@0xkey-io/sdk-browser).
 
 ### Preqrequisites
 
@@ -10,7 +10,7 @@ Telegram Bot API >= 6.9
 
 ### About
 
-The Telegram Cloud Storage Stamper has a few different modes of operation, namely a classic [stamper](https://docs.0xkey.com/developer-reference/api-overview/stamps) for stamping requests made to ZeroXKey's API, and an interface for a Telegram Mini App built with ZeroXKey to interact with Telegram Cloud Storage. This provides the developer of the application utilities such as creating stamps on requests made by users, storing user API keys, storing temporary keys that are needed for decrypting credential bundles for activites like [email auth](https://docs.0xkey.com/features/email-auth) or [oauth](https://docs.0xkey.com/features/oauth), or storing arbitrary values that would be helpful to have saved for a user from session to session on device to device.
+The Telegram Cloud Storage Stamper has a few different modes of operation, namely a classic [stamper](https://docs.0xkey.io/developer-reference/api-overview/stamps) for stamping requests made to 0xkey's API, and an interface for a Telegram Mini App built with 0xkey to interact with Telegram Cloud Storage. This provides the developer of the application utilities such as creating stamps on requests made by users, storing user API keys, storing temporary keys that are needed for decrypting credential bundles for activites like [email auth](https://docs.0xkey.io/features/email-auth) or [oauth](https://docs.0xkey.io/features/oauth), or storing arbitrary values that would be helpful to have saved for a user from session to session on device to device.
 
 The Telegram Cloud Storage Stamper will, by default, store the API key used for signing in Telegram Cloud Storage under the key `ZEROXKEY_API_KEY`. A Cloud Storage "key" is the index under which a value is stored in Telegram Cloud Storage. This can be changed when using the `.create()` or `.setSigningKey()` functions. An API key is stored within Cloud Storage as a JSON string of the following object:
 
@@ -60,7 +60,7 @@ const stamper = await TelegramCloudStorageStamper.create({
 // use the stamper in the client config
 const browserConfig: ZeroXKeySDKClientConfig = {
   stamper: stamper,
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   organizationId: <ORGANIZATION_ID>,
 };
 
@@ -85,7 +85,7 @@ const stamper = await TelegramCloudStorageStamper.create();
 // use the stamper in the client config
 const browserConfig: ZeroXKeySDKClientConfig = {
   stamper: stamper,
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   organizationId: <ORGANIZATION_ID>,
 };
 

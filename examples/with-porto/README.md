@@ -1,6 +1,6 @@
 # Example: `with-porto`
 
-This example shows how to upgrade a ZeroXKey EOA to a [Porto](https://porto.sh/) wallet and then perform operations with it, **using API keys**.
+This example shows how to upgrade a 0xkey EOA to a [Porto](https://porto.sh/) wallet and then perform operations with it, **using API keys**.
 
 ## Getting started
 
@@ -19,9 +19,9 @@ $ cd examples/with-porto/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 - A (crypto) private key ID
 
@@ -47,7 +47,7 @@ $ pnpm start
 
 This script will do the following:
 
-1. upgrade your ZeroXKey EOA to a Porto wallet
+1. upgrade your 0xkey EOA to a Porto wallet
 2. demonstrate an operation from the upgraded wallet – sends some ETH
 
 Sample output from a successful execution:

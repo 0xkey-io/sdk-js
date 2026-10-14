@@ -1,6 +1,6 @@
 # Example: `delegated-access`
 
-A sample application that quickly configures a Delegated Access setup (see https://docs.0xkey.com/concepts/policies/delegated-access):
+A sample application that quickly configures a Delegated Access setup (see https://docs.0xkey.io/concepts/policies/delegated-access):
 
 - Creates a Sub-Organization with a Delegated user account and an End User account
 - Creates a new Policy for the Delegated account
@@ -25,9 +25,9 @@ $ cd examples/delegated-access/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey parent organization
+- A public/private API key pair for 0xkey parent organization
 - A public/private API key pair for the Delegated account
 - An organization ID
 
@@ -56,7 +56,7 @@ pnpm start
 ### 3/ Testing the Delegated account permissions
 
 We want to make sure that the Delegated account API keys are highly scoped to sending ETH transactions only to the specified RECIPIENT_ADDRESS and transactions to other addresses (and all other actions) are not possible.
-You could run various ad-hoc tests by using the [ZeroXKey CLI](https://github.com/0xkey-io/tkcli) or try the provided validate.ts script which runs three tests using the Delegated account API keys:
+You could run various ad-hoc tests by using the [0xkey CLI](https://github.com/0xkey-io/tkcli) or try the provided validate.ts script which runs three tests using the Delegated account API keys:
 
 - Send a tx from the Delegated account sub-organization wallet address to the allowed Ethereum RECIPIENT_ADDRESS
 - Send a tx from the Delegated account sub-organization wallet address to a different Ethereum address

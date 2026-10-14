@@ -21,7 +21,7 @@ import { v4 as uuidv4 } from "uuid";
 
 // Returns authenticator params that can be used with sub-org creation, user creation, etc.
 const authenticatorParams = await createPasskey({
-  // Won't be visible to users, this is the name of the ZeroXKey resource
+  // Won't be visible to users, this is the name of the 0xkey resource
   authenticatorName: "End-User Passkey",
   rp: {
     id: "your.site.com",
@@ -51,7 +51,7 @@ const stamper = new PasskeyStamper({
 
 // New HTTP client able to sign with passkeys!
 const httpClient = new ZeroXKeyClient(
-  { baseUrl: "https://api.0xkey.com" },
+  { baseUrl: "https://api.0xkey.io" },
   stamper
 );
 

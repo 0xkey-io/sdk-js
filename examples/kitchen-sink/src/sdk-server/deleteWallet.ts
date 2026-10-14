@@ -8,7 +8,7 @@ import { ZeroXKey as ZeroXKeySDKServer } from "@0xkey-io/sdk-server";
 
 async function main() {
   const zeroXKeyClient = new ZeroXKeySDKServer({
-    apiBaseUrl: process.env.BASE_URL || "https://api.0xkey.com",
+    apiBaseUrl: process.env.BASE_URL || "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,

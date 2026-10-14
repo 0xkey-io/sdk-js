@@ -1,22 +1,22 @@
 # Encryption Key Escrow
 
-This example demonstrates how to use ZeroXKey as a **secure key storage and retrieval service** rather than relying on ZeroXKey for signing operations directly. By leveraging ZeroXKey's secure enclaves to hold encryption keys while keeping encrypted data in your own infrastructure, you can build applications that:
+This example demonstrates how to use ZeroXKey as a **secure key storage and retrieval service** rather than relying on 0xkey for signing operations directly. By leveraging 0xkey's secure enclaves to hold encryption keys while keeping encrypted data in your own infrastructure, you can build applications that:
 
 - Maintain full control over signing and cryptographic operations
 - Achieve performance characteristics not possible with network-based signing
 - Implement user-controlled backup and recovery flows
-- Distribute trust between ZeroXKey and your infrastructure
+- Distribute trust between 0xkey and your infrastructure
 
 ## The Pattern: Key Separation
 
 The encryption key escrow pattern separates two components:
 
-| Component          | Location                | Purpose                                                    |
-| ------------------ | ----------------------- | ---------------------------------------------------------- |
-| **Encrypted data** | Your infrastructure     | Wallet bundles, recovery material, sensitive credentials   |
-| **Encryption key** | ZeroXKey secure enclave | Decryption only possible via authenticated ZeroXKey access |
+| Component          | Location             | Purpose                                                  |
+| ------------------ | -------------------- | -------------------------------------------------------- |
+| **Encrypted data** | Your infrastructure  | Wallet bundles, recovery material, sensitive credentials |
+| **Encryption key** | 0xkey secure enclave | Decryption only possible via authenticated 0xkey access  |
 
-This creates a **2-of-2 security model**: an attacker must compromise both your infrastructure AND ZeroXKey authentication to access the plaintext data.
+This creates a **2-of-2 security model**: an attacker must compromise both your infrastructure AND 0xkey authentication to access the plaintext data.
 
 ```
 ┌──────────────────────────────────┐     ┌──────────────────────────────────┐
@@ -52,21 +52,21 @@ Applications requiring ultra-fast signing (trading platforms, gaming, batch oper
 
 ### 2. User-Controlled Backup & Recovery
 
-Similar to [World App's integration with ZeroXKey](https://www.0xkey.com/blog/0xkey-announces-integration-tools-for-humanitys-world-app), applications can:
+Similar to [World App's integration with ZeroXKey](https://0xkey.io/blog/0xkey-announces-integration-tools-for-humanitys-world-app), applications can:
 
 - Encrypt user recovery bundles on-device
-- Store the encryption key in ZeroXKey, gated by user authentication (OAuth, passkeys)
+- Store the encryption key in 0xkey, gated by user authentication (OAuth, passkeys)
 - Keep encrypted bundles client-side or in your storage
-- Enable recovery by authenticating to ZeroXKey to retrieve the decryption key
+- Enable recovery by authenticating to 0xkey to retrieve the decryption key
 
-**Benefit:** Users maintain control of their encrypted data while ZeroXKey provides secure, authenticated access to decryption capability.
+**Benefit:** Users maintain control of their encrypted data while 0xkey provides secure, authenticated access to decryption capability.
 
 ### 3. Distributed Trust Models
 
 For compliance or architectural requirements where key material must be separated:
 
 - Store sensitive credentials encrypted in your infrastructure
-- Gate decryption through ZeroXKey's authentication and policy engine
+- Gate decryption through 0xkey's authentication and policy engine
 - Require quorum approval for key export in high-security scenarios
 - Maintain audit trails of all key access events
 
@@ -76,7 +76,7 @@ For compliance or architectural requirements where key material must be separate
 
 1. **Create encryption keypair** in ZeroXKey (P-256, stored in secure enclave)
 2. **Encrypt sensitive material** using the public key
-3. **Store encrypted bundles** in your infrastructure (ZeroXKey never sees this data)
+3. **Store encrypted bundles** in your infrastructure (0xkey never sees this data)
 
 ### Per-Session / On-Demand Access
 
@@ -88,11 +88,11 @@ For compliance or architectural requirements where key material must be separate
 
 ### Security Properties
 
-| Scenario                         | Impact                                                              |
-| -------------------------------- | ------------------------------------------------------------------- |
-| Your storage compromised         | Attacker gets encrypted blobs, cannot decrypt without ZeroXKey auth |
-| ZeroXKey credentials compromised | Attacker can export key but has no encrypted bundles                |
-| Both compromised                 | Full access (inherent to any 2-of-2 model)                          |
+| Scenario                      | Impact                                                           |
+| ----------------------------- | ---------------------------------------------------------------- |
+| Your storage compromised      | Attacker gets encrypted blobs, cannot decrypt without 0xkey auth |
+| 0xkey credentials compromised | Attacker can export key but has no encrypted bundles             |
+| Both compromised              | Full access (inherent to any 2-of-2 model)                       |
 
 ## Quick Start
 
@@ -103,7 +103,7 @@ pnpm install
 # Copy environment template
 cp .env.local.example .env.local
 
-# Edit .env.local with your ZeroXKey credentials
+# Edit .env.local with your 0xkey credentials
 
 # Launch the interactive CLI
 pnpm start
@@ -115,7 +115,7 @@ The CLI provides a complete walkthrough of the escrow pattern:
 
 ### Initial Setup
 
-1. **Create Encryption Key** - Generate a P-256 keypair in ZeroXKey
+1. **Create Encryption Key** - Generate a P-256 keypair in 0xkey
 2. **Generate & Encrypt Wallets** - Create test wallets and encrypt them
 
 ### Per-Session Flow
@@ -131,11 +131,11 @@ The CLI provides a complete walkthrough of the escrow pattern:
 ## Environment Variables
 
 ```bash
-# Required - ZeroXKey API credentials
-API_PUBLIC_KEY="<Your ZeroXKey API public key>"
-API_PRIVATE_KEY="<Your ZeroXKey API private key>"
-BASE_URL="https://api.0xkey.com"
-ORGANIZATION_ID="<Your ZeroXKey organization ID>"
+# Required - 0xkey API credentials
+API_PUBLIC_KEY="<Your 0xkey API public key>"
+API_PRIVATE_KEY="<Your 0xkey API private key>"
+BASE_URL="https://api.0xkey.io"
+ORGANIZATION_ID="<Your 0xkey organization ID>"
 
 # Created during setup
 ENCRYPTION_KEY_ID="<Private key ID from ZeroXKey>"
@@ -153,7 +153,7 @@ ENCRYPTION_KEY_ID="<Private key ID from ZeroXKey>"
 │  │                                                          │    │
 │  │  • Wallet bundles, recovery material, credentials        │    │
 │  │  • Encrypted with P-256 ECIES                           │    │
-│  │  • ZeroXKey never sees this data                         │    │
+│  │  • 0xkey never sees this data                         │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                              │                                   │
 │                              │ On-demand decryption              │
@@ -180,7 +180,7 @@ ENCRYPTION_KEY_ID="<Private key ID from ZeroXKey>"
 │  │  • Protected by policies and optional quorum approval     │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
-│  ZeroXKey provides:                                               │
+│  0xkey provides:                                               │
 │  • Secure key storage in TEE-based enclaves                     │
 │  • Authentication (API keys, passkeys, OAuth)                   │
 │  • Policy engine for access control                             │
@@ -205,7 +205,7 @@ For sensitive keys, require multi-party approval for export:
 
 ### Authentication Options
 
-ZeroXKey supports multiple authentication methods for key export:
+0xkey supports multiple authentication methods for key export:
 
 - **API keys** - For server-to-server access
 - **Passkeys** - For user-initiated access (WebAuthn)
@@ -231,14 +231,14 @@ encryption-key-escrow/
 └── src/
     ├── interactive.ts       # Main CLI application
     └── shared/
-        ├── 0xkey.ts       # ZeroXKey client initialization
+        ├── 0xkey.ts       # 0xkey client initialization
         └── crypto-helpers.ts # ECIES encryption utilities
 ```
 
 ## Related Resources
 
 - [World App Backup Service](https://github.com/worldcoin/backup-service) - Production implementation of encryption key escrow
-- [ZeroXKey + World App Blog Post](https://www.0xkey.com/blog/0xkey-announces-integration-tools-for-humanitys-world-app) - Case study on user-controlled recovery
-- [ZeroXKey Secure Enclaves](https://docs.0xkey.com/security/secure-enclaves) - How ZeroXKey protects key material
-- [Export Private Keys](https://docs.0xkey.com/wallets/export-wallets) - API documentation for key export
-- [Policy Engine](https://docs.0xkey.com/concepts/policies/quickstart) - Configuring access controls
+- [ZeroXKey + World App Blog Post](https://0xkey.io/blog/0xkey-announces-integration-tools-for-humanitys-world-app) - Case study on user-controlled recovery
+- [0xkey Secure Enclaves](https://docs.0xkey.io/security/secure-enclaves) - How 0xkey protects key material
+- [Export Private Keys](https://docs.0xkey.io/wallets/export-wallets) - API documentation for key export
+- [Policy Engine](https://docs.0xkey.io/concepts/policies/quickstart) - Configuring access controls

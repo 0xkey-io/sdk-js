@@ -29,7 +29,7 @@ export class ZeroXKeySigner {
   }
 
   /**
-   * This function takes an array of Solana transactions and adds a signature with ZeroXKey to each of them
+   * This function takes an array of Solana transactions and adds a signature with 0xkey to each of them
    *
    * @param txs array of Transaction | VersionedTransaction (native @solana/web3.js type)
    * @param fromAddress Solana address (base58 encoded)
@@ -61,7 +61,7 @@ export class ZeroXKeySigner {
   }
 
   /**
-   * This function takes a Solana transaction and adds a signature with ZeroXKey
+   * This function takes a Solana transaction and adds a signature with 0xkey
    *
    * @param tx Transaction | VersionedTransaction object (native @solana/web3.js type)
    * @param fromAddress Solana address (base58 encoded)
@@ -84,7 +84,7 @@ export class ZeroXKeySigner {
   }
 
   /**
-   * This function takes a message and returns it after being signed with ZeroXKey
+   * This function takes a message and returns it after being signed with 0xkey
    *
    * @param message The message to sign (Uint8Array)
    * @param fromAddress Solana address (base58 encoded)
@@ -106,7 +106,7 @@ export class ZeroXKeySigner {
   }
 
   /**
-   * This function takes a Solana transaction, adds a signature via ZeroXKey,
+   * This function takes a Solana transaction, adds a signature via 0xkey,
    * and returns a new transaction
    *
    * @param tx Transaction | VersionedTransaction object (native @solana/web3.js type)
@@ -197,7 +197,7 @@ export class ZeroXKeySigner {
           payload,
           encoding: "PAYLOAD_ENCODING_HEXADECIMAL",
           // Note: unlike ECDSA, EdDSA's API does not support signing raw digests (see RFC 8032).
-          // ZeroXKey's signer requires an explicit value to be passed here to minimize ambiguity.
+          // 0xkey's signer requires an explicit value to be passed here to minimize ambiguity.
           hashFunction: "HASH_FUNCTION_NOT_APPLICABLE",
         },
       });
@@ -214,7 +214,7 @@ export class ZeroXKeySigner {
         payload,
         encoding: "PAYLOAD_ENCODING_HEXADECIMAL",
         // Note: unlike ECDSA, EdDSA's API does not support signing raw digests (see RFC 8032).
-        // ZeroXKey's signer requires an explicit value to be passed here to minimize ambiguity.
+        // 0xkey's signer requires an explicit value to be passed here to minimize ambiguity.
         hashFunction: "HASH_FUNCTION_NOT_APPLICABLE",
       });
 
@@ -245,7 +245,7 @@ export class ZeroXKeySigner {
           payloads,
           encoding: "PAYLOAD_ENCODING_HEXADECIMAL",
           // Note: unlike ECDSA, EdDSA's API does not support signing raw digests (see RFC 8032).
-          // ZeroXKey's signer requires an explicit value to be passed here to minimize ambiguity.
+          // 0xkey's signer requires an explicit value to be passed here to minimize ambiguity.
           hashFunction: "HASH_FUNCTION_NOT_APPLICABLE",
         },
       });
@@ -262,7 +262,7 @@ export class ZeroXKeySigner {
         payloads,
         encoding: "PAYLOAD_ENCODING_HEXADECIMAL",
         // Note: unlike ECDSA, EdDSA's API does not support signing raw digests (see RFC 8032).
-        // ZeroXKey's signer requires an explicit value to be passed here to minimize ambiguity.
+        // 0xkey's signer requires an explicit value to be passed here to minimize ambiguity.
         hashFunction: "HASH_FUNCTION_NOT_APPLICABLE",
       });
 

@@ -24,15 +24,15 @@ export const createSuborgParams: CreateSubOrgParams = {
 };
 
 export const initialConfig: ZeroXKeyProviderConfig = {
-  apiBaseUrl: process.env.NEXT_PUBLIC_BASE_URL || "https://api.0xkey.com",
+  apiBaseUrl: process.env.NEXT_PUBLIC_BASE_URL || "https://api.0xkey.io",
   authProxyUrl:
-    process.env.NEXT_PUBLIC_AUTH_PROXY_URL || "https://authproxy.0xkey.com",
+    process.env.NEXT_PUBLIC_AUTH_PROXY_URL || "https://authproxy.0xkey.io",
   authProxyConfigId: process.env.NEXT_PUBLIC_AUTH_PROXY_ID!,
   organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
   importIframeUrl:
-    process.env.NEXT_PUBLIC_IMPORT_IFRAME_URL || "https://import.0xkey.com",
+    process.env.NEXT_PUBLIC_IMPORT_IFRAME_URL || "https://import.0xkey.io",
   exportIframeUrl:
-    process.env.NEXT_PUBLIC_EXPORT_IFRAME_URL || "https://export.0xkey.com",
+    process.env.NEXT_PUBLIC_EXPORT_IFRAME_URL || "https://export.0xkey.io",
   auth: {
     oauthConfig: {
       googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
@@ -102,7 +102,7 @@ export const initialConfig: ZeroXKeyProviderConfig = {
     walletConnect: {
       projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
       appMetadata: {
-        name: "ZeroXKey Wallet",
+        name: "0xkey Wallet",
         description: "A wallet for ZeroXKey",
         url: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_URL!,
         icons: ["/favicon.svg"],

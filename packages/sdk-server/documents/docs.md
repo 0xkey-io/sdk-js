@@ -1,13 +1,13 @@
 ---
 title: "JavaScript Server"
-description: "The [`@0xkey-io/sdk-server`](https://www.npmjs.com/package/@0xkey-io/sdk-server) package exposes functionality that lets developers build server-side functionality for applications that interact with the ZeroXKey API."
+description: "The [`@0xkey-io/sdk-server`](https://www.npmjs.com/package/@0xkey-io/sdk-server) package exposes functionality that lets developers build server-side functionality for applications that interact with the 0xkey API."
 ---
 
 ## Overview
 
-It exposes a ready-made API client class which manages the process of constructing requests to the ZeroXKey API and authenticating them with a valid API key. Furthermore, it exposes API proxies that forward requests from your application's client that need to be signed by parent organizations API key.
+It exposes a ready-made API client class which manages the process of constructing requests to the 0xkey API and authenticating them with a valid API key. Furthermore, it exposes API proxies that forward requests from your application's client that need to be signed by parent organizations API key.
 
-Use the [`@0xkey-io/sdk-server`](https://www.npmjs.com/package/@0xkey-io/sdk-server) package to handle server-side interactions for applications that interact with the ZeroXKey API.
+Use the [`@0xkey-io/sdk-server`](https://www.npmjs.com/package/@0xkey-io/sdk-server) package to handle server-side interactions for applications that interact with the 0xkey API.
 
 ## Installation
 
@@ -28,9 +28,9 @@ yarn add @0xkey-io/sdk-server
 ```js
 import { ZeroXKey } from "@0xkey-io/sdk-server";
 
-const 0xkey = new ZeroXKey({
+const zeroXKey = new ZeroXKey({
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   apiPrivateKey: process.env.ZEROXKEY_API_PRIVATE_KEY,
   apiPublicKey: process.env.ZEROXKEY_API_PUBLIC_KEY,
 });
@@ -65,7 +65,7 @@ The root organization that requests will be made from unless otherwise specified
   required
 >
 
-The base URL that API requests will be sent to (use [https://api.0xkey.com](https://api.0xkey.com) when making requests to ZeroXKey's API)
+The base URL that API requests will be sent to (use [https://api.0xkey.io](https://api.0xkey.io) when making requests to 0xkey's API)
 
 </ParamField>
 <ParamField
@@ -86,14 +86,14 @@ The API Public Key associated with the configured API Private Key above
 </ParamField>
 ## Creating Clients
 
-Calls to ZeroXKey's API must be signed with a valid credential (often referred to in the docs as [stamping](https://docs.0xkey.com/developer-reference/api-overview/stamps)) from the user initiating the API call. When using the Server SDK, the user initiating the API call is normally your root organization, and the API call is authenticated with the API keypair you create on the ZeroXKey dashboard.
+Calls to 0xkey's API must be signed with a valid credential (often referred to in the docs as [stamping](https://docs.0xkey.io/developer-reference/api-overview/stamps)) from the user initiating the API call. When using the Server SDK, the user initiating the API call is normally your root organization, and the API call is authenticated with the API keypair you create on the 0xkey dashboard.
 
 #### `apiClient()`
 
 The `apiClient` method returns an instance of the `ZeroXKeyApiClient` which will sign requests with the injected `apiPrivateKey`, and `apiPublicKey` credentials.
 
 ```js
-const apiClient = 0xkey.apiClient();
+const apiClient = zeroXKey.apiClient();
 const walletsResponse = await apiClient.getWallets();
 
 // this will sign the request with the configured api credentials
@@ -107,10 +107,10 @@ These can be implemented in your backend by creating an `apiClient` and handling
 
 #### expressProxyHandler()
 
-The `expressProxyHandler()` method creates a proxy handler designed as a middleware for Express applications. It provides an API endpoint that forwards requests to the ZeroXKey API server.
+The `expressProxyHandler()` method creates a proxy handler designed as a middleware for Express applications. It provides an API endpoint that forwards requests to the 0xkey API server.
 
 ```js
-const zeroXKeyProxyHandler = 0xkey.expressProxyHandler({
+const zeroXKeyProxyHandler = zeroXKey.expressProxyHandler({
   allowedMethods: ["createSubOrganization", "emailAuth", "getSubOrgIds"],
 });
 
@@ -121,11 +121,11 @@ app.post("/apiProxy", zeroXKeyProxyHandler);
 
 #### 2. nextProxyHandler()
 
-The `nextProxyHandler()` method creates a proxy handler designed as a middleware for Next.js applications. It provides an API endpoint that forwards requests to the ZeroXKey API server.
+The `nextProxyHandler()` method creates a proxy handler designed as a middleware for Next.js applications. It provides an API endpoint that forwards requests to the 0xkey API server.
 
 ```js
 // Configure the Next.js handler with allowed methods
-const zeroXKeyProxyHandler = 0xkey.nextProxyHandler({
+const zeroXKeyProxyHandler = zeroXKey.nextProxyHandler({
   allowedMethods: ["createSubOrganization", "emailAuth", "getSubOrgIds"],
 });
 

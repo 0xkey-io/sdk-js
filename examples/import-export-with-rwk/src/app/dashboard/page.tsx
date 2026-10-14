@@ -598,7 +598,7 @@ export default function Dashboard() {
                   <br />
                   See{" "}
                   <a
-                    href="https://docs.0xkey.com/concepts/wallets#address-formats-and-curves"
+                    href="https://docs.0xkey.io/concepts/wallets#address-formats-and-curves"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline"

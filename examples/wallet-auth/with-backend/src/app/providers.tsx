@@ -14,7 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ZeroXKeyProvider
       config={zeroXKeyConfig}
       callbacks={{
-        onError: (error) => console.error("ZeroXKey error:", error),
+        onError: (error) => console.error("0xkey error:", error),
       }}
     >
       {children}

@@ -93,7 +93,7 @@ const zeroXKeyClient = new ZeroXKeyServerSDK({
 const main = async () => {
   const rpcUrl = selectedChain === "base" ? env.BASE_RPC_URL : env.ETH_RPC_URL;
 
-  // Create viem wallet clients with ZeroXKey accounts
+  // Create viem wallet clients with 0xkey accounts
   const userAccount = await createAccount({
     client: zeroXKeyClient.apiClient(),
     organizationId: env.ORGANIZATION_ID,

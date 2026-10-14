@@ -38,13 +38,13 @@ async function pollStatus(
 
 async function main() {
   const zeroXKeyClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
   });
 
-  const from = process.env.TRON_ADDRESS!; // your ZeroXKey Tron address
+  const from = process.env.TRON_ADDRESS!; // your 0xkey Tron address
   const to = process.env.TRON_RECIPIENT || "TY1jfzP3s94oSzYECC89EFn17iA8S4imVZ";
   // Nile USDT (Tether) test token contract used by the faucet.
   const usdtContract = "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj";

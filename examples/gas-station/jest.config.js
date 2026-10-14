@@ -9,6 +9,6 @@ module.exports = {
   transform: {
     "\\.[jt]sx?$": "@0xkey-io/jest-config/transformer.js",
   },
-  testTimeout: 120000, // 2 minutes for tests involving ZeroXKey API calls
+  testTimeout: 120000, // 2 minutes for tests involving 0xkey API calls
   verbose: true,
 };

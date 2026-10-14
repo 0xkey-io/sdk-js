@@ -10,7 +10,7 @@ import { ApiKeyStamper } from "@0xkey-io/api-key-stamper";
 import { refineNonNull } from "../../utils";
 
 async function main() {
-  // Initialize a ZeroXKey client
+  // Initialize a 0xkey client
   const zeroXKeyClient = new ZeroXKeyClient(
     { baseUrl: process.env.BASE_URL! },
     new ApiKeyStamper({
@@ -21,8 +21,8 @@ async function main() {
 
   const policyName = "<your new policy name";
   const effect = "EFFECT_ALLOW"; // "EFFECT_ALLOW" | "EFFECT_DENY"
-  const consensus = ""; // desired consensus. See https://docs.0xkey.com/concepts/policies/overview
-  const condition = ""; // desired condition. See https://docs.0xkey.com/concepts/policies/overview
+  const consensus = ""; // desired consensus. See https://docs.0xkey.io/concepts/policies/overview
+  const condition = ""; // desired condition. See https://docs.0xkey.io/concepts/policies/overview
   const notes = "";
 
   const { activity } = await zeroXKeyClient.createPolicy({

@@ -33,13 +33,13 @@ export function getProvider(env = Environment.GOERLI): Provider {
 // (https://docs.ethers.org/v6/api/providers/)
 export function getZeroXKeySigner(provider: ethers.Provider): ZeroXKeySigner {
   const zeroXKeyClient = new ZeroXKeySDKServer({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
   });
 
-  // Initialize a ZeroXKey Signer
+  // Initialize a 0xkey Signer
   const zeroXKeySigner = new ZeroXKeySigner({
     client: zeroXKeyClient.apiClient(),
     organizationId: process.env.ORGANIZATION_ID!,

@@ -37,7 +37,7 @@ function RootLayout({ children }: RootLayoutProps) {
           initialConfig={initialConfig}
           callbacks={{
             onError: (error) => {
-              console.error("ZeroXKey Error:", error.code);
+              console.error("0xkey Error:", error.code);
               switch (error.code) {
                 case ZeroXKeyErrorCodes.ACCOUNT_ALREADY_EXISTS:
                   notify(

@@ -479,7 +479,7 @@ export interface BuildOAuthUrlParams {
   transactionId?: string;
   codeChallenge?: string | undefined;
   additionalState?: Record<string, string> | undefined;
-  /** If true, uses direct provider URLs; if false, uses ZeroXKey OAuth proxy */
+  /** If true, uses direct provider URLs; if false, uses 0xkey OAuth proxy */
   useOauthProxyOrigin?: boolean;
   /** Hosted OAuth origin page. Defaults to `ZEROXKEY_OAUTH_ORIGIN_URL`. */
   oauthOriginUrl?: string;
@@ -489,7 +489,7 @@ export interface BuildOAuthUrlParams {
  * Builds the complete OAuth authorization URL for a provider
  * For react-native, can use either:
  * - Direct provider URLs (Discord, X)
- * - ZeroXKey OAuth proxy (Google, Apple, Facebook)
+ * - 0xkey OAuth proxy (Google, Apple, Facebook)
  */
 export function buildOAuthUrl(params: BuildOAuthUrlParams): string {
   const {
@@ -524,7 +524,7 @@ export function buildOAuthUrl(params: BuildOAuthUrlParams): string {
   }
   const state = buildOAuthState(stateParams);
 
-  // If using ZeroXKey Oauth proxy (for Google, Apple, Facebook)
+  // If using 0xkey Oauth proxy (for Google, Apple, Facebook)
   if (useOauthProxyOrigin) {
     const url = new URL(oauthOriginUrl);
     url.searchParams.set("provider", provider);

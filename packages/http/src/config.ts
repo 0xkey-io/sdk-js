@@ -2,22 +2,22 @@ type TNullable<T> = { [K in keyof T]: T[K] | null };
 
 type TConfig = {
   /**
-   * ZeroXKey API public key
+   * 0xkey API public key
    */
   apiPublicKey: string;
   /**
-   * ZeroXKey API private key
+   * 0xkey API private key
    */
   apiPrivateKey: string;
   /**
-   * ZeroXKey API base URL
+   * 0xkey API base URL
    */
   baseUrl: string;
 };
 
 type TBrowserConfig = {
   /**
-   * ZeroXKey API base URL
+   * 0xkey API base URL
    */
   baseUrl: string;
 };

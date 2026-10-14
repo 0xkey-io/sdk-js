@@ -15,7 +15,7 @@ import { createStampResult } from "./_kernel/stamping";
 import type { Hex } from "viem";
 
 // WalletStamper class implements the TStamper interface to use wallet's signature and public key
-// to authenticate requests to ZeroXKey.
+// to authenticate requests to 0xkey.
 export class WalletStamper implements TStamper {
   private wallet: WalletInterface;
 
@@ -58,7 +58,7 @@ export class WalletStamper implements TStamper {
           "hex",
         );
 
-        // Convert the signature to DER format which is required by the ZeroXKey API.
+        // Convert the signature to DER format which is required by the 0xkey API.
         signature = toDerSignature(signature.replace("0x", ""));
       } else {
         // For Solana, we can directly use the public key.

@@ -19,7 +19,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the 0xkey API.
     await createNewWallet();
     return;
   }
@@ -93,7 +93,7 @@ async function main() {
     signature,
   });
 
-  print("ZeroXKey-powered signature - typed data (EIP-712):", `${signature}`);
+  print("0xkey-powered signature - typed data (EIP-712):", `${signature}`);
   assertEqual(address, recoveredAddress);
 }
 

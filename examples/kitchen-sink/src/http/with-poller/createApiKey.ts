@@ -9,7 +9,7 @@ import { ApiKeyStamper } from "@0xkey-io/api-key-stamper";
 import { refineNonNull } from "../../utils";
 
 async function main() {
-  console.log("creating a new private key on ZeroXKey...\n");
+  console.log("creating a new private key on 0xkey...\n");
 
   const zeroXKeyClient = new ZeroXKeyClient(
     { baseUrl: process.env.BASE_URL! },

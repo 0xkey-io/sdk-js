@@ -36,7 +36,7 @@ export class ZeroXKeyRequestError extends Error {
   code: number;
 
   constructor(input: GrpcStatus) {
-    let zeroXKeyErrorMessage = `ZeroXKey error ${input.code}: ${input.message}`;
+    let zeroXKeyErrorMessage = `0xkey error ${input.code}: ${input.message}`;
 
     if (input.details != null) {
       zeroXKeyErrorMessage += ` (Details: ${JSON.stringify(input.details)})`;

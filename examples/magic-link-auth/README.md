@@ -19,7 +19,7 @@ A high-level overview of the user experience and what happens on screen:
 A step-by-step look under the hood:
 
 1. **_Send the magic link_**
-   - The app calls [`initOtp`](https://docs.0xkey.com/api-reference/activities/init-generic-otp) with the user’s email and an `emailCustomization` object containing a `magicLinkTemplate`:
+   - The app calls [`initOtp`](https://docs.0xkey.io/api-reference/activities/init-generic-otp) with the user’s email and an `emailCustomization` object containing a `magicLinkTemplate`:
 
      ```ts
      emailCustomization: {
@@ -28,7 +28,7 @@ A step-by-step look under the hood:
      },
      ```
 
-   - The `%s` placeholder in the template will be replaced by ZeroXKey with the **`otpCode`** when the email is sent, producing a fully functional magic link.
+   - The `%s` placeholder in the template will be replaced by 0xkey with the **`otpCode`** when the email is sent, producing a fully functional magic link.
 
    - The response returns an `otpId` that will be required later when the user clicks the link. We store this `otpId` in `localStorage` for use after redirection.
 
@@ -44,7 +44,7 @@ A step-by-step look under the hood:
    - It then proceeds to complete the authentication flow.
 
 3. **_Verify OTP_**
-   - The app calls [`verifyOtp`](https://docs.0xkey.com/api-reference/activities/verify-generic-otp) with the `otpId` and `otpCode`.
+   - The app calls [`verifyOtp`](https://docs.0xkey.io/api-reference/activities/verify-generic-otp) with the `otpId` and `otpCode`.
    - This returns a `verificationToken`, which contains their email address.
 
 4. **_Getting the Sub-organization Id_**
@@ -56,12 +56,12 @@ A step-by-step look under the hood:
    - In both cases, the process results in a valid `suborgId`.
 
 5. **_Login with OTP_**
-   - The app calls [`otpLogin`](https://docs.0xkey.com/api-reference/activities/login-with-otp) with the `verificationToken`, `publicKey`, and `suborgId`.
+   - The app calls [`otpLogin`](https://docs.0xkey.io/api-reference/activities/login-with-otp) with the `verificationToken`, `publicKey`, and `suborgId`.
    - This final step issues a **session token**, completing the magic link login/signup flow.
 
 6. **_Session storage_**
-   - The frontend stores the resulting session using the ZeroXKey SDK’s `storeSession` method.
-   - From this point onward, the user is authenticated and can interact with their ZeroXKey-managed wallets and sub-organization.
+   - The frontend stores the resulting session using the 0xkey SDK’s `storeSession` method.
+   - From this point onward, the user is authenticated and can interact with their 0xkey-managed wallets and sub-organization.
 
 ---
 
@@ -82,9 +82,9 @@ $ cd examples/otp-auth/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your API private key should be securely managed and **_never_** be committed to git.

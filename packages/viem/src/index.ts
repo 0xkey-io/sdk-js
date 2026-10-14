@@ -50,7 +50,7 @@ export type TZeroXKeyActivityErrorType = ZeroXKeyActivityError & {
 
 type TSignAuthorizationParameters = Omit<
   SignAuthorizationParameters,
-  "privateKey" // unnecessary as we are signing using ZeroXKey keys
+  "privateKey" // unnecessary as we are signing using 0xkey keys
 >;
 
 type TSignatureFormat = "object" | "bytes" | "hex";
@@ -108,7 +108,7 @@ export function __serializeTypedDataForZeroXKey(
 /**
  * Detects the transaction type from a serialized transaction payload.
  * @param serializedTx - The hex-encoded transaction (without 0x prefix)
- * @returns The transaction type to use with ZeroXKey API
+ * @returns The transaction type to use with 0xkey API
  */
 function detectTransactionType(serializedTx: string): TTransactionType {
   // Check if the transaction starts with 0x76 (Tempo transaction)
@@ -127,7 +127,7 @@ export class ZeroXKeyConsensusNeededError extends BaseError {
   activityStatus: TActivityStatus | undefined;
 
   constructor({
-    message = "ZeroXKey activity requires consensus.",
+    message = "0xkey activity requires consensus.",
     activityId,
     activityStatus,
   }: {
@@ -148,7 +148,7 @@ export class ZeroXKeyActivityError extends BaseError {
   activityStatus: TActivityStatus | undefined;
 
   constructor({
-    message = "Received unexpected ZeroXKey activity status.",
+    message = "Received unexpected 0xkey activity status.",
     activityId,
     activityStatus,
   }: {
@@ -250,7 +250,7 @@ export async function createAccount(input: {
   // This can be a wallet account address, private key address, or private key ID.
   signWith: string;
   // Ethereum address to use for this account, in the case that a private key ID is used to sign.
-  // If left undefined, `createAccount` will fetch it from the ZeroXKey API.
+  // If left undefined, `createAccount` will fetch it from the 0xkey API.
   // We recommend setting this if you're using a passkey client, so that your users are not prompted for a passkey signature just to fetch their address.
   // You may leave this undefined if using an API key client.
   ethereumAddress?: string;
@@ -299,29 +299,29 @@ export async function createAccount(input: {
  */
 type TApiKeyAccountConfig = {
   /**
-   * ZeroXKey API public key
+   * 0xkey API public key
    */
   apiPublicKey: string;
   /**
-   * ZeroXKey API private key
+   * 0xkey API private key
    */
   apiPrivateKey: string;
   /**
-   * ZeroXKey API base URL
+   * 0xkey API base URL
    */
   baseUrl: string;
   /**
-   * ZeroXKey organization ID
+   * 0xkey organization ID
    */
   organizationId: string;
   /**
-   * ZeroXKey private key ID
+   * 0xkey private key ID
    */
   privateKeyId: string;
 };
 
 /**
- * Creates a new Custom Account backed by a ZeroXKey API key.
+ * Creates a new Custom Account backed by a 0xkey API key.
  * @deprecated use {@link createAccount} instead.
  */
 export async function createApiKeyAccount(
@@ -564,7 +564,7 @@ async function signTransactionWithErrorWrapping(
       transactionType,
     );
   } catch (error: any) {
-    // Wrap ZeroXKey error in Viem-specific error
+    // Wrap 0xkey error in Viem-specific error
     if (error instanceof ZeroXKeyHttpActivityError) {
       throw new ZeroXKeyActivityError({
         message: error.message,
@@ -657,7 +657,7 @@ async function signMessageWithErrorWrapping(
       to,
     );
   } catch (error: any) {
-    // Wrap ZeroXKey error in Viem-specific error
+    // Wrap 0xkey error in Viem-specific error
     if (error instanceof ZeroXKeyHttpActivityError) {
       throw new ZeroXKeyActivityError({
         message: error.message,
@@ -755,7 +755,7 @@ export function serializeSignature(
   const s: `0x${string}` = `0x${sString}`;
   const v = BigInt(vString);
 
-  // ZeroXKey's `v` returned can be used as a proxy for yParity
+  // 0xkey's `v` returned can be used as a proxy for yParity
   const yParity_ = v;
 
   const signature = `0x${new secp256k1.Signature(

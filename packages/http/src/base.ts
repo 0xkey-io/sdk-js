@@ -27,7 +27,7 @@ const sharedRequestOptions: Partial<RequestInit> = {
 };
 
 /**
- * Represents a signed request ready to be POSTed to ZeroXKey
+ * Represents a signed request ready to be POSTed to 0xkey
  * @deprecated use {@link TSignedRequest} instead
  */
 export type SignedRequest = {
@@ -370,10 +370,10 @@ function stableStringify(input: Record<string, any>): string {
 }
 
 /**
- * Seals and stamps the request body with your ZeroXKey API credentials.
+ * Seals and stamps the request body with your 0xkey API credentials.
  *
  * You can either:
- * - Before calling `sealAndStampRequestBody(...)`, initialize with your ZeroXKey API credentials via `init(...)`
+ * - Before calling `sealAndStampRequestBody(...)`, initialize with your 0xkey API credentials via `init(...)`
  * - Or, provide `apiPublicKey` and `apiPrivateKey` here as arguments
  */
 export async function sealAndStampRequestBody(input: {
@@ -427,7 +427,7 @@ export type THttpConfig = {
 };
 
 /**
- * Represents a signed request ready to be POSTed to ZeroXKey
+ * Represents a signed request ready to be POSTed to 0xkey
  */
 export type TSignedRequest = {
   body: string;
@@ -451,7 +451,7 @@ export type GrpcStatus = {
 
 /**
  * Interface to implement if you want to provide your own stampers to your {@link ZeroXKeyClient}.
- * Currently ZeroXKey provides 2 stampers:
+ * Currently 0xkey provides 2 stampers:
  * - applications signing requests with Passkeys or webauthn devices should use `@0xkey-io/webauthn-stamper`
  * - applications signing requests with API keys should use `@0xkey-io/api-key-stamper`
  */
@@ -464,7 +464,7 @@ export class ZeroXKeyRequestError extends Error {
   code: number;
 
   constructor(input: GrpcStatus) {
-    let zeroXKeyErrorMessage = `ZeroXKey error ${input.code}: ${input.message}`;
+    let zeroXKeyErrorMessage = `0xkey error ${input.code}: ${input.message}`;
 
     if (input.details != null) {
       zeroXKeyErrorMessage += ` (Details: ${JSON.stringify(input.details)})`;

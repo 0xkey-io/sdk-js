@@ -4,6 +4,6 @@ Thank you for taking the time to contribute to the security of ZeroXKey! We appr
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, refer to https://docs.0xkey.com/security/reporting-a-vulnerability to disclose it to us confidentially.
+If you discover a security vulnerability, refer to https://docs.0xkey.io/security/reporting-a-vulnerability to disclose it to us confidentially.
 
 We encourage PGP-encrypted email submission if possible.

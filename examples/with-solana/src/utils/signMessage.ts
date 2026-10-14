@@ -1,7 +1,7 @@
 import type { ZeroXKeySigner } from "@0xkey-io/solana";
 
 /**
- * Sign a message with a ZeroXKey Solana address.
+ * Sign a message with a 0xkey Solana address.
  * @param signer
  * @param fromAddress
  * @param message

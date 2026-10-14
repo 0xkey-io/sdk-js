@@ -12,7 +12,7 @@ async function main() {
   const connectedSigner = getZeroXKeySigner(provider);
 
   print(
-    "Connected ZeroXKey signer to provider:",
+    "Connected 0xkey signer to provider:",
     `${JSON.stringify(connectedSigner)}`,
   );
 

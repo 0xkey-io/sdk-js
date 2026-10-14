@@ -9,9 +9,9 @@ import { ZeroXKey as ZeroXKeySDKServer } from "@0xkey-io/sdk-server";
 import { refineNonNull } from "../utils";
 
 async function main() {
-  // Initialize a ZeroXKey client
+  // Initialize a 0xkey client
   const zeroXKeyClient = new ZeroXKeySDKServer({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPublicKey: process.env.API_PUBLIC_KEY!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
@@ -19,8 +19,8 @@ async function main() {
 
   const policyName = "<your new policy name";
   const effect = "EFFECT_ALLOW"; // "EFFECT_ALLOW" | "EFFECT_DENY"
-  const consensus = ""; // desired consensus. See https://docs.0xkey.com/concepts/policies/overview
-  const condition = ""; // desired condition. See https://docs.0xkey.com/concepts/policies/overview
+  const consensus = ""; // desired consensus. See https://docs.0xkey.io/concepts/policies/overview
+  const condition = ""; // desired condition. See https://docs.0xkey.io/concepts/policies/overview
   const notes = "";
 
   const { policyId } = await zeroXKeyClient.apiClient().createPolicy({

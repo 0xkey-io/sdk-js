@@ -95,7 +95,7 @@ function getZeroXKeyClient(): ZeroXKey {
   const apiPublicKey = process.env.API_PUBLIC_KEY;
   const apiPrivateKey = process.env.API_PRIVATE_KEY;
   const organizationId = process.env.ORGANIZATION_ID;
-  const baseUrl = process.env.BASE_URL ?? "https://api.0xkey.com";
+  const baseUrl = process.env.BASE_URL ?? "https://api.0xkey.io";
 
   if (!apiPublicKey || !apiPrivateKey || !organizationId) {
     throw new Error(
@@ -479,7 +479,7 @@ async function importHDWallet(): Promise<void> {
 
   console.log("Step 1: Initialize import bundle from ZeroXKey");
   console.log(
-    "This creates a temporary public key in ZeroXKey's enclave for encrypting your mnemonic.",
+    "This creates a temporary public key in 0xkey's enclave for encrypting your mnemonic.",
   );
   console.log();
 
@@ -487,7 +487,7 @@ async function importHDWallet(): Promise<void> {
     userId,
   });
 
-  console.log("Import bundle received from ZeroXKey enclave.");
+  console.log("Import bundle received from 0xkey enclave.");
   console.log();
 
   console.log("Step 2: Encrypt wallet material");
@@ -665,7 +665,7 @@ async function importPrivateKey(): Promise<void> {
     userId,
   });
 
-  console.log("Import bundle received from ZeroXKey enclave.");
+  console.log("Import bundle received from 0xkey enclave.");
   console.log();
 
   console.log("Step 2: Encrypt private key material");
@@ -854,7 +854,7 @@ async function sweepFunds(): Promise<void> {
   });
 
   console.log();
-  console.log("Creating ZeroXKey signing account...");
+  console.log("Creating 0xkey signing account...");
   const zeroXKeyAccount = await createAccount({
     client: zeroXKeyClient.apiClient(),
     organizationId,
@@ -983,13 +983,13 @@ async function escrowSetup(): Promise<void> {
   console.log();
   console.log("This will:");
   console.log("1. Create an encryption keypair in ZeroXKey");
-  console.log("2. Encrypt your recovery material with ZeroXKey's public key");
+  console.log("2. Encrypt your recovery material with 0xkey's public key");
   console.log("3. Save the encrypted bundle locally (you store this securely)");
   console.log();
   console.log(
     "Note: The encrypted bundle should be stored in YOUR infrastructure,",
   );
-  console.log("not on ZeroXKey. This creates a 2-of-2 security model.");
+  console.log("not on 0xkey. This creates a 2-of-2 security model.");
   console.log();
 
   const organizationId = process.env.ORGANIZATION_ID;

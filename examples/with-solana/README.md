@@ -2,10 +2,10 @@
 
 This example walks through the following:
 
-- Creation of a new ZeroXKey wallet with a new Solana account
+- Creation of a new 0xkey wallet with a new Solana account
 - Monitoring of devnet tokens landing on that address
 - Construction of a transaction sending the funds out with the `@0xkey-io/solana` signer
-- Creating, minting, and transferring a SPL token using ZeroXKey
+- Creating, minting, and transferring a SPL token using 0xkey
 
 You can try this example quickly on Stackblitz. Follow the instructions below --> [Stackblitz Instructions](#7-stackblitz-example)
 
@@ -26,9 +26,9 @@ $ cd examples/with-solana/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
@@ -44,10 +44,10 @@ Now open `.env.local` and add the missing environment variables:
 - `BASE_URL`
 - `ORGANIZATION_ID`
 
-You can specify an existing ZeroXKey Solana address if you have one already:
+You can specify an existing 0xkey Solana address if you have one already:
 
 ```
-SOLANA_ADDRESS=<your ZeroXKey Solana address>
+SOLANA_ADDRESS=<your 0xkey Solana address>
 ```
 
 Note that this is optional: the script gives you a fresh one if you don't specify one in your `.env.local` file.
@@ -61,7 +61,7 @@ $ pnpm start
 You should see output similar to the following:
 
 ```
-creating a new Solana wallet in your ZeroXKey organization...
+creating a new Solana wallet in your 0xkey organization...
 
 New Solana wallet created!
 - Name: Solana Wallet 6527
@@ -82,7 +82,7 @@ Using existing Solana address from ENV: "G6fEj2pt4YYAxLS8JAsY5BL6hea7Fpe8Xyqscg2
 ? Destination address: 11111111111111111111111111111111
 ? Amount (in Lamports) to send to 11111111111111111111111111111111: 100
 
-ZeroXKey-powered signature:
+0xkey-powered signature:
         4W4X5wVzpPhCHQ8LeR18icfUYs7FdHQ6uTfkQ7E6jciuv9NQ6pZnyYj2veaeZoD5co3nz1gzBdZ2v6c4LXLjiTBm
 
 Transaction broadcast and confirmed! 🎉
@@ -172,7 +172,7 @@ This example shows the flow of using our policy engine's support for SPL token t
 
 To best see how policies can be used effectively, we will go through example in the following steps
 
-1. Setup - this step creates the on-chain state and SOME of the ZeroXKey setup state required to make this transfer (notably, it leaves out the creation of the policy that allows the created non root user to sign the SPL transfer)
+1. Setup - this step creates the on-chain state and SOME of the 0xkey setup state required to make this transfer (notably, it leaves out the creation of the policy that allows the created non root user to sign the SPL transfer)
 2. Attempt Transfer - since we're attempting the transfer WITHOUT having created the policy allowing it, this will fail
 3. Create Token Policy - this will create a policy that allows Solana transactions initiated by the correct user to be signed if they contain a single instruction which is an SPL token transfer to the correct token account
 4. Attempt Transfer (again) - this will succeed, now that the appropriate policy has been created!
@@ -189,9 +189,9 @@ $ pnpm token-transfer-policy setup
 
 This will create a Solana wallet address that you'll have to fund with devnet SOL via a faucet or cli. A commonly used SOL devnet faucet is available here --> https://faucet.solana.com/
 
-Funding your devnet and hitting `y` in the terminal to proceed will set up the necessary on-chain state and ZeroXKey setup to start, and will output the following information to be used in coming steps
+Funding your devnet and hitting `y` in the terminal to proceed will set up the necessary on-chain state and 0xkey setup to start, and will output the following information to be used in coming steps
 
-- ZeroXKey Solana wallet address
+- 0xkey Solana wallet address
 - Token Mint public key
 - Non root user created with user id
 
@@ -218,7 +218,7 @@ New user created!
 - User ID: 13c4609b-8818-40be-aeac-c8b63da0de4a
 
 Setup complete -- token mint and token accounts created, non root user created
-ZeroXKey Solana wallet address: 2bwUkGZ72SNyzBWFwfzKVrVWJ9JNZggjqFPDM9X9mrp9
+0xkey Solana wallet address: 2bwUkGZ72SNyzBWFwfzKVrVWJ9JNZggjqFPDM9X9mrp9
 Token Mint public key: FA7umztm6eYcENE22ndEZhd8MCf9C7myJ2KjfCwobj8F
 Non root user created with user id: 13c4609b-8818-40be-aeac-c8b63da0de4a
 ```
@@ -231,7 +231,7 @@ We will now attempt to transfer these SPL tokens that we've created
 $ pnpm token-transfer-policy attempt-transfer
 ```
 
-This will prompt you first to enter in the Solana wallet address that is originating the transfer (use the address labeled "ZeroXKey Solana wallet address" output at the end of the setup step)
+This will prompt you first to enter in the Solana wallet address that is originating the transfer (use the address labeled "0xkey Solana wallet address" output at the end of the setup step)
 
 ```bash
 ? Enter Solana wallet address originating transfer (created during setup stage):
@@ -258,7 +258,7 @@ details: [
 
 #### Step 3. Create Policy allowing the correct user to make SPL transfers to receiving Associated Token Address
 
-This is the most important step! In this step we are taking our receiving address (the ZeroXKey example recipient), calculating it's "associated token address", given the Mint account address for the token we've created, and creating a policy that allows the correct non root user to sign Solana transactions if and only if they contain a single instruction that is an SPL token transfer to this associated token address.
+This is the most important step! In this step we are taking our receiving address (the 0xkey example recipient), calculating it's "associated token address", given the Mint account address for the token we've created, and creating a policy that allows the correct non root user to sign Solana transactions if and only if they contain a single instruction that is an SPL token transfer to this associated token address.
 
 ```bash
 $ pnpm token-transfer-policy create-token-policy
@@ -305,7 +305,7 @@ Example Link: https://stackblitz.com/edit/stackblitz-starters-xeb93i
 
 To use the example you need the following
 
-- ZeroXKey Organization
+- 0xkey Organization
 - API key for the root user (both public and private key needed)
 
 #### Set Env Variables

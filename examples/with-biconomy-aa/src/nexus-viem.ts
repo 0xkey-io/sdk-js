@@ -21,7 +21,7 @@ import { print } from "./util";
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the ZeroXKey API.
+    // If you don't specify a `SIGN_WITH`, we'll create a new wallet for you via calling the 0xkey API.
     await createNewWallet();
     return;
   }
@@ -33,7 +33,7 @@ async function main() {
     defaultOrganizationId: process.env.ORGANIZATION_ID!,
   });
 
-  // Initialize a ZeroXKey-powered Viem Account
+  // Initialize a 0xkey-powered Viem Account
   const zeroXKeyAccount = await createAccount({
     client: zeroXKeyClient.apiClient(),
     organizationId: process.env.ORGANIZATION_ID!,

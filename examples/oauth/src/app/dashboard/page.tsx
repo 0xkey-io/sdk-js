@@ -234,7 +234,7 @@ export default function Dashboard() {
       const lamports = Math.round(parseFloat(solAmount) * 1e9);
 
       // recentBlockhash is required for serialization.
-      // ZeroXKey replaces it with a fresh one at broadcast time when sponsor=true.
+      // 0xkey replaces it with a fresh one at broadcast time when sponsor=true.
       const message = new TransactionMessage({
         payerKey: fromPubkey,
         recentBlockhash: "11111111111111111111111111111111",

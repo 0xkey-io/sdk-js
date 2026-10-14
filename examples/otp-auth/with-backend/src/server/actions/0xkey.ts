@@ -52,7 +52,7 @@ export async function initOtpAction(params: {
   publicKey: string;
 }) {
   const res = await zeroXKey.apiClient().initOtp({
-    appName: "ZeroXKey Wallet",
+    appName: "0xkey Wallet",
     otpType: "OTP_TYPE_EMAIL",
     contact: params.email,
     userIdentifier: params.publicKey,

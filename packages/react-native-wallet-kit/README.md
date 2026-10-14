@@ -1,10 +1,10 @@
 # @0xkey-io/react-native-wallet-kit
 
-The easiest and most powerful way to integrate ZeroXKey's Embedded Wallets into your React Native applications.
+The easiest and most powerful way to integrate 0xkey's Embedded Wallets into your React Native applications.
 
 ## Getting started
 
-To learn how to setup your ZeroXKey organization and configure the Auth Proxy, check out our Getting Started guide for React Native.
+To learn how to setup your 0xkey organization and configure the Auth Proxy, check out our Getting Started guide for React Native.
 
 ## Installation
 
@@ -179,7 +179,7 @@ recovering OAuth under those settings.
 
 ## Development
 
-This package is part of the ZeroXKey SDK monorepo. To build:
+This package is part of the 0xkey SDK monorepo. To build:
 
 ```bash
 pnpm build

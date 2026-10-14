@@ -1,10 +1,10 @@
 # @0xkey-io/react-wallet-kit
 
-The `@0xkey-io/react-wallet-kit` is a powerful SDK that allows you to integrate ZeroXKey's Embedded Wallets into your React applications. It provides a set of UI components and easy-to-use functions, all exported from a hook, enabling you to quickly build secure embedded wallet experiences.
+The `@0xkey-io/react-wallet-kit` is a powerful SDK that allows you to integrate 0xkey's Embedded Wallets into your React applications. It provides a set of UI components and easy-to-use functions, all exported from a hook, enabling you to quickly build secure embedded wallet experiences.
 
 ## Getting started
 
-To learn how to setup your ZeroXKey organization and configure the Auth Proxy, check out our [Getting Started](https://docs.0xkey.com/sdks/react/getting-started) guide!
+To learn how to setup your 0xkey organization and configure the Auth Proxy, check out our [Getting Started](https://docs.0xkey.io/sdks/react/getting-started) guide!
 
 ## Installation
 
@@ -18,7 +18,7 @@ For this guide, let's create a new `Next.js` app. If you already have an existin
 npx create-next-app@latest
 ```
 
-Now, install the ZeroXKey React Wallet Kit package:
+Now, install the 0xkey React Wallet Kit package:
 
 <CodeGroup>
 
@@ -66,7 +66,7 @@ In case anything goes wrong, let's add an `onError` callback to the `ZeroXKeyPro
 <ZeroXKeyProvider
   config={zeroXKeyConfig}
   callbacks={{
-    onError: (error) => console.error("ZeroXKey error:", error),
+    onError: (error) => console.error("0xkey error:", error),
   }}
 >
 ```
@@ -97,7 +97,7 @@ export default function RootLayout({
 >
 > - Callbacks (and other interactive bits) must be declared in a client component.
 > - Keeping layout.tsx as a server component maintains optimal rendering and avoids making your entire app client-side unnecessarily.
-> - Centralizing ZeroXKey setup in app/providers.tsx keeps configuration, styles, and callbacks in one place.
+> - Centralizing 0xkey setup in app/providers.tsx keeps configuration, styles, and callbacks in one place.
 
 
 ## Quick authentication
@@ -115,4 +115,4 @@ function LoginButton() {
 ```
 
 
-For more information, check out [our docs!](https://docs.0xkey.com/sdks/react)
+For more information, check out [our docs!](https://docs.0xkey.io/sdks/react)

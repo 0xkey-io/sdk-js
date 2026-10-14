@@ -1,6 +1,6 @@
 # Example: `with-arc`
 
-This example shows how to construct and broadcast a transaction on the Arc testnet using ZeroXKey.
+This example shows how to construct and broadcast a transaction on the Arc testnet using 0xkey.
 
 ## Getting started
 
@@ -19,11 +19,11 @@ $ cd examples/with-arc/
 
 ### 2/ Setting up ZeroXKey
 
-The first step is to set up your ZeroXKey organization and account. By following the [Quickstart](https://docs.0xkey.com/getting-started/quickstart) guide, you should have:
+The first step is to set up your 0xkey organization and account. By following the [Quickstart](https://docs.0xkey.io/getting-started/quickstart) guide, you should have:
 
-- A public/private API key pair for ZeroXKey
+- A public/private API key pair for 0xkey
 - An organization ID
-- A ZeroXKey wallet account (address), private key address, or a private key ID
+- A 0xkey wallet account (address), private key address, or a private key ID
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 
@@ -37,7 +37,7 @@ Now open `.env.local` and add the missing environment variables:
 - `API_PRIVATE_KEY`
 - `BASE_URL`
 - `ORGANIZATION_ID`
-- `SIGN_WITH` -- a ZeroXKey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
+- `SIGN_WITH` -- a 0xkey wallet account address, private key address, or private key ID. If you leave this blank, we'll create a wallet for you.
 
 We have hardcoded the sole Arc testnet RPC & explorer (at the time of writing), but if you wished to customize this you're welcome to change for
 different values.
@@ -55,7 +55,7 @@ This script will do the following:
 1. connect to and check your testnet balance
 2. send native token (USDC) via a type 2 EIP-1559 transaction
 
-The script constructs a transaction via ZeroXKey and broadcasts through Arc's provided testner RPC.
+The script constructs a transaction via 0xkey and broadcasts through Arc's provided testner RPC.
 If the script exits because your account isn't funded, you can request funds on https://faucet.circle.com/.
 
 Visit the explorer link to view your transaction; you have successfully sent your first transaction with ZeroXKey!
@@ -77,7 +77,7 @@ Transaction count:
 
 ✔ Amount to send in USDC (default is 1 cent) … 1.7
 ✔ Destination address (default is yourself) … 0xDa3F600A97078Ab97793D4Fd6f7C11cB37a5F565
-ZeroXKey-signed transaction:
+0xkey-signed transaction:
         0x02f877834cef520385012a05f200854bab82720082520894da3f600a97078ab97793d4fd6f7c11cb37a5f5658817979cfe362a000080c001a0894f9d9fed3c50a71636a0d78b5b4e3481356417a5c22720efa979065101601aa01a81d065684fa950b49c162bc950813ab0574392259ad05d82c6ae5efaab66f7
 
 Sent 1.7 USDC to 0xDa3F600A97078Ab97793D4Fd6f7C11cB37a5F565:

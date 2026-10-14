@@ -1,6 +1,6 @@
 # Example: `wallet-auth-without-backend`
 
-This is a minimal Next.js app showing how to implement [external wallets authentication](https://docs.0xkey.com/sdks/react/using-external-wallets/overview) (e.g. MetaMask, Phantom, etc) with ZeroXKey using the [@0xkey-io/react-wallet-kit](https://docs.0xkey.com/sdks/react) and [Auth Proxy](https://docs.0xkey.com/reference/auth-proxy).
+This is a minimal Next.js app showing how to implement [external wallets authentication](https://docs.0xkey.io/sdks/react/using-external-wallets/overview) (e.g. MetaMask, Phantom, etc) with 0xkey using the [@0xkey-io/react-wallet-kit](https://docs.0xkey.io/sdks/react) and [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy).
 
 > No backend required. This example uses ZeroXKey’s Auth Proxy behind the scenes, so your frontend can securely perform sign-up / login without hosting your own authentication server.
 
@@ -8,8 +8,8 @@ This is a minimal Next.js app showing how to implement [external wallets authent
 
 A high-level summary of the user experience and what appears on screen:
 
-- Use an external wallet to authenticate into a sub-organization. Under the hood the wallet acts as a stamper signing requests sent to ZeroXKey.
-- Automatically create or access a ZeroXKey sub-organization / embedded wallet tied to the external wallet’s public key.
+- Use an external wallet to authenticate into a sub-organization. Under the hood the wallet acts as a stamper signing requests sent to 0xkey.
+- Automatically create or access a 0xkey sub-organization / embedded wallet tied to the external wallet’s public key.
 
 Once logged in, access a dashboard with two panels:
 
@@ -20,8 +20,8 @@ Once logged in, access a dashboard with two panels:
   - Solana: signs locally with the connected wallet but requires an rpcUrl for broadcasting.
 
 - **Embedded wallets**
-  - Signs transactions via the ZeroXKey API.
-  - Requires an rpcUrl to broadcast (since ZeroXKey does not broadcast directly).
+  - Signs transactions via the 0xkey API.
+  - Requires an rpcUrl to broadcast (since 0xkey does not broadcast directly).
   - Broadcasting uses a standard JSON-RPC client and returns the resulting transaction hash or signature.
 
 > Note: in this demo, you can configure these URLs using `NEXT_PUBLIC_RPC_ETH` and `NEXT_PUBLIC_RPC_SOL`.
@@ -30,17 +30,17 @@ Once logged in, access a dashboard with two panels:
 
 ## How it works
 
-1. Wrap your app with the [ZeroXKeyProvider](https://docs.0xkey.com/sdks/react/getting-started#provider) component. Configure it for this example by:
+1. Wrap your app with the [ZeroXKeyProvider](https://docs.0xkey.io/sdks/react/getting-started#provider) component. Configure it for this example by:
 
-- [Sub-organization customization](https://docs.0xkey.com/sdks/react/sub-organization-customization#customization) - Add one Ethereum and one Solana embedded wallet at creation time.
-- **Auth methods** - Disable everything except wallet authentication (`walletAuthEnabled`). You can toggle methods in the [Dashboard](https://app.0xkey.com/dashboard/walletKit) or in your `app/providers.tsx` wrapper (which takes precedence over Dashboard settings).
-- [Chains](https://docs.0xkey.com/sdks/react/using-external-wallets/authentication#setting-up-wallet-authentication) Allow Ethereum and Solana for external wallet auth.
+- [Sub-organization customization](https://docs.0xkey.io/sdks/react/sub-organization-customization#customization) - Add one Ethereum and one Solana embedded wallet at creation time.
+- **Auth methods** - Disable everything except wallet authentication (`walletAuthEnabled`). You can toggle methods in the [Dashboard](https://app.0xkey.io/dashboard/walletKit) or in your `app/providers.tsx` wrapper (which takes precedence over Dashboard settings).
+- [Chains](https://docs.0xkey.io/sdks/react/using-external-wallets/authentication#setting-up-wallet-authentication) Allow Ethereum and Solana for external wallet auth.
 
 2. Trigger wallet authentication with `handleLogin()`. Call `handleLogin()` from `useZeroXKey()`. The SDK opens a modal with the enabled auth methods and supported wallet providers.
 
 - The flow is **idempotent:** if a user already exists, they log in; otherwise a sub-organization is created and the wallet’s public key is registered as an authenticator.
 
-3. Session is stored and used automatically. After login, the SDK persists a ZeroXKey session and exposes it via useZeroXKey(). The dashboard can now:
+3. Session is stored and used automatically. After login, the SDK persists a 0xkey session and exposes it via useZeroXKey(). The dashboard can now:
 
 - Sign messages and transactions using the choosen embedded or connected wallet in the sub-org.
 - List wallets (embedded + any connected wallets) through the wallets array.
@@ -62,8 +62,8 @@ $ cd examples/wallet-auth/without-backend
 
 ### 2/ Setting up ZeroXKey
 
-- Set up your [ZeroXKey organization and account](https://docs.0xkey.com/getting-started/quickstart#create-an-account) and write down the parent organization id.
-- Enable [Auth Proxy](https://app.0xkey.com/dashboard/walletKit) from your ZeroXKey dashboard, choose the user auth methods and write down the Auth Proxy Config ID.
+- Set up your [0xkey organization and account](https://docs.0xkey.io/getting-started/quickstart#create-an-account) and write down the parent organization id.
+- Enable [Auth Proxy](https://app.0xkey.io/dashboard/walletKit) from your 0xkey dashboard, choose the user auth methods and write down the Auth Proxy Config ID.
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your API private key should be securely managed and **_never_** be committed to git.
 

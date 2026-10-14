@@ -7,7 +7,7 @@ import { ApiKeyStamper } from "@0xkey-io/api-key-stamper";
 import * as crypto from "crypto";
 
 export async function createNewEthereumPrivateKey() {
-  console.log("creating a new Ethereum private key on ZeroXKey...\n");
+  console.log("creating a new Ethereum private key on 0xkey...\n");
 
   const privateKeyName = `ETH Key ${crypto.randomBytes(2).toString("hex")}`;
 

@@ -4,11 +4,11 @@ title: "IframeStamper"
 
 ## Introduction
 
-The [`@0xkey-io/iframe-stamper`](https://www.npmjs.com/package/@0xkey-io/iframe-stamper) package, while sharing a similar purpose with the `@0xkey-io/api-key-stamper`, caters specifically to the unique context of iframes. This package is designed for stamping requests within an iframe, using credentials for ZeroXKey's API, but operates distinctly from the API key stamper. Unlike the API key stamper, which has direct access to the API private key to compute signatures or stamps directly, the iframe stamper interacts with credentials in a more indirect manner.
+The [`@0xkey-io/iframe-stamper`](https://www.npmjs.com/package/@0xkey-io/iframe-stamper) package, while sharing a similar purpose with the `@0xkey-io/api-key-stamper`, caters specifically to the unique context of iframes. This package is designed for stamping requests within an iframe, using credentials for 0xkey's API, but operates distinctly from the API key stamper. Unlike the API key stamper, which has direct access to the API private key to compute signatures or stamps directly, the iframe stamper interacts with credentials in a more indirect manner.
 
 It leverages the `postMessage` communication mechanism to send and receive messages within the iframe, ensuring the credential does not leave its secure environment. This approach is particularly crucial in sensitive flows such as [Email Auth](/authentication/email), and [Key or Wallet Export](/wallets/export-wallets), where heightened security is required. The `@0xkey-io/iframe-stamper` works in tandem with `@0xkey-io/http`, facilitating secure and efficient communication in these specific use cases.
 
-By bridging the gap between the iframe's isolated environment and ZeroXKey's API, the iframe stamper plays a pivotal role in maintaining the integrity and security of the credential while ensuring seamless operation within the iframe context.
+By bridging the gap between the iframe's isolated environment and 0xkey's API, the iframe stamper plays a pivotal role in maintaining the integrity and security of the credential while ensuring seamless operation within the iframe context.
 
 ## Installing
 
@@ -32,7 +32,7 @@ yarn add @0xkey-io/iframe-stamper
 
 ## Initializing
 
-The IframeStamper class, part of the @0xkey-io/iframe-stamper package, is designed for stamping ZeroXKey requests through credentials in an iframe. It's used with @0xkey-io/http for constructing various flows. The class can manage iframe interactions for credential insertion, wallet exports, and request stamping. Here's how you can initialize an IframeStamper:
+The IframeStamper class, part of the @0xkey-io/iframe-stamper package, is designed for stamping 0xkey requests through credentials in an iframe. It's used with @0xkey-io/http for constructing various flows. The class can manage iframe interactions for credential insertion, wallet exports, and request stamping. Here's how you can initialize an IframeStamper:
 
 ### `constructor(config: TIframeStamperConfig): IframeStamper`
 

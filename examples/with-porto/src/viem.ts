@@ -38,7 +38,7 @@ const zeroXKeyClient = new ZeroXKeyServerSDK({
 });
 
 async function main() {
-  // ZeroXKey setup
+  // 0xkey setup
   const signWith = process.env.SIGN_WITH!;
   const zeroXKeyEoa = await createAccount({
     client: zeroXKeyClient.apiClient(),

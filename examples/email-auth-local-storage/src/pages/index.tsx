@@ -145,7 +145,7 @@ export default function AuthPage() {
       return;
     }
 
-    // The decrypted credential is an API keypair that can be used to authenticate ZeroXKey requests
+    // The decrypted credential is an API keypair that can be used to authenticate 0xkey requests
     setZeroXKeyPrivateKey(decryptedData);
     setZeroXKeyPublicKey(getPublicKeyFromPrivateKeyHex(decryptedData));
 
@@ -154,7 +154,7 @@ export default function AuthPage() {
 
   const createWallet = async (data: CreateWalletFormData) => {
     const zeroXKeyClient = new ZeroXKey({
-      apiBaseUrl: "https://api.0xkey.com",
+      apiBaseUrl: "https://api.0xkey.io",
       apiPublicKey: zeroXKeyPublicKey,
       apiPrivateKey: zeroXKeyPrivateKey,
       defaultOrganizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
@@ -213,7 +213,7 @@ export default function AuthPage() {
       return;
     }
 
-    // The decrypted credential is an API keypair that can be used to authenticate ZeroXKey requests
+    // The decrypted credential is an API keypair that can be used to authenticate 0xkey requests
     setZeroXKeyPrivateKey(decryptedData);
     setZeroXKeyPublicKey(getPublicKeyFromPrivateKeyHex(decryptedData));
     setUseLocalBundle(true);
@@ -223,10 +223,10 @@ export default function AuthPage() {
 
   return (
     <main className={styles.main}>
-      <a href="https://www.0xkey.com" target="_blank" rel="noopener noreferrer">
+      <a href="https://0xkey.io" target="_blank" rel="noopener noreferrer">
         <Image
           src="/logo.svg"
-          alt="ZeroXKey Logo"
+          alt="0xkey"
           className={styles.zeroXKeyLogo}
           width={100}
           height={24}

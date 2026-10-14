@@ -134,7 +134,7 @@ async function main() {
     throw new Error("unable to verify signed message");
   }
 
-  print("ZeroXKey-powered signature:", `${bs58.encode(signature)}`);
+  print("0xkey-powered signature:", `${bs58.encode(signature)}`);
 
   // 2. Create, sign, and verify a transfer transaction
   const { destination } = await prompts([

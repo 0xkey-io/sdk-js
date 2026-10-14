@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 import { ZeroXKey as ZeroXKeyServerSDK } from "@0xkey-io/sdk-server";
 
 async function main() {
-  // Initialize a ZeroXKey client
+  // Initialize a 0xkey client
   const zeroXKeyClient = new ZeroXKeyServerSDK({
     apiBaseUrl: process.env.BASE_URL!,
     apiPrivateKey: process.env.API_PRIVATE_KEY!,

@@ -4,7 +4,7 @@ title: "ZeroXKeyClient"
 
 ## Introduction
 
-The [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http) package is a fully-typed lower-level HTTP client for developers integrating with ZeroXKey.
+The [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http) package is a fully-typed lower-level HTTP client for developers integrating with 0xkey.
 
 ## Installing
 
@@ -30,7 +30,7 @@ yarn add @0xkey-io/http
 
 Create a new client for use in your JavaScript/Typescript applications.
 
-You can initialize a new **`ZeroXKeyClient`** using the **`ZeroXKeyClient`** constructor. The **`ZeroXKeyClient`** serves as your entry point to interact with the ZeroXKey API.
+You can initialize a new **`ZeroXKeyClient`** using the **`ZeroXKeyClient`** constructor. The **`ZeroXKeyClient`** serves as your entry point to interact with the 0xkey API.
 
 ### Parameters
 
@@ -52,7 +52,7 @@ required
 
 >
 
-The base URL for the ZeroXKey API. Note: An error `Missing base URL. Please verify env vars.` will be thrown if a value is not provided.
+The base URL for the 0xkey API. Note: An error `Missing base URL. Please verify env vars.` will be thrown if a value is not provided.
 
 </ParamField>
 
@@ -65,7 +65,7 @@ required
 
 An instance of a stamper class (e.g. [**`ApiKeyStamper`**](/sdks/advanced/api-key-stamper)) used to create signatures for authenticating API requests.
 </ParamField>
-Currently ZeroXKey provides 3 stampers:
+Currently 0xkey provides 3 stampers:
 
 - applications signing requests with Passkeys or webauthn devices should use [`@0xkey-io/webauthn-stamper`](/sdks/advanced/webauthn-stamper)
 - applications signing requests with API keys should use [`@0xkey-io/api-key-stamper`](/sdks/advanced/api-key-stamper)
@@ -98,13 +98,13 @@ import { ZeroXKeyClient } from "@0xkey-io/http";
 import { ApiKeyStamper } from "@0xkey-io/api-key-stamper";
 
 // Following best practices, define parameters in your .env file
-const baseUrl = process.env.ZEROXKEY_BASE_URL || "https://api.0xkey.com";
+const baseUrl = process.env.ZEROXKEY_BASE_URL || "https://api.0xkey.io";
 const apiPublicKey = process.env.ZEROXKEY_API_PUBLIC_KEY;
 const apiPrivateKey = process.env.ZEROXKEY_API_PRIVATE_KEY;
 
 // Initialize the API key stamper
 const stamper = new ApiKeyStamper({ apiPublicKey, apiPrivateKey });
 
-// Initialize the ZeroXKey client and then you're ready to use the ZeroXKey client! 🎉
+// Initialize the 0xkey client and then you're ready to use the 0xkey client! 🎉
 const client = new ZeroXKeyClient({ baseUrl }, stamper);
 ```

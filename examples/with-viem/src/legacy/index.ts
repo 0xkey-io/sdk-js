@@ -19,7 +19,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 async function main() {
   if (!process.env.SIGN_WITH) {
-    // If you don't specify a `PRIVATE_KEY_ID`, we'll create one for you via calling the ZeroXKey API.
+    // If you don't specify a `PRIVATE_KEY_ID`, we'll create one for you via calling the 0xkey API.
     await createNewEthereumPrivateKey();
     return;
   }
@@ -73,7 +73,7 @@ async function main() {
     signature,
   });
 
-  print("ZeroXKey-powered signature:", `${signature}`);
+  print("0xkey-powered signature:", `${signature}`);
   print("Recovered address:", `${recoveredAddress}`);
   assertEqual(address, recoveredAddress);
 

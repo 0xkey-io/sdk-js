@@ -4,7 +4,7 @@ title: "JavaScript Browser"
 
 ## Overview
 
-The [`@0xkey-io/sdk-browser`](https://www.npmjs.com/package/@0xkey-io/sdk-browser) package exposes functionality that lets developers build browser based applications that interact with the ZeroXKey API with different types of authentication.
+The [`@0xkey-io/sdk-browser`](https://www.npmjs.com/package/@0xkey-io/sdk-browser) package exposes functionality that lets developers build browser based applications that interact with the 0xkey API with different types of authentication.
 
 It consists of the `passkeyClient`, `iframeClient` and `walletClient` that enable requests to the API to be authenticated via different auth methods. It also contains methods to manage information and state related to authentication like auth bundles and sessions, retrieving user information and server signing API requests.
 
@@ -28,8 +28,8 @@ yarn add @0xkey-io/sdk-browser
 
 ```js
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
-const 0xkey = new ZeroXKey({
-  apiBaseUrl: "https://api.0xkey.com",
+const zeroXKey = new ZeroXKey({
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 });
 ```
@@ -50,7 +50,7 @@ The root organization that requests will be made from unless otherwise specified
 
 <ParamField body="apiBaseUrl" type="string" required >
 
-The base URL that API requests will be sent to (use [https://api.0xkey.com](https://api.0xkey.com) when making requests to ZeroXKey's API)
+The base URL that API requests will be sent to (use [https://api.0xkey.io](https://api.0xkey.io) when making requests to 0xkey's API)
 
 </ParamField>
 
@@ -65,23 +65,23 @@ The Relying Party ID used for WebAuthn flows (will default to the value returned
 The URL to send requests that need to be signed from a backend codebase by the root organization's API key if using the `serverSign` flow.
 
 </ParamField>
-Calls to ZeroXKey's API must be signed with a valid credential from the appropriate user and, from a browser client, can either be sent directly to ZeroXKey or proxied through a server. ZeroXKey's Browser SDK contains the following different clients that manage the process of validating these requests depending on the kind of authentication credential that is being used.
+Calls to 0xkey's API must be signed with a valid credential from the appropriate user and, from a browser client, can either be sent directly to 0xkey or proxied through a server. 0xkey's Browser SDK contains the following different clients that manage the process of validating these requests depending on the kind of authentication credential that is being used.
 
 ## ZeroXKeyBrowserClient
 
-The `ZeroXKeyBrowserClient` wraps ZeroXKey's basic SDK client with browser session management functionality. This client allows you to create a read only session that only authenticates read requests, or a read write session. It uses local storage for session management. The constructor for `ZeroXKeyBrowserClient` optionally takes in `AuthClient` which tracks which client was used for the initial authentication, to be used for retrieval purposes. Each subclass of `ZeroXKeyBrowserClient` (including `ZeroXKeyPasskeyClient`, `ZeroXKeyIframeClient` and `ZeroXKeyWalletClient`) will also set this to the respective value when used.
+The `ZeroXKeyBrowserClient` wraps 0xkey's basic SDK client with browser session management functionality. This client allows you to create a read only session that only authenticates read requests, or a read write session. It uses local storage for session management. The constructor for `ZeroXKeyBrowserClient` optionally takes in `AuthClient` which tracks which client was used for the initial authentication, to be used for retrieval purposes. Each subclass of `ZeroXKeyBrowserClient` (including `ZeroXKeyPasskeyClient`, `ZeroXKeyIframeClient` and `ZeroXKeyWalletClient`) will also set this to the respective value when used.
 
 Below are all of the methods exposed by `ZeroXKeyBrowserClient`
 
 ### `login()`
 
-Creates a read-only session for the current user, storing session details like userId, organizationId, sessionExpiry and which authentication client was used in local storage. This session allows for read-only actions within the ZeroXKey API. If you would like to instantiate a read only `ZeroXKeyBrowserClient` after logging in, you can use the [`currentUserSession()`](#currentusersession) method.
+Creates a read-only session for the current user, storing session details like userId, organizationId, sessionExpiry and which authentication client was used in local storage. This session allows for read-only actions within the 0xkey API. If you would like to instantiate a read only `ZeroXKeyBrowserClient` after logging in, you can use the [`currentUserSession()`](#currentusersession) method.
 
 ```js
 import { ZeroXKeyBrowserClient } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -100,7 +100,7 @@ Authenticate a user via the credential bundle emailed to them and creates a read
 import { ZeroXKeyBrowserClient } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -142,7 +142,7 @@ Authenticate a user via Passkey and create a read-only or read-write session.
 import { ZeroXKeyBrowserClient } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -190,7 +190,7 @@ Log in with a session object created via a server action. The session can be eit
 import { ZeroXKeyBrowserClient } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -215,7 +215,7 @@ Login with an existing wallet e.g. Metamask.
 import { ZeroXKeyBrowserClient } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -263,7 +263,7 @@ Attempts to refresh an existing, active session and will extend the session expi
 import { ZeroXKeyBrowserClient } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -304,7 +304,7 @@ Creates a read-write session. This method infers the current user's organization
 import { ZeroXKeyBrowserClient } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -335,7 +335,7 @@ Creates a passkey for an end-user, handling lower-level configurations for the W
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -362,7 +362,7 @@ Uses Passkey authentication to create a read-write session, via an embedded API 
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -397,7 +397,7 @@ Injects an encrypted credential bundle (API key or session token) directly into 
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -421,7 +421,7 @@ Injects a wallet export bundle into the iframe, associating it with a specified 
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -446,7 +446,7 @@ Injects a key export bundle into the iframe, supporting optional key formats. Th
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -472,7 +472,7 @@ Injects an import bundle into the iframe, associating it with a specific organiz
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -498,7 +498,7 @@ Extracts an encrypted wallet bundle from the iframe. Useful for securely retriev
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -520,7 +520,7 @@ Extracts an encrypted key bundle from the iframe, providing secure retrieval of 
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -536,7 +536,7 @@ const keyBundle = await iframeClient.extractKeyEncryptedBundle();
 
 ## ZeroXKeyWalletClient
 
-The `ZeroXKeyWalletClient` extends `ZeroXKeyBrowserClient` such that it is specialized for using a wallet to stamp and authenticate requests to the ZeroXKey API. This stamping process leverages your wallet's signature key to authenticate requests securely.
+The `ZeroXKeyWalletClient` extends `ZeroXKeyBrowserClient` such that it is specialized for using a wallet to stamp and authenticate requests to the 0xkey API. This stamping process leverages your wallet's signature key to authenticate requests securely.
 
 ### `getPublicKey()`
 
@@ -547,7 +547,7 @@ import { ZeroXKey } from "@0xkey-io/sdk-browser";
 import { EthereumWallet } from "@0xkey-io/wallet-stamper";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -567,7 +567,7 @@ import { ZeroXKey } from "@0xkey-io/sdk-browser";
 import { EthereumWallet } from "@0xkey-io/wallet-stamper";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -580,7 +580,7 @@ const wallet = await walletsClient.getWalletInterface();
 
 ## Top Level SDK Functions in `ZeroXKeyBrowserSDK`
 
-The `ZeroXKeyBrowserSDK` serves as the main entry point for interacting with ZeroXKey's services in a web browser environment. It contains methods to instantiate clients like the `ZeroXKeyPasskeyClient` and the `ZeroXKeyIframeClient`. manage information and state related to authentication like auth bundles and sessions, retrieving user information and server signing API requests.The client enables easy access to the wallet public key to be used for authentication flows.
+The `ZeroXKeyBrowserSDK` serves as the main entry point for interacting with 0xkey's services in a web browser environment. It contains methods to instantiate clients like the `ZeroXKeyPasskeyClient` and the `ZeroXKeyIframeClient`. manage information and state related to authentication like auth bundles and sessions, retrieving user information and server signing API requests.The client enables easy access to the wallet public key to be used for authentication flows.
 
 ### `passkeyClient()`
 
@@ -590,7 +590,7 @@ Creates an instance of ZeroXKeyPasskeyClient with a specified or default rpId (r
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
   serverSignUrl: "https://your-server-sign-url.com",
 };
@@ -604,13 +604,13 @@ const walletsResponse = await passkeyClient.getWallets();
 
 ### `iframeClient()`
 
-Creates an instance of `ZeroXKeyIframeClient` by initializing an iframe stamper with the specified iframeUrl and optional element ID. The iframe client is used to interact with a series of iframes hosted by ZeroXKey, designed for sensitive operations such as storing an expiring credential within the [Email Recovery](/authentication/email#recovery-flow) and [Email Auth](/authentication/email) flows, and facilitating Wallet [Import](/wallets/import-wallets) and [Export](/wallets/export-wallets). The code powering these iframes can be found at [https://github.com/0xkey-io/frames](https://github.com/0xkey-io/frames). If you'd like to use your iframe client to proxy requests to your server, to be signed with parent organization credentials, include the server URL in the `serverSignUrl` parameter.
+Creates an instance of `ZeroXKeyIframeClient` by initializing an iframe stamper with the specified iframeUrl and optional element ID. The iframe client is used to interact with a series of iframes hosted by 0xkey, designed for sensitive operations such as storing an expiring credential within the [Email Recovery](/authentication/email#recovery-flow) and [Email Auth](/authentication/email) flows, and facilitating Wallet [Import](/wallets/import-wallets) and [Export](/wallets/export-wallets). The code powering these iframes can be found at [https://github.com/0xkey-io/frames](https://github.com/0xkey-io/frames). If you'd like to use your iframe client to proxy requests to your server, to be signed with parent organization credentials, include the server URL in the `serverSignUrl` parameter.
 
 ```js
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
   serverSignUrl: "https://your-server-sign-url.com",
 };
@@ -620,7 +620,7 @@ const zeroXKeySDK = new ZeroXKey(config);
 
 const iframeClient = await zeroXKeySDK.iframeClient({
   iframeContainer: document.getElementById("<iframe container id>"),
-  iframeUrl: "https://auth.0xkey.com",
+  iframeUrl: "https://authproxy.0xkey.io",
 });
 const response = await iframeClient.injectCredentialBundle(
   "<Credential from Email>",
@@ -634,14 +634,14 @@ if (response) {
 
 ### `walletClient()`
 
-Creates an instance of `ZeroXKeyWalletClient`, taking in an wallet, wrapped by an object that matches the `WalletInterface` class. The wallet client is used to interact with the ZeroXKey API, authenticating requests by using the wallet to stamp the requests. If you'd like to use your wallet client to proxy requests to your server, to be signed with parent organization credentials, include the server URL in the `serverSignUrl` parameter.
+Creates an instance of `ZeroXKeyWalletClient`, taking in an wallet, wrapped by an object that matches the `WalletInterface` class. The wallet client is used to interact with the 0xkey API, authenticating requests by using the wallet to stamp the requests. If you'd like to use your wallet client to proxy requests to your server, to be signed with parent organization credentials, include the server URL in the `serverSignUrl` parameter.
 
 ```js
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 import { EthereumWallet } from "@0xkey-io/wallet-stamper";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
   serverSignUrl: "https://your-server-sign-url.com",
 };
@@ -654,13 +654,13 @@ const walletClient = zeroXKeySDK.walletClient(new EthereumWallet());
 
 ### `serverSign()`
 
-The serverSign function is used to proxy requests from a root parent organization to a child organization. The API key cannot be stored client-side, which is why the serverSign flow exists: to forward authenticated client-side requests to ZeroXKey via proxy backend.
+The serverSign function is used to proxy requests from a root parent organization to a child organization. The API key cannot be stored client-side, which is why the serverSign flow exists: to forward authenticated client-side requests to 0xkey via proxy backend.
 
 ```js
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
     serverSignUrl: "https://your-server-sign-url.com",
 };
@@ -694,13 +694,13 @@ Attempts to refresh an existing, active session and will extend the session expi
 
 ### `currentUserSession()`
 
-Generally speaking, in order to ensure a seamless UX, you might not want a passkey user have to manually authenticate every read request from ZeroXKey's API with a credential (e.g. via FaceID or TouchID). In order to reduce friction, you can have a user login() to ZeroXKey with a credential once. This method facilitates this process and creates an instance of The ZeroXKeyBrowserClient that allows multiple read-only requests to ZeroXKey's API.
+Generally speaking, in order to ensure a seamless UX, you might not want a passkey user have to manually authenticate every read request from 0xkey's API with a credential (e.g. via FaceID or TouchID). In order to reduce friction, you can have a user login() to 0xkey with a credential once. This method facilitates this process and creates an instance of The ZeroXKeyBrowserClient that allows multiple read-only requests to 0xkey's API.
 
 ```js
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -710,7 +710,7 @@ const zeroXKeySDK = new ZeroXKey(config);
 const passkeyClient = zeroXKeySDK.passkeyClient();
 await passkeySigner.login();
 
-// when a user logs in with the ZeroXKey SDK, a read-only API credential is saved in localStorage and can be used to make API read requests on their behalf
+// when a user logs in with the 0xkey SDK, a read-only API credential is saved in localStorage and can be used to make API read requests on their behalf
 
 const userSessionClient = await zeroXKeySDK.currentUserSession();
 const walletsResponse = await userSessionClient.getWallets();
@@ -726,7 +726,7 @@ If there is a valid, current read-session, this will return an auth bundle and i
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 
@@ -745,7 +745,7 @@ Retrieves information about the user's current sub-organization from the user da
 import { ZeroXKey } from "@0xkey-io/sdk-browser";
 
 const config = {
-  apiBaseUrl: "https://api.0xkey.com",
+  apiBaseUrl: "https://api.0xkey.io",
   defaultOrganizationId: process.env.ZEROXKEY_ORGANIZATION_ID,
 };
 

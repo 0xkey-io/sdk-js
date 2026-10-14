@@ -2,7 +2,7 @@ import type { ZeroXKey, ZeroXKeyApiTypes } from "@0xkey-io/sdk-server";
 
 /**
  * Get a list of private keys for a given tag
- * @param 0xkeyClient
+ * @param zeroXKeyClient
  * @param tagName
  * @returns a list of private keys matching the passed in tag
  */

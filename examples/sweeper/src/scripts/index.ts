@@ -77,7 +77,7 @@ export async function main() {
   const { useSponsor } = await prompts({
     type: "confirm",
     name: "useSponsor",
-    message: "Use ZeroXKey gas sponsorship for sweep transactions?",
+    message: "Use 0xkey gas sponsorship for sweep transactions?",
     initial: false,
   });
   sponsor = !!useSponsor;
@@ -156,7 +156,7 @@ async function sweepTokens(
 
     const { nonce } = resp;
     const { gasStationNonce } = resp;
-    // Submit transaction via ZeroXKey
+    // Submit transaction via 0xkey
     const { sendTransactionStatusId } = await zeroXKey
       .apiClient()
       .ethSendTransaction({
@@ -232,7 +232,7 @@ async function sweepEth(
   });
   const { nonce } = resp;
   const { gasStationNonce } = resp;
-  // Submit transaction via ZeroXKey
+  // Submit transaction via 0xkey
   const { sendTransactionStatusId } = await zeroXKey
     .apiClient()
     .ethSendTransaction({

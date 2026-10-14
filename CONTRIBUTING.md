@@ -2,7 +2,7 @@
 
 ## Repo overview
 
-- [`packages/`](/packages/): ZeroXKey npm packages.
+- [`packages/`](/packages/): 0xkey npm packages.
 - [`examples/`](/examples/): Examples and templates. Won't be published to npm.
 - [`internal/`](/internal/): Internal scripts and configs. Won't be published to npm.
 

@@ -107,7 +107,7 @@ describe("OTP V2 Auth Proxy contract", () => {
         }) as Response) as typeof fetch;
       await expect(
         (client()[method] as (input: any) => Promise<unknown>)(body),
-      ).rejects.toThrow("ZeroXKey error 3: invalid OTP request");
+      ).rejects.toThrow("0xkey error 3: invalid OTP request");
     },
   );
 

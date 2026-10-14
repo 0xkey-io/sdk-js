@@ -1,10 +1,10 @@
-# ZeroXKey EIP-1193 Provider
+# 0xkey EIP-1193 Provider
 
-The `@0xkey-io/eip-1193-provider` package delivers a ZeroXKey-compatible Ethereum provider that adheres to the EIP-1193 standards. It's built to integrate seamlessly with a broad spectrum of EVM-compatible chains, offering capabilities like account management, transaction signing, and blockchain interaction. This initial setup is intended for use in conjunction with the [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http) and [`@0xkey-io/webauthn-stamper`](https://www.npmjs.com/package/@0xkey-io/webauthn-stamper) package, for initial authentication.
+The `@0xkey-io/eip-1193-provider` package delivers a 0xkey-compatible Ethereum provider that adheres to the EIP-1193 standards. It's built to integrate seamlessly with a broad spectrum of EVM-compatible chains, offering capabilities like account management, transaction signing, and blockchain interaction. This initial setup is intended for use in conjunction with the [`@0xkey-io/http`](https://www.npmjs.com/package/@0xkey-io/http) and [`@0xkey-io/webauthn-stamper`](https://www.npmjs.com/package/@0xkey-io/webauthn-stamper) package, for initial authentication.
 
 ## Installation
 
-Before you start using the ZeroXKey EIP-1193 Provider, make sure to install the necessary packages in your project. This guide assumes you have a Node.js environment ready for development.
+Before you start using the 0xkey EIP-1193 Provider, make sure to install the necessary packages in your project. This guide assumes you have a Node.js environment ready for development.
 
 Install the required packages using NPM or Yarn:
 
@@ -22,7 +22,7 @@ yarn add @0xkey-io/eip-1193-provider @0xkey-io/http @0xkey-io/webauthn-stamper
 
 ## Initialization
 
-To set up the ZeroXKey EIP-1193 Provider, you need to initialize it with your configuration, which includes setting up the ZeroXKey client with your base URL and stamper.
+To set up the 0xkey EIP-1193 Provider, you need to initialize it with your configuration, which includes setting up the 0xkey client with your base URL and stamper.
 
 ```ts
 import { WebauthnStamper } from "@0xkey-io/webauthn-stamper";
@@ -32,9 +32,9 @@ const stamper = new WebauthnStamper({
   rpId: "example.com",
 });
 
-// Initialize the ZeroXKey HTTP client
+// Initialize the 0xkey HTTP client
 const zeroXKeyClient = new ZeroXKeyClient(
-  { baseUrl: "https://api.0xkey.com" },
+  { baseUrl: "https://api.0xkey.io" },
   stamper,
 );
 
@@ -126,7 +126,7 @@ The following methods also prompt for passkey authentication:
 
 ## Contributing
 
-We welcome contributions to improve the `ZeroXKey EIP-1193 Provider`. Please follow the project's [contribution guidelines](https://github.com/0xkey-io/sdk-js/blob/ad9071716919d062ba67fd623a01cbd4523ed444/CONTRIBUTING.md).
+We welcome contributions to improve the `0xkey EIP-1193 Provider`. Please follow the project's [contribution guidelines](https://github.com/0xkey-io/sdk-js/blob/ad9071716919d062ba67fd623a01cbd4523ed444/CONTRIBUTING.md).
 
 ## License
 

@@ -16,7 +16,7 @@ const WETH_TOKEN_ADDRESS_GOERLI = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6";
 
 async function main() {
   if (!process.env.PRIVATE_KEY_ID) {
-    // If you don't specify a `PRIVATE_KEY_ID`, we'll create one for you via calling the ZeroXKey API.
+    // If you don't specify a `PRIVATE_KEY_ID`, we'll create one for you via calling the 0xkey API.
     await createNewEthereumPrivateKey();
     return;
   }
@@ -31,7 +31,7 @@ async function main() {
     }),
   );
 
-  // Initialize a ZeroXKey Signer with a private key ID
+  // Initialize a 0xkey Signer with a private key ID
   const zeroXKeySigner = new ZeroXKeySigner({
     client: zeroXKeyClient,
     organizationId: process.env.ORGANIZATION_ID!,
@@ -59,7 +59,7 @@ async function main() {
   const signature = await connectedSigner.signMessage(message);
   const recoveredAddress = ethers.verifyMessage(message, signature);
 
-  print("ZeroXKey-powered signature:", `${signature}`);
+  print("0xkey-powered signature:", `${signature}`);
   print("Recovered address:", `${recoveredAddress}`);
   assertEqual(recoveredAddress, address);
 
@@ -74,7 +74,7 @@ async function main() {
 
   const signedTx = await connectedSigner.signTransaction(transactionRequest);
 
-  print("ZeroXKey-signed transaction:", `${signedTx}`);
+  print("0xkey-signed transaction:", `${signedTx}`);
 
   if (balance === 0) {
     let warningMessage =

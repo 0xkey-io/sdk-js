@@ -4,7 +4,7 @@
 
 ## Getting started
 
-A package for common and reusable ZeroXKey Types which can be used for consistent typing across packages.
+A package for common and reusable 0xkey Types which can be used for consistent typing across packages.
 
 ### Installation
 

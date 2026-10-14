@@ -17,9 +17,9 @@ export const signWithApiKey = async (input: {
 };
 
 /**
- * Imports a P-256 ZeroXKey API key into a WebCrypto `CryptoKey`.
+ * Imports a P-256 0xkey API key into a WebCrypto `CryptoKey`.
  *
- * @param {Object} input - The ZeroXKey API key components.
+ * @param {Object} input - The 0xkey API key components.
  * @param {string} input.uncompressedPrivateKeyHex - Hexadecimal-encoded uncompressed private key (32-byte scalar).
  * @param {string} input.compressedPublicKeyHex - Hexadecimal-encoded compressed public key (33 bytes).
  * @returns {Promise<CryptoKey>} A `CryptoKey` object representing a P-256 key.
@@ -73,7 +73,7 @@ async function signMessage(input: {
  * `SubtleCrypto.sign(...)` outputs signature in IEEE P1363 format:
  * - https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/sign#ecdsa
  *
- * ZeroXKey expects the signature encoding to be DER-encoded ASN.1.
+ * 0xkey expects the signature encoding to be DER-encoded ASN.1.
  *
  * Code modified from https://github.com/google/tink/blob/6f74b99a2bfe6677e3670799116a57268fd067fa/javascript/subtle/elliptic_curves.ts#L114
  *

@@ -1,12 +1,12 @@
 # Example: `Setup Delegated Access`
 
-This is a minimal **Next.js** app showing how to add a **Delegated Access (DA) API user** to an [embedded wallet](https://docs.0xkey.com/sdks/react/getting-started).
+This is a minimal **Next.js** app showing how to add a **Delegated Access (DA) API user** to an [embedded wallet](https://docs.0xkey.io/sdks/react/getting-started).
 
 ### What this demo shows
 
 A high-level summary of the user experience and what you can see on screen.
 
-1. Log in with [@0xkey-io/react-wallet-kit](https://www.npmjs.com/package/@0xkey-io/react-wallet-kit) and [Auth Proxy](https://docs.0xkey.com/sdks/react/getting-started#:~:text=1-,Enable%20Auth%20Proxy,-Navigate%20to%20the).
+1. Log in with [@0xkey-io/react-wallet-kit](https://www.npmjs.com/package/@0xkey-io/react-wallet-kit) and [Auth Proxy](https://docs.0xkey.io/sdks/react/getting-started#:~:text=1-,Enable%20Auth%20Proxy,-Navigate%20to%20the).
 
 2. After login, the dashboard is split into two panels:
 
@@ -31,18 +31,18 @@ A step-by-step look under the hood:
    - Creates a new **sub-organization** with the user’s chosen auth method (email, OAuth, passkey, etc.) and an **embedded wallet** with an Ethereum account.
    - The authentication methods called by `handleLogin` are **idempotent** - existing users just log in.
 
-> **Note:** You can use your own backend instead, but for simplicity we stick with the Auth Proxy. If you'd like to see how, check out this guide: [Advanced Backend Authentication](https://docs.0xkey.com/sdks/react/advanced-backend-authentication).
+> **Note:** You can use your own backend instead, but for simplicity we stick with the Auth Proxy. If you'd like to see how, check out this guide: [Advanced Backend Authentication](https://docs.0xkey.io/sdks/react/advanced-backend-authentication).
 
 3. **Dashboard rendering**:
    - Right panel shows the live organization object from ZeroXKey (`getOrganization`), including users, root quorum, policies, and wallets.
 
 4. **Delegated Access user creation:**
-   - Done with [`fetchOrCreateP256ApiKeyUser`](https://docs.0xkey.com/generated-docs/formatted/react-wallet-kit/client-context-type-fetch-or-create-p256-api-key-user).
+   - Done with [`fetchOrCreateP256ApiKeyUser`](https://docs.0xkey.io/generated-docs/formatted/react-wallet-kit/client-context-type-fetch-or-create-p256-api-key-user).
 
-> **Note:** The DA user is non-root, so at this point any signing requests will be denied by the ZeroXKey policy engine until a policy is added.
+> **Note:** The DA user is non-root, so at this point any signing requests will be denied by the 0xkey policy engine until a policy is added.
 
 5. **Policy management:**
-   - Added via [`fetchOrCreatePolicies`](https://docs.0xkey.com/generated-docs/formatted/react-wallet-kit/client-context-type-fetch-or-create-policies)).
+   - Added via [`fetchOrCreatePolicies`](https://docs.0xkey.io/generated-docs/formatted/react-wallet-kit/client-context-type-fetch-or-create-policies)).
    - Example policy: “DA user can only sign Ethereum transactions to NEXT_PUBLIC_RECIPIENT_ADDRESS.”
 
 6. **Policy Validation (Demo)**
@@ -68,9 +68,9 @@ $ cd examples/with-delegated/
 
 ### 2/ Setting up ZeroXKey
 
-- Set up your ZeroXKey [organization and account](https://docs.0xkey.com/getting-started/quickstart#create-an-account) and write down the parent organization id.
-- Enable [Auth Proxy](https://app.0xkey.com/dashboard/walletKit) from your ZeroXKey dashboard, choose the user auth methods and write down the Auth Proxy Config ID.
-- Generate a P-256 API keypair for the Delegated Access user, you can do easily this via [CLI](https://docs.0xkey.com/sdks/cli#generate-an-api-key%E2%80%8B) or the `generateP256KeyPair()` helper function from the [@0xkey-io/crypto](https://github.com/0xkey-io/sdk-js/tree/main/packages/crypto) package. Save both the public and private API key.
+- Set up your ZeroXKey [organization and account](https://docs.0xkey.io/getting-started/quickstart#create-an-account) and write down the parent organization id.
+- Enable [Auth Proxy](https://app.0xkey.io/dashboard/walletKit) from your 0xkey dashboard, choose the user auth methods and write down the Auth Proxy Config ID.
+- Generate a P-256 API keypair for the Delegated Access user, you can do easily this via [CLI](https://docs.0xkey.io/sdks/cli#generate-an-api-key%E2%80%8B) or the `generateP256KeyPair()` helper function from the [@0xkey-io/crypto](https://github.com/0xkey-io/sdk-js/tree/main/packages/crypto) package. Save both the public and private API key.
 
 Once you've gathered these values, add them to a new `.env.local` file. Notice that your private key should be securely managed and **_never_** be committed to git.
 
