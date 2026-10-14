@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/with-yield",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": "true",
   "scripts": {
     "build": "pnpm -w run build-all",
