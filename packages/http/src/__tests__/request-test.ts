@@ -36,7 +36,7 @@ test("requests are stamped after initialization", async () => {
   init({
     apiPublicKey: publicKey,
     apiPrivateKey: privateKey,
-    baseUrl: "https://mocked.0xkey.com",
+    baseUrl: "https://mocked.example.test",
   });
 
   const mockedFetch = fetch as jest.MockedFunction<typeof fetch>;
@@ -66,7 +66,7 @@ test("requests return grpc status details as part of their errors", async () => 
   init({
     apiPublicKey: publicKey,
     apiPrivateKey: privateKey,
-    baseUrl: "https://mocked.0xkey.com",
+    baseUrl: "https://mocked.example.test",
   });
 
   const mockedFetch = fetch as jest.MockedFunction<typeof fetch>;
@@ -119,7 +119,7 @@ test("rate-limited requests retry with the same signed request", async () => {
   init({
     apiPublicKey: publicKey,
     apiPrivateKey: privateKey,
-    baseUrl: "https://mocked.0xkey.com",
+    baseUrl: "https://mocked.example.test",
   });
   jest.spyOn(Math, "random").mockReturnValue(0);
 
@@ -156,7 +156,7 @@ test("rate-limit retry budget returns a structured error", async () => {
   init({
     apiPublicKey: publicKey,
     apiPrivateKey: privateKey,
-    baseUrl: "https://mocked.0xkey.com",
+    baseUrl: "https://mocked.example.test",
   });
 
   const mockedFetch = fetch as jest.MockedFunction<typeof fetch>;
@@ -195,7 +195,7 @@ test("unrelated problem-json 503 responses are not retried", async () => {
   init({
     apiPublicKey: publicKey,
     apiPrivateKey: privateKey,
-    baseUrl: "https://mocked.0xkey.com",
+    baseUrl: "https://mocked.example.test",
   });
 
   const mockedFetch = fetch as jest.MockedFunction<typeof fetch>;

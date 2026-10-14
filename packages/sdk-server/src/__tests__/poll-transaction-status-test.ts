@@ -16,7 +16,7 @@ function createClientWithStatusResponse(
         stampHeaderValue: "stamp",
       }),
     },
-    apiBaseUrl: "https://mocked.0xkey.com",
+    apiBaseUrl: "https://mocked.example.test",
     organizationId: "org-id",
   });
 

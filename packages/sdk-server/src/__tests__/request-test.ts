@@ -10,7 +10,7 @@ test("requests are stamped after client creation", async () => {
   const { privateKey, publicKey } = await readFixture();
 
   const zeroXKeyServerClient = new ZeroXKey({
-    apiBaseUrl: "https://mocked.0xkey.com",
+    apiBaseUrl: "https://mocked.example.test",
     apiPrivateKey: privateKey,
     apiPublicKey: publicKey,
     defaultOrganizationId: "89881fc7-6ff3-4b43-b962-916698f8ff58",
@@ -39,7 +39,7 @@ test("requests return grpc status details as part of their errors", async () => 
   const { privateKey, publicKey } = await readFixture();
 
   const zeroXKeyServerClient = new ZeroXKey({
-    apiBaseUrl: "https://mocked.0xkey.com",
+    apiBaseUrl: "https://mocked.example.test",
     apiPrivateKey: privateKey,
     apiPublicKey: publicKey,
     defaultOrganizationId: "89881fc7-6ff3-4b43-b962-916698f8ff58",

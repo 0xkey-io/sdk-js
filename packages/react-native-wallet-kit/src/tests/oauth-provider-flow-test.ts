@@ -58,7 +58,7 @@ function client() {
     httpClient: {
       config: {
         organizationId: "organization-1",
-        apiBaseUrl: "https://api.0xkey.com",
+        apiBaseUrl: "https://api.0xkey.io",
         authProxyUrl: "https://authproxy.0xkey.io",
         authProxyConfigId: "proxy-config-1",
       },
@@ -307,7 +307,7 @@ describe("OAuth Provider flow adapter", () => {
       .find((flow) => flow.snapshot.provider === OAuthProviders.GOOGLE)!;
     expect(google.snapshot).toMatchObject({
       organizationId: "organization-1",
-      apiBaseUrl: "https://api.0xkey.com",
+      apiBaseUrl: "https://api.0xkey.io",
       authProxyUrl: "https://authproxy.0xkey.io",
       authProxyConfigId: null,
     });

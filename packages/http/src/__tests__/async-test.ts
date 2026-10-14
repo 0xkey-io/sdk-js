@@ -19,7 +19,7 @@ beforeEach(async () => {
   init({
     apiPublicKey: publicKey,
     apiPrivateKey: privateKey,
-    baseUrl: "https://mocked.0xkey.com",
+    baseUrl: "https://mocked.example.test",
   });
 });
 

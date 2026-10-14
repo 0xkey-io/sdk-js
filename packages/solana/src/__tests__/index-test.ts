@@ -32,7 +32,7 @@ describe("ZeroXKeySigner", () => {
   const zeroXKeySolAddress = "D8P541wwnertZTgDT14kYJPoFT2eHUFqjTgPxMK5qatM";
 
   const zeroXKeyBaseClient = new ZeroXKeyClient(
-    { baseUrl: "https://api.0xkey.com" },
+    { baseUrl: "https://api.0xkey.io" },
     new ApiKeyStamper({
       apiPublicKey,
       apiPrivateKey: process.env.SOLANA_TEST_ORG_API_PRIVATE_KEY,
@@ -40,7 +40,7 @@ describe("ZeroXKeySigner", () => {
   );
 
   const zeroXKeyServerClient = new ZeroXKey({
-    apiBaseUrl: "https://api.0xkey.com",
+    apiBaseUrl: "https://api.0xkey.io",
     apiPublicKey,
     apiPrivateKey: process.env.SOLANA_TEST_ORG_API_PRIVATE_KEY,
     defaultOrganizationId: organizationId,

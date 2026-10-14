@@ -10,7 +10,7 @@ afterEach(() => {
 test("createSubOrganization sends and flattens the current V8 contract", async () => {
   const { privateKey, publicKey } = await readFixture();
   const client = new ZeroXKey({
-    apiBaseUrl: "https://mocked.0xkey.com",
+    apiBaseUrl: "https://mocked.example.test",
     apiPrivateKey: privateKey,
     apiPublicKey: publicKey,
     defaultOrganizationId: "89881fc7-6ff3-4b43-b962-916698f8ff58",
@@ -59,7 +59,7 @@ test("createSubOrganization sends and flattens the current V8 contract", async (
 test("createSubOrganization tolerates a newer versioned result key", async () => {
   const { privateKey, publicKey } = await readFixture();
   const client = new ZeroXKey({
-    apiBaseUrl: "https://mocked.0xkey.com",
+    apiBaseUrl: "https://mocked.example.test",
     apiPrivateKey: privateKey,
     apiPublicKey: publicKey,
     defaultOrganizationId: "89881fc7-6ff3-4b43-b962-916698f8ff58",
