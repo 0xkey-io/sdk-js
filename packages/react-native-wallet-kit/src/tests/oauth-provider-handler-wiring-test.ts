@@ -268,7 +268,23 @@ jest.mock("@0xkey-io/core", () => {
   };
 });
 
+const mockBundleCrypto = {
+  decryptExportBundle: jest.fn(async (_params: unknown) => "decrypted"),
+  encryptWalletToBundle: jest.fn(async (_params: unknown) => "encrypted"),
+  encryptPrivateKeyToBundle: jest.fn(async (_params: unknown) => "encrypted"),
+};
+jest.mock("@0xkey-io/crypto", () => ({
+  ...jest.requireActual<object>("@0xkey-io/crypto"),
+  decryptExportBundle: (params: unknown) =>
+    mockBundleCrypto.decryptExportBundle(params),
+  encryptWalletToBundle: (params: unknown) =>
+    mockBundleCrypto.encryptWalletToBundle(params),
+  encryptPrivateKeyToBundle: (params: unknown) =>
+    mockBundleCrypto.encryptPrivateKeyToBundle(params),
+}));
+
 import { ZeroXKeyProvider } from "../providers/ZeroXKeyProvider";
+import { signerPublicKeyFor } from "../utils/enclave-signer";
 
 function mockMakeClient(
   config: ZeroXKeyProviderConfig,
@@ -1468,5 +1484,87 @@ describe("OAuth cold recovery through the actual Provider", () => {
     expect(mockKeychain.size).toBe(1);
     expect(foreignMount.client.keys.has(foreign.publicKey)).toBe(true);
     expect(foreignMount.client.completeOauth).not.toHaveBeenCalled();
+  });
+});
+
+describe("Export and import bundles through the actual Provider", () => {
+  function withBundleEndpoints(client: ReturnType<typeof mockMakeClient>) {
+    const session = { organizationId: "sub-org-id", userId: "user-id" };
+    const httpClient = client.httpClient as Record<string, unknown>;
+    httpClient.initImportWallet = jest.fn(async () => ({
+      importBundle: "import-bundle",
+    }));
+    httpClient.initImportPrivateKey = jest.fn(async () => ({
+      importBundle: "import-bundle",
+    }));
+    Object.assign(client, {
+      getSession: jest.fn(async () => session),
+      exportWallet: jest.fn(async () => "export-bundle"),
+      exportWalletAccount: jest.fn(async () => "export-bundle"),
+      exportPrivateKey: jest.fn(async () => "export-bundle"),
+      importWallet: jest.fn(async () => "wallet-id"),
+      importPrivateKey: jest.fn(async () => "private-key-id"),
+    });
+  }
+
+  function signerKeysUsed() {
+    return [
+      ...mockBundleCrypto.decryptExportBundle.mock.calls,
+      ...mockBundleCrypto.encryptWalletToBundle.mock.calls,
+      ...mockBundleCrypto.encryptPrivateKeyToBundle.mock.calls,
+    ].map(
+      ([params]) =>
+        (params as { dangerouslyOverrideSignerPublicKey?: string })
+          .dangerouslyOverrideSignerPublicKey,
+    );
+  }
+
+  async function exportAndImportEverything(context: ClientContextType) {
+    await expect(context.exportWallet({ walletId: "wallet-id" })).resolves.toBe(
+      "decrypted",
+    );
+    await context.exportWalletAccount({ address: "0xaddress" });
+    await context.exportPrivateKey({ privateKeyId: "private-key-id" });
+    await context.importWallet({
+      mnemonic: "test mnemonic",
+      walletName: "imported",
+    });
+    await context.importPrivateKey({
+      privateKey: "00",
+      privateKeyName: "imported",
+      addressFormats: ["ADDRESS_FORMAT_ETHEREUM"],
+    } as never);
+  }
+
+  function resetBundleCrypto() {
+    mockBundleCrypto.decryptExportBundle.mockClear();
+    mockBundleCrypto.encryptWalletToBundle.mockClear();
+    mockBundleCrypto.encryptPrivateKeyToBundle.mockClear();
+  }
+
+  it("verifies bundles against the production signer by default", async () => {
+    reset();
+    resetBundleCrypto();
+    const { harness, client } = await mountReady();
+    withBundleEndpoints(client);
+
+    await exportAndImportEverything(harness.context);
+
+    expect(signerKeysUsed()).toEqual(Array(5).fill(signerPublicKeyFor("prod")));
+  });
+
+  it("verifies bundles against the staging signer when signerEnvironment is staging", async () => {
+    reset();
+    resetBundleCrypto();
+    const { harness, client } = await mountReady(
+      baseConfig({ signerEnvironment: "staging" }),
+    );
+    withBundleEndpoints(client);
+
+    await exportAndImportEverything(harness.context);
+
+    expect(signerKeysUsed()).toEqual(
+      Array(5).fill(signerPublicKeyFor("staging")),
+    );
   });
 });

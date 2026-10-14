@@ -9,6 +9,9 @@ import type {
   ZeroXKeyError,
   ZeroXKeyNetworkError,
 } from "@0xkey-io/sdk-types";
+import type { SignerEnvironment } from "../utils/enclave-signer";
+
+export type { SignerEnvironment };
 
 /**
  * Legacy OAuth provider configuration. Provider-specific configuration types
@@ -146,6 +149,13 @@ export interface ZeroXKeyProviderConfig
 
   /** default stamper type to use for requests that require stamping. */
   defaultStamperType?: StamperType;
+
+  /**
+   * Enclave environment whose pinned Signer key export and import bundles
+   * are verified against. Defaults to `"prod"`; set `"staging"` when
+   * `apiBaseUrl` points at 0xkey staging. Never taken from the Auth Proxy.
+   */
+  signerEnvironment?: SignerEnvironment;
 }
 
 /**@internal */
