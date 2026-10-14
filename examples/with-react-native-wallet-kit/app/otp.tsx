@@ -66,12 +66,6 @@ export default function OtpScreen() {
     }
 
     setLoading(true);
-    console.log("completeOtp", {
-      otpId,
-      otpCode: codeToVerify,
-      contact: email,
-      otpType: OtpType.Email,
-    });
     try {
       await completeOtp({
         otpId,
