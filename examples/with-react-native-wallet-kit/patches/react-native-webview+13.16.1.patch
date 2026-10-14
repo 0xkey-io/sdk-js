@@ -1,0 +1,192 @@
+diff --git a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
+index 80c6803..56b43e6 100644
+--- a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
++++ b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
+@@ -253,7 +253,11 @@ public class RNCWebView extends WebView implements LifecycleEventListener {
+             this.bridgeListener = new WebViewCompat.WebMessageListener() {
+               @Override
+               public void onPostMessage(@NonNull WebView view, @NonNull WebMessageCompat message, @NonNull Uri sourceOrigin, boolean isMainFrame, @NonNull JavaScriptReplyProxy replyProxy) {
+-                RNCWebView.this.onMessage(message.getData(), sourceOrigin.toString());
++                // Capture the frame proof and independent top-level URL in the
++                // same native callback before React event dispatch is queued.
++                RNCWebView.this.onMessage(message.getData(), sourceOrigin.toString(),
++                  "android-web-message-listener", sourceOrigin.toString(),
++                  isMainFrame, view.getUrl());
+               }
+             };
+             WebViewCompat.addWebMessageListener(
+@@ -325,6 +329,13 @@ public class RNCWebView extends WebView implements LifecycleEventListener {
+     }
+ 
+     public void onMessage(String message, String sourceUrl) {
++        // The addJavascriptInterface fallback has no sending-frame proof.
++        onMessage(message, sourceUrl, null, null, false, null);
++    }
++
++    private void onMessage(String message, String sourceUrl, String captchaSourceKind,
++                           String captchaSourceOrigin, boolean captchaIsMainFrame,
++                           String captchaTopLevelUrl) {
+         ThemedReactContext reactContext = getThemedReactContext();
+         RNCWebView mWebView = this;
+ 
+@@ -338,6 +349,12 @@ public class RNCWebView extends WebView implements LifecycleEventListener {
+                     }
+                     WritableMap data = mRNCWebViewClient.createWebViewEvent(webView, sourceUrl);
+                     data.putString("data", message);
++                    if (captchaSourceKind != null) {
++                        data.putString("captchaSourceKind", captchaSourceKind);
++                        data.putString("captchaSourceOrigin", captchaSourceOrigin);
++                        data.putBoolean("captchaIsMainFrame", captchaIsMainFrame);
++                        data.putString("captchaTopLevelUrl", captchaTopLevelUrl);
++                    }
+ 
+                     if (mMessagingJSModule != null) {
+                         dispatchDirectMessage(data);
+@@ -349,6 +366,12 @@ public class RNCWebView extends WebView implements LifecycleEventListener {
+         } else {
+             WritableMap eventData = Arguments.createMap();
+             eventData.putString("data", message);
++            if (captchaSourceKind != null) {
++                eventData.putString("captchaSourceKind", captchaSourceKind);
++                eventData.putString("captchaSourceOrigin", captchaSourceOrigin);
++                eventData.putBoolean("captchaIsMainFrame", captchaIsMainFrame);
++                eventData.putString("captchaTopLevelUrl", captchaTopLevelUrl);
++            }
+ 
+             if (mMessagingJSModule != null) {
+                 dispatchDirectMessage(eventData);
+@@ -465,4 +488,4 @@ public class RNCWebView extends WebView implements LifecycleEventListener {
+             return waitingForCommandLoadUrl;
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewClient.java b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewClient.java
+index 0287e1c..efd2a3a 100644
+--- a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewClient.java
++++ b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewClient.java
+@@ -92,6 +92,11 @@ public class RNCWebViewClient extends WebViewClient {
+ 
+     @Override
+     public boolean shouldOverrideUrlLoading(WebView view, String url) {
++        // This legacy callback has no frame identity. Do not infer it from URL.
++        return shouldOverrideUrlLoading(view, url, null);
++    }
++
++    private boolean shouldOverrideUrlLoading(WebView view, String url, @Nullable Boolean isTopFrame) {
+         final RNCWebView rncWebView = (RNCWebView) view;
+         final boolean isJsDebugging = rncWebView.getReactApplicationContext().getJavaScriptContextHolder().get() == 0;
+ 
+@@ -102,6 +107,9 @@ public class RNCWebViewClient extends WebViewClient {
+ 
+             final WritableMap event = createWebViewEvent(view, url);
+             event.putDouble("lockIdentifier", lockIdentifier);
++            if (isTopFrame != null) {
++                event.putBoolean("isTopFrame", isTopFrame);
++            }
+             rncWebView.dispatchDirectShouldStartLoadWithRequest(event);
+ 
+             try {
+@@ -132,9 +140,13 @@ public class RNCWebViewClient extends WebViewClient {
+             progressChangedFilter.setWaitingForCommandLoadUrl(true);
+ 
+             int reactTag = RNCWebViewWrapper.getReactTagFromWebView(view);
++            WritableMap event = createWebViewEvent(view, url);
++            if (isTopFrame != null) {
++                event.putBoolean("isTopFrame", isTopFrame);
++            }
+             UIManagerHelper.getEventDispatcherForReactTag((ReactContext) view.getContext(), reactTag).dispatchEvent(new TopShouldStartLoadWithRequestEvent(
+                     reactTag,
+-                    createWebViewEvent(view, url)));
++                    event));
+             return true;
+         }
+     }
+@@ -143,7 +155,7 @@ public class RNCWebViewClient extends WebViewClient {
+     @Override
+     public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+         final String url = request.getUrl().toString();
+-        return this.shouldOverrideUrlLoading(view, url);
++        return this.shouldOverrideUrlLoading(view, url, request.isForMainFrame());
+     }
+ 
+     @Override
+@@ -327,4 +339,4 @@ public class RNCWebViewClient extends WebViewClient {
+     public void setProgressChangedFilter(RNCWebView.ProgressChangedFilter filter) {
+         progressChangedFilter = filter;
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/node_modules/react-native-webview/apple/RNCWebViewImpl.m b/node_modules/react-native-webview/apple/RNCWebViewImpl.m
+index 7f5c24d..91207da 100644
+--- a/node_modules/react-native-webview/apple/RNCWebViewImpl.m
++++ b/node_modules/react-native-webview/apple/RNCWebViewImpl.m
+@@ -785,7 +785,13 @@ - (void)userContentController:(WKUserContentController *)userContentController
+     if (_onMessage) {
+       NSMutableDictionary<NSString *, id> *event = [self baseEvent];
+       [event addEntriesFromDictionary: @{@"data": message.body}];
+-      [event addEntriesFromDictionary: @{@"url": message.frameInfo.request.URL.absoluteString}];
++      [event addEntriesFromDictionary: @{@"url": message.frameInfo.request.URL.absoluteString ?: @""}];
++      [event addEntriesFromDictionary: @{
++        @"captchaSourceKind": @"ios-wk-script-message",
++        @"captchaSourceFrameUrl": message.frameInfo.request.URL.absoluteString ?: @"",
++        @"captchaIsMainFrame": @(message.frameInfo.isMainFrame),
++        @"captchaTopLevelUrl": _webView.URL.absoluteString ?: @""
++      }];
+       _onMessage(event);
+     }
+   }
+diff --git a/node_modules/react-native-webview/lib/WebViewTypes.d.ts b/node_modules/react-native-webview/lib/WebViewTypes.d.ts
+index 998cc88..faa0a2c 100644
+--- a/node_modules/react-native-webview/lib/WebViewTypes.d.ts
++++ b/node_modules/react-native-webview/lib/WebViewTypes.d.ts
+@@ -60,7 +60,8 @@ export interface WebViewNavigation extends WebViewNativeEvent {
+     mainDocumentURL?: string;
+ }
+ export interface ShouldStartLoadRequest extends WebViewNavigation {
+-    isTopFrame: boolean;
++    /** Android's legacy String callback has no frame proof. */
++    isTopFrame?: boolean;
+ }
+ export interface FileDownload {
+     downloadUrl: string;
+@@ -68,6 +69,11 @@ export interface FileDownload {
+ export type DecelerationRateConstant = 'normal' | 'fast';
+ export interface WebViewMessage extends WebViewNativeEvent {
+     data: string;
++    captchaSourceKind?: 'android-web-message-listener' | 'ios-wk-script-message';
++    captchaSourceOrigin?: string;
++    captchaSourceFrameUrl?: string;
++    captchaIsMainFrame?: boolean;
++    captchaTopLevelUrl?: string;
+ }
+ export interface WebViewError extends WebViewNativeEvent {
+     /**
+diff --git a/node_modules/react-native-webview/src/WebViewTypes.ts b/node_modules/react-native-webview/src/WebViewTypes.ts
+index eca8141..e24cbf8 100644
+--- a/node_modules/react-native-webview/src/WebViewTypes.ts
++++ b/node_modules/react-native-webview/src/WebViewTypes.ts
+@@ -99,7 +99,8 @@ export interface WebViewNavigation extends WebViewNativeEvent {
+ }
+ 
+ export interface ShouldStartLoadRequest extends WebViewNavigation {
+-  isTopFrame: boolean;
++  // Android's legacy String callback has no frame proof.
++  isTopFrame?: boolean;
+ }
+ 
+ export interface FileDownload {
+@@ -110,6 +111,11 @@ export type DecelerationRateConstant = 'normal' | 'fast';
+ 
+ export interface WebViewMessage extends WebViewNativeEvent {
+   data: string;
++  captchaSourceKind?: 'android-web-message-listener' | 'ios-wk-script-message';
++  captchaSourceOrigin?: string;
++  captchaSourceFrameUrl?: string;
++  captchaIsMainFrame?: boolean;
++  captchaTopLevelUrl?: string;
+ }
+ 
+ export interface WebViewError extends WebViewNativeEvent {

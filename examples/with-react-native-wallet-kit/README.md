@@ -35,7 +35,7 @@ This demo app illustrates how to integrate ZeroXKey's embedded wallet kit into a
 - **Android:** Android Studio and a device with Google Play services
 - A development build. Expo Go cannot load the native modules this app needs
   (`react-native-passkey`, `react-native-inappbrowser-reborn`, `react-native-keychain`,
-  `react-native-device-info`).
+  `react-native-device-info`, and the patched `react-native-webview` used for Captcha).
 
 ## 🚀 Installation & Setup
 
@@ -85,6 +85,7 @@ into the app, so never add API keys or other secrets.
 | `EXPO_PUBLIC_ZEROXKEY_RPID`                          | Passkey RP ID, a bare host name. Also becomes the iOS `webcredentials:` associated domain.                                                             |
 | `EXPO_PUBLIC_APP_SCHEME`                             | Deep link scheme used to return from OAuth                                                                                                             |
 | `EXPO_PUBLIC_ZEROXKEY_SIGNER_ENVIRONMENT`            | `staging` or `prod` (default). Selects the pinned enclave Signer key that export and import bundles are verified against; must match the API base URL. |
+| `EXPO_PUBLIC_CAPTCHA_ORIGIN`                         | Captcha challenge page: `https://captcha.staging.0xkey.io` or `https://captcha.0xkey.io`                                                               |
 | `EXPO_PUBLIC_OAUTH_ORIGIN_URI`                       | OAuth origin page that forwards to the provider (default `https://oauth-origin.0xkey.io`)                                                              |
 | `EXPO_PUBLIC_OAUTH_REDIRECT_URI`                     | OAuth relay that returns to the app (default `https://oauth-redirect.0xkey.io/`)                                                                       |
 | `EXPO_PUBLIC_GOOGLE_CLIENT_ID`                       | Google **web** client ID. Leave empty to hide Google.                                                                                                  |
@@ -141,6 +142,34 @@ them together so a staging flow never uses a production page.
 If you change the scheme, update `EXPO_PUBLIC_APP_SCHEME` and the registered
 redirect URI together.
 
+## Captcha
+
+When the Auth Proxy config has Captcha enabled, OTP send and resend, passkey
+sign-up and OAuth sign-up of a new account need a Cloudflare Turnstile token.
+Before each of these, the app reads the config's client params. Without a
+`turnstileSiteKey` it sends the request as before and shows no challenge.
+With one, it opens `EXPO_PUBLIC_CAPTCHA_ORIGIN` in a WebView sheet, takes the
+one-time token and passes it as `captchaToken` to that single call.
+
+- Passkey login and OAuth login of a known account are not challenged. OAuth
+  first completes without a token; only a sign-up that the Auth Proxy rejects
+  for a missing Captcha token is challenged and submitted again.
+- Sending an OTP is always challenged, also for an existing account, as with
+  Turnkey.
+- Cancelling the sheet, sending the app to the background, an expired or failed
+  challenge, or unreadable client params end the attempt before the protected
+  request is sent.
+- OTP sign-up with a verified code needs no second challenge.
+
+The challenge completes only through `react-native-webview` **13.16.1** with the
+reviewed patch in `patches/`, which forwards the native frame provenance the
+SDK's bridge checks (`createCaptchaWebViewBridge`,
+`receiveCaptchaNativeMessage`, `permitsCaptchaNavigation`). `npm install`
+applies it with `patch-package` and fails if the patched files or the pinned
+navigation routing differ (`npm run verify:webview-patch`). A stock WebView
+build cannot complete a challenge. After changing the patch or the WebView
+version, run `npm run prebuild` and rebuild the app.
+
 ## 📱 Running the App
 
 ### On a device
@@ -160,7 +189,10 @@ only count when measured on a physical device.
 2. Sign up with a passkey, sign out, then log in with the same passkey.
 3. Google: sign in, cancel once, and return from the background mid-flow.
 4. Export a wallet and an account; both show a success alert.
-5. Record the device, OS version, SDK commit and outcome for each step.
+5. With Captcha enabled on the config: OTP send and resend show the challenge
+   sheet (it may pass without interaction); passkey and OAuth login of an
+   existing account do not. Cancel the sheet once: no code is sent.
+6. Record the device, OS version, SDK commit and outcome for each step.
 
 ### Production Build
 

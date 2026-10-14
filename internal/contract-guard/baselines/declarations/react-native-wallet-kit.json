@@ -15,6 +15,10 @@
     },
     {
       "kind": "re-export",
+      "name": "permitsCaptchaNavigation"
+    },
+    {
+      "kind": "re-export",
       "name": "receiveCaptchaNativeMessage"
     },
     {
@@ -36,6 +40,10 @@
     {
       "kind": "re-export",
       "name": "type CaptchaNativeMessageEvent"
+    },
+    {
+      "kind": "re-export",
+      "name": "type CaptchaNavigationRequest"
     },
     {
       "kind": "re-export",

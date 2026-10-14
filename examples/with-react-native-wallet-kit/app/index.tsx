@@ -15,6 +15,9 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { EmailInput, validateEmail } from "@/components/auth/email-input";
 import { SecondaryButton } from "@/components/ui/secondary-button";
+import { useCaptcha } from "@/components/captcha/captcha-provider";
+import { setOauthProvider } from "@/constants/callbacks";
+import { CaptchaCancelledError, withCaptchaToken } from "@/constants/captcha";
 import { AuthState, useZeroXKey } from "@0xkey-io/react-native-wallet-kit";
 import { OtpType } from "@/types/types";
 
@@ -43,6 +46,7 @@ export default function LoginScreen() {
     handleAppleOauth,
     authState,
   } = useZeroXKey();
+  const { requireCaptchaToken } = useCaptcha();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
 
@@ -58,24 +62,32 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
+    try {
+      const captchaToken = await requireCaptchaToken();
+      const { otpId, otpEncryptionTargetBundle } = await initOtp(
+        withCaptchaToken(
+          { otpType: OtpType.Email, contact: email },
+          captchaToken,
+        ),
+      );
 
-    const { otpId, otpEncryptionTargetBundle } = await initOtp({
-      otpType: OtpType.Email,
-      contact: email,
-    });
+      if (!otpId) {
+        Alert.alert("Error", "Failed to initialize OTP");
+        return;
+      }
 
-    if (!otpId) {
-      Alert.alert("Error", "Failed to initialize OTP");
-      return;
+      setEmailError(false);
+      router.push({
+        pathname: "/otp",
+        params: { email, otpId, otpEncryptionTargetBundle },
+      });
+    } catch (error) {
+      if (error instanceof CaptchaCancelledError) return;
+      console.error("Error sending the verification code", error);
+      Alert.alert("Error", "Failed to send the verification code");
+    } finally {
+      setLoading(false);
     }
-
-    setEmailError(false);
-    setLoading(false);
-
-    router.push({
-      pathname: "/otp",
-      params: { email, otpId, otpEncryptionTargetBundle },
-    });
   };
 
   const handleEmailChange = (text: string) => {
@@ -89,13 +101,20 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       console.log("signing up with passkey");
-      await signUpWithPasskey({
-        passkeyDisplayName: "DefaultPasskey",
-        createSubOrgParams: {
-          customWallet,
-        },
-      });
+      const captchaToken = await requireCaptchaToken();
+      await signUpWithPasskey(
+        withCaptchaToken(
+          {
+            passkeyDisplayName: "DefaultPasskey",
+            createSubOrgParams: {
+              customWallet,
+            },
+          },
+          captchaToken,
+        ),
+      );
     } catch (error) {
+      if (error instanceof CaptchaCancelledError) return;
       console.error("Error signing up with passkey", error);
     } finally {
       setLoading(false);
@@ -117,6 +136,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
+      setOauthProvider("google");
       await handleGoogleOauth();
     } catch (error) {
       console.error("Error signing in with Google", error);
@@ -129,6 +149,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       console.log("signing in with X");
+      setOauthProvider("x");
       await handleXOauth();
     } catch (error) {
       console.error("Error signing in with X", error);
@@ -142,6 +163,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       console.log("signing in with Discord");
+      setOauthProvider("discord");
       await handleDiscordOauth();
     } catch (error) {
       console.error("Error signing in with Discord", error);
@@ -155,6 +177,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       console.log("signing in with Facebook");
+      setOauthProvider("facebook");
       await handleFacebookOauth();
     } catch (error) {
       console.error("Error signing in with Facebook", error);
@@ -168,6 +191,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       console.log("signing in with Apple");
+      setOauthProvider("apple");
       await handleAppleOauth();
     } catch (error) {
       console.error("Error signing in with Apple", error);

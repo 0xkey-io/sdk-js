@@ -8,7 +8,13 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { ZeroXKeyProvider } from "@0xkey-io/react-native-wallet-kit";
-import { ZEROXKEY_CONFIG, ZEROXKEY_CALLBACKS } from "@/constants/0xkey";
+import { OauthCompletion } from "@/components/auth/oauth-completion";
+import { CaptchaProvider } from "@/components/captcha/captcha-provider";
+import {
+  CAPTCHA_SETTINGS,
+  ZEROXKEY_CONFIG,
+  ZEROXKEY_CALLBACKS,
+} from "@/constants/0xkey";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthState, useZeroXKey } from "@0xkey-io/react-native-wallet-kit";
 
@@ -39,8 +45,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <ZeroXKeyProvider config={ZEROXKEY_CONFIG} callbacks={ZEROXKEY_CALLBACKS}>
-        <AuthGate />
-        <StatusBar style="auto" />
+        <CaptchaProvider settings={CAPTCHA_SETTINGS}>
+          <OauthCompletion />
+          <AuthGate />
+          <StatusBar style="auto" />
+        </CaptchaProvider>
       </ZeroXKeyProvider>
     </ThemeProvider>
   );
