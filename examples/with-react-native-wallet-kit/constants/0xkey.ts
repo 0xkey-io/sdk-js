@@ -1,5 +1,6 @@
 import type { ZeroXKeyProviderConfig } from "@0xkey-io/react-native-wallet-kit";
 
+import { buildCaptchaSettings, type CaptchaSettings } from "./captcha";
 import { buildZeroXKeyConfig } from "./config";
 
 export { ZEROXKEY_CALLBACKS } from "./callbacks";
@@ -21,4 +22,10 @@ export const ZEROXKEY_CONFIG: ZeroXKeyProviderConfig = buildZeroXKeyConfig({
   xClientId: process.env.EXPO_PUBLIC_X_CLIENT_ID,
   discordClientId: process.env.EXPO_PUBLIC_DISCORD_CLIENT_ID,
   signerEnvironment: process.env.EXPO_PUBLIC_ZEROXKEY_SIGNER_ENVIRONMENT,
+});
+
+export const CAPTCHA_SETTINGS: CaptchaSettings | null = buildCaptchaSettings({
+  origin: process.env.EXPO_PUBLIC_CAPTCHA_ORIGIN,
+  authProxyUrl: process.env.EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_URL,
+  authProxyConfigId: process.env.EXPO_PUBLIC_ZEROXKEY_AUTH_PROXY_CONFIG_ID,
 });

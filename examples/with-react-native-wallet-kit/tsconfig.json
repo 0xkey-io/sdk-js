@@ -6,7 +6,8 @@
       "@/*": ["./*"],
       "@0xkey-io/react-native-wallet-kit": [
         "../../packages/react-native-wallet-kit/dist/index.d.ts"
-      ]
+      ],
+      "@0xkey-io/core": ["../../packages/core/dist/index.d.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],

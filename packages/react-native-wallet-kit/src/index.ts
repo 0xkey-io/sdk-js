@@ -11,6 +11,10 @@ export {
   receiveCaptchaNativeMessage,
   type CaptchaNativeMessageEvent,
 } from "./utils/captcha-webview-adapter";
+export {
+  permitsCaptchaNavigation,
+  type CaptchaNavigationRequest,
+} from "./utils/captcha-webview-navigation";
 
 // Re-export selected values from @0xkey-io/core
 export {

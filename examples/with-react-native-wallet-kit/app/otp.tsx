@@ -15,12 +15,15 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { OtpVerification } from "@/components/auth/otp-verification";
+import { useCaptcha } from "@/components/captcha/captcha-provider";
+import { CaptchaCancelledError, withCaptchaToken } from "@/constants/captcha";
 import { OtpType } from "@/types/types";
 import { useZeroXKey } from "@0xkey-io/react-native-wallet-kit";
 
 export default function OtpScreen() {
   const router = useRouter();
   const { completeOtp, initOtp } = useZeroXKey();
+  const { requireCaptchaToken } = useCaptcha();
   const {
     email,
     otpId: otpIdParam,
@@ -86,31 +89,44 @@ export default function OtpScreen() {
 
   const handleResendCode = async () => {
     setResendLoading(true);
+    try {
+      // Every send needs its own challenge; a token is single-use.
+      const captchaToken = await requireCaptchaToken();
+      const {
+        otpId: newOtpId,
+        otpEncryptionTargetBundle: newOtpEncryptionTargetBundle,
+      } = await initOtp(
+        withCaptchaToken(
+          { otpType: OtpType.Email, contact: email },
+          captchaToken,
+        ),
+      );
 
-    const {
-      otpId: newOtpId,
-      otpEncryptionTargetBundle: newOtpEncryptionTargetBundle,
-    } = await initOtp({
-      otpType: OtpType.Email,
-      contact: email,
-    });
+      if (!newOtpId) {
+        Alert.alert("Error", "Failed to initialize OTP");
+        return;
+      }
 
-    if (!newOtpId) {
-      Alert.alert("Error", "Failed to initialize OTP");
-      return;
-    }
-
-    setOtpId(newOtpId);
-    setOtpEncryptionTargetBundle(newOtpEncryptionTargetBundle);
-
-    // Mock resend
-    setTimeout(() => {
-      setResendLoading(false);
+      setOtpId(newOtpId);
+      setOtpEncryptionTargetBundle(newOtpEncryptionTargetBundle);
       Alert.alert(
         "Code Sent",
         "A new verification code has been sent to your email",
       );
-    }, 1000);
+    } catch (error) {
+      if (error instanceof CaptchaCancelledError) return;
+      console.error("Error resending the verification code", error);
+      const retryAfter = (error as { retryAfterSeconds?: unknown })
+        .retryAfterSeconds;
+      Alert.alert(
+        "Error",
+        typeof retryAfter === "number"
+          ? `Please wait ${retryAfter} seconds before requesting a new code`
+          : "Failed to resend the verification code",
+      );
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleBack = () => {
