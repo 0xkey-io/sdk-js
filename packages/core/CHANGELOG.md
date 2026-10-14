@@ -1,5 +1,16 @@
 # @0xkey-io/core
 
+## 0.2.1
+
+### Patch Changes
+
+- Security: without an `apiBaseUrl`, the client sends requests to
+  `https://api.0xkey.io` instead of `https://api.0xkey.com`, a domain 0xkey
+  does not own. 0.2.1 is published from the 2026-06-23 release line (branch
+  `security/0xkey-com-hosts-core-0.2.1-rnwk-0.1.4`); this tree only carries the
+  same host change and the version so that `@0xkey-io/react-wallet-kit@0.3.1`
+  depends on it. It is not published from here.
+
 ## 0.2.0
 
 ### Minor Changes

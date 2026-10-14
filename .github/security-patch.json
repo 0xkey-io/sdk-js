@@ -1,0 +1,13 @@
+{
+  "base": "2026-07-03 release (2c2b2e0): react-wallet-kit 0.3.0",
+  "publish": [{ "name": "@0xkey-io/react-wallet-kit", "version": "0.3.1" }],
+  "test": ["@0xkey-io/react-wallet-kit"],
+  "dependencyPins": { "@0xkey-io/core": "0.2.1" },
+  "requirePublished": [
+    {
+      "name": "@0xkey-io/core",
+      "version": "0.2.1",
+      "from": "security/0xkey-com-hosts-core-0.2.1-rnwk-0.1.4"
+    }
+  ]
+}

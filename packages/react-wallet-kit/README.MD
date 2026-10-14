@@ -4,7 +4,7 @@ The `@0xkey-io/react-wallet-kit` is a powerful SDK that allows you to integrate 
 
 ## Getting started
 
-To learn how to setup your ZeroXKey organization and configure the Auth Proxy, check out our [Getting Started](https://docs.0xkey.com/sdks/react/getting-started) guide!
+To learn how to setup your ZeroXKey organization and configure the Auth Proxy, check out our [Getting Started](https://docs.0xkey.io/sdks/react/getting-started) guide!
 
 ## Installation
 
@@ -113,4 +113,4 @@ function LoginButton() {
 ```
 
 
-For more information, check out [our docs!](https://docs.0xkey.com/sdks/react)
+For more information, check out [our docs!](https://docs.0xkey.io/sdks/react)

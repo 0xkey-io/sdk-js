@@ -1,4 +1,6 @@
 import { describe, expect, jest, it } from "@jest/globals";
+import { readdirSync, readFileSync } from "fs";
+import { join } from "path";
 import {
   Session,
   SessionType,
@@ -174,5 +176,43 @@ describe("withZeroXKeyErrorHandling", () => {
     );
 
     expect(logout).toHaveBeenCalledTimes(1);
+  });
+});
+
+const SRC_DIR = join(__dirname, "..");
+
+function shippedSourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return entry.name === "tests" ? [] : shippedSourceFiles(path);
+    }
+    return /\.tsx?$/.test(entry.name) ? [path] : [];
+  });
+}
+
+function iframeDefault(option: "importIframeUrl" | "exportIframeUrl") {
+  const provider = readFileSync(
+    join(SRC_DIR, "providers", "client", "Provider.tsx"),
+    "utf8",
+  );
+  const match = provider.match(
+    new RegExp(`${option}: config\\.${option} \\?\\? "([^"]+)"`),
+  );
+  return match?.[1];
+}
+
+describe("default hosts", () => {
+  it("defaults the import and export iframes to 0xkey.io", () => {
+    expect(iframeDefault("importIframeUrl")).toBe("https://import.0xkey.io");
+    expect(iframeDefault("exportIframeUrl")).toBe("https://export.0xkey.io");
+  });
+
+  it("ships no 0xkey.com host", () => {
+    const offenders = shippedSourceFiles(SRC_DIR).filter((path) =>
+      /0xkey\.com\b/i.test(readFileSync(path, "utf8")),
+    );
+
+    expect(offenders).toEqual([]);
   });
 });

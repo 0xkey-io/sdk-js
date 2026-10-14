@@ -1,13 +1,13 @@
 {
   "name": "@0xkey-io/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A core JavaScript web and React Native package for interfacing with 0xkey's infrastructure.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "dist/index.d.ts",
   "author": {
     "name": "0xkey",
-    "url": "https://0xkey.com/"
+    "url": "https://0xkey.io/"
   },
   "homepage": "https://github.com/0xkey-io/sdk-js/tree/main/packages/core",
   "bugs": {
