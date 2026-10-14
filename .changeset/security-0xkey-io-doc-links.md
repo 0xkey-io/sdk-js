@@ -7,5 +7,5 @@
 ---
 
 Depend on the patched `@0xkey-io/core@0.2.1`, and point README examples and
-package links at 0xkey.io instead of `0xkey.com`, a domain 0xkey does not own.
-No code changes.
+package links at 0xkey.io instead of a third-party domain that 0xkey does not
+own. No code changes.
