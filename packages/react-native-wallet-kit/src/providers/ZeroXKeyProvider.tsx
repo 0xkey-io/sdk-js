@@ -140,6 +140,7 @@ import {
   attachOAuthLinking,
   type OAuthLinkingAttachment,
 } from "../utils/oauth-linking";
+import { signerPublicKeyFor } from "../utils/enclave-signer";
 
 /**
  * @inline
@@ -1799,6 +1800,9 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           organizationId: orgId,
           returnMnemonic: true,
           keyFormat: "HEXADECIMAL",
+          dangerouslyOverrideSignerPublicKey: signerPublicKeyFor(
+            config.signerEnvironment,
+          ),
         });
 
         return mnemonic;
@@ -1806,7 +1810,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         throw error;
       }
     },
-    [client, session, callbacks],
+    [client, session, callbacks, config.signerEnvironment],
   );
 
   const exportPrivateKey = useCallback(
@@ -1871,6 +1875,9 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           organizationId: orgId,
           returnMnemonic: false,
           keyFormat: "HEXADECIMAL",
+          dangerouslyOverrideSignerPublicKey: signerPublicKeyFor(
+            config.signerEnvironment,
+          ),
         });
 
         return rawPrivateKey;
@@ -1878,7 +1885,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         throw error;
       }
     },
-    [client, callbacks],
+    [client, callbacks, config.signerEnvironment],
   );
 
   const exportWalletAccount = useCallback(
@@ -1945,6 +1952,9 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           organizationId: orgId,
           returnMnemonic: false,
           keyFormat: "HEXADECIMAL",
+          dangerouslyOverrideSignerPublicKey: signerPublicKeyFor(
+            config.signerEnvironment,
+          ),
         });
 
         return decryptedKey;
@@ -1952,7 +1962,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         throw error;
       }
     },
-    [client, callbacks, masterConfig, session, user],
+    [client, callbacks, masterConfig, session, user, config.signerEnvironment],
   );
 
   const importWallet = useCallback(
@@ -2012,6 +2022,9 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         importBundle,
         userId: effectiveUserId,
         organizationId: effectiveOrgId,
+        dangerouslyOverrideSignerPublicKey: signerPublicKeyFor(
+          config.signerEnvironment,
+        ),
       });
 
       // Step 3: call importWallet with encrypted bundle
@@ -2039,7 +2052,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         });
       return res;
     },
-    [client, callbacks, masterConfig, session, user],
+    [client, callbacks, masterConfig, session, user, config.signerEnvironment],
   );
 
   const importPrivateKey = useCallback(
@@ -2102,6 +2115,9 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         importBundle,
         userId: effectiveUserId,
         organizationId: effectiveOrgId,
+        dangerouslyOverrideSignerPublicKey: signerPublicKeyFor(
+          config.signerEnvironment,
+        ),
       });
 
       // Import
@@ -2122,7 +2138,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
       );
       return res;
     },
-    [client, callbacks, masterConfig, session, user],
+    [client, callbacks, masterConfig, session, user, config.signerEnvironment],
   );
 
   const deleteSubOrganization = useCallback(

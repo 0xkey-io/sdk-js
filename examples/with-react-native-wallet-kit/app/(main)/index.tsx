@@ -88,7 +88,6 @@ export default function HomeScreen() {
       const exportedWalletMnemonic = await exportWallet({
         walletId,
       });
-      console.log("Wallet mnemonic:", exportedWalletMnemonic);
       Alert.alert(
         "Success",
         "Wallet exported successfully!\n\nMnemonic: " + exportedWalletMnemonic,
@@ -105,7 +104,6 @@ export default function HomeScreen() {
       const exportedAccountPrivateKey = await exportWalletAccount({
         address,
       });
-      console.log("Exported account private key:", exportedAccountPrivateKey);
       Alert.alert(
         "Success",
         "Account exported successfully!\n\nPrivate Key: " +

@@ -150,3 +150,29 @@ test("enables email OTP and passkeys for the device test", () => {
   assert.equal(auth?.otp?.sms, false);
   assert.equal(auth?.passkey, true);
 });
+
+test("forwards the signer environment so staging export bundles verify", () => {
+  assert.equal(
+    buildZeroXKeyConfig({ ...staging, signerEnvironment: "staging" })
+      .signerEnvironment,
+    "staging",
+  );
+  assert.equal(
+    buildZeroXKeyConfig({ ...staging, signerEnvironment: "prod" })
+      .signerEnvironment,
+    "prod",
+  );
+  assert.equal(buildZeroXKeyConfig(staging).signerEnvironment, undefined);
+});
+
+test("rejects a signer environment without a pinned signer key", () => {
+  assert.throws(
+    () => buildZeroXKeyConfig({ ...staging, signerEnvironment: "preprod-x" }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /EXPO_PUBLIC_ZEROXKEY_SIGNER_ENVIRONMENT/);
+      assert.doesNotMatch(error.message, /preprod-x/);
+      return true;
+    },
+  );
+});

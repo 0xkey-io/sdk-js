@@ -15,6 +15,7 @@ export type DemoEnv = {
   facebookClientId?: string | undefined;
   xClientId?: string | undefined;
   discordClientId?: string | undefined;
+  signerEnvironment?: string | undefined;
 };
 
 const ENV_NAMES: Record<keyof DemoEnv, string> = {
@@ -32,6 +33,7 @@ const ENV_NAMES: Record<keyof DemoEnv, string> = {
   facebookClientId: "EXPO_PUBLIC_FACEBOOK_CLIENT_ID",
   xClientId: "EXPO_PUBLIC_X_CLIENT_ID",
   discordClientId: "EXPO_PUBLIC_DISCORD_CLIENT_ID",
+  signerEnvironment: "EXPO_PUBLIC_ZEROXKEY_SIGNER_ENVIRONMENT",
 };
 
 const HOST_NAME =
@@ -94,6 +96,15 @@ export function buildZeroXKeyConfig(env: DemoEnv): ZeroXKeyProviderConfig {
       `${ENV_NAMES.appScheme} must be a lowercase URL scheme without "://"`,
     );
   }
+  const signerEnvironment = value("signerEnvironment");
+  if (
+    signerEnvironment !== undefined &&
+    !isSignerEnvironment(signerEnvironment)
+  ) {
+    throw new Error(
+      `${ENV_NAMES.signerEnvironment} must be "prod" or "staging"`,
+    );
+  }
 
   const googleWebClientId = value("googleWebClientId");
   const appleServiceId = value("appleServiceId");
@@ -107,6 +118,7 @@ export function buildZeroXKeyConfig(env: DemoEnv): ZeroXKeyProviderConfig {
     apiBaseUrl: apiBaseUrl!,
     ...(authProxyUrl ? { authProxyUrl, authProxyConfigId } : {}),
     passkeyConfig: { rpId: passkeyRpId! },
+    ...(signerEnvironment ? { signerEnvironment } : {}),
     auth: {
       otp: { email: true, sms: false },
       passkey: true,
@@ -135,6 +147,12 @@ export function buildZeroXKeyConfig(env: DemoEnv): ZeroXKeyProviderConfig {
       autoRefreshSession: true,
     },
   };
+}
+
+function isSignerEnvironment(
+  raw: string,
+): raw is NonNullable<ZeroXKeyProviderConfig["signerEnvironment"]> {
+  return raw === "prod" || raw === "staging";
 }
 
 function isHttpsUrl(raw: string): boolean {
