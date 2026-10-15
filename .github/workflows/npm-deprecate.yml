@@ -1,0 +1,76 @@
+# One-off: deprecate the @0xkey-io versions whose defaults point at 0xkey.com
+# (GHSA-883c-fqwg-phgv, GHSA-x4cf-59wm-72gv, GHSA-fpfh-w5pv-pf22). Lives on its
+# own orphan branch so that no other workflow runs on push.
+name: npm-deprecate-0xkey-com
+
+on:
+  push:
+    branches: [security/npm-deprecate-0xkey-com]
+
+permissions:
+  contents: read
+
+jobs:
+  deprecate:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Deprecate affected versions
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GHSA_CORE: GHSA-883c-fqwg-phgv
+          GHSA_RWK: GHSA-x4cf-59wm-72gv
+          GHSA_RNWK: GHSA-fpfh-w5pv-pf22
+        run: |
+          set -euo pipefail
+          run() { npm deprecate "$1" "$2"; echo "deprecated $1"; }
+
+          for spec in @0xkey-io/core@0.2.1 @0xkey-io/react-wallet-kit@0.2.1 @0xkey-io/react-wallet-kit@0.3.1 \
+                      @0xkey-io/react-native-wallet-kit@0.1.4 @0xkey-io/cosmjs@0.1.4 @0xkey-io/eip-1193-provider@0.1.4 \
+                      @0xkey-io/ethers@0.1.4 @0xkey-io/solana@0.1.4 @0xkey-io/viem@0.1.4; do
+            [ "$(npm view "$spec" version 2>/dev/null)" = "${spec##*@}" ] || { echo "missing $spec" >&2; exit 1; }
+          done
+
+          for v in 0.1.0 0.1.1; do
+            run "@0xkey-io/core@$v" "SECURITY $GHSA_CORE: when apiBaseUrl/authProxyUrl are unset this version uses api/authproxy.0xkey.com; 0xkey does not control 0xkey.com. Upgrade to @0xkey-io/core@0.2.1+ or set apiBaseUrl=https://api.0xkey.io and authProxyUrl=https://authproxy.0xkey.io."
+          done
+          run "@0xkey-io/core@0.2.0" "SECURITY $GHSA_CORE: when apiBaseUrl is unset this version uses https://api.0xkey.com; 0xkey does not control 0xkey.com. Upgrade to @0xkey-io/core@0.2.1 or set apiBaseUrl=https://api.0xkey.io."
+
+          for v in 0.1.0 0.1.1; do
+            run "@0xkey-io/react-wallet-kit@$v" "SECURITY $GHSA_RWK, $GHSA_CORE: export/import iframes, apiBaseUrl and authProxyUrl default to *.0xkey.com, which 0xkey does not control. Upgrade to 0.3.1 (or 0.2.1), or set exportIframeUrl=https://export.0xkey.io, importIframeUrl=https://import.0xkey.io, apiBaseUrl=https://api.0xkey.io, authProxyUrl=https://authproxy.0xkey.io."
+          done
+          run "@0xkey-io/react-wallet-kit@0.2.0" "SECURITY $GHSA_RWK, $GHSA_CORE: export/import iframes and apiBaseUrl default to *.0xkey.com, which 0xkey does not control. Upgrade to 0.2.1 (or 0.3.1), or set exportIframeUrl=https://export.0xkey.io, importIframeUrl=https://import.0xkey.io, apiBaseUrl=https://api.0xkey.io."
+          run "@0xkey-io/react-wallet-kit@0.3.0" "SECURITY $GHSA_RWK, $GHSA_CORE: export/import iframes and apiBaseUrl default to *.0xkey.com, which 0xkey does not control. Upgrade to 0.3.1, or set exportIframeUrl=https://export.0xkey.io, importIframeUrl=https://import.0xkey.io, apiBaseUrl=https://api.0xkey.io."
+
+          for v in 0.1.0 0.1.1; do
+            run "@0xkey-io/react-native-wallet-kit@$v" "SECURITY $GHSA_RNWK, $GHSA_CORE: Google/Apple/Facebook login always opens oauth-origin.0xkey.com and defaults its redirect to oauth-redirect.0xkey.com; apiBaseUrl/authProxyUrl also default to *.0xkey.com. 0xkey does not control 0xkey.com. Upgrade to 0.1.4; until then disable those logins and set apiBaseUrl and authProxyUrl explicitly."
+          done
+          run "@0xkey-io/react-native-wallet-kit@0.1.3" "SECURITY $GHSA_RNWK, $GHSA_CORE: Google/Apple/Facebook login always opens oauth-origin.0xkey.com and defaults its redirect to oauth-redirect.0xkey.com; apiBaseUrl also defaults to api.0xkey.com. 0xkey does not control 0xkey.com. Upgrade to 0.1.4; until then disable those logins and set apiBaseUrl explicitly."
+
+          for p in cosmjs eip-1193-provider ethers solana viem; do
+            for v in 0.1.0 0.1.1 0.1.3; do
+              run "@0xkey-io/$p@$v" "Pins a vulnerable @0xkey-io/core ($GHSA_CORE). This package only uses core's types, but the pinned copy is installed and reported by npm audit. Upgrade to 0.1.4."
+            done
+          done
+
+      - name: Verify
+        run: |
+          set -euo pipefail
+          # Registry metadata can lag a few minutes behind npm deprecate.
+          for spec in @0xkey-io/core@0.2.0 @0xkey-io/react-wallet-kit@0.3.0 @0xkey-io/react-native-wallet-kit@0.1.3 @0xkey-io/viem@0.1.3; do
+            for i in $(seq 1 20); do
+              [ -n "$(npm view "$spec" deprecated --prefer-online)" ] && break
+              [ "$i" = 20 ] && { echo "not deprecated: $spec" >&2; exit 1; }
+              sleep 15
+            done
+          done
+          for spec in @0xkey-io/core@0.2.1 @0xkey-io/react-wallet-kit@0.3.1 @0xkey-io/react-wallet-kit@0.2.1 @0xkey-io/react-native-wallet-kit@0.1.4 @0xkey-io/viem@0.1.4; do
+            [ -z "$(npm view "$spec" deprecated)" ] || { echo "patched version deprecated: $spec" >&2; exit 1; }
+          done
+          echo "verified"
