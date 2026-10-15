@@ -1,5 +1,12 @@
 # with-0x
 
+## 0.1.28
+
+### Patch Changes
+
+- Updated dependencies [[`7a2df40`](https://github.com/0xkey-io/sdk-js/commit/7a2df4010a1a20a535eb6ecbb3dc0b4efcc502b2)]:
+  - @0xkey-io/react-wallet-kit@0.3.1
+
 ## 0.1.27
 
 ### Patch Changes
