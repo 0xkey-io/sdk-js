@@ -644,6 +644,40 @@
         ]
       }
     },
+    "/public/v1/query/get_oidc_providers": {
+      "post": {
+        "summary": "Get OIDC providers",
+        "description": "List the OIDC Identity Providers registered as trusted for this organization.",
+        "operationId": "PublicApiService_GetOidcProviders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetOidcProvidersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetOidcProvidersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OIDC Federation"
+        ]
+      }
+    },
     "/public/v1/query/get_onramp_transaction_status": {
       "post": {
         "summary": "Get On Ramp transaction status",
@@ -1154,6 +1188,40 @@
         ]
       }
     },
+    "/public/v1/query/list_gas_sponsorship_usage": {
+      "post": {
+        "summary": "List gas sponsorship usage records.",
+        "description": "List the most recent gas sponsorship usage entries for an organization (newest first), joined with each sponsored transaction's broadcast lifecycle (tx hash, status, block, actual native fee). Powers the Gas Station sponsorship records table.",
+        "operationId": "PublicApiService_ListGasSponsorshipUsage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListGasSponsorshipUsageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListGasSponsorshipUsageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Broadcasting"
+        ]
+      }
+    },
     "/public/v1/query/list_oauth2_credentials": {
       "post": {
         "summary": "List OAuth 2.0 Credentials",
@@ -1287,6 +1355,40 @@
         ],
         "tags": [
           "Private Keys"
+        ]
+      }
+    },
+    "/public/v1/query/list_send_transactions": {
+      "post": {
+        "summary": "List send transactions.",
+        "description": "List the most recent send-transaction records for an organization (newest first), optionally filtered to a single CAIP-2 network. Powers the Dashboard Company Wallets transaction history page.",
+        "operationId": "PublicApiService_ListSendTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSendTransactionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListSendTransactionsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Send Transactions"
         ]
       }
     },
@@ -1525,6 +1627,40 @@
         ],
         "tags": [
           "Wallets"
+        ]
+      }
+    },
+    "/public/v1/query/list_webhook_endpoints": {
+      "post": {
+        "summary": "List Webhook Endpoints",
+        "description": "List all webhook endpoints for the organization.",
+        "operationId": "PublicApiService_ListWebhookEndpoints",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWebhookEndpointsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListWebhookEndpointsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Webhooks"
         ]
       }
     },
@@ -1831,6 +1967,40 @@
         ],
         "tags": [
           "User Auth"
+        ]
+      }
+    },
+    "/public/v1/submit/create_oidc_provider": {
+      "post": {
+        "summary": "Create OIDC provider",
+        "description": "Register a customer OIDC Identity Provider as trusted for this (parent) organization's OAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform this.",
+        "operationId": "PublicApiService_CreateOidcProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateOidcProviderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OIDC Federation"
         ]
       }
     },
@@ -2276,6 +2446,40 @@
         ]
       }
     },
+    "/public/v1/submit/create_webhook_endpoint": {
+      "post": {
+        "summary": "Create Webhook Endpoint",
+        "description": "Create a new webhook endpoint for the organization.",
+        "operationId": "PublicApiService_CreateWebhookEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateWebhookEndpointRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
     "/public/v1/submit/delete_api_keys": {
       "post": {
         "summary": "Delete API keys",
@@ -2511,6 +2715,40 @@
         ],
         "tags": [
           "User Auth"
+        ]
+      }
+    },
+    "/public/v1/submit/delete_oidc_provider": {
+      "post": {
+        "summary": "Delete OIDC provider",
+        "description": "Remove one or more registered OIDC Identity Providers.",
+        "operationId": "PublicApiService_DeleteOidcProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteOidcProviderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OIDC Federation"
         ]
       }
     },
@@ -2851,6 +3089,40 @@
         ],
         "tags": [
           "Wallets"
+        ]
+      }
+    },
+    "/public/v1/submit/delete_webhook_endpoint": {
+      "post": {
+        "summary": "Delete Webhook Endpoint",
+        "description": "Delete a webhook endpoint.",
+        "operationId": "PublicApiService_DeleteWebhookEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteWebhookEndpointRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Webhooks"
         ]
       }
     },
@@ -3908,6 +4180,40 @@
         ]
       }
     },
+    "/public/v1/submit/update_oidc_provider": {
+      "post": {
+        "summary": "Update OIDC provider",
+        "description": "Update a registered OIDC Identity Provider's name, audiences, or enabled state.",
+        "operationId": "PublicApiService_UpdateOidcProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateOidcProviderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OIDC Federation"
+        ]
+      }
+    },
     "/public/v1/submit/update_organization_name": {
       "post": {
         "summary": "Update organization name",
@@ -4245,6 +4551,40 @@
         ],
         "tags": [
           "Wallets"
+        ]
+      }
+    },
+    "/public/v1/submit/update_webhook_endpoint": {
+      "post": {
+        "summary": "Update Webhook Endpoint",
+        "description": "Update an existing webhook endpoint (url, name, active status).",
+        "operationId": "PublicApiService_UpdateWebhookEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateWebhookEndpointRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Webhooks"
         ]
       }
     },
@@ -9305,7 +9645,13 @@
       ]
     },
     "v1DisableAuthProxyIntent": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "authProxySecurityTransition": {
+          "$ref": "#/definitions/v1AuthProxySecurityTransition",
+          "description": "0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch."
+        }
+      }
     },
     "v1DisableAuthProxyResult": {
       "type": "object"
@@ -9629,7 +9975,13 @@
       "description": "This proto message is to be used for newer email-related activities (OTP).\nNote that app_name is no longer a parameter here, as it is required in the top-level intent for these activities.\nAll other fields remain optional and will fall back to defaults."
     },
     "v1EnableAuthProxyIntent": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "authProxySecurityTransition": {
+          "$ref": "#/definitions/v1AuthProxySecurityTransition",
+          "description": "0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch."
+        }
+      }
     },
     "v1EnableAuthProxyResult": {
       "type": "object",
@@ -15833,6 +16185,14 @@
         "captchaEnabled": {
           "type": "boolean",
           "description": "Whether captcha verification is required on sign up and OTP init."
+        },
+        "authProxySecurityTransition": {
+          "$ref": "#/definitions/v1AuthProxySecurityTransition",
+          "description": "0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch."
+        },
+        "authProxySecurityTransitionV2": {
+          "$ref": "#/definitions/v1AuthProxySecurityTransitionV2",
+          "description": "0xkey Captcha V2 extension. Default closed; legacy captchaEnabled does not authorize it. Strict validation of signed bytes and raw/typed comparison are required."
         }
       }
     },
@@ -17628,6 +17988,820 @@
       },
       "required": [
         "eventType"
+      ]
+    },
+    "v1AuthProxySecurityAudienceGrant": {
+      "type": "object",
+      "properties": {
+        "usage": {
+          "type": "string"
+        },
+        "clientIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "0xkey extension audience draft; business strings require the strict parser."
+    },
+    "v1AuthProxySecurityPolicy": {
+      "type": "object",
+      "properties": {
+        "piiProofRequired": {
+          "type": "boolean"
+        },
+        "allowedAuthMethods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthProxySecurityProvider"
+          }
+        },
+        "registrations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthProxySecurityRegistration"
+          }
+        }
+      },
+      "description": "0xkey extension policy draft; unauthenticated until activation checks pass."
+    },
+    "v1AuthProxySecurityProvider": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "$ref": "#/definitions/v1AuthProxySecurityProviderKey"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "audienceGrants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthProxySecurityAudienceGrant"
+          }
+        }
+      },
+      "description": "0xkey extension provider draft; unauthenticated until activation checks pass."
+    },
+    "v1AuthProxySecurityProviderKey": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "issuer": {
+          "type": "string"
+        }
+      },
+      "description": "0xkey extension provider key; business strings require the strict parser."
+    },
+    "v1AuthProxySecurityRegistration": {
+      "type": "object",
+      "properties": {
+        "registrationId": {
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/definitions/v1AuthProxySecurityProviderKey"
+        },
+        "clientId": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "callbackUri": {
+          "type": "string"
+        },
+        "returnUri": {
+          "type": "string"
+        }
+      },
+      "description": "0xkey extension registration draft; unauthenticated until activation checks pass."
+    },
+    "v1AuthProxySecuritySelector": {
+      "type": "object",
+      "properties": {
+        "configId": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint64",
+          "description": "0xkey extension. Strict wire requires a JSON integer from 1 through 18446744073709551615. Generic protobuf acceptance of strings does not authorize string revision; default protojson output must not replace the original signed request.",
+          "minimum": 1
+        }
+      },
+      "description": "0xkey extension selector; unauthenticated until strict entry and authorization."
+    },
+    "v1AuthProxySecurityTransition": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "piiProofRequired": {
+          "type": "boolean"
+        },
+        "allowedAuthMethods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expected": {
+          "$ref": "#/definitions/v1AuthProxySecuritySelector"
+        },
+        "policy": {
+          "$ref": "#/definitions/v1AuthProxySecurityPolicy"
+        }
+      },
+      "description": "0xkey extension carrying unauthenticated configuration input. Activation\nrequires the strict raw entry to validate the original signed bytes and\ncompare the complete typed intent before dispatch. Protobuf cannot preserve\nrepeated-field presence or prove rejection of duplicates, unknowns or null."
+    },
+    "v1AuthProxySecurityTransitionV2": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "expected": {
+          "$ref": "#/definitions/v1AuthProxySecuritySelector"
+        },
+        "captchaEnabled": {
+          "type": "boolean"
+        },
+        "captchaBinding": {
+          "$ref": "#/definitions/v1CaptchaResourceBindingV1"
+        },
+        "readyWitness": {
+          "$ref": "#/definitions/v1CaptchaReadyWitnessV1"
+        }
+      },
+      "description": "0xkey Captcha V2 input only. This transport does not authorize execution.\nStrict signed-JSON presence and complete raw/typed equivalence are required."
+    },
+    "v1CaptchaReadyWitnessV1": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        }
+      },
+      "description": "Signed Captcha ready witness, verified only against pinned issuer keys.\nBoth fields are canonical unpadded base64url; signature is low-S DER."
+    },
+    "v1CaptchaResourceBindingV1": {
+      "type": "object",
+      "properties": {
+        "environment": {
+          "type": "string"
+        },
+        "cloudflareAccountId": {
+          "type": "string"
+        },
+        "resourceVersion": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "siteKey": {
+          "type": "string"
+        },
+        "allowedHostnames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "secretArn": {
+          "type": "string"
+        }
+      },
+      "description": "Non-secret resource reference; secret_arn names a secret, not its value."
+    },
+    "v1CreateOidcProviderIntent": {
+      "type": "object",
+      "properties": {
+        "providerName": {
+          "type": "string",
+          "description": "Human-readable name to identify this Identity Provider (e.g. \"Zapry IdP\").",
+          "title": "@inject_tag: validate:\"required\""
+        },
+        "issuer": {
+          "type": "string",
+          "description": "OIDC issuer URL — must exactly match the 'iss' claim of tokens from this IdP (e.g. https://auth.customer.com).",
+          "title": "@inject_tag: validate:\"required,url\""
+        },
+        "audiences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowed OAuth2 audiences (client IDs). A token's 'aud' must match one of these — at least one is required (fail-closed: no wildcard trust).",
+          "title": "@inject_tag: validate:\"required,dive,required\""
+        }
+      },
+      "description": "OIDC Federation — org-level trusted Identity Provider registry.\n\nDistinct from `CreateOauthProvidersIntent` (which binds a specific user's\nidentity, `iss`+`sub`): this registers *trust* in an issuer/audience pair\nfor the whole (parent) organization, enforced by the Signer during\nOAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform\nthis — enforced by the Policy Engine, not here.",
+      "required": [
+        "providerName",
+        "issuer",
+        "audiences"
+      ]
+    },
+    "v1CreateOidcProviderRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1CreateOidcProviderIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1CreateWebhookEndpointRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1CreateWebhookEndpointIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1DeleteOidcProviderIntent": {
+      "type": "object",
+      "properties": {
+        "providerIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Unique identifiers of the OIDC providers to remove.",
+          "title": "@inject_tag: validate:\"required,dive,required,uuid\""
+        }
+      },
+      "required": [
+        "providerIds"
+      ]
+    },
+    "v1DeleteOidcProviderRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1DeleteOidcProviderIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1DeleteWebhookEndpointRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1DeleteWebhookEndpointIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1GasSponsorshipUsageEntry": {
+      "type": "object",
+      "properties": {
+        "activityId": {
+          "type": "string",
+          "description": "The activity that triggered the sponsored transaction."
+        },
+        "sendTransactionStatusId": {
+          "type": "string",
+          "description": "Status id of the outer paymaster broadcast (poll GetSendTransactionStatus)."
+        },
+        "caip2": {
+          "type": "string",
+          "description": "CAIP-2 network identifier (e.g. 'eip155:11155111')."
+        },
+        "gasFeeAtomic": {
+          "type": "string",
+          "description": "Gas fee in chain-native smallest unit (wei). '0' until confirmed."
+        },
+        "gasFeeNative": {
+          "type": "string",
+          "description": "Human-readable native fee (ETH, 18-decimal). Empty until back-filled on confirmation."
+        },
+        "gasFeeUsd": {
+          "type": "string",
+          "description": "USD equivalent at recording time. Empty when no price oracle."
+        },
+        "eoa": {
+          "type": "string",
+          "description": "End-user EOA whose transaction was sponsored."
+        },
+        "userTo": {
+          "type": "string",
+          "description": "End-user target recipient (sponsored intent `to`)."
+        },
+        "userValue": {
+          "type": "string",
+          "description": "End-user transferred value in wei."
+        },
+        "txHash": {
+          "type": "string",
+          "description": "Outer paymaster transaction hash. Empty if not yet broadcast."
+        },
+        "status": {
+          "type": "string",
+          "description": "Broadcast lifecycle status: pending | broadcast | confirmed | failed | dropped."
+        },
+        "blockNumber": {
+          "type": "string",
+          "format": "int64",
+          "description": "Block number the outer tx was mined in (0 if unconfirmed)."
+        },
+        "recordedAt": {
+          "type": "string",
+          "description": "RFC3339 timestamp when the usage was recorded."
+        }
+      }
+    },
+    "v1GetOidcProvidersRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given organization."
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1GetOidcProvidersResponse": {
+      "type": "object",
+      "properties": {
+        "oidcProviders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OidcProviderConfig"
+          },
+          "description": "A list of registered OIDC Identity Providers trusted by this organization."
+        }
+      },
+      "required": [
+        "oidcProviders"
+      ]
+    },
+    "v1ListGasSponsorshipUsageRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Max rows to return (default 50, capped at 200)."
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Number of rows to skip for pagination (default 0)."
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1ListGasSponsorshipUsageResponse": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GasSponsorshipUsageEntry"
+          },
+          "description": "Usage records, newest first."
+        }
+      }
+    },
+    "v1ListSendTransactionsRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given organization."
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Deprecated: use page_size. Max rows to return (default 50, capped at 200)."
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Deprecated and ignored now that this list uses keyset pagination; use cursor instead."
+        },
+        "filterByCaip2": {
+          "type": "string",
+          "description": "Restrict results to a single CAIP-2 network (e.g. 'eip155:8453'). Omit for all networks."
+        },
+        "includeSubOrganizations": {
+          "type": "boolean",
+          "description": "When true, organization_id is resolved to its root and results span the root org AND every sub-org / embedded wallet beneath it (each row's ownerOrganizationId identifies which one sent it), including gas-sponsored sends attributed back to the requesting tenant. When false (default), results are scoped to organization_id exactly."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Max rows to return (default 50, capped at 200). Supersedes the deprecated limit field."
+        },
+        "cursor": {
+          "type": "string",
+          "description": "Opaque keyset-pagination cursor from a previous response's next_cursor. Omit to fetch the first page."
+        },
+        "filterByStatus": {
+          "type": "string",
+          "description": "Restrict results to a single lifecycle status: 'pending', 'broadcast', 'confirmed', 'failed', or 'dropped'. Omit for all statuses."
+        },
+        "filterByAddress": {
+          "type": "string",
+          "description": "Case-insensitive match against either the from or to address. Omit for no address filter."
+        },
+        "createdAfter": {
+          "type": "string",
+          "description": "RFC3339 timestamp; only include rows created at or after this time. Omit for no lower bound."
+        },
+        "createdBefore": {
+          "type": "string",
+          "description": "RFC3339 timestamp; only include rows created at or before this time. Omit for no upper bound."
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1ListSendTransactionsResponse": {
+      "type": "object",
+      "properties": {
+        "sendTransactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SendTransactionSummary"
+          },
+          "description": "Send-transaction records, newest first."
+        },
+        "nextCursor": {
+          "type": "string",
+          "description": "Opaque cursor to pass as `cursor` to fetch the next page. Empty when this is the last page."
+        }
+      }
+    },
+    "v1ListWebhookEndpointsRequest": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        }
+      },
+      "required": [
+        "organizationId"
+      ]
+    },
+    "v1ListWebhookEndpointsResponse": {
+      "type": "object",
+      "properties": {
+        "webhookEndpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WebhookEndpointData"
+          },
+          "description": "List of webhook endpoints for the organization."
+        }
+      },
+      "required": [
+        "webhookEndpoints"
+      ]
+    },
+    "v1OidcProviderConfig": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "description": "Unique identifier for this OIDC Identity Provider registration."
+        },
+        "providerName": {
+          "type": "string",
+          "description": "Human-readable name to identify this Identity Provider."
+        },
+        "issuer": {
+          "type": "string",
+          "description": "OIDC issuer URL, matched against the 'iss' claim of incoming tokens."
+        },
+        "audiences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowed OAuth2 audiences (client IDs) for tokens from this issuer."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this provider is currently trusted for OAUTH_LOGIN / CreateOauthProviders."
+        },
+        "createdAt": {
+          "$ref": "#/definitions/externaldatav1Timestamp"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/externaldatav1Timestamp"
+        }
+      },
+      "description": "A customer-registered OIDC Identity Provider, trusted at the organization\nlevel (distinct from `OauthProvider`, which binds one specific user's\nidentity). See the OIDC Federation trust registry docs.",
+      "required": [
+        "providerId",
+        "providerName",
+        "issuer",
+        "audiences",
+        "enabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "v1SendTransactionSummary": {
+      "type": "object",
+      "properties": {
+        "sendTransactionStatusId": {
+          "type": "string",
+          "description": "Stable status id (poll via GetSendTransactionStatus)."
+        },
+        "caip2": {
+          "type": "string",
+          "description": "CAIP-2 network identifier, e.g. 'eip155:8453'."
+        },
+        "chainId": {
+          "type": "string",
+          "format": "int64",
+          "description": "EVM numeric chain id (0 for non-EVM networks)."
+        },
+        "fromAddress": {
+          "type": "string",
+          "description": "Sender address."
+        },
+        "toAddress": {
+          "type": "string",
+          "description": "Recipient (or contract) address."
+        },
+        "value": {
+          "type": "string",
+          "description": "Native value transferred, in atomic units (wei/lamports). Empty when not decoded."
+        },
+        "nonce": {
+          "type": "string",
+          "format": "int64",
+          "description": "Transaction nonce (EVM). 0 when not applicable."
+        },
+        "txHash": {
+          "type": "string",
+          "description": "Transaction hash / Solana signature. Empty until broadcast."
+        },
+        "status": {
+          "type": "string",
+          "description": "Broadcast lifecycle status: pending | broadcast | confirmed | failed | dropped."
+        },
+        "blockNumber": {
+          "type": "string",
+          "format": "int64",
+          "description": "Block number (EVM) or slot (Solana) the tx was included in. 0 if unconfirmed."
+        },
+        "error": {
+          "type": "string",
+          "description": "Broadcast/confirmation error, if any."
+        },
+        "sponsored": {
+          "type": "boolean",
+          "description": "True when the platform paymaster broadcast this transaction (Gas Station)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "RFC3339 timestamp the record was created (reservation or broadcast)."
+        },
+        "broadcastAt": {
+          "type": "string",
+          "description": "RFC3339 timestamp the transaction was broadcast. Empty if not yet broadcast."
+        },
+        "confirmedAt": {
+          "type": "string",
+          "description": "RFC3339 timestamp the transaction was confirmed. Empty if not confirmed."
+        },
+        "ownerOrganizationId": {
+          "type": "string",
+          "description": "Tenant that actually initiated the transfer: the requesting org for a gas-sponsored send, otherwise the same org as organization_id. Differs from the queried organization_id only when include_sub_organizations was true."
+        },
+        "ownerOrganizationName": {
+          "type": "string",
+          "description": "Display name of owner_organization_id, when that org still exists. Empty for a dangling/deleted org."
+        },
+        "contractAddress": {
+          "type": "string",
+          "description": "TRC-20/ERC-20 contract this transfer is denominated in. Empty means `value` is the chain's NATIVE unit (wei/lamports/sun); non-empty means `value` is the TOKEN's atomic unit and `to_address` remains the recipient (never the contract)."
+        },
+        "feeAtomic": {
+          "type": "string",
+          "description": "Actual network fee burned, in the chain's native smallest unit (decimal string). Empty while unconfirmed or when the chain family does not expose a per-tx receipt fee."
+        },
+        "energyUsage": {
+          "type": "string",
+          "format": "int64",
+          "description": "Tron Energy consumed (TRC-20/contract calls only). 0 for a native TRX transfer, a non-Tron chain, or an unconfirmed row."
+        },
+        "netUsage": {
+          "type": "string",
+          "format": "int64",
+          "description": "Tron Bandwidth (net) consumed. 0 for a non-Tron chain or an unconfirmed row."
+        }
+      }
+    },
+    "v1UpdateOidcProviderIntent": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "description": "Unique identifier of the OIDC provider to update.",
+          "title": "@inject_tag: validate:\"required,uuid\""
+        },
+        "providerName": {
+          "type": "string",
+          "description": "New human-readable provider name."
+        },
+        "audiences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "New audience allowlist (replaces the existing list wholesale, if provided)."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable/disable this provider without deleting it."
+        }
+      },
+      "required": [
+        "providerId"
+      ]
+    },
+    "v1UpdateOidcProviderRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1UpdateOidcProviderIntent"
+        },
+        "generateAppProofs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
+      ]
+    },
+    "v1UpdateWebhookEndpointRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT"
+          ]
+        },
+        "timestampMs": {
+          "type": "string",
+          "description": "Timestamp (in milliseconds) of the request, used to verify liveness of user requests."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Unique identifier for a given Organization."
+        },
+        "parameters": {
+          "$ref": "#/definitions/v1UpdateWebhookEndpointIntent"
+        }
+      },
+      "required": [
+        "type",
+        "timestampMs",
+        "organizationId",
+        "parameters"
       ]
     },
     "v1EthFailureDetails": {

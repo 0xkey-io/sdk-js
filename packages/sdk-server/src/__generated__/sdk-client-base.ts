@@ -623,6 +623,38 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  getOidcProviders = async (
+    input: SdkApiTypes.TGetOidcProvidersBody,
+  ): Promise<SdkApiTypes.TGetOidcProvidersResponse> => {
+    return this.request("/public/v1/query/get_oidc_providers", {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    });
+  };
+
+  stampGetOidcProviders = async (
+    input: SdkApiTypes.TGetOidcProvidersBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/get_oidc_providers";
+    const body = {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   getOnRampTransactionStatus = async (
     input: SdkApiTypes.TGetOnRampTransactionStatusBody,
   ): Promise<SdkApiTypes.TGetOnRampTransactionStatusResponse> => {
@@ -1097,6 +1129,38 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  listGasSponsorshipUsage = async (
+    input: SdkApiTypes.TListGasSponsorshipUsageBody,
+  ): Promise<SdkApiTypes.TListGasSponsorshipUsageResponse> => {
+    return this.request("/public/v1/query/list_gas_sponsorship_usage", {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    });
+  };
+
+  stampListGasSponsorshipUsage = async (
+    input: SdkApiTypes.TListGasSponsorshipUsageBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/list_gas_sponsorship_usage";
+    const body = {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   listOauth2Credentials = async (
     input: SdkApiTypes.TListOauth2CredentialsBody,
   ): Promise<SdkApiTypes.TListOauth2CredentialsResponse> => {
@@ -1210,6 +1274,38 @@ export class ZeroXKeySDKClientBase {
 
     const fullUrl =
       this.config.apiBaseUrl + "/public/v1/query/list_private_keys";
+    const body = {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  listSendTransactions = async (
+    input: SdkApiTypes.TListSendTransactionsBody,
+  ): Promise<SdkApiTypes.TListSendTransactionsResponse> => {
+    return this.request("/public/v1/query/list_send_transactions", {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    });
+  };
+
+  stampListSendTransactions = async (
+    input: SdkApiTypes.TListSendTransactionsBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/list_send_transactions";
     const body = {
       ...input,
       organizationId: input.organizationId ?? this.config.organizationId,
@@ -1431,6 +1527,38 @@ export class ZeroXKeySDKClientBase {
     }
 
     const fullUrl = this.config.apiBaseUrl + "/public/v1/query/list_wallets";
+    const body = {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  listWebhookEndpoints = async (
+    input: SdkApiTypes.TListWebhookEndpointsBody,
+  ): Promise<SdkApiTypes.TListWebhookEndpointsResponse> => {
+    return this.request("/public/v1/query/list_webhook_endpoints", {
+      ...input,
+      organizationId: input.organizationId ?? this.config.organizationId,
+    });
+  };
+
+  stampListWebhookEndpoints = async (
+    input: SdkApiTypes.TListWebhookEndpointsBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/list_webhook_endpoints";
     const body = {
       ...input,
       organizationId: input.organizationId ?? this.config.organizationId,
@@ -1798,6 +1926,48 @@ export class ZeroXKeySDKClientBase {
       organizationId: organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_CREATE_OAUTH_PROVIDERS",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  createOidcProvider = async (
+    input: SdkApiTypes.TCreateOidcProviderBody,
+  ): Promise<SdkApiTypes.TCreateOidcProviderResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    return this.command(
+      "/public/v1/submit/create_oidc_provider",
+      {
+        parameters: rest,
+        organizationId: organizationId ?? this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER",
+      },
+      "createOidcProviderResult",
+    );
+  };
+
+  stampCreateOidcProvider = async (
+    input: SdkApiTypes.TCreateOidcProviderBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/create_oidc_provider";
+    const bodyWithType = {
+      parameters,
+      organizationId: organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -2353,6 +2523,48 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  createWebhookEndpoint = async (
+    input: SdkApiTypes.TCreateWebhookEndpointBody,
+  ): Promise<SdkApiTypes.TCreateWebhookEndpointResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    return this.command(
+      "/public/v1/submit/create_webhook_endpoint",
+      {
+        parameters: rest,
+        organizationId: organizationId ?? this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT",
+      },
+      "createWebhookEndpointResult",
+    );
+  };
+
+  stampCreateWebhookEndpoint = async (
+    input: SdkApiTypes.TCreateWebhookEndpointBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/create_webhook_endpoint";
+    const bodyWithType = {
+      parameters,
+      organizationId: organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   deleteApiKeys = async (
     input: SdkApiTypes.TDeleteApiKeysBody,
   ): Promise<SdkApiTypes.TDeleteApiKeysResponse> => {
@@ -2637,6 +2849,48 @@ export class ZeroXKeySDKClientBase {
       organizationId: organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  deleteOidcProvider = async (
+    input: SdkApiTypes.TDeleteOidcProviderBody,
+  ): Promise<SdkApiTypes.TDeleteOidcProviderResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    return this.command(
+      "/public/v1/submit/delete_oidc_provider",
+      {
+        parameters: rest,
+        organizationId: organizationId ?? this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER",
+      },
+      "deleteOidcProviderResult",
+    );
+  };
+
+  stampDeleteOidcProvider = async (
+    input: SdkApiTypes.TDeleteOidcProviderBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/delete_oidc_provider";
+    const bodyWithType = {
+      parameters,
+      organizationId: organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -3055,6 +3309,48 @@ export class ZeroXKeySDKClientBase {
       organizationId: organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_DELETE_WALLETS",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  deleteWebhookEndpoint = async (
+    input: SdkApiTypes.TDeleteWebhookEndpointBody,
+  ): Promise<SdkApiTypes.TDeleteWebhookEndpointResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    return this.command(
+      "/public/v1/submit/delete_webhook_endpoint",
+      {
+        parameters: rest,
+        organizationId: organizationId ?? this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT",
+      },
+      "deleteWebhookEndpointResult",
+    );
+  };
+
+  stampDeleteWebhookEndpoint = async (
+    input: SdkApiTypes.TDeleteWebhookEndpointBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/delete_webhook_endpoint";
+    const bodyWithType = {
+      parameters,
+      organizationId: organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -4354,6 +4650,48 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  updateOidcProvider = async (
+    input: SdkApiTypes.TUpdateOidcProviderBody,
+  ): Promise<SdkApiTypes.TUpdateOidcProviderResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    return this.command(
+      "/public/v1/submit/update_oidc_provider",
+      {
+        parameters: rest,
+        organizationId: organizationId ?? this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER",
+      },
+      "updateOidcProviderResult",
+    );
+  };
+
+  stampUpdateOidcProvider = async (
+    input: SdkApiTypes.TUpdateOidcProviderBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/update_oidc_provider";
+    const bodyWithType = {
+      parameters,
+      organizationId: organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   updateOrganizationName = async (
     input: SdkApiTypes.TUpdateOrganizationNameBody,
   ): Promise<SdkApiTypes.TUpdateOrganizationNameResponse> => {
@@ -4760,6 +5098,48 @@ export class ZeroXKeySDKClientBase {
       organizationId: organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_UPDATE_WALLET",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await this.stamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  updateWebhookEndpoint = async (
+    input: SdkApiTypes.TUpdateWebhookEndpointBody,
+  ): Promise<SdkApiTypes.TUpdateWebhookEndpointResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    return this.command(
+      "/public/v1/submit/update_webhook_endpoint",
+      {
+        parameters: rest,
+        organizationId: organizationId ?? this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT",
+      },
+      "updateWebhookEndpointResult",
+    );
+  };
+
+  stampUpdateWebhookEndpoint = async (
+    input: SdkApiTypes.TUpdateWebhookEndpointBody,
+  ): Promise<TSignedRequest | undefined> => {
+    if (!this.stamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/update_webhook_endpoint";
+    const bodyWithType = {
+      parameters,
+      organizationId: organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);

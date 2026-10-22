@@ -64,6 +64,10 @@ import type {
   TGetOauthProvidersResponse,
 } from "./public_api.fetcher";
 import type {
+  TGetOidcProvidersBody,
+  TGetOidcProvidersResponse,
+} from "./public_api.fetcher";
+import type {
   TGetOnRampTransactionStatusBody,
   TGetOnRampTransactionStatusResponse,
 } from "./public_api.fetcher";
@@ -115,6 +119,10 @@ import type {
   TListFiatOnRampCredentialsResponse,
 } from "./public_api.fetcher";
 import type {
+  TListGasSponsorshipUsageBody,
+  TListGasSponsorshipUsageResponse,
+} from "./public_api.fetcher";
+import type {
   TListOauth2CredentialsBody,
   TListOauth2CredentialsResponse,
 } from "./public_api.fetcher";
@@ -129,6 +137,10 @@ import type {
 import type {
   TGetPrivateKeysBody,
   TGetPrivateKeysResponse,
+} from "./public_api.fetcher";
+import type {
+  TListSendTransactionsBody,
+  TListSendTransactionsResponse,
 } from "./public_api.fetcher";
 import type {
   TGetSmartContractInterfacesBody,
@@ -154,6 +166,10 @@ import type {
 import type {
   TGetWalletsBody,
   TGetWalletsResponse,
+} from "./public_api.fetcher";
+import type {
+  TListWebhookEndpointsBody,
+  TListWebhookEndpointsResponse,
 } from "./public_api.fetcher";
 import type { TGetWhoamiBody, TGetWhoamiResponse } from "./public_api.fetcher";
 import type {
@@ -187,6 +203,10 @@ import type {
 import type {
   TCreateOauthProvidersBody,
   TCreateOauthProvidersResponse,
+} from "./public_api.fetcher";
+import type {
+  TCreateOidcProviderBody,
+  TCreateOidcProviderResponse,
 } from "./public_api.fetcher";
 import type {
   TCreatePoliciesBody,
@@ -241,6 +261,10 @@ import type {
   TCreateWalletAccountsResponse,
 } from "./public_api.fetcher";
 import type {
+  TCreateWebhookEndpointBody,
+  TCreateWebhookEndpointResponse,
+} from "./public_api.fetcher";
+import type {
   TDeleteApiKeysBody,
   TDeleteApiKeysResponse,
 } from "./public_api.fetcher";
@@ -267,6 +291,10 @@ import type {
 import type {
   TDeleteOauthProvidersBody,
   TDeleteOauthProvidersResponse,
+} from "./public_api.fetcher";
+import type {
+  TDeleteOidcProviderBody,
+  TDeleteOidcProviderResponse,
 } from "./public_api.fetcher";
 import type {
   TDeletePoliciesBody,
@@ -307,6 +335,10 @@ import type {
 import type {
   TDeleteWalletsBody,
   TDeleteWalletsResponse,
+} from "./public_api.fetcher";
+import type {
+  TDeleteWebhookEndpointBody,
+  TDeleteWebhookEndpointResponse,
 } from "./public_api.fetcher";
 import type { TEmailAuthBody, TEmailAuthResponse } from "./public_api.fetcher";
 import type {
@@ -418,6 +450,10 @@ import type {
   TUpdateOauth2CredentialResponse,
 } from "./public_api.fetcher";
 import type {
+  TUpdateOidcProviderBody,
+  TUpdateOidcProviderResponse,
+} from "./public_api.fetcher";
+import type {
   TUpdateOrganizationNameBody,
   TUpdateOrganizationNameResponse,
 } from "./public_api.fetcher";
@@ -456,6 +492,10 @@ import type {
 import type {
   TUpdateWalletBody,
   TUpdateWalletResponse,
+} from "./public_api.fetcher";
+import type {
+  TUpdateWebhookEndpointBody,
+  TUpdateWebhookEndpointResponse,
 } from "./public_api.fetcher";
 import type { TVerifyOtpBody, TVerifyOtpResponse } from "./public_api.fetcher";
 
@@ -963,6 +1003,37 @@ export class ZeroXKeyClient {
   };
 
   /**
+   * List the OIDC Identity Providers registered as trusted for this organization.
+   *
+   * Sign the provided `TGetOidcProvidersBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_oidc_providers).
+   *
+   * See also {@link stampGetOidcProviders}.
+   */
+  getOidcProviders = async (
+    input: TGetOidcProvidersBody,
+  ): Promise<TGetOidcProvidersResponse> => {
+    return this.request("/public/v1/query/get_oidc_providers", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TGetOidcProvidersBody` by using the client's `stamp` function.
+   *
+   * See also {@link GetOidcProviders}.
+   */
+  stampGetOidcProviders = async (
+    input: TGetOidcProvidersBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl = this.config.baseUrl + "/public/v1/query/get_oidc_providers";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
    * Get the status of an on ramp transaction.
    *
    * Sign the provided `TGetOnRampTransactionStatusBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_onramp_transaction_status).
@@ -1430,6 +1501,38 @@ export class ZeroXKeyClient {
   };
 
   /**
+   * List the most recent gas sponsorship usage entries for an organization (newest first), joined with each sponsored transaction's broadcast lifecycle (tx hash, status, block, actual native fee). Powers the Gas Station sponsorship records table.
+   *
+   * Sign the provided `TListGasSponsorshipUsageBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/list_gas_sponsorship_usage).
+   *
+   * See also {@link stampListGasSponsorshipUsage}.
+   */
+  listGasSponsorshipUsage = async (
+    input: TListGasSponsorshipUsageBody,
+  ): Promise<TListGasSponsorshipUsageResponse> => {
+    return this.request("/public/v1/query/list_gas_sponsorship_usage", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TListGasSponsorshipUsageBody` by using the client's `stamp` function.
+   *
+   * See also {@link ListGasSponsorshipUsage}.
+   */
+  stampListGasSponsorshipUsage = async (
+    input: TListGasSponsorshipUsageBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/query/list_gas_sponsorship_usage";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
    * List all OAuth 2.0 credentials within an organization.
    *
    * Sign the provided `TListOauth2CredentialsBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/list_oauth2_credentials).
@@ -1546,6 +1649,38 @@ export class ZeroXKeyClient {
     input: TGetPrivateKeysBody,
   ): Promise<TSignedRequest> => {
     const fullUrl = this.config.baseUrl + "/public/v1/query/list_private_keys";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * List the most recent send-transaction records for an organization (newest first), optionally filtered to a single CAIP-2 network. Powers the Dashboard Company Wallets transaction history page.
+   *
+   * Sign the provided `TListSendTransactionsBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/list_send_transactions).
+   *
+   * See also {@link stampListSendTransactions}.
+   */
+  listSendTransactions = async (
+    input: TListSendTransactionsBody,
+  ): Promise<TListSendTransactionsResponse> => {
+    return this.request("/public/v1/query/list_send_transactions", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TListSendTransactionsBody` by using the client's `stamp` function.
+   *
+   * See also {@link ListSendTransactions}.
+   */
+  stampListSendTransactions = async (
+    input: TListSendTransactionsBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/query/list_send_transactions";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -1761,6 +1896,38 @@ export class ZeroXKeyClient {
    */
   stampGetWallets = async (input: TGetWalletsBody): Promise<TSignedRequest> => {
     const fullUrl = this.config.baseUrl + "/public/v1/query/list_wallets";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * List all webhook endpoints for the organization.
+   *
+   * Sign the provided `TListWebhookEndpointsBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/list_webhook_endpoints).
+   *
+   * See also {@link stampListWebhookEndpoints}.
+   */
+  listWebhookEndpoints = async (
+    input: TListWebhookEndpointsBody,
+  ): Promise<TListWebhookEndpointsResponse> => {
+    return this.request("/public/v1/query/list_webhook_endpoints", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TListWebhookEndpointsBody` by using the client's `stamp` function.
+   *
+   * See also {@link ListWebhookEndpoints}.
+   */
+  stampListWebhookEndpoints = async (
+    input: TListWebhookEndpointsBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/query/list_webhook_endpoints";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -2044,6 +2211,38 @@ export class ZeroXKeyClient {
   ): Promise<TSignedRequest> => {
     const fullUrl =
       this.config.baseUrl + "/public/v1/submit/create_oauth_providers";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Register a customer OIDC Identity Provider as trusted for this (parent) organization's OAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform this.
+   *
+   * Sign the provided `TCreateOidcProviderBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/create_oidc_provider).
+   *
+   * See also {@link stampCreateOidcProvider}.
+   */
+  createOidcProvider = async (
+    input: TCreateOidcProviderBody,
+  ): Promise<TCreateOidcProviderResponse> => {
+    return this.request("/public/v1/submit/create_oidc_provider", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TCreateOidcProviderBody` by using the client's `stamp` function.
+   *
+   * See also {@link CreateOidcProvider}.
+   */
+  stampCreateOidcProvider = async (
+    input: TCreateOidcProviderBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/submit/create_oidc_provider";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -2468,6 +2667,38 @@ export class ZeroXKeyClient {
   };
 
   /**
+   * Create a new webhook endpoint for the organization.
+   *
+   * Sign the provided `TCreateWebhookEndpointBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/create_webhook_endpoint).
+   *
+   * See also {@link stampCreateWebhookEndpoint}.
+   */
+  createWebhookEndpoint = async (
+    input: TCreateWebhookEndpointBody,
+  ): Promise<TCreateWebhookEndpointResponse> => {
+    return this.request("/public/v1/submit/create_webhook_endpoint", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TCreateWebhookEndpointBody` by using the client's `stamp` function.
+   *
+   * See also {@link CreateWebhookEndpoint}.
+   */
+  stampCreateWebhookEndpoint = async (
+    input: TCreateWebhookEndpointBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/submit/create_webhook_endpoint";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
    * Remove api keys from a user.
    *
    * Sign the provided `TDeleteApiKeysBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/delete_api_keys).
@@ -2682,6 +2913,38 @@ export class ZeroXKeyClient {
   ): Promise<TSignedRequest> => {
     const fullUrl =
       this.config.baseUrl + "/public/v1/submit/delete_oauth_providers";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Remove one or more registered OIDC Identity Providers.
+   *
+   * Sign the provided `TDeleteOidcProviderBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/delete_oidc_provider).
+   *
+   * See also {@link stampDeleteOidcProvider}.
+   */
+  deleteOidcProvider = async (
+    input: TDeleteOidcProviderBody,
+  ): Promise<TDeleteOidcProviderResponse> => {
+    return this.request("/public/v1/submit/delete_oidc_provider", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TDeleteOidcProviderBody` by using the client's `stamp` function.
+   *
+   * See also {@link DeleteOidcProvider}.
+   */
+  stampDeleteOidcProvider = async (
+    input: TDeleteOidcProviderBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/submit/delete_oidc_provider";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -3000,6 +3263,38 @@ export class ZeroXKeyClient {
     input: TDeleteWalletsBody,
   ): Promise<TSignedRequest> => {
     const fullUrl = this.config.baseUrl + "/public/v1/submit/delete_wallets";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Delete a webhook endpoint.
+   *
+   * Sign the provided `TDeleteWebhookEndpointBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/delete_webhook_endpoint).
+   *
+   * See also {@link stampDeleteWebhookEndpoint}.
+   */
+  deleteWebhookEndpoint = async (
+    input: TDeleteWebhookEndpointBody,
+  ): Promise<TDeleteWebhookEndpointResponse> => {
+    return this.request("/public/v1/submit/delete_webhook_endpoint", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TDeleteWebhookEndpointBody` by using the client's `stamp` function.
+   *
+   * See also {@link DeleteWebhookEndpoint}.
+   */
+  stampDeleteWebhookEndpoint = async (
+    input: TDeleteWebhookEndpointBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/submit/delete_webhook_endpoint";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {
@@ -3960,6 +4255,38 @@ export class ZeroXKeyClient {
   };
 
   /**
+   * Update a registered OIDC Identity Provider's name, audiences, or enabled state.
+   *
+   * Sign the provided `TUpdateOidcProviderBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/update_oidc_provider).
+   *
+   * See also {@link stampUpdateOidcProvider}.
+   */
+  updateOidcProvider = async (
+    input: TUpdateOidcProviderBody,
+  ): Promise<TUpdateOidcProviderResponse> => {
+    return this.request("/public/v1/submit/update_oidc_provider", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TUpdateOidcProviderBody` by using the client's `stamp` function.
+   *
+   * See also {@link UpdateOidcProvider}.
+   */
+  stampUpdateOidcProvider = async (
+    input: TUpdateOidcProviderBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/submit/update_oidc_provider";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
    * Update the name of an organization.
    *
    * Sign the provided `TUpdateOrganizationNameBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/update_organization_name).
@@ -4260,6 +4587,38 @@ export class ZeroXKeyClient {
     input: TUpdateWalletBody,
   ): Promise<TSignedRequest> => {
     const fullUrl = this.config.baseUrl + "/public/v1/submit/update_wallet";
+    const body = JSON.stringify(input);
+    const stamp = await this.stamper.stamp(body);
+    return {
+      body: body,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  /**
+   * Update an existing webhook endpoint (url, name, active status).
+   *
+   * Sign the provided `TUpdateWebhookEndpointBody` with the client's `stamp` function, and submit the request (POST /public/v1/submit/update_webhook_endpoint).
+   *
+   * See also {@link stampUpdateWebhookEndpoint}.
+   */
+  updateWebhookEndpoint = async (
+    input: TUpdateWebhookEndpointBody,
+  ): Promise<TUpdateWebhookEndpointResponse> => {
+    return this.request("/public/v1/submit/update_webhook_endpoint", input);
+  };
+
+  /**
+   * Produce a `SignedRequest` from `TUpdateWebhookEndpointBody` by using the client's `stamp` function.
+   *
+   * See also {@link UpdateWebhookEndpoint}.
+   */
+  stampUpdateWebhookEndpoint = async (
+    input: TUpdateWebhookEndpointBody,
+  ): Promise<TSignedRequest> => {
+    const fullUrl =
+      this.config.baseUrl + "/public/v1/submit/update_webhook_endpoint";
     const body = JSON.stringify(input);
     const stamp = await this.stamper.stamp(body);
     return {

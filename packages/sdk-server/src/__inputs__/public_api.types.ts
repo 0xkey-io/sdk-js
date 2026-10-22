@@ -69,6 +69,10 @@ export interface paths {
     /** Get details about Oauth providers for a user. */
     post: operations["PublicApiService_GetOauthProviders"];
   };
+  "/public/v1/query/get_oidc_providers": {
+    /** List the OIDC Identity Providers registered as trusted for this organization. */
+    post: operations["PublicApiService_GetOidcProviders"];
+  };
   "/public/v1/query/get_onramp_transaction_status": {
     /** Get the status of an on ramp transaction. */
     post: operations["PublicApiService_GetOnRampTransactionStatus"];
@@ -129,6 +133,10 @@ export interface paths {
     /** List all fiat on ramp provider credentials within an organization. */
     post: operations["PublicApiService_ListFiatOnRampCredentials"];
   };
+  "/public/v1/query/list_gas_sponsorship_usage": {
+    /** List the most recent gas sponsorship usage entries for an organization (newest first), joined with each sponsored transaction's broadcast lifecycle (tx hash, status, block, actual native fee). Powers the Gas Station sponsorship records table. */
+    post: operations["PublicApiService_ListGasSponsorshipUsage"];
+  };
   "/public/v1/query/list_oauth2_credentials": {
     /** List all OAuth 2.0 credentials within an organization. */
     post: operations["PublicApiService_ListOauth2Credentials"];
@@ -144,6 +152,10 @@ export interface paths {
   "/public/v1/query/list_private_keys": {
     /** List all private keys within an organization. */
     post: operations["PublicApiService_GetPrivateKeys"];
+  };
+  "/public/v1/query/list_send_transactions": {
+    /** List the most recent send-transaction records for an organization (newest first), optionally filtered to a single CAIP-2 network. Powers the Dashboard Company Wallets transaction history page. */
+    post: operations["PublicApiService_ListSendTransactions"];
   };
   "/public/v1/query/list_smart_contract_interfaces": {
     /** List all smart contract interfaces within an organization. */
@@ -172,6 +184,10 @@ export interface paths {
   "/public/v1/query/list_wallets": {
     /** List all wallets within an organization. */
     post: operations["PublicApiService_GetWallets"];
+  };
+  "/public/v1/query/list_webhook_endpoints": {
+    /** List all webhook endpoints for the organization. */
+    post: operations["PublicApiService_ListWebhookEndpoints"];
   };
   "/public/v1/query/whoami": {
     /** Get basic information about your current API or WebAuthN user and their organization. Affords sub-organization look ups via parent organization for WebAuthN or API key users. */
@@ -208,6 +224,10 @@ export interface paths {
   "/public/v1/submit/create_oauth_providers": {
     /** Create Oauth providers for a specified user. */
     post: operations["PublicApiService_CreateOauthProviders"];
+  };
+  "/public/v1/submit/create_oidc_provider": {
+    /** Register a customer OIDC Identity Provider as trusted for this (parent) organization's OAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform this. */
+    post: operations["PublicApiService_CreateOidcProvider"];
   };
   "/public/v1/submit/create_policies": {
     /** Create new policies. */
@@ -261,6 +281,10 @@ export interface paths {
     /** Derive additional addresses using an existing wallet. */
     post: operations["PublicApiService_CreateWalletAccounts"];
   };
+  "/public/v1/submit/create_webhook_endpoint": {
+    /** Create a new webhook endpoint for the organization. */
+    post: operations["PublicApiService_CreateWebhookEndpoint"];
+  };
   "/public/v1/submit/delete_api_keys": {
     /** Remove api keys from a user. */
     post: operations["PublicApiService_DeleteApiKeys"];
@@ -288,6 +312,10 @@ export interface paths {
   "/public/v1/submit/delete_oauth_providers": {
     /** Remove Oauth providers for a specified user. */
     post: operations["PublicApiService_DeleteOauthProviders"];
+  };
+  "/public/v1/submit/delete_oidc_provider": {
+    /** Remove one or more registered OIDC Identity Providers. */
+    post: operations["PublicApiService_DeleteOidcProvider"];
   };
   "/public/v1/submit/delete_policies": {
     /** Delete existing policies. */
@@ -328,6 +356,10 @@ export interface paths {
   "/public/v1/submit/delete_wallets": {
     /** Delete wallets for an organization. */
     post: operations["PublicApiService_DeleteWallets"];
+  };
+  "/public/v1/submit/delete_webhook_endpoint": {
+    /** Delete a webhook endpoint. */
+    post: operations["PublicApiService_DeleteWebhookEndpoint"];
   };
   "/public/v1/submit/email_auth": {
     /** Authenticate a user via email. */
@@ -453,6 +485,10 @@ export interface paths {
     /** Update an OAuth 2.0 provider credential */
     post: operations["PublicApiService_UpdateOauth2Credential"];
   };
+  "/public/v1/submit/update_oidc_provider": {
+    /** Update a registered OIDC Identity Provider's name, audiences, or enabled state. */
+    post: operations["PublicApiService_UpdateOidcProvider"];
+  };
   "/public/v1/submit/update_organization_name": {
     /** Update the name of an organization. */
     post: operations["PublicApiService_UpdateOrganizationName"];
@@ -492,6 +528,10 @@ export interface paths {
   "/public/v1/submit/update_wallet": {
     /** Update a wallet for an organization. */
     post: operations["PublicApiService_UpdateWallet"];
+  };
+  "/public/v1/submit/update_webhook_endpoint": {
+    /** Update an existing webhook endpoint (url, name, active status). */
+    post: operations["PublicApiService_UpdateWebhookEndpoint"];
   };
   "/public/v1/submit/verify_otp": {
     /** Verify a generic OTP (legacy, plaintext otpCode). */
@@ -2936,7 +2976,10 @@ export interface definitions {
     /** @description Unique identifier for the deleted Webhook Endpoint. */
     endpointId: string;
   };
-  v1DisableAuthProxyIntent: { [key: string]: unknown };
+  v1DisableAuthProxyIntent: {
+    /** @description 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+    authProxySecurityTransition?: definitions["v1AuthProxySecurityTransition"];
+  };
   v1DisableAuthProxyResult: { [key: string]: unknown };
   v1DisablePrivateKeyIntent: {
     /**
@@ -3134,7 +3177,10 @@ export interface definitions {
     /** @description Unique identifier for a given Email Template. If not specified, the default is the most recent Email Template. */
     templateId?: string;
   };
-  v1EnableAuthProxyIntent: { [key: string]: unknown };
+  v1EnableAuthProxyIntent: {
+    /** @description 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+    authProxySecurityTransition?: definitions["v1AuthProxySecurityTransition"];
+  };
   v1EnableAuthProxyResult: {
     /** @description A User ID with permission to initiate authentication. */
     userId: string;
@@ -6022,6 +6068,10 @@ export interface definitions {
     socialLinkingClientIds?: string[];
     /** @description Whether captcha verification is required on sign up and OTP init. */
     captchaEnabled?: boolean;
+    /** @description 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+    authProxySecurityTransition?: definitions["v1AuthProxySecurityTransition"];
+    /** @description 0xkey Captcha V2 extension. Default closed; legacy captchaEnabled does not authorize it. Strict validation of signed bytes and raw/typed comparison are required. */
+    authProxySecurityTransitionV2?: definitions["v1AuthProxySecurityTransitionV2"];
   };
   v1UpdateAuthProxyConfigResult: {
     /**
@@ -6871,6 +6921,376 @@ export interface definitions {
     /** @description Whether this subscription is active. Defaults to true. */
     isActive?: boolean;
   };
+  /** @description 0xkey extension audience draft; business strings require the strict parser. */
+  v1AuthProxySecurityAudienceGrant: {
+    usage?: string;
+    clientIds?: string[];
+  };
+  /** @description 0xkey extension policy draft; unauthenticated until activation checks pass. */
+  v1AuthProxySecurityPolicy: {
+    piiProofRequired?: boolean;
+    allowedAuthMethods?: string[];
+    providers?: definitions["v1AuthProxySecurityProvider"][];
+    registrations?: definitions["v1AuthProxySecurityRegistration"][];
+  };
+  /** @description 0xkey extension provider draft; unauthenticated until activation checks pass. */
+  v1AuthProxySecurityProvider: {
+    key?: definitions["v1AuthProxySecurityProviderKey"];
+    enabled?: boolean;
+    audienceGrants?: definitions["v1AuthProxySecurityAudienceGrant"][];
+  };
+  /** @description 0xkey extension provider key; business strings require the strict parser. */
+  v1AuthProxySecurityProviderKey: {
+    kind?: string;
+    issuer?: string;
+  };
+  /** @description 0xkey extension registration draft; unauthenticated until activation checks pass. */
+  v1AuthProxySecurityRegistration: {
+    registrationId?: string;
+    provider?: definitions["v1AuthProxySecurityProviderKey"];
+    clientId?: string;
+    platform?: string;
+    enabled?: boolean;
+    callbackUri?: string;
+    returnUri?: string;
+  };
+  /** @description 0xkey extension selector; unauthenticated until strict entry and authorization. */
+  v1AuthProxySecuritySelector: {
+    configId?: string;
+    generation?: string;
+    /**
+     * Format: uint64
+     * @description 0xkey extension. Strict wire requires a JSON integer from 1 through 18446744073709551615. Generic protobuf acceptance of strings does not authorize string revision; default protojson output must not replace the original signed request.
+     */
+    revision?: number;
+  };
+  /**
+   * @description 0xkey extension carrying unauthenticated configuration input. Activation
+   * requires the strict raw entry to validate the original signed bytes and
+   * compare the complete typed intent before dispatch. Protobuf cannot preserve
+   * repeated-field presence or prove rejection of duplicates, unknowns or null.
+   */
+  v1AuthProxySecurityTransition: {
+    kind?: string;
+    piiProofRequired?: boolean;
+    allowedAuthMethods?: string[];
+    expected?: definitions["v1AuthProxySecuritySelector"];
+    policy?: definitions["v1AuthProxySecurityPolicy"];
+  };
+  /**
+   * @description 0xkey Captcha V2 input only. This transport does not authorize execution.
+   * Strict signed-JSON presence and complete raw/typed equivalence are required.
+   */
+  v1AuthProxySecurityTransitionV2: {
+    kind?: string;
+    expected?: definitions["v1AuthProxySecuritySelector"];
+    captchaEnabled?: boolean;
+    captchaBinding?: definitions["v1CaptchaResourceBindingV1"];
+    readyWitness?: definitions["v1CaptchaReadyWitnessV1"];
+  };
+  /**
+   * @description Signed Captcha ready witness, verified only against pinned issuer keys.
+   * Both fields are canonical unpadded base64url; signature is low-S DER.
+   */
+  v1CaptchaReadyWitnessV1: {
+    payload?: string;
+    signature?: string;
+  };
+  /** @description Non-secret resource reference; secret_arn names a secret, not its value. */
+  v1CaptchaResourceBindingV1: {
+    environment?: string;
+    cloudflareAccountId?: string;
+    /** Format: uint64 */
+    resourceVersion?: string;
+    siteKey?: string;
+    allowedHostnames?: string[];
+    secretArn?: string;
+  };
+  /**
+   * @description OIDC Federation — org-level trusted Identity Provider registry.
+   *
+   * Distinct from `CreateOauthProvidersIntent` (which binds a specific user's
+   * identity, `iss`+`sub`): this registers *trust* in an issuer/audience pair
+   * for the whole (parent) organization, enforced by the Signer during
+   * OAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform
+   * this — enforced by the Policy Engine, not here.
+   */
+  v1CreateOidcProviderIntent: {
+    /**
+     * @inject_tag: validate:"required"
+     * @description Human-readable name to identify this Identity Provider (e.g. "Zapry IdP").
+     */
+    providerName: string;
+    /**
+     * @inject_tag: validate:"required,url"
+     * @description OIDC issuer URL — must exactly match the 'iss' claim of tokens from this IdP (e.g. https://auth.customer.com).
+     */
+    issuer: string;
+    /**
+     * @inject_tag: validate:"required,dive,required"
+     * @description Allowed OAuth2 audiences (client IDs). A token's 'aud' must match one of these — at least one is required (fail-closed: no wildcard trust).
+     */
+    audiences: string[];
+  };
+  v1CreateOidcProviderRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1CreateOidcProviderIntent"];
+    generateAppProofs?: boolean;
+  };
+  v1CreateWebhookEndpointRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1CreateWebhookEndpointIntent"];
+  };
+  v1DeleteOidcProviderIntent: {
+    /**
+     * @inject_tag: validate:"required,dive,required,uuid"
+     * @description Unique identifiers of the OIDC providers to remove.
+     */
+    providerIds: string[];
+  };
+  v1DeleteOidcProviderRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1DeleteOidcProviderIntent"];
+    generateAppProofs?: boolean;
+  };
+  v1DeleteWebhookEndpointRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1DeleteWebhookEndpointIntent"];
+  };
+  v1GasSponsorshipUsageEntry: {
+    /** @description The activity that triggered the sponsored transaction. */
+    activityId?: string;
+    /** @description Status id of the outer paymaster broadcast (poll GetSendTransactionStatus). */
+    sendTransactionStatusId?: string;
+    /** @description CAIP-2 network identifier (e.g. 'eip155:11155111'). */
+    caip2?: string;
+    /** @description Gas fee in chain-native smallest unit (wei). '0' until confirmed. */
+    gasFeeAtomic?: string;
+    /** @description Human-readable native fee (ETH, 18-decimal). Empty until back-filled on confirmation. */
+    gasFeeNative?: string;
+    /** @description USD equivalent at recording time. Empty when no price oracle. */
+    gasFeeUsd?: string;
+    /** @description End-user EOA whose transaction was sponsored. */
+    eoa?: string;
+    /** @description End-user target recipient (sponsored intent `to`). */
+    userTo?: string;
+    /** @description End-user transferred value in wei. */
+    userValue?: string;
+    /** @description Outer paymaster transaction hash. Empty if not yet broadcast. */
+    txHash?: string;
+    /** @description Broadcast lifecycle status: pending | broadcast | confirmed | failed | dropped. */
+    status?: string;
+    /**
+     * Format: int64
+     * @description Block number the outer tx was mined in (0 if unconfirmed).
+     */
+    blockNumber?: string;
+    /** @description RFC3339 timestamp when the usage was recorded. */
+    recordedAt?: string;
+  };
+  v1GetOidcProvidersRequest: {
+    /** @description Unique identifier for a given organization. */
+    organizationId: string;
+  };
+  v1GetOidcProvidersResponse: {
+    /** @description A list of registered OIDC Identity Providers trusted by this organization. */
+    oidcProviders: definitions["v1OidcProviderConfig"][];
+  };
+  v1ListGasSponsorshipUsageRequest: {
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    /**
+     * Format: int64
+     * @description Max rows to return (default 50, capped at 200).
+     */
+    limit?: number;
+    /**
+     * Format: int64
+     * @description Number of rows to skip for pagination (default 0).
+     */
+    offset?: number;
+  };
+  v1ListGasSponsorshipUsageResponse: {
+    /** @description Usage records, newest first. */
+    entries?: definitions["v1GasSponsorshipUsageEntry"][];
+  };
+  v1ListSendTransactionsRequest: {
+    /** @description Unique identifier for a given organization. */
+    organizationId: string;
+    /**
+     * Format: int64
+     * @description Deprecated: use page_size. Max rows to return (default 50, capped at 200).
+     */
+    limit?: number;
+    /**
+     * Format: int64
+     * @description Deprecated and ignored now that this list uses keyset pagination; use cursor instead.
+     */
+    offset?: number;
+    /** @description Restrict results to a single CAIP-2 network (e.g. 'eip155:8453'). Omit for all networks. */
+    filterByCaip2?: string;
+    /** @description When true, organization_id is resolved to its root and results span the root org AND every sub-org / embedded wallet beneath it (each row's ownerOrganizationId identifies which one sent it), including gas-sponsored sends attributed back to the requesting tenant. When false (default), results are scoped to organization_id exactly. */
+    includeSubOrganizations?: boolean;
+    /**
+     * Format: int64
+     * @description Max rows to return (default 50, capped at 200). Supersedes the deprecated limit field.
+     */
+    pageSize?: number;
+    /** @description Opaque keyset-pagination cursor from a previous response's next_cursor. Omit to fetch the first page. */
+    cursor?: string;
+    /** @description Restrict results to a single lifecycle status: 'pending', 'broadcast', 'confirmed', 'failed', or 'dropped'. Omit for all statuses. */
+    filterByStatus?: string;
+    /** @description Case-insensitive match against either the from or to address. Omit for no address filter. */
+    filterByAddress?: string;
+    /** @description RFC3339 timestamp; only include rows created at or after this time. Omit for no lower bound. */
+    createdAfter?: string;
+    /** @description RFC3339 timestamp; only include rows created at or before this time. Omit for no upper bound. */
+    createdBefore?: string;
+  };
+  v1ListSendTransactionsResponse: {
+    /** @description Send-transaction records, newest first. */
+    sendTransactions?: definitions["v1SendTransactionSummary"][];
+    /** @description Opaque cursor to pass as `cursor` to fetch the next page. Empty when this is the last page. */
+    nextCursor?: string;
+  };
+  v1ListWebhookEndpointsRequest: {
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+  };
+  v1ListWebhookEndpointsResponse: {
+    /** @description List of webhook endpoints for the organization. */
+    webhookEndpoints: definitions["v1WebhookEndpointData"][];
+  };
+  /**
+   * @description A customer-registered OIDC Identity Provider, trusted at the organization
+   * level (distinct from `OauthProvider`, which binds one specific user's
+   * identity). See the OIDC Federation trust registry docs.
+   */
+  v1OidcProviderConfig: {
+    /** @description Unique identifier for this OIDC Identity Provider registration. */
+    providerId: string;
+    /** @description Human-readable name to identify this Identity Provider. */
+    providerName: string;
+    /** @description OIDC issuer URL, matched against the 'iss' claim of incoming tokens. */
+    issuer: string;
+    /** @description Allowed OAuth2 audiences (client IDs) for tokens from this issuer. */
+    audiences: string[];
+    /** @description Whether this provider is currently trusted for OAUTH_LOGIN / CreateOauthProviders. */
+    enabled: boolean;
+    createdAt: definitions["externaldatav1Timestamp"];
+    updatedAt: definitions["externaldatav1Timestamp"];
+  };
+  v1SendTransactionSummary: {
+    /** @description Stable status id (poll via GetSendTransactionStatus). */
+    sendTransactionStatusId?: string;
+    /** @description CAIP-2 network identifier, e.g. 'eip155:8453'. */
+    caip2?: string;
+    /**
+     * Format: int64
+     * @description EVM numeric chain id (0 for non-EVM networks).
+     */
+    chainId?: string;
+    /** @description Sender address. */
+    fromAddress?: string;
+    /** @description Recipient (or contract) address. */
+    toAddress?: string;
+    /** @description Native value transferred, in atomic units (wei/lamports). Empty when not decoded. */
+    value?: string;
+    /**
+     * Format: int64
+     * @description Transaction nonce (EVM). 0 when not applicable.
+     */
+    nonce?: string;
+    /** @description Transaction hash / Solana signature. Empty until broadcast. */
+    txHash?: string;
+    /** @description Broadcast lifecycle status: pending | broadcast | confirmed | failed | dropped. */
+    status?: string;
+    /**
+     * Format: int64
+     * @description Block number (EVM) or slot (Solana) the tx was included in. 0 if unconfirmed.
+     */
+    blockNumber?: string;
+    /** @description Broadcast/confirmation error, if any. */
+    error?: string;
+    /** @description True when the platform paymaster broadcast this transaction (Gas Station). */
+    sponsored?: boolean;
+    /** @description RFC3339 timestamp the record was created (reservation or broadcast). */
+    createdAt?: string;
+    /** @description RFC3339 timestamp the transaction was broadcast. Empty if not yet broadcast. */
+    broadcastAt?: string;
+    /** @description RFC3339 timestamp the transaction was confirmed. Empty if not confirmed. */
+    confirmedAt?: string;
+    /** @description Tenant that actually initiated the transfer: the requesting org for a gas-sponsored send, otherwise the same org as organization_id. Differs from the queried organization_id only when include_sub_organizations was true. */
+    ownerOrganizationId?: string;
+    /** @description Display name of owner_organization_id, when that org still exists. Empty for a dangling/deleted org. */
+    ownerOrganizationName?: string;
+    /** @description TRC-20/ERC-20 contract this transfer is denominated in. Empty means `value` is the chain's NATIVE unit (wei/lamports/sun); non-empty means `value` is the TOKEN's atomic unit and `to_address` remains the recipient (never the contract). */
+    contractAddress?: string;
+    /** @description Actual network fee burned, in the chain's native smallest unit (decimal string). Empty while unconfirmed or when the chain family does not expose a per-tx receipt fee. */
+    feeAtomic?: string;
+    /**
+     * Format: int64
+     * @description Tron Energy consumed (TRC-20/contract calls only). 0 for a native TRX transfer, a non-Tron chain, or an unconfirmed row.
+     */
+    energyUsage?: string;
+    /**
+     * Format: int64
+     * @description Tron Bandwidth (net) consumed. 0 for a non-Tron chain or an unconfirmed row.
+     */
+    netUsage?: string;
+  };
+  v1UpdateOidcProviderIntent: {
+    /**
+     * @inject_tag: validate:"required,uuid"
+     * @description Unique identifier of the OIDC provider to update.
+     */
+    providerId: string;
+    /** @description New human-readable provider name. */
+    providerName?: string;
+    /** @description New audience allowlist (replaces the existing list wholesale, if provided). */
+    audiences?: string[];
+    /** @description Enable/disable this provider without deleting it. */
+    enabled?: boolean;
+  };
+  v1UpdateOidcProviderRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1UpdateOidcProviderIntent"];
+    generateAppProofs?: boolean;
+  };
+  v1UpdateWebhookEndpointRequest: {
+    /** @enum {string} */
+    type: "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT";
+    /** @description Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+    timestampMs: string;
+    /** @description Unique identifier for a given Organization. */
+    organizationId: string;
+    parameters: definitions["v1UpdateWebhookEndpointIntent"];
+  };
   v1EthFailureDetails: {
     /** @description Ethereum revert chain, ordered from outermost to innermost. */
     revertChain?: definitions["v1RevertChainEntry"][];
@@ -7235,6 +7655,24 @@ export interface operations {
       };
     };
   };
+  /** List the OIDC Identity Providers registered as trusted for this organization. */
+  PublicApiService_GetOidcProviders: {
+    parameters: {
+      body: {
+        body: definitions["v1GetOidcProvidersRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1GetOidcProvidersResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   /** Get the status of an on ramp transaction. */
   PublicApiService_GetOnRampTransactionStatus: {
     parameters: {
@@ -7505,6 +7943,24 @@ export interface operations {
       };
     };
   };
+  /** List the most recent gas sponsorship usage entries for an organization (newest first), joined with each sponsored transaction's broadcast lifecycle (tx hash, status, block, actual native fee). Powers the Gas Station sponsorship records table. */
+  PublicApiService_ListGasSponsorshipUsage: {
+    parameters: {
+      body: {
+        body: definitions["v1ListGasSponsorshipUsageRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ListGasSponsorshipUsageResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   /** List all OAuth 2.0 credentials within an organization. */
   PublicApiService_ListOauth2Credentials: {
     parameters: {
@@ -7570,6 +8026,24 @@ export interface operations {
       /** A successful response. */
       200: {
         schema: definitions["v1GetPrivateKeysResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** List the most recent send-transaction records for an organization (newest first), optionally filtered to a single CAIP-2 network. Powers the Dashboard Company Wallets transaction history page. */
+  PublicApiService_ListSendTransactions: {
+    parameters: {
+      body: {
+        body: definitions["v1ListSendTransactionsRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ListSendTransactionsResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -7696,6 +8170,24 @@ export interface operations {
       /** A successful response. */
       200: {
         schema: definitions["v1GetWalletsResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** List all webhook endpoints for the organization. */
+  PublicApiService_ListWebhookEndpoints: {
+    parameters: {
+      body: {
+        body: definitions["v1ListWebhookEndpointsRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ListWebhookEndpointsResponse"];
       };
       /** An unexpected error response. */
       default: {
@@ -7852,6 +8344,24 @@ export interface operations {
     parameters: {
       body: {
         body: definitions["v1CreateOauthProvidersRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Register a customer OIDC Identity Provider as trusted for this (parent) organization's OAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform this. */
+  PublicApiService_CreateOidcProvider: {
+    parameters: {
+      body: {
+        body: definitions["v1CreateOidcProviderRequest"];
       };
     };
     responses: {
@@ -8099,6 +8609,24 @@ export interface operations {
       };
     };
   };
+  /** Create a new webhook endpoint for the organization. */
+  PublicApiService_CreateWebhookEndpoint: {
+    parameters: {
+      body: {
+        body: definitions["v1CreateWebhookEndpointRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   /** Remove api keys from a user. */
   PublicApiService_DeleteApiKeys: {
     parameters: {
@@ -8212,6 +8740,24 @@ export interface operations {
     parameters: {
       body: {
         body: definitions["v1DeleteOauthProvidersRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Remove one or more registered OIDC Identity Providers. */
+  PublicApiService_DeleteOidcProvider: {
+    parameters: {
+      body: {
+        body: definitions["v1DeleteOidcProviderRequest"];
       };
     };
     responses: {
@@ -8392,6 +8938,24 @@ export interface operations {
     parameters: {
       body: {
         body: definitions["v1DeleteWalletsRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Delete a webhook endpoint. */
+  PublicApiService_DeleteWebhookEndpoint: {
+    parameters: {
+      body: {
+        body: definitions["v1DeleteWebhookEndpointRequest"];
       };
     };
     responses: {
@@ -8963,6 +9527,24 @@ export interface operations {
       };
     };
   };
+  /** Update a registered OIDC Identity Provider's name, audiences, or enabled state. */
+  PublicApiService_UpdateOidcProvider: {
+    parameters: {
+      body: {
+        body: definitions["v1UpdateOidcProviderRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
   /** Update the name of an organization. */
   PublicApiService_UpdateOrganizationName: {
     parameters: {
@@ -9130,6 +9712,24 @@ export interface operations {
     parameters: {
       body: {
         body: definitions["v1UpdateWalletRequest"];
+      };
+    };
+    responses: {
+      /** A successful response. */
+      200: {
+        schema: definitions["v1ActivityResponse"];
+      };
+      /** An unexpected error response. */
+      default: {
+        schema: definitions["rpcStatus"];
+      };
+    };
+  };
+  /** Update an existing webhook endpoint (url, name, active status). */
+  PublicApiService_UpdateWebhookEndpoint: {
+    parameters: {
+      body: {
+        body: definitions["v1UpdateWebhookEndpointRequest"];
       };
     };
     responses: {
