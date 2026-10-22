@@ -765,6 +765,58 @@ export const signGetOauthProviders = (
   });
 
 /**
+ * `POST /public/v1/query/get_oidc_providers`
+ */
+export type TGetOidcProvidersResponse =
+  operations["PublicApiService_GetOidcProviders"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/get_oidc_providers`
+ */
+export type TGetOidcProvidersInput = { body: TGetOidcProvidersBody };
+
+/**
+ * `POST /public/v1/query/get_oidc_providers`
+ */
+export type TGetOidcProvidersBody =
+  operations["PublicApiService_GetOidcProviders"]["parameters"]["body"]["body"];
+
+/**
+ * Get OIDC providers
+ *
+ * List the OIDC Identity Providers registered as trusted for this organization.
+ *
+ * `POST /public/v1/query/get_oidc_providers`
+ */
+export const getOidcProviders = (input: TGetOidcProvidersInput) =>
+  request<
+    TGetOidcProvidersResponse,
+    TGetOidcProvidersBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/query/get_oidc_providers",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `GetOidcProviders` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link GetOidcProviders}
+ */
+export const signGetOidcProviders = (
+  input: TGetOidcProvidersInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TGetOidcProvidersBody, never, never>({
+    uri: "/public/v1/query/get_oidc_providers",
+    body: input.body,
+    options,
+  });
+
+/**
  * `POST /public/v1/query/get_onramp_transaction_status`
  */
 export type TGetOnRampTransactionStatusResponse =
@@ -1527,6 +1579,60 @@ export const signListFiatOnRampCredentials = (
   });
 
 /**
+ * `POST /public/v1/query/list_gas_sponsorship_usage`
+ */
+export type TListGasSponsorshipUsageResponse =
+  operations["PublicApiService_ListGasSponsorshipUsage"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/list_gas_sponsorship_usage`
+ */
+export type TListGasSponsorshipUsageInput = {
+  body: TListGasSponsorshipUsageBody;
+};
+
+/**
+ * `POST /public/v1/query/list_gas_sponsorship_usage`
+ */
+export type TListGasSponsorshipUsageBody =
+  operations["PublicApiService_ListGasSponsorshipUsage"]["parameters"]["body"]["body"];
+
+/**
+ * List gas sponsorship usage records.
+ *
+ * List the most recent gas sponsorship usage entries for an organization (newest first), joined with each sponsored transaction's broadcast lifecycle (tx hash, status, block, actual native fee). Powers the Gas Station sponsorship records table.
+ *
+ * `POST /public/v1/query/list_gas_sponsorship_usage`
+ */
+export const listGasSponsorshipUsage = (input: TListGasSponsorshipUsageInput) =>
+  request<
+    TListGasSponsorshipUsageResponse,
+    TListGasSponsorshipUsageBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/query/list_gas_sponsorship_usage",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `ListGasSponsorshipUsage` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link ListGasSponsorshipUsage}
+ */
+export const signListGasSponsorshipUsage = (
+  input: TListGasSponsorshipUsageInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TListGasSponsorshipUsageBody, never, never>({
+    uri: "/public/v1/query/list_gas_sponsorship_usage",
+    body: input.body,
+    options,
+  });
+
+/**
  * `POST /public/v1/query/list_oauth2_credentials`
  */
 export type TListOauth2CredentialsResponse =
@@ -1718,6 +1824,58 @@ export const signGetPrivateKeys = (
 ) =>
   signedRequest<TGetPrivateKeysBody, never, never>({
     uri: "/public/v1/query/list_private_keys",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/query/list_send_transactions`
+ */
+export type TListSendTransactionsResponse =
+  operations["PublicApiService_ListSendTransactions"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/list_send_transactions`
+ */
+export type TListSendTransactionsInput = { body: TListSendTransactionsBody };
+
+/**
+ * `POST /public/v1/query/list_send_transactions`
+ */
+export type TListSendTransactionsBody =
+  operations["PublicApiService_ListSendTransactions"]["parameters"]["body"]["body"];
+
+/**
+ * List send transactions.
+ *
+ * List the most recent send-transaction records for an organization (newest first), optionally filtered to a single CAIP-2 network. Powers the Dashboard Company Wallets transaction history page.
+ *
+ * `POST /public/v1/query/list_send_transactions`
+ */
+export const listSendTransactions = (input: TListSendTransactionsInput) =>
+  request<
+    TListSendTransactionsResponse,
+    TListSendTransactionsBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/query/list_send_transactions",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `ListSendTransactions` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link ListSendTransactions}
+ */
+export const signListSendTransactions = (
+  input: TListSendTransactionsInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TListSendTransactionsBody, never, never>({
+    uri: "/public/v1/query/list_send_transactions",
     body: input.body,
     options,
   });
@@ -2062,6 +2220,58 @@ export const signGetWallets = (
 ) =>
   signedRequest<TGetWalletsBody, never, never>({
     uri: "/public/v1/query/list_wallets",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/query/list_webhook_endpoints`
+ */
+export type TListWebhookEndpointsResponse =
+  operations["PublicApiService_ListWebhookEndpoints"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/query/list_webhook_endpoints`
+ */
+export type TListWebhookEndpointsInput = { body: TListWebhookEndpointsBody };
+
+/**
+ * `POST /public/v1/query/list_webhook_endpoints`
+ */
+export type TListWebhookEndpointsBody =
+  operations["PublicApiService_ListWebhookEndpoints"]["parameters"]["body"]["body"];
+
+/**
+ * List Webhook Endpoints
+ *
+ * List all webhook endpoints for the organization.
+ *
+ * `POST /public/v1/query/list_webhook_endpoints`
+ */
+export const listWebhookEndpoints = (input: TListWebhookEndpointsInput) =>
+  request<
+    TListWebhookEndpointsResponse,
+    TListWebhookEndpointsBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/query/list_webhook_endpoints",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `ListWebhookEndpoints` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link ListWebhookEndpoints}
+ */
+export const signListWebhookEndpoints = (
+  input: TListWebhookEndpointsInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TListWebhookEndpointsBody, never, never>({
+    uri: "/public/v1/query/list_webhook_endpoints",
     body: input.body,
     options,
   });
@@ -2512,6 +2722,58 @@ export const signCreateOauthProviders = (
 ) =>
   signedRequest<TCreateOauthProvidersBody, never, never>({
     uri: "/public/v1/submit/create_oauth_providers",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/submit/create_oidc_provider`
+ */
+export type TCreateOidcProviderResponse =
+  operations["PublicApiService_CreateOidcProvider"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/create_oidc_provider`
+ */
+export type TCreateOidcProviderInput = { body: TCreateOidcProviderBody };
+
+/**
+ * `POST /public/v1/submit/create_oidc_provider`
+ */
+export type TCreateOidcProviderBody =
+  operations["PublicApiService_CreateOidcProvider"]["parameters"]["body"]["body"];
+
+/**
+ * Create OIDC provider
+ *
+ * Register a customer OIDC Identity Provider as trusted for this (parent) organization's OAUTH_LOGIN / CreateOauthProviders. Only root-quorum admins may perform this.
+ *
+ * `POST /public/v1/submit/create_oidc_provider`
+ */
+export const createOidcProvider = (input: TCreateOidcProviderInput) =>
+  request<
+    TCreateOidcProviderResponse,
+    TCreateOidcProviderBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/submit/create_oidc_provider",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `CreateOidcProvider` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link CreateOidcProvider}
+ */
+export const signCreateOidcProvider = (
+  input: TCreateOidcProviderInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TCreateOidcProviderBody, never, never>({
+    uri: "/public/v1/submit/create_oidc_provider",
     body: input.body,
     options,
   });
@@ -3169,6 +3431,58 @@ export const signCreateWalletAccounts = (
   });
 
 /**
+ * `POST /public/v1/submit/create_webhook_endpoint`
+ */
+export type TCreateWebhookEndpointResponse =
+  operations["PublicApiService_CreateWebhookEndpoint"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/create_webhook_endpoint`
+ */
+export type TCreateWebhookEndpointInput = { body: TCreateWebhookEndpointBody };
+
+/**
+ * `POST /public/v1/submit/create_webhook_endpoint`
+ */
+export type TCreateWebhookEndpointBody =
+  operations["PublicApiService_CreateWebhookEndpoint"]["parameters"]["body"]["body"];
+
+/**
+ * Create Webhook Endpoint
+ *
+ * Create a new webhook endpoint for the organization.
+ *
+ * `POST /public/v1/submit/create_webhook_endpoint`
+ */
+export const createWebhookEndpoint = (input: TCreateWebhookEndpointInput) =>
+  request<
+    TCreateWebhookEndpointResponse,
+    TCreateWebhookEndpointBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/submit/create_webhook_endpoint",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `CreateWebhookEndpoint` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link CreateWebhookEndpoint}
+ */
+export const signCreateWebhookEndpoint = (
+  input: TCreateWebhookEndpointInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TCreateWebhookEndpointBody, never, never>({
+    uri: "/public/v1/submit/create_webhook_endpoint",
+    body: input.body,
+    options,
+  });
+
+/**
  * `POST /public/v1/submit/delete_api_keys`
  */
 export type TDeleteApiKeysResponse =
@@ -3522,6 +3836,58 @@ export const signDeleteOauthProviders = (
 ) =>
   signedRequest<TDeleteOauthProvidersBody, never, never>({
     uri: "/public/v1/submit/delete_oauth_providers",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/submit/delete_oidc_provider`
+ */
+export type TDeleteOidcProviderResponse =
+  operations["PublicApiService_DeleteOidcProvider"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/delete_oidc_provider`
+ */
+export type TDeleteOidcProviderInput = { body: TDeleteOidcProviderBody };
+
+/**
+ * `POST /public/v1/submit/delete_oidc_provider`
+ */
+export type TDeleteOidcProviderBody =
+  operations["PublicApiService_DeleteOidcProvider"]["parameters"]["body"]["body"];
+
+/**
+ * Delete OIDC provider
+ *
+ * Remove one or more registered OIDC Identity Providers.
+ *
+ * `POST /public/v1/submit/delete_oidc_provider`
+ */
+export const deleteOidcProvider = (input: TDeleteOidcProviderInput) =>
+  request<
+    TDeleteOidcProviderResponse,
+    TDeleteOidcProviderBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/submit/delete_oidc_provider",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `DeleteOidcProvider` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link DeleteOidcProvider}
+ */
+export const signDeleteOidcProvider = (
+  input: TDeleteOidcProviderInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TDeleteOidcProviderBody, never, never>({
+    uri: "/public/v1/submit/delete_oidc_provider",
     body: input.body,
     options,
   });
@@ -4016,6 +4382,58 @@ export const signDeleteWallets = (
 ) =>
   signedRequest<TDeleteWalletsBody, never, never>({
     uri: "/public/v1/submit/delete_wallets",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/submit/delete_webhook_endpoint`
+ */
+export type TDeleteWebhookEndpointResponse =
+  operations["PublicApiService_DeleteWebhookEndpoint"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/delete_webhook_endpoint`
+ */
+export type TDeleteWebhookEndpointInput = { body: TDeleteWebhookEndpointBody };
+
+/**
+ * `POST /public/v1/submit/delete_webhook_endpoint`
+ */
+export type TDeleteWebhookEndpointBody =
+  operations["PublicApiService_DeleteWebhookEndpoint"]["parameters"]["body"]["body"];
+
+/**
+ * Delete Webhook Endpoint
+ *
+ * Delete a webhook endpoint.
+ *
+ * `POST /public/v1/submit/delete_webhook_endpoint`
+ */
+export const deleteWebhookEndpoint = (input: TDeleteWebhookEndpointInput) =>
+  request<
+    TDeleteWebhookEndpointResponse,
+    TDeleteWebhookEndpointBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/submit/delete_webhook_endpoint",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `DeleteWebhookEndpoint` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link DeleteWebhookEndpoint}
+ */
+export const signDeleteWebhookEndpoint = (
+  input: TDeleteWebhookEndpointInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TDeleteWebhookEndpointBody, never, never>({
+    uri: "/public/v1/submit/delete_webhook_endpoint",
     body: input.body,
     options,
   });
@@ -5543,6 +5961,58 @@ export const signUpdateOauth2Credential = (
   });
 
 /**
+ * `POST /public/v1/submit/update_oidc_provider`
+ */
+export type TUpdateOidcProviderResponse =
+  operations["PublicApiService_UpdateOidcProvider"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/update_oidc_provider`
+ */
+export type TUpdateOidcProviderInput = { body: TUpdateOidcProviderBody };
+
+/**
+ * `POST /public/v1/submit/update_oidc_provider`
+ */
+export type TUpdateOidcProviderBody =
+  operations["PublicApiService_UpdateOidcProvider"]["parameters"]["body"]["body"];
+
+/**
+ * Update OIDC provider
+ *
+ * Update a registered OIDC Identity Provider's name, audiences, or enabled state.
+ *
+ * `POST /public/v1/submit/update_oidc_provider`
+ */
+export const updateOidcProvider = (input: TUpdateOidcProviderInput) =>
+  request<
+    TUpdateOidcProviderResponse,
+    TUpdateOidcProviderBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/submit/update_oidc_provider",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `UpdateOidcProvider` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link UpdateOidcProvider}
+ */
+export const signUpdateOidcProvider = (
+  input: TUpdateOidcProviderInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TUpdateOidcProviderBody, never, never>({
+    uri: "/public/v1/submit/update_oidc_provider",
+    body: input.body,
+    options,
+  });
+
+/**
  * `POST /public/v1/submit/update_organization_name`
  */
 export type TUpdateOrganizationNameResponse =
@@ -6024,6 +6494,58 @@ export const signUpdateWallet = (
 ) =>
   signedRequest<TUpdateWalletBody, never, never>({
     uri: "/public/v1/submit/update_wallet",
+    body: input.body,
+    options,
+  });
+
+/**
+ * `POST /public/v1/submit/update_webhook_endpoint`
+ */
+export type TUpdateWebhookEndpointResponse =
+  operations["PublicApiService_UpdateWebhookEndpoint"]["responses"]["200"]["schema"];
+
+/**
+ * `POST /public/v1/submit/update_webhook_endpoint`
+ */
+export type TUpdateWebhookEndpointInput = { body: TUpdateWebhookEndpointBody };
+
+/**
+ * `POST /public/v1/submit/update_webhook_endpoint`
+ */
+export type TUpdateWebhookEndpointBody =
+  operations["PublicApiService_UpdateWebhookEndpoint"]["parameters"]["body"]["body"];
+
+/**
+ * Update Webhook Endpoint
+ *
+ * Update an existing webhook endpoint (url, name, active status).
+ *
+ * `POST /public/v1/submit/update_webhook_endpoint`
+ */
+export const updateWebhookEndpoint = (input: TUpdateWebhookEndpointInput) =>
+  request<
+    TUpdateWebhookEndpointResponse,
+    TUpdateWebhookEndpointBody,
+    never,
+    never,
+    never
+  >({
+    uri: "/public/v1/submit/update_webhook_endpoint",
+    method: "POST",
+    body: input.body,
+  });
+
+/**
+ * Request a WebAuthn assertion and return a signed `UpdateWebhookEndpoint` request, ready to be POSTed to 0xkey.
+ *
+ * See {@link UpdateWebhookEndpoint}
+ */
+export const signUpdateWebhookEndpoint = (
+  input: TUpdateWebhookEndpointInput,
+  options?: ZeroXKeyCredentialRequestOptions,
+) =>
+  signedRequest<TUpdateWebhookEndpointBody, never, never>({
+    uri: "/public/v1/submit/update_webhook_endpoint",
     body: input.body,
     options,
   });

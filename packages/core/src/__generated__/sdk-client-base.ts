@@ -1147,6 +1147,53 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  getOidcProviders = async (
+    input: SdkTypes.TGetOidcProvidersBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TGetOidcProvidersResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/get_oidc_providers",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampGetOidcProviders = async (
+    input: SdkTypes.TGetOidcProvidersBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/get_oidc_providers";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   getOnRampTransactionStatus = async (
     input: SdkTypes.TGetOnRampTransactionStatusBody,
     stampWith?: StamperType,
@@ -1846,6 +1893,53 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  listGasSponsorshipUsage = async (
+    input: SdkTypes.TListGasSponsorshipUsageBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TListGasSponsorshipUsageResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/list_gas_sponsorship_usage",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampListGasSponsorshipUsage = async (
+    input: SdkTypes.TListGasSponsorshipUsageBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/list_gas_sponsorship_usage";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   listOauth2Credentials = async (
     input: SdkTypes.TListOauth2CredentialsBody,
     stampWith?: StamperType,
@@ -2016,6 +2110,53 @@ export class ZeroXKeySDKClientBase {
     const session = await this.storageManager?.getActiveSession();
     const fullUrl =
       this.config.apiBaseUrl + "/public/v1/query/list_private_keys";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  listSendTransactions = async (
+    input: SdkTypes.TListSendTransactionsBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TListSendTransactionsResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/list_send_transactions",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampListSendTransactions = async (
+    input: SdkTypes.TListSendTransactionsBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/list_send_transactions";
     const body = {
       ...input,
       organizationId:
@@ -2342,6 +2483,53 @@ export class ZeroXKeySDKClientBase {
 
     const session = await this.storageManager?.getActiveSession();
     const fullUrl = this.config.apiBaseUrl + "/public/v1/query/list_wallets";
+    const body = {
+      ...input,
+      organizationId:
+        input.organizationId ??
+        session?.organizationId ??
+        this.config.organizationId,
+    };
+
+    const stringifiedBody = JSON.stringify(body);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  listWebhookEndpoints = async (
+    input: SdkTypes.TListWebhookEndpointsBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TListWebhookEndpointsResponse> => {
+    const session = await this.storageManager?.getActiveSession();
+    return this.request(
+      "/public/v1/query/list_webhook_endpoints",
+      {
+        ...input,
+        organizationId:
+          input.organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+      },
+      stampWith,
+    );
+  };
+
+  stampListWebhookEndpoints = async (
+    input: SdkTypes.TListWebhookEndpointsBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const session = await this.storageManager?.getActiveSession();
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/query/list_webhook_endpoints";
     const body = {
       ...input,
       organizationId:
@@ -2825,6 +3013,60 @@ export class ZeroXKeySDKClientBase {
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_CREATE_OAUTH_PROVIDERS",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  createOidcProvider = async (
+    input: SdkTypes.TCreateOidcProviderBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TCreateOidcProviderResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/create_oidc_provider",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER",
+      },
+      "createOidcProviderResult",
+      stampWith,
+    );
+  };
+
+  stampCreateOidcProvider = async (
+    input: SdkTypes.TCreateOidcProviderBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/create_oidc_provider";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_CREATE_OIDC_PROVIDER",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -3536,6 +3778,60 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  createWebhookEndpoint = async (
+    input: SdkTypes.TCreateWebhookEndpointBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TCreateWebhookEndpointResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/create_webhook_endpoint",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT",
+      },
+      "createWebhookEndpointResult",
+      stampWith,
+    );
+  };
+
+  stampCreateWebhookEndpoint = async (
+    input: SdkTypes.TCreateWebhookEndpointBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/create_webhook_endpoint";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_CREATE_WEBHOOK_ENDPOINT",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   deleteApiKeys = async (
     input: SdkTypes.TDeleteApiKeysBody,
     stampWith?: StamperType,
@@ -3904,6 +4200,60 @@ export class ZeroXKeySDKClientBase {
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  deleteOidcProvider = async (
+    input: SdkTypes.TDeleteOidcProviderBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TDeleteOidcProviderResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/delete_oidc_provider",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER",
+      },
+      "deleteOidcProviderResult",
+      stampWith,
+    );
+  };
+
+  stampDeleteOidcProvider = async (
+    input: SdkTypes.TDeleteOidcProviderBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/delete_oidc_provider";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_DELETE_OIDC_PROVIDER",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -4442,6 +4792,60 @@ export class ZeroXKeySDKClientBase {
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_DELETE_WALLETS",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  deleteWebhookEndpoint = async (
+    input: SdkTypes.TDeleteWebhookEndpointBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TDeleteWebhookEndpointResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/delete_webhook_endpoint",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT",
+      },
+      "deleteWebhookEndpointResult",
+      stampWith,
+    );
+  };
+
+  stampDeleteWebhookEndpoint = async (
+    input: SdkTypes.TDeleteWebhookEndpointBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/delete_webhook_endpoint";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_DELETE_WEBHOOK_ENDPOINT",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);
@@ -6115,6 +6519,60 @@ export class ZeroXKeySDKClientBase {
     };
   };
 
+  updateOidcProvider = async (
+    input: SdkTypes.TUpdateOidcProviderBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TUpdateOidcProviderResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/update_oidc_provider",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER",
+      },
+      "updateOidcProviderResult",
+      stampWith,
+    );
+  };
+
+  stampUpdateOidcProvider = async (
+    input: SdkTypes.TUpdateOidcProviderBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/update_oidc_provider";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_UPDATE_OIDC_PROVIDER",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
   updateOrganizationName = async (
     input: SdkTypes.TUpdateOrganizationNameBody,
     stampWith?: StamperType,
@@ -6641,6 +7099,60 @@ export class ZeroXKeySDKClientBase {
         organizationId ?? session?.organizationId ?? this.config.organizationId,
       timestampMs: timestampMs ?? String(Date.now()),
       type: "ACTIVITY_TYPE_UPDATE_WALLET",
+    };
+
+    const stringifiedBody = JSON.stringify(bodyWithType);
+    const stamp = await activeStamper.stamp(stringifiedBody);
+    return {
+      body: stringifiedBody,
+      stamp: stamp,
+      url: fullUrl,
+    };
+  };
+
+  updateWebhookEndpoint = async (
+    input: SdkTypes.TUpdateWebhookEndpointBody,
+    stampWith?: StamperType,
+  ): Promise<SdkTypes.TUpdateWebhookEndpointResponse> => {
+    const { organizationId, timestampMs, ...rest } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    return this.activity(
+      "/public/v1/submit/update_webhook_endpoint",
+      {
+        parameters: rest,
+        organizationId:
+          organizationId ??
+          session?.organizationId ??
+          this.config.organizationId,
+        timestampMs: timestampMs ?? String(Date.now()),
+        type: "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT",
+      },
+      "updateWebhookEndpointResult",
+      stampWith,
+    );
+  };
+
+  stampUpdateWebhookEndpoint = async (
+    input: SdkTypes.TUpdateWebhookEndpointBody,
+    stampWith?: StamperType,
+  ): Promise<TSignedRequest | undefined> => {
+    const activeStamper = this.getStamper(stampWith);
+    if (!activeStamper) {
+      return undefined;
+    }
+
+    const { organizationId, timestampMs, ...parameters } = input;
+    const session = await this.storageManager?.getActiveSession();
+
+    const fullUrl =
+      this.config.apiBaseUrl + "/public/v1/submit/update_webhook_endpoint";
+    const bodyWithType = {
+      parameters,
+      organizationId:
+        organizationId ?? session?.organizationId ?? this.config.organizationId,
+      timestampMs: timestampMs ?? String(Date.now()),
+      type: "ACTIVITY_TYPE_UPDATE_WEBHOOK_ENDPOINT",
     };
 
     const stringifiedBody = JSON.stringify(bodyWithType);

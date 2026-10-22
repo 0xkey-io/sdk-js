@@ -13,8 +13,8 @@ const swaggerPath = path.resolve(
 const pinPath = path.resolve(__dirname, "../contract-pin.yaml");
 
 const FROZEN_OPENAPI_SHA256 =
-  "cca6a179db09bb9ea1d01deabd0b9e7122f4dbc1f27735efdcf433700aee42e2"; // gitleaks:allow
-const FROZEN_SERVICES_COMMIT = "0eb6eb86a2ddb875552e97a33880d2c1c1eb4e4e";
+  "22cb946ff151d3fbf6f43683f384a32cd6f86ff961e51f51e1240b9ce997e009"; // gitleaks:allow
+const FROZEN_SERVICES_COMMIT = "4694398826e09dc658edbadaf4df833eb0cd2cdb";
 
 test("pin records the frozen services OpenAPI hash", () => {
   const pin: Record<string, string> = {};
@@ -103,6 +103,50 @@ test("projected swagger preserves every referenced public definition", () => {
   expect([...referenced].filter((name) => !swagger.definitions[name])).toEqual(
     [],
   );
+});
+
+const SYNCED_PUBLIC_METHODS = [
+  "createWebhookEndpoint",
+  "updateWebhookEndpoint",
+  "deleteWebhookEndpoint",
+  "listWebhookEndpoints",
+  "createOidcProvider",
+  "updateOidcProvider",
+  "deleteOidcProvider",
+  "getOidcProviders",
+  "listSendTransactions",
+  "listGasSponsorshipUsage",
+] as const;
+
+test("generated client exposes the synced services public surface", () => {
+  const client = new ZeroXKeyClient(
+    { baseUrl: "https://api.0xkey.io" },
+    {
+      stamp: async () => ({
+        stampHeaderName: "X-Stamp",
+        stampHeaderValue: "test",
+      }),
+    },
+  ) as unknown as Record<string, unknown>;
+  for (const method of SYNCED_PUBLIC_METHODS) {
+    expect(typeof client[method]).toBe("function");
+  }
+});
+
+test("projected paths are exactly the services public allowlist", () => {
+  const swagger = JSON.parse(fs.readFileSync(swaggerPath, "utf8")) as {
+    paths: Record<string, unknown>;
+  };
+  const allowlist = JSON.parse(
+    fs.readFileSync(
+      path.resolve(__dirname, "../../../../contracts/sdk-public-paths.json"),
+      "utf8",
+    ),
+  ) as string[];
+  expect(Object.keys(swagger.paths)).toEqual(allowlist);
+  for (const route of allowlist) {
+    expect(route.startsWith("/internal/")).toBe(false);
+  }
 });
 
 test("generated fetcher and client expose getMfaStatus", () => {

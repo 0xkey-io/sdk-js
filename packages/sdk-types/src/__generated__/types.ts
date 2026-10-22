@@ -1909,7 +1909,11 @@ export type v1DeleteWebhookEndpointResult = {
   endpointId: string;
 };
 
-export type v1DisableAuthProxyIntent = {};
+export type v1DisableAuthProxyIntent = {
+  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+  authProxySecurityTransition?: v1AuthProxySecurityTransition;
+};
+
 export type v1DisableAuthProxyResult = {};
 export type v1DisablePrivateKeyIntent = {
   /** Unique identifier for a given Private Key. */
@@ -2042,7 +2046,11 @@ export type v1EmailCustomizationParamsV2 = {
   templateId?: string;
 };
 
-export type v1EnableAuthProxyIntent = {};
+export type v1EnableAuthProxyIntent = {
+  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+  authProxySecurityTransition?: v1AuthProxySecurityTransition;
+};
+
 export type v1EnableAuthProxyResult = {
   /** A User ID with permission to initiate authentication. */
   userId: string;
@@ -4357,6 +4365,10 @@ export type v1UpdateAuthProxyConfigIntent = {
   socialLinkingClientIds?: string[];
   /** Whether captcha verification is required on sign up and OTP init. */
   captchaEnabled?: boolean;
+  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+  authProxySecurityTransition?: v1AuthProxySecurityTransition;
+  /** 0xkey Captcha V2 extension. Default closed; legacy captchaEnabled does not authorize it. Strict validation of signed bytes and raw/typed comparison are required. */
+  authProxySecurityTransitionV2?: v1AuthProxySecurityTransitionV2;
 };
 
 export type v1UpdateAuthProxyConfigResult = {
@@ -4982,6 +4994,313 @@ export type v1WebhookSubscriptionParams = {
   isActive?: boolean;
 };
 
+export type v1AuthProxySecurityAudienceGrant = {
+  usage?: string;
+  clientIds?: string[];
+};
+
+export type v1AuthProxySecurityPolicy = {
+  piiProofRequired?: boolean;
+  allowedAuthMethods?: string[];
+  providers?: v1AuthProxySecurityProvider[];
+  registrations?: v1AuthProxySecurityRegistration[];
+};
+
+export type v1AuthProxySecurityProvider = {
+  key?: v1AuthProxySecurityProviderKey;
+  enabled?: boolean;
+  audienceGrants?: v1AuthProxySecurityAudienceGrant[];
+};
+
+export type v1AuthProxySecurityProviderKey = {
+  kind?: string;
+  issuer?: string;
+};
+
+export type v1AuthProxySecurityRegistration = {
+  registrationId?: string;
+  provider?: v1AuthProxySecurityProviderKey;
+  clientId?: string;
+  platform?: string;
+  enabled?: boolean;
+  callbackUri?: string;
+  returnUri?: string;
+};
+
+export type v1AuthProxySecuritySelector = {
+  configId?: string;
+  generation?: string;
+  /** 0xkey extension. Strict wire requires a JSON integer from 1 through 18446744073709551615. Generic protobuf acceptance of strings does not authorize string revision; default protojson output must not replace the original signed request. */
+  revision?: number;
+};
+
+export type v1AuthProxySecurityTransition = {
+  kind?: string;
+  piiProofRequired?: boolean;
+  allowedAuthMethods?: string[];
+  expected?: v1AuthProxySecuritySelector;
+  policy?: v1AuthProxySecurityPolicy;
+};
+
+export type v1AuthProxySecurityTransitionV2 = {
+  kind?: string;
+  expected?: v1AuthProxySecuritySelector;
+  captchaEnabled?: boolean;
+  captchaBinding?: v1CaptchaResourceBindingV1;
+  readyWitness?: v1CaptchaReadyWitnessV1;
+};
+
+export type v1CaptchaReadyWitnessV1 = {
+  payload?: string;
+  signature?: string;
+};
+
+export type v1CaptchaResourceBindingV1 = {
+  environment?: string;
+  cloudflareAccountId?: string;
+  resourceVersion?: string;
+  siteKey?: string;
+  allowedHostnames?: string[];
+  secretArn?: string;
+};
+
+export type v1CreateOidcProviderIntent = {
+  /** Human-readable name to identify this Identity Provider (e.g. "Zapry IdP"). */
+  providerName: string;
+  /** OIDC issuer URL — must exactly match the 'iss' claim of tokens from this IdP (e.g. https://auth.customer.com). */
+  issuer: string;
+  /** Allowed OAuth2 audiences (client IDs). A token's 'aud' must match one of these — at least one is required (fail-closed: no wildcard trust). */
+  audiences: string[];
+};
+
+export type v1CreateOidcProviderRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1CreateOidcProviderIntent;
+  generateAppProofs?: boolean;
+};
+
+export type v1CreateWebhookEndpointRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1CreateWebhookEndpointIntent;
+};
+
+export type v1DeleteOidcProviderIntent = {
+  /** Unique identifiers of the OIDC providers to remove. */
+  providerIds: string[];
+};
+
+export type v1DeleteOidcProviderRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1DeleteOidcProviderIntent;
+  generateAppProofs?: boolean;
+};
+
+export type v1DeleteWebhookEndpointRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1DeleteWebhookEndpointIntent;
+};
+
+export type v1GasSponsorshipUsageEntry = {
+  /** The activity that triggered the sponsored transaction. */
+  activityId?: string;
+  /** Status id of the outer paymaster broadcast (poll GetSendTransactionStatus). */
+  sendTransactionStatusId?: string;
+  /** CAIP-2 network identifier (e.g. 'eip155:11155111'). */
+  caip2?: string;
+  /** Gas fee in chain-native smallest unit (wei). '0' until confirmed. */
+  gasFeeAtomic?: string;
+  /** Human-readable native fee (ETH, 18-decimal). Empty until back-filled on confirmation. */
+  gasFeeNative?: string;
+  /** USD equivalent at recording time. Empty when no price oracle. */
+  gasFeeUsd?: string;
+  /** End-user EOA whose transaction was sponsored. */
+  eoa?: string;
+  /** End-user target recipient (sponsored intent `to`). */
+  userTo?: string;
+  /** End-user transferred value in wei. */
+  userValue?: string;
+  /** Outer paymaster transaction hash. Empty if not yet broadcast. */
+  txHash?: string;
+  /** Broadcast lifecycle status: pending | broadcast | confirmed | failed | dropped. */
+  status?: string;
+  /** Block number the outer tx was mined in (0 if unconfirmed). */
+  blockNumber?: string;
+  /** RFC3339 timestamp when the usage was recorded. */
+  recordedAt?: string;
+};
+
+export type v1GetOidcProvidersRequest = {
+  /** Unique identifier for a given organization. */
+  organizationId: string;
+};
+
+export type v1GetOidcProvidersResponse = {
+  /** A list of registered OIDC Identity Providers trusted by this organization. */
+  oidcProviders: v1OidcProviderConfig[];
+};
+
+export type v1ListGasSponsorshipUsageRequest = {
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  /** Max rows to return (default 50, capped at 200). */
+  limit?: number;
+  /** Number of rows to skip for pagination (default 0). */
+  offset?: number;
+};
+
+export type v1ListGasSponsorshipUsageResponse = {
+  /** Usage records, newest first. */
+  entries?: v1GasSponsorshipUsageEntry[];
+};
+
+export type v1ListSendTransactionsRequest = {
+  /** Unique identifier for a given organization. */
+  organizationId: string;
+  /** Deprecated: use page_size. Max rows to return (default 50, capped at 200). */
+  limit?: number;
+  /** Deprecated and ignored now that this list uses keyset pagination; use cursor instead. */
+  offset?: number;
+  /** Restrict results to a single CAIP-2 network (e.g. 'eip155:8453'). Omit for all networks. */
+  filterByCaip2?: string;
+  /** When true, organization_id is resolved to its root and results span the root org AND every sub-org / embedded wallet beneath it (each row's ownerOrganizationId identifies which one sent it), including gas-sponsored sends attributed back to the requesting tenant. When false (default), results are scoped to organization_id exactly. */
+  includeSubOrganizations?: boolean;
+  /** Max rows to return (default 50, capped at 200). Supersedes the deprecated limit field. */
+  pageSize?: number;
+  /** Opaque keyset-pagination cursor from a previous response's next_cursor. Omit to fetch the first page. */
+  cursor?: string;
+  /** Restrict results to a single lifecycle status: 'pending', 'broadcast', 'confirmed', 'failed', or 'dropped'. Omit for all statuses. */
+  filterByStatus?: string;
+  /** Case-insensitive match against either the from or to address. Omit for no address filter. */
+  filterByAddress?: string;
+  /** RFC3339 timestamp; only include rows created at or after this time. Omit for no lower bound. */
+  createdAfter?: string;
+  /** RFC3339 timestamp; only include rows created at or before this time. Omit for no upper bound. */
+  createdBefore?: string;
+};
+
+export type v1ListSendTransactionsResponse = {
+  /** Send-transaction records, newest first. */
+  sendTransactions?: v1SendTransactionSummary[];
+  /** Opaque cursor to pass as `cursor` to fetch the next page. Empty when this is the last page. */
+  nextCursor?: string;
+};
+
+export type v1ListWebhookEndpointsRequest = {
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+};
+
+export type v1ListWebhookEndpointsResponse = {
+  /** List of webhook endpoints for the organization. */
+  webhookEndpoints: v1WebhookEndpointData[];
+};
+
+export type v1OidcProviderConfig = {
+  /** Unique identifier for this OIDC Identity Provider registration. */
+  providerId: string;
+  /** Human-readable name to identify this Identity Provider. */
+  providerName: string;
+  /** OIDC issuer URL, matched against the 'iss' claim of incoming tokens. */
+  issuer: string;
+  /** Allowed OAuth2 audiences (client IDs) for tokens from this issuer. */
+  audiences: string[];
+  /** Whether this provider is currently trusted for OAUTH_LOGIN / CreateOauthProviders. */
+  enabled: boolean;
+  createdAt: externaldatav1Timestamp;
+  updatedAt: externaldatav1Timestamp;
+};
+
+export type v1SendTransactionSummary = {
+  /** Stable status id (poll via GetSendTransactionStatus). */
+  sendTransactionStatusId?: string;
+  /** CAIP-2 network identifier, e.g. 'eip155:8453'. */
+  caip2?: string;
+  /** EVM numeric chain id (0 for non-EVM networks). */
+  chainId?: string;
+  /** Sender address. */
+  fromAddress?: string;
+  /** Recipient (or contract) address. */
+  toAddress?: string;
+  /** Native value transferred, in atomic units (wei/lamports). Empty when not decoded. */
+  value?: string;
+  /** Transaction nonce (EVM). 0 when not applicable. */
+  nonce?: string;
+  /** Transaction hash / Solana signature. Empty until broadcast. */
+  txHash?: string;
+  /** Broadcast lifecycle status: pending | broadcast | confirmed | failed | dropped. */
+  status?: string;
+  /** Block number (EVM) or slot (Solana) the tx was included in. 0 if unconfirmed. */
+  blockNumber?: string;
+  /** Broadcast/confirmation error, if any. */
+  error?: string;
+  /** True when the platform paymaster broadcast this transaction (Gas Station). */
+  sponsored?: boolean;
+  /** RFC3339 timestamp the record was created (reservation or broadcast). */
+  createdAt?: string;
+  /** RFC3339 timestamp the transaction was broadcast. Empty if not yet broadcast. */
+  broadcastAt?: string;
+  /** RFC3339 timestamp the transaction was confirmed. Empty if not confirmed. */
+  confirmedAt?: string;
+  /** Tenant that actually initiated the transfer: the requesting org for a gas-sponsored send, otherwise the same org as organization_id. Differs from the queried organization_id only when include_sub_organizations was true. */
+  ownerOrganizationId?: string;
+  /** Display name of owner_organization_id, when that org still exists. Empty for a dangling/deleted org. */
+  ownerOrganizationName?: string;
+  /** TRC-20/ERC-20 contract this transfer is denominated in. Empty means `value` is the chain's NATIVE unit (wei/lamports/sun); non-empty means `value` is the TOKEN's atomic unit and `to_address` remains the recipient (never the contract). */
+  contractAddress?: string;
+  /** Actual network fee burned, in the chain's native smallest unit (decimal string). Empty while unconfirmed or when the chain family does not expose a per-tx receipt fee. */
+  feeAtomic?: string;
+  /** Tron Energy consumed (TRC-20/contract calls only). 0 for a native TRX transfer, a non-Tron chain, or an unconfirmed row. */
+  energyUsage?: string;
+  /** Tron Bandwidth (net) consumed. 0 for a non-Tron chain or an unconfirmed row. */
+  netUsage?: string;
+};
+
+export type v1UpdateOidcProviderIntent = {
+  /** Unique identifier of the OIDC provider to update. */
+  providerId: string;
+  /** New human-readable provider name. */
+  providerName?: string;
+  /** New audience allowlist (replaces the existing list wholesale, if provided). */
+  audiences?: string[];
+  /** Enable/disable this provider without deleting it. */
+  enabled?: boolean;
+};
+
+export type v1UpdateOidcProviderRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1UpdateOidcProviderIntent;
+  generateAppProofs?: boolean;
+};
+
+export type v1UpdateWebhookEndpointRequest = {
+  type: string;
+  /** Timestamp (in milliseconds) of the request, used to verify liveness of user requests. */
+  timestampMs: string;
+  /** Unique identifier for a given Organization. */
+  organizationId: string;
+  parameters: v1UpdateWebhookEndpointIntent;
+};
+
 export type v1EthFailureDetails = {
   /** Ethereum revert chain, ordered from outermost to innermost. */
   revertChain?: v1RevertChainEntry[];
@@ -5261,6 +5580,17 @@ export type TGetOauthProvidersBody = {
 
 export type TGetOauthProvidersInput = { body: TGetOauthProvidersBody };
 
+export type TGetOidcProvidersResponse = {
+  /** A list of registered OIDC Identity Providers trusted by this organization. */
+  oidcProviders: v1OidcProviderConfig[];
+};
+
+export type TGetOidcProvidersBody = {
+  organizationId?: string;
+};
+
+export type TGetOidcProvidersInput = { body: TGetOidcProvidersBody };
+
 export type TGetOnRampTransactionStatusResponse = {
   /** The status of the fiat on ramp transaction. */
   transactionStatus: string;
@@ -5474,6 +5804,23 @@ export type TListFiatOnRampCredentialsInput = {
   body: TListFiatOnRampCredentialsBody;
 };
 
+export type TListGasSponsorshipUsageResponse = {
+  /** Usage records, newest first. */
+  entries?: v1GasSponsorshipUsageEntry[];
+};
+
+export type TListGasSponsorshipUsageBody = {
+  organizationId?: string;
+  /** Max rows to return (default 50, capped at 200). */
+  limit?: number;
+  /** Number of rows to skip for pagination (default 0). */
+  offset?: number;
+};
+
+export type TListGasSponsorshipUsageInput = {
+  body: TListGasSponsorshipUsageBody;
+};
+
 export type TListOauth2CredentialsResponse = {
   oauth2Credentials: v1Oauth2Credential[];
 };
@@ -5516,6 +5863,39 @@ export type TGetPrivateKeysBody = {
 };
 
 export type TGetPrivateKeysInput = { body: TGetPrivateKeysBody };
+
+export type TListSendTransactionsResponse = {
+  /** Send-transaction records, newest first. */
+  sendTransactions?: v1SendTransactionSummary[];
+  /** Opaque cursor to pass as `cursor` to fetch the next page. Empty when this is the last page. */
+  nextCursor?: string;
+};
+
+export type TListSendTransactionsBody = {
+  organizationId?: string;
+  /** Deprecated: use page_size. Max rows to return (default 50, capped at 200). */
+  limit?: number;
+  /** Deprecated and ignored now that this list uses keyset pagination; use cursor instead. */
+  offset?: number;
+  /** Restrict results to a single CAIP-2 network (e.g. 'eip155:8453'). Omit for all networks. */
+  filterByCaip2?: string;
+  /** When true, organization_id is resolved to its root and results span the root org AND every sub-org / embedded wallet beneath it (each row's ownerOrganizationId identifies which one sent it), including gas-sponsored sends attributed back to the requesting tenant. When false (default), results are scoped to organization_id exactly. */
+  includeSubOrganizations?: boolean;
+  /** Max rows to return (default 50, capped at 200). Supersedes the deprecated limit field. */
+  pageSize?: number;
+  /** Opaque keyset-pagination cursor from a previous response's next_cursor. Omit to fetch the first page. */
+  cursor?: string;
+  /** Restrict results to a single lifecycle status: 'pending', 'broadcast', 'confirmed', 'failed', or 'dropped'. Omit for all statuses. */
+  filterByStatus?: string;
+  /** Case-insensitive match against either the from or to address. Omit for no address filter. */
+  filterByAddress?: string;
+  /** RFC3339 timestamp; only include rows created at or after this time. Omit for no lower bound. */
+  createdAfter?: string;
+  /** RFC3339 timestamp; only include rows created at or before this time. Omit for no upper bound. */
+  createdBefore?: string;
+};
+
+export type TListSendTransactionsInput = { body: TListSendTransactionsBody };
 
 export type TGetSmartContractInterfacesResponse = {
   /** A list of smart contract interfaces. */
@@ -5613,6 +5993,17 @@ export type TGetWalletsBody = {
 };
 
 export type TGetWalletsInput = { body: TGetWalletsBody };
+
+export type TListWebhookEndpointsResponse = {
+  /** List of webhook endpoints for the organization. */
+  webhookEndpoints: v1WebhookEndpointData[];
+};
+
+export type TListWebhookEndpointsBody = {
+  organizationId?: string;
+};
+
+export type TListWebhookEndpointsInput = { body: TListWebhookEndpointsBody };
 
 export type TGetWhoamiResponse = {
   /** Unique identifier for a given organization. */
@@ -5775,6 +6166,25 @@ export type TCreateOauthProvidersBody = {
 };
 
 export type TCreateOauthProvidersInput = { body: TCreateOauthProvidersBody };
+
+export type TCreateOidcProviderResponse = {
+  activity: v1Activity;
+  /** Unique identifier for the newly registered OIDC provider. */
+  providerId: string;
+};
+
+export type TCreateOidcProviderBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  /** Human-readable name to identify this Identity Provider (e.g. "Zapry IdP"). */
+  providerName: string;
+  /** OIDC issuer URL — must exactly match the 'iss' claim of tokens from this IdP (e.g. https://auth.customer.com). */
+  issuer: string;
+  /** Allowed OAuth2 audiences (client IDs). A token's 'aud' must match one of these — at least one is required (fail-closed: no wildcard trust). */
+  audiences: string[];
+};
+
+export type TCreateOidcProviderInput = { body: TCreateOidcProviderBody };
 
 export type TCreatePoliciesResponse = {
   activity: v1Activity;
@@ -6056,6 +6466,27 @@ export type TCreateWalletAccountsBody = {
 
 export type TCreateWalletAccountsInput = { body: TCreateWalletAccountsBody };
 
+export type TCreateWebhookEndpointResponse = {
+  activity: v1Activity;
+  /** Unique identifier for the created Webhook Endpoint. */
+  endpointId: string;
+  /** The created webhook endpoint data, including the signing public key. */
+  webhookEndpoint: v1WebhookEndpointData;
+};
+
+export type TCreateWebhookEndpointBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  /** The destination URL for webhook deliveries. */
+  url: string;
+  /** Human-readable name for the webhook endpoint. */
+  name: string;
+  /** Event subscriptions. If empty, the endpoint receives all event types. */
+  subscriptions?: v1WebhookSubscriptionParams[];
+};
+
+export type TCreateWebhookEndpointInput = { body: TCreateWebhookEndpointBody };
+
 export type TDeleteApiKeysResponse = {
   activity: v1Activity;
   /** A list of API Key IDs. */
@@ -6169,6 +6600,21 @@ export type TDeleteOauthProvidersBody = {
 };
 
 export type TDeleteOauthProvidersInput = { body: TDeleteOauthProvidersBody };
+
+export type TDeleteOidcProviderResponse = {
+  activity: v1Activity;
+  /** A list of unique identifiers for OIDC providers that were removed. */
+  providerIds: string[];
+};
+
+export type TDeleteOidcProviderBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  /** Unique identifiers of the OIDC providers to remove. */
+  providerIds: string[];
+};
+
+export type TDeleteOidcProviderInput = { body: TDeleteOidcProviderBody };
 
 export type TDeletePoliciesResponse = {
   activity: v1Activity;
@@ -6331,6 +6777,21 @@ export type TDeleteWalletsBody = {
 };
 
 export type TDeleteWalletsInput = { body: TDeleteWalletsBody };
+
+export type TDeleteWebhookEndpointResponse = {
+  activity: v1Activity;
+  /** Unique identifier for the deleted Webhook Endpoint. */
+  endpointId: string;
+};
+
+export type TDeleteWebhookEndpointBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  /** Unique identifier of the webhook endpoint to delete. */
+  endpointId: string;
+};
+
+export type TDeleteWebhookEndpointInput = { body: TDeleteWebhookEndpointBody };
 
 export type TEmailAuthResponse = {
   activity: v1Activity;
@@ -7083,6 +7544,27 @@ export type TUpdateOauth2CredentialInput = {
   body: TUpdateOauth2CredentialBody;
 };
 
+export type TUpdateOidcProviderResponse = {
+  activity: v1Activity;
+  /** Unique identifier for the updated OIDC provider. */
+  providerId: string;
+};
+
+export type TUpdateOidcProviderBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  /** Unique identifier of the OIDC provider to update. */
+  providerId: string;
+  /** New human-readable provider name. */
+  providerName?: string;
+  /** New audience allowlist (replaces the existing list wholesale, if provided). */
+  audiences?: string[];
+  /** Enable/disable this provider without deleting it. */
+  enabled?: boolean;
+};
+
+export type TUpdateOidcProviderInput = { body: TUpdateOidcProviderBody };
+
 export type TUpdateOrganizationNameResponse = {
   activity: v1Activity;
   /** Unique identifier for the Organization. */
@@ -7278,6 +7760,27 @@ export type TUpdateWalletBody = {
 };
 
 export type TUpdateWalletInput = { body: TUpdateWalletBody };
+
+export type TUpdateWebhookEndpointResponse = {
+  activity: v1Activity;
+  /** Unique identifier for the updated Webhook Endpoint. */
+  endpointId: string;
+};
+
+export type TUpdateWebhookEndpointBody = {
+  timestampMs?: string;
+  organizationId?: string;
+  /** Unique identifier of the webhook endpoint to update. */
+  endpointId: string;
+  /** Updated destination URL. */
+  url?: string;
+  /** Updated human-readable name. */
+  name?: string;
+  /** Updated active status. */
+  isActive?: boolean;
+};
+
+export type TUpdateWebhookEndpointInput = { body: TUpdateWebhookEndpointBody };
 
 export type TVerifyOtpResponse = {
   activity: v1Activity;
