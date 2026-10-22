@@ -323,7 +323,8 @@ const generateSDKClientFromSwagger = async (
      */
     private async pollForCompletion(
         activityId: string,
-        stampWith?: StamperType
+        stampWith?: StamperType,
+        organizationId?: string
     ): Promise<TActivityResponse> {
         const pollingDuration = this.config.activityPoller?.intervalMs ?? 1000;
         const maxRetries = this.config.activityPoller?.numRetries ?? 3;
@@ -333,7 +334,9 @@ const generateSDKClientFromSwagger = async (
 
         do {
         await this.sleep(pollingDuration);
-        activityData = await this.getActivity({ activityId }, stampWith) as TActivityResponse;
+        // Query the organization the activity belongs to (for example a
+        // sub-organization), not the session's or the client's default one.
+        activityData = await this.getActivity({ activityId, ...(organizationId ? { organizationId } : {}) }, stampWith) as TActivityResponse;
         attempts++;
         } while (
         !TERMINAL_ACTIVITY_STATUSES.includes(activityData.activity.status as TActivityStatus) &&
@@ -403,7 +406,7 @@ const generateSDKClientFromSwagger = async (
         mfaStatuses: mfaStatuses as MfaContext["mfaStatuses"]
         };
         await this.config.onMfaRequired(context);
-        return this.pollForCompletion(activityData.activity.id, stampWith);
+        return this.pollForCompletion(activityData.activity.id, stampWith, activityData.activity.organizationId);
     }
 
     async request<TBodyType, TResponseType>(
@@ -462,7 +465,7 @@ const generateSDKClientFromSwagger = async (
         
         // Poll if not in terminal status
         if (!TERMINAL_ACTIVITY_STATUSES.includes(activityData.activity.status as TActivityStatus)) {
-        activityData = await this.pollForCompletion(activityData.activity.id, stampWith);
+        activityData = await this.pollForCompletion(activityData.activity.id, stampWith, activityData.activity.organizationId);
         }
 
         activityData = await this.handleMfaIfNeeded(activityData, stampWith);
@@ -593,7 +596,7 @@ const generateSDKClientFromSwagger = async (
 
         // Poll if not in terminal status
         if (!TERMINAL_ACTIVITY_STATUSES.includes(activityData.activity.status as TActivityStatus)) {
-            activityData = await this.pollForCompletion(activityData.activity.id);
+            activityData = await this.pollForCompletion(activityData.activity.id, undefined, activityData.activity.organizationId);
         }
 
         return this.handleActivityResponse<TResponseType>(activityData, options?.resultKey);

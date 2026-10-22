@@ -105,6 +105,7 @@ export class ZeroXKeySDKClientBase {
   private async pollForCompletion(
     activityId: string,
     stampWith?: StamperType,
+    organizationId?: string,
   ): Promise<TActivityResponse> {
     const pollingDuration = this.config.activityPoller?.intervalMs ?? 1000;
     const maxRetries = this.config.activityPoller?.numRetries ?? 3;
@@ -114,8 +115,10 @@ export class ZeroXKeySDKClientBase {
 
     do {
       await this.sleep(pollingDuration);
+      // Query the organization the activity belongs to (for example a
+      // sub-organization), not the session's or the client's default one.
       activityData = (await this.getActivity(
-        { activityId },
+        { activityId, ...(organizationId ? { organizationId } : {}) },
         stampWith,
       )) as TActivityResponse;
       attempts++;
@@ -201,7 +204,11 @@ export class ZeroXKeySDKClientBase {
       mfaStatuses: mfaStatuses as MfaContext["mfaStatuses"],
     };
     await this.config.onMfaRequired(context);
-    return this.pollForCompletion(activityData.activity.id, stampWith);
+    return this.pollForCompletion(
+      activityData.activity.id,
+      stampWith,
+      activityData.activity.organizationId,
+    );
   }
 
   async request<TBodyType, TResponseType>(
@@ -271,6 +278,7 @@ export class ZeroXKeySDKClientBase {
       activityData = await this.pollForCompletion(
         activityData.activity.id,
         stampWith,
+        activityData.activity.organizationId,
       );
     }
 
@@ -439,7 +447,11 @@ export class ZeroXKeySDKClientBase {
           activityData.activity.status as TActivityStatus,
         )
       ) {
-        activityData = await this.pollForCompletion(activityData.activity.id);
+        activityData = await this.pollForCompletion(
+          activityData.activity.id,
+          undefined,
+          activityData.activity.organizationId,
+        );
       }
 
       return this.handleActivityResponse<TResponseType>(
