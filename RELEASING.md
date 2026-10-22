@@ -116,6 +116,65 @@ The workflow will:
 This general workflow versions and publishes other SDK packages only. It
 rejects a changeset naming `@0xkey-io/pay` and cannot publish Pay.
 
+#### Release guards
+
+`changeset publish` silently skips any `name@version` that already exists on
+npm, while `main` still records that version in `package.json`, the CHANGELOG
+and git tags. The workflow therefore runs `scripts/release-guard.mjs`:
+
+- **Build job:** `assert-unpublished --changeset-status` fails if any generic
+  package that the pending changesets would version already exists on npm.
+  Private workspaces such as examples are not checked.
+- **Version job and publish job:** `pack-smoke` packs every generic package
+  with `pnpm pack`, then checks three things in each tarball. The manifest
+  version must match the workspace. Every `@0xkey-io/*` dependency must be
+  resolved (no `workspace:`) to a range that the current workspace version
+  satisfies. A short list of key exports, such as `ZeroXKeyClient` and
+  `permitsCaptchaNavigation`, must be present.
+- **Publish job:** immediately before publishing,
+  `assert-unpublished --since-ref origin/<default branch>` fails if any package
+  that this release branch versioned already exists on npm. This also blocks a
+  blind rerun after a partial publish. Inspect npm first, and register any
+  versions that were published.
+
+Run the same checks locally with:
+
+```bash
+pnpm changeset status --output=changeset-status.json
+node scripts/release-guard.mjs assert-unpublished --changeset-status changeset-status.json
+rm changeset-status.json
+pnpm run build-all && node scripts/release-guard.mjs pack-smoke
+```
+
+### Security release lines
+
+An urgent security fix for already-published versions may be released from a
+`security/*` branch cut from the old release commit. On 2026-10-15, for
+example, `core@0.2.1`, `react-wallet-kit@0.3.1` and five other packages were
+published this way. These branches are publication sources only. **Never merge
+a `security/*` or `release/security/*` branch into `main`.** They are based on
+old release lines, and merging one would revert unrelated work on `main`.
+
+After a security-line publish, `main` must register the published versions in
+a normal PR (as was done for GHSA-883c-fqwg-phgv, GHSA-fpfh-w5pv-pf22 and
+GHSA-x4cf-59wm-72gv):
+
+1. Set `version` in each released package's `package.json` to the published
+   version. Rerun `pnpm run version` so generated `VERSION` constants match.
+   Confirm each version with `npm view @0xkey-io/<pkg> versions --json` and
+   the `@0xkey-io/<pkg>@<version>` git tag.
+2. Internal dependencies use `workspace:*`, so ranges follow automatically.
+   Update any hard-coded `@0xkey-io/*` range outside the workspace protocol.
+3. Add a CHANGELOG section for the published version. Copy the release line's
+   entry and note the source branch, tag, commit and GHSA ids.
+4. Keep the pending changesets. The next `changeset version` then bumps past
+   the registered versions.
+5. Prove it: the `assert-unpublished --changeset-status` check above must
+   pass.
+
+Until this PR merges, the build-job guard blocks any release from `main` that
+would reuse a security-line version.
+
 ### Pay release candidates
 
 Use **Publish Pay SDK release candidate** (`.github/workflows/pay-publish.yml`)
