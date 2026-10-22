@@ -45,6 +45,9 @@ jobs:
       - name: Brand assets
         run: node --test internal/acceptance/brand-assets.test.mjs
 
+      - name: Release guard
+        run: node --test scripts/release-guard.test.mjs
+
       - name: Auth Proxy codegen drift
         run: |
           pnpm --filter @0xkey-io/core codegen
