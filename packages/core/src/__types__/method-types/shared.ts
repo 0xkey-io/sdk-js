@@ -243,6 +243,12 @@ export type SignMessageParams = {
   encoding?: v1PayloadEncoding;
   hashFunction?: v1HashFunction;
   stampWith?: StamperType | undefined;
+  /**
+   * Prefix Ethereum messages with `"\x19Ethereum Signed Message:\n" + byte length` (EIP-191) before signing.
+   * Default: no prefix, so embedded wallets sign the raw message. Set to `true` for
+   * `personal_sign` / `verifyMessage` compatibility; required for connected Ethereum wallets.
+   * Ignored for non-Ethereum address formats.
+   */
   addEthereumPrefix?: boolean;
   organizationId?: string;
 };

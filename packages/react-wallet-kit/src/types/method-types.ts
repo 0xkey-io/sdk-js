@@ -238,6 +238,11 @@ export type HandleSignMessageParams = {
   walletAccount: WalletAccount;
   encoding?: v1PayloadEncoding;
   hashFunction?: v1HashFunction;
+  /**
+   * Prefix Ethereum messages with `"\x19Ethereum Signed Message:\n" + byte length` (EIP-191) before signing.
+   * Default: no prefix, so embedded wallets sign the raw message. Set to `true` for
+   * `personal_sign` / `verifyMessage` compatibility; required for connected Ethereum wallets.
+   */
   addEthereumPrefix?: boolean;
   subText?: string;
   successPageDuration?: number | undefined; // Duration in milliseconds for the success page to show. If 0, it will not show the success page.

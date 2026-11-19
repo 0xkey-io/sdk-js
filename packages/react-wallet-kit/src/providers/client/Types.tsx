@@ -669,7 +669,7 @@ export interface ClientContextType
    * @param params.walletAccount - The wallet account to use for signing.
    * @param params.encoding - encoding for the payload (defaults to the proper encoding for the account type).
    * @param params.hashFunction - hash function to use (defaults to the appropriate function for the account type).
-   * @param params.addEthereumPrefix - whether to add the Ethereum prefix to the message (default: false).
+   * @param params.addEthereumPrefix - whether to add the EIP-191 Ethereum prefix to the message (default: false, the raw message is signed). Set to `true` for `personal_sign` / `verifyMessage` compatibility; required for connected Ethereum wallets.
    * @param params.subText - subtext to display in the modal.
    * @param params.successPageDuration - duration in seconds to display the success page after signing.
    * @param params.stampWith - parameter to stamp the request with a specific stamper (StamperType.Passkey, StamperType.ApiKey, or StamperType.Wallet).
