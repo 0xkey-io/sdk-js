@@ -3186,14 +3186,17 @@ export class ZeroXKeyClient {
    *     - The wallet automatically prefixes messages with
    *       `"\x19Ethereum Signed Message:\n" + message length` before signing.
    *     - As a result, these signatures cannot be used as raw transaction signatures or broadcast on-chain.
-   *     - If `addEthereumPrefix` is set to `false`, an error is thrown because connected Ethereum wallets always prefix.
+   *     - `addEthereumPrefix` must be `true`; if it is omitted or `false`, an error is thrown because connected Ethereum wallets always prefix.
    *   - *Other chains*: follows the native connected wallet behavior.
    *
    * - **Embedded wallets**
    *   - Uses the 0xkey API to sign the message directly.
-   *   - Supports optional `addEthereumPrefix`:
-   *     - If `true` (default for Ethereum), the message is prefixed before signing.
-   *     - If `false`, the raw message is signed without any prefix.
+   *   - Supports optional `addEthereumPrefix` (Ethereum accounts only):
+   *     - If omitted or `false` (the default), the raw UTF-8 message is hashed and signed without any prefix.
+   *       The result does **not** verify with `personal_sign`, `ethers.verifyMessage`, or viem's `verifyMessage`.
+   *     - If `true`, the message is prefixed with `"\x19Ethereum Signed Message:\n" + byte length` (EIP-191)
+   *       before signing. Pass `true` whenever the signature must be EIP-191 / `personal_sign` compatible.
+   *   - Ignored for non-Ethereum address formats.
    *
    * Additional details:
    * - Automatically handles encoding and hashing based on the wallet account’s address format,
@@ -3207,7 +3210,8 @@ export class ZeroXKeyClient {
    * @param params.hashFunction - override for hash function (defaults to the function appropriate for the address format).
    * @param params.stampWith - optional stamper for the signing request.
    * @param params.addEthereumPrefix - whether to prefix the message with Ethereum’s
-   *   `"\x19Ethereum Signed Message:\n"` string (default: `true` for Ethereum).
+   *   `"\x19Ethereum Signed Message:\n"` string (EIP-191). Default: no prefix. Set to `true` for
+   *   `personal_sign` / `verifyMessage` compatibility; required for connected Ethereum wallets.
    * @param params.organizationId - organization ID to target (defaults to the session's organization ID).
    *
    * @returns A promise that resolves to a `v1SignRawPayloadResult` containing the signature and metadata.
