@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/delegated-access",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "private": true,
   "scripts": {
     "build": "pnpm -w run build-all",
