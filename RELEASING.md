@@ -100,18 +100,41 @@ Commit the generated `.changeset/*.md` file with the PR.
 3. Enable:
    - `enable_release`: true
    - `publish_to_npm`: true (only after tests pass)
+   - `run_integration_tests`: leave `false` unless the preprod/prod API
+     secrets are configured (see below)
 4. Approve the `production` environment deployment when prompted
 
 The workflow will:
 
 1. Build and validate pending changesets
-2. Run `changeset version` and bump package versions
-3. Run integration tests (preprod → prod)
+2. Run `changeset version` and bump package versions on the disposable
+   `release/<branch>` branch
+3. Run integration tests (preprod → prod), only when `run_integration_tests`
+   is `true`
 4. Dry-run the generic packages with an explicit Pay exclusion, then invoke the
    guarded generic publisher. The wrapper verifies that the official
    Changesets parser sees no Pay release candidate and that Pay remains private
-   in source; it never mutates the Pay manifest.
-5. Create a GitHub Release
+   in source; it never mutates the Pay manifest. Both the dry run and the
+   publish use npm provenance (`--provenance` on the dry run and
+   `NPM_CONFIG_PROVENANCE=true` for `changeset publish`, which pnpm hands to
+   npm), so the publish job has `id-token: write`.
+5. Push the `@0xkey-io/<pkg>@<version>` tags that `changeset publish` created
+   on the release commit. This also runs after a partial publish.
+6. Open a PR that brings the release commit back to the default branch. The
+   workflow never pushes to the default branch; a maintainer reviews and
+   merges the PR. PRs opened with `GITHUB_TOKEN` do not start CI, so close and
+   reopen the PR to run the checks before merging.
+7. Create one GitHub Release per pushed package tag
+
+#### Integration tests
+
+The preprod/prod integration suites need API secrets (`PREPROD_*`, `API_*`,
+`ORGANIZATION_ID` and others) that are not configured for this repository.
+`run_integration_tests` therefore defaults to `false`. A release without them
+relies on the unit tests in CI plus a prod smoke test after publishing (install
+the published packages in an empty project and sign in once against prod).
+The run summary and every GitHub Release created by the run state which of the
+two applied.
 
 This general workflow versions and publishes other SDK packages only. It
 rejects a changeset naming `@0xkey-io/pay` and cannot publish Pay.
