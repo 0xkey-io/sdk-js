@@ -54,10 +54,6 @@
       "kind": "string"
     },
     {
-      "name": "PRODUCTION_ON_RAMP_CREDENTIALS_ENCRYPTION_PUBLIC_KEY",
-      "kind": "string"
-    },
-    {
       "name": "PRODUCTION_QUORUM_KEY_HEX",
       "kind": "string"
     },

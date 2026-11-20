@@ -36,9 +36,6 @@ export const PRODUCTION_NOTARIZER_SIGN_PUBLIC_KEY =
 export const PRODUCTION_TLS_FETCHER_ENCRYPT_PUBLIC_KEY =
   "0438c11ab9353df275dd2f3b99a47c64fe37c820775e352cb2746221d9eb458bc513aedae91a662d3a57de88d708c04dd494fc99dfe3ea91b6b4e9fcbca12e78e6";
 
-export const PRODUCTION_ON_RAMP_CREDENTIALS_ENCRYPTION_PUBLIC_KEY =
-  "02336ebd7e929ef64b87c776b72540255b4c7b41579a24b1e68fb060daa873f9f6";
-
 // Quorum trust anchor for boot proof verification (verifyBootProof):
 // the manifest-set members + threshold + quorum key that approved the
 // currently-deployed 0xkey production manifests. Pinned from the quorum
