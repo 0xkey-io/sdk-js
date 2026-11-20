@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
@@ -23,9 +24,9 @@ const { stdout: trackedBytes } = await execute(
 const tracked = trackedBytes
   .toString("utf8")
   .split("\0")
-  .filter((path) =>
-    /\.(?:css|html|js|json|md|ts|tsx|yaml|yml|mjs)$/.test(path),
-  );
+  .filter((path) => /\.(?:css|html|js|json|md|ts|tsx|yaml|yml|mjs)$/.test(path))
+  // `changeset version` deletes consumed changesets that are still indexed.
+  .filter((path) => existsSync(new URL(path, root)));
 
 let prettierOutput = "";
 try {

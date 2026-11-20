@@ -83,7 +83,7 @@ jobs:
         run: pnpm run typecheck-all
 
       - name: Prettier
-        run: pnpm run prettier-all:check
+        run: node .github/scripts/check-prettier-debt.mjs
 
   version-and-rebuild:
     runs-on: ubuntu-latest
@@ -127,7 +127,7 @@ jobs:
           pnpm install -r
           pnpm run build-all
           pnpm run typecheck-all
-          pnpm run prettier-all:check
+          node .github/scripts/check-prettier-debt.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
