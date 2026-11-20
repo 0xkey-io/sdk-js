@@ -146,6 +146,8 @@ import {
   getClientSignatureMessageForSignup,
   decodeVerificationToken,
   otpRateLimitErrorFrom,
+  isAttestedLoginUnavailable,
+  getClientSignatureMessageForLogin,
 } from "../utils";
 import { createStorageManager } from "../__storage__/base";
 import {
@@ -2140,17 +2142,60 @@ export class ZeroXKeyClient {
           ...this.httpClient.config,
           attestedStamper: loginStamper,
         });
-        const loginRes = await httpClient.stampLogin(
-          {
+        let session: string | undefined;
+        try {
+          const loginRes = await httpClient.stampLogin(
+            {
+              publicKey,
+              expirationSeconds,
+              ...(sessionProfileId !== undefined && { sessionProfileId }),
+              ...(invalidateExisting !== undefined && { invalidateExisting }),
+              organizationId: resolvedOrganizationId,
+            },
+            StamperType.Attested,
+          );
+          session = loginRes.session;
+        } catch (error) {
+          if (
+            sessionProfileId !== undefined ||
+            !httpClient.config.authProxyUrl ||
+            !httpClient.config.authProxyConfigId ||
+            !isAttestedLoginUnavailable(error)
+          ) {
+            throw error;
+          }
+          // otp_login_v2 takes the Session lifetime from the Auth Proxy
+          // configuration, not expirationSeconds.
+          const { message } = getClientSignatureMessageForLogin({
+            verificationToken,
+            sessionPublicKey: publicKey,
+          });
+          const signature = await this.apiKeyStamper?.sign(
+            message,
+            SignatureFormat.Raw,
             publicKey,
-            expirationSeconds,
-            ...(sessionProfileId !== undefined && { sessionProfileId }),
+          );
+          if (!signature) {
+            throw new ZeroXKeyError(
+              "Failed to sign client signature for OTP login",
+              ZeroXKeyErrorCodes.INTERNAL_ERROR,
+            );
+          }
+          const fallbackRes = await httpClient.proxyOtpLoginV2({
+            verificationToken,
+            publicKey,
+            clientSignature: {
+              message,
+              publicKey,
+              scheme: "CLIENT_SIGNATURE_SCHEME_API_P256",
+              signature,
+            },
             ...(invalidateExisting !== undefined && { invalidateExisting }),
             organizationId: resolvedOrganizationId,
-          },
-          StamperType.Attested,
-        );
-        if (!loginRes.session) {
+          });
+          session = fallbackRes?.session;
+        }
+        if (!session) {
           throw new ZeroXKeyError(
             "No session returned from OTP StampLogin",
             ZeroXKeyErrorCodes.OTP_LOGIN_ERROR,
@@ -2162,7 +2207,7 @@ export class ZeroXKeyClient {
         await withZeroXKeyErrorHandling(
           async () =>
             this.commitAuthMutation(() =>
-              this.storageManager.storeSession(loginRes.session, sessionKey),
+              this.storageManager.storeSession(session, sessionKey),
             ),
           {
             errorMessage: "Failed to store session",
@@ -2171,7 +2216,7 @@ export class ZeroXKeyClient {
         );
 
         return {
-          sessionToken: loginRes.session,
+          sessionToken: session,
         };
       },
       {
