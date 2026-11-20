@@ -226,7 +226,10 @@ const generateSDKClientFromSwagger = async (
   const imports = [];
 
   imports.push(
-    'import { GrpcStatus, StorageBase, TActivityResponse, TActivityStatus, TERMINAL_ACTIVITY_STATUSES, TSignedRequest, TStamper, ZeroXKeyHttpClientConfig, ZeroXKeyRequestError } from "../__types__";',
+    'import { StorageBase, TActivityResponse, TActivityStatus, TERMINAL_ACTIVITY_STATUSES, TSignedRequest, TStamper, ZeroXKeyHttpClientConfig } from "../__types__";',
+  );
+  imports.push(
+    'import { responseError } from "../__clients__/response-error";',
   );
   imports.push('import type { MfaContext } from "../__types__";');
 
@@ -435,14 +438,7 @@ const generateSDKClientFromSwagger = async (
         });
 
         if (!response.ok) {
-        let res: GrpcStatus;
-        try {
-            res = await response.json();
-        } catch (_) {
-            throw new Error(\`\${response.status} \${response.statusText}\`);
-        }
-
-        throw new ZeroXKeyRequestError(res);
+        throw await responseError(response);
         }
 
         const data = await response.json();
@@ -525,18 +521,7 @@ const generateSDKClientFromSwagger = async (
         });
 
         if (!response.ok) {
-        const errorResponse = {
-            status: response.status,
-            retryAfter: response.headers?.get?.("retry-after") ?? undefined,
-        };
-        let res: GrpcStatus;
-        try {
-            res = await response.json();
-        } catch (_) {
-            throw Object.assign(new Error(\`\${response.status} \${response.statusText}\`), errorResponse);
-        }
-
-        throw new ZeroXKeyRequestError(res, errorResponse);
+        throw await responseError(response);
         }
 
         const data = await response.json();
@@ -576,13 +561,7 @@ const generateSDKClientFromSwagger = async (
         });
 
         if (!response.ok) {
-        let res: GrpcStatus;
-        try {
-            res = await response.json();
-        } catch (_) {
-            throw new Error(\`\${response.status} \${response.statusText}\`);
-        }
-        throw new ZeroXKeyRequestError(res);
+        throw await responseError(response);
         }
 
         const data = await response.json();

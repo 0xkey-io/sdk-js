@@ -10,7 +10,6 @@ import {
 
 import {
   PRODUCTION_NOTARIZER_SIGN_PUBLIC_KEY,
-  PRODUCTION_ON_RAMP_CREDENTIALS_ENCRYPTION_PUBLIC_KEY,
   PRODUCTION_SIGNER_SIGN_PUBLIC_KEY,
   PRODUCTION_TLS_FETCHER_ENCRYPT_PUBLIC_KEY,
 } from "./constants";
@@ -545,25 +544,30 @@ export const encryptOauth2ClientSecret = async (
  * to the on ramp encryption public key. This is used before uploading your on ramp
  * credentials to 0xkey via the CreateFiatOnRampCredential activity
  *
+ * 0xkey does not publish a default on-ramp encryption key, so the caller must
+ * pass the key of the enclave that will decrypt the credential.
+ *
  * @param secret The private/secret api key issued by the on ramp provider
- * @param dangerouslyOverrideOnRampEncryptionPublicKey *(optional)* Hex-encoded
- *              uncompressed P-256 public key to encrypt to (use only in
- *              tests/dev environment).  Defaults to the production on ramp encryption public key.
+ * @param onRampEncryptionPublicKey Hex-encoded compressed P-256 public key to
+ *              encrypt to.
  * @returns {Promise<string>} A base58check encoded borsh serialized envelope with the encrypted secret
  *                            meant to be passed to the CreateFiatOnRampCredential activity
+ * @throws {Error} If `onRampEncryptionPublicKey` is missing or empty.
  */
 export const encryptOnRampSecret = (
   secret: string,
-  dangerouslyOverrideOnRampEncryptionPublicKey?: string,
+  onRampEncryptionPublicKey: string,
 ): string => {
+  if (!onRampEncryptionPublicKey) {
+    throw new Error(
+      "encryptOnRampSecret: an on-ramp encryption public key is required; 0xkey does not provide a default",
+    );
+  }
   return bs58check.encode(
     hpkeEncrypt({
       plainTextBuf: new TextEncoder().encode(secret),
       targetKeyBuf: uncompressRawPublicKey(
-        uint8ArrayFromHexString(
-          dangerouslyOverrideOnRampEncryptionPublicKey ??
-            PRODUCTION_ON_RAMP_CREDENTIALS_ENCRYPTION_PUBLIC_KEY,
-        ),
+        uint8ArrayFromHexString(onRampEncryptionPublicKey),
       ),
       hpkeInfo: ZEROXKEY_HPKE_INFO,
     }),

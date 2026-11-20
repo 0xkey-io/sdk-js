@@ -30,6 +30,7 @@ import {
   type WalletProvider,
   Chain,
   GrpcStatus,
+  ZeroXKeyHttpError,
   ZeroXKeyRequestError,
   EvmChainInfo,
   SolanaChainInfo,
@@ -1227,6 +1228,45 @@ function safeStringify(value: unknown): string {
 
 const pluralSeconds = (seconds: number) =>
   `${seconds} second${seconds === 1 ? "" : "s"}`;
+
+const ATTESTED_LOGIN_UNAVAILABLE_STATUSES = new Set([404, 501, 503]);
+
+/**
+ * @internal
+ *
+ * Whether a StampLogin failure means the server cannot take attested logins
+ * at all, as opposed to rejecting this login. Only the former may fall back
+ * to `otp_login_v2`: a 403 or an `ATTESTED_LOGIN_*` reason can be an MFA
+ * requirement that the fallback would bypass, and an `ATTESTED_STAMP_*`
+ * reason means the server checked the stamp and refused it.
+ */
+export function isAttestedLoginUnavailable(error: unknown): boolean {
+  if (error instanceof ZeroXKeyHttpError) {
+    // A gateway that does not know X-Stamp-Attested answers 401 in plain text.
+    return (
+      error.status === 401 ||
+      ATTESTED_LOGIN_UNAVAILABLE_STATUSES.has(error.status)
+    );
+  }
+  if (
+    !(error instanceof ZeroXKeyRequestError) ||
+    error.status === undefined ||
+    error.status === 403
+  ) {
+    return false;
+  }
+  const reasons = (error.details ?? []).flatMap((detail) =>
+    isRecord(detail) && typeof detail.reason === "string"
+      ? [detail.reason]
+      : [],
+  );
+  if (reasons.some((reason) => reason.startsWith("ATTESTED_LOGIN_"))) {
+    return false;
+  }
+  if (reasons.includes("ATTESTED_STAMP_NOT_ENABLED")) return true;
+  if (reasons.some((reason) => reason.startsWith("ATTESTED_"))) return false;
+  return ATTESTED_LOGIN_UNAVAILABLE_STATUSES.has(error.status);
+}
 
 /**
  * @internal

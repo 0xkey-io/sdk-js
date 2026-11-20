@@ -115,4 +115,10 @@ function LoginButton() {
 ```
 
 
+OTP login (`completeOtp`) uses Attested `stamp_login` and, only when the server
+cannot take Attested stamps, retries through Auth Proxy `otp_login_v2`; set
+`authProxyConfigId` for that fallback. See the
+[`@0xkey-io/core` README](https://github.com/0xkey-io/sdk-js/tree/main/packages/core#otp-login-and-the-otp_login_v2-fallback)
+for the exact conditions.
+
 For more information, check out [our docs!](https://docs.0xkey.io/sdks/react)
