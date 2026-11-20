@@ -1,5 +1,20 @@
 # @0xkey-io/react-wallet-kit
 
+## 0.3.1
+
+> Published to npm on 2026-10-15 from the security release line `release/security/0xkey-com-hosts-rwk-0.3.1/38703859678` (git tag `@0xkey-io/react-wallet-kit@0.3.1`, commit `0bd4e2b`), not from `main`. Security advisories: [GHSA-x4cf-59wm-72gv](https://github.com/0xkey-io/sdk-js/security/advisories/GHSA-x4cf-59wm-72gv), [GHSA-883c-fqwg-phgv](https://github.com/0xkey-io/sdk-js/security/advisories/GHSA-883c-fqwg-phgv). `main` already contains the same host fix; this entry registers the published version so the next release from `main` versions past it instead of colliding with it.
+>
+> The same fix was also published for the 0.2 line as `@0xkey-io/react-wallet-kit@0.2.1` (npm dist-tag `legacy-0.2`, commit `417832d`).
+
+### Patch Changes
+
+- [`7a2df40`](https://github.com/0xkey-io/sdk-js/commit/7a2df4010a1a20a535eb6ecbb3dc0b4efcc502b2) Author [@torbensen](https://github.com/torbensen) - Security: stop defaulting to hosts on a third-party domain that 0xkey does not
+  own. Without `importIframeUrl` / `exportIframeUrl`, wallet import and export
+  load `https://import.0xkey.io` and `https://export.0xkey.io`, and the package
+  depends on `@0xkey-io/core@0.2.1`, whose API fallback is
+  `https://api.0xkey.io`. Nothing else changes; apps that configure these values
+  explicitly are unaffected.
+
 ## 0.3.0
 
 ### Minor Changes

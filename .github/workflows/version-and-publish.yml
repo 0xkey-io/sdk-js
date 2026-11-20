@@ -61,6 +61,15 @@ jobs:
             exit 1
           fi
 
+      # changeset publish silently skips a name@version that already exists on
+      # npm (for example one published from a security release line). Fail
+      # before versioning instead; see RELEASING.md "Security release lines".
+      - name: Refuse planned versions that already exist on npm
+        run: |
+          pnpm changeset status --output=changeset-status.json
+          node scripts/release-guard.mjs assert-unpublished --changeset-status changeset-status.json
+          rm changeset-status.json
+
       - name: Debug Foundry
         run: anvil --version || echo "anvil not found"
 
@@ -118,6 +127,11 @@ jobs:
           pnpm run prettier-all:check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pack every generic package as pnpm publishes it and check versions,
+      # resolved internal dependency ranges and key exported symbols.
+      - name: Pack smoke versioned packages
+        run: node scripts/release-guard.mjs pack-smoke
 
       - name: Debug Git Status
         run: |
@@ -255,6 +269,17 @@ jobs:
       # build-all runs in topological order so every package has fresh dist.
       - name: Build all packages
         run: pnpm run build-all
+
+      # Final pre-publish gates on the exact tree that will be published.
+      # Every package this release branch versioned must still be absent from
+      # npm, so changeset publish can never skip one silently.
+      - name: Refuse versions that already exist on npm
+        run: |
+          git fetch origin ${{ github.event.repository.default_branch }}
+          node scripts/release-guard.mjs assert-unpublished --since-ref origin/${{ github.event.repository.default_branch }}
+
+      - name: Pack smoke
+        run: node scripts/release-guard.mjs pack-smoke
 
       - name: Confirm environment variables
         run: |
