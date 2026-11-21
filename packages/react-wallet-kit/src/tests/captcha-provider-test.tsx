@@ -546,6 +546,7 @@ describe("mounted Provider Captcha gate", () => {
       otpType: "OTP_TYPE_EMAIL",
       contact: "signup@example.test",
       verificationToken: "verified-otp",
+      expirationSeconds: "900",
       captchaToken: "widget-token",
     });
     expect(reset).toHaveBeenCalledTimes(1);
@@ -575,10 +576,41 @@ describe("mounted Provider Captcha gate", () => {
       otpType: "OTP_TYPE_EMAIL",
       contact: "signup@example.test",
       verificationToken: "verified-otp",
+      expirationSeconds: "900",
     });
     expect(mockLoginWithOtp).toHaveBeenCalledWith({
       verificationToken: "verified-otp",
+      expirationSeconds: "900",
     });
+  });
+
+  it("applies the configured session length to OTP login and signup unless the call sets one", async () => {
+    mockGetClientParams.mockResolvedValue({});
+    mounted = await mountReady({
+      ...baseConfig,
+      auth: { ...baseConfig.auth, sessionExpirationSeconds: "3600" },
+    });
+    await act(async () => {
+      await mounted.context()!.loginWithOtp({
+        verificationToken: "verified-otp",
+      });
+      await mounted.context()!.loginWithOtp({
+        verificationToken: "verified-otp",
+        expirationSeconds: "120",
+      });
+      await mounted.context()!.signUpWithOtp(otpSignup());
+    });
+    expect(mockLoginWithOtp).toHaveBeenNthCalledWith(1, {
+      verificationToken: "verified-otp",
+      expirationSeconds: "3600",
+    });
+    expect(mockLoginWithOtp).toHaveBeenNthCalledWith(2, {
+      verificationToken: "verified-otp",
+      expirationSeconds: "120",
+    });
+    expect(mockSignUpWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({ expirationSeconds: "3600" }),
+    );
   });
 
   it.each(["C3", "widget"])(

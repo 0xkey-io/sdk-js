@@ -2942,8 +2942,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
+      const expirationSeconds =
+        params?.expirationSeconds ??
+        masterConfig?.auth?.sessionExpirationSeconds ??
+        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
       const res = await withZeroXKeyErrorHandling(
-        () => client.loginWithOtp(params),
+        () => client.loginWithOtp({ ...params, expirationSeconds }),
         undefined,
         callbacks,
         "Failed to login with OTP",
@@ -2958,7 +2962,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       return res;
     },
-    [client, callbacks, handlePostAuth],
+    [client, callbacks, handlePostAuth, masterConfig],
   );
 
   const signUpWithOtp = useCallback(
@@ -2991,11 +2995,16 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           : { ...params };
 
       const { captchaToken: _callerToken, ...coreParams } = params;
+      const expirationSeconds =
+        params?.expirationSeconds ??
+        masterConfig?.auth?.sessionExpirationSeconds ??
+        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
       const res = await withZeroXKeyErrorHandling(
         () =>
           runCaptchaProtected(client, (captchaToken) =>
             client.signUpWithOtp({
               ...coreParams,
+              expirationSeconds,
               ...(captchaToken !== undefined && { captchaToken }),
             }),
           ),
@@ -3050,8 +3059,13 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
+      const expirationSeconds =
+        params?.expirationSeconds ??
+        masterConfig?.auth?.sessionExpirationSeconds ??
+        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+
       const res = await withZeroXKeyErrorHandling(
-        () => client.completeOtp(params),
+        () => client.completeOtp({ ...params, expirationSeconds }),
         undefined,
         callbacks,
         "Failed to complete OTP",

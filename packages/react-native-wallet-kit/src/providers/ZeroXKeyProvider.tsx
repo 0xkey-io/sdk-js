@@ -912,8 +912,12 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         );
       }
 
+      const expirationSeconds =
+        params?.expirationSeconds ??
+        masterConfig?.auth?.sessionExpirationSeconds ??
+        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
       const res = await withZeroXKeyErrorHandling(
-        () => client.loginWithOtp(params),
+        () => client.loginWithOtp({ ...params, expirationSeconds }),
         () => logout(),
         callbacks,
         "Failed to login with OTP",
@@ -927,7 +931,7 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
       }
       return res;
     },
-    [client, callbacks],
+    [client, callbacks, masterConfig],
   );
 
   const signUpWithOtp = useCallback(
@@ -959,8 +963,13 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
+      const expirationSeconds =
+        params?.expirationSeconds ??
+        masterConfig?.auth?.sessionExpirationSeconds ??
+        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+
       const res = await withZeroXKeyErrorHandling(
-        () => client.signUpWithOtp(params),
+        () => client.signUpWithOtp({ ...params, expirationSeconds }),
         () => logout(),
         callbacks,
         "Failed to sign up with OTP",
@@ -1011,8 +1020,13 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
+      const expirationSeconds =
+        params?.expirationSeconds ??
+        masterConfig?.auth?.sessionExpirationSeconds ??
+        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+
       const res = await withZeroXKeyErrorHandling(
-        () => client.completeOtp(params),
+        () => client.completeOtp({ ...params, expirationSeconds }),
         () => logout(),
         callbacks,
         "Failed to complete OTP",
