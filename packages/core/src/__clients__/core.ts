@@ -2726,6 +2726,7 @@ export class ZeroXKeyClient {
                 providerName,
                 oidcToken,
               },
+              ...(createSubOrgParams?.oauthProviders ?? []),
             ],
           },
         });

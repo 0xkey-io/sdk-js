@@ -992,3 +992,28 @@ test.each([
     );
   },
 );
+
+test("signUpWithOauth keeps caller-supplied OAuth providers after the primary one", async () => {
+  const client = await ready();
+  const requests = capture({
+    "/v1/signup": { appProofs: [] },
+    "/v1/oauth_login": { session: "session" },
+  });
+  await client.signUpWithOauth({
+    oidcToken: "primary-oidc",
+    publicKey: "key",
+    providerName: "primary",
+    createSubOrgParams: {
+      oauthProviders: [
+        { providerName: "secondary", oidcToken: "secondary-oidc" },
+      ],
+    },
+  });
+  const signup = requests.find(
+    (request) => new URL(request.url).pathname === "/v1/signup",
+  )!;
+  expect(signup.body.oauthProviders).toEqual([
+    { providerName: "primary", oidcToken: "primary-oidc" },
+    { providerName: "secondary", oidcToken: "secondary-oidc" },
+  ]);
+});
