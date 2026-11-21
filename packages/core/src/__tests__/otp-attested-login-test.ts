@@ -772,3 +772,87 @@ test("completeOtp passes the verified existing organization into Attested login"
   });
   expect(result.action).toBe(AuthAction.LOGIN);
 });
+
+test("completeOtp forwards expirationSeconds to login and signup, and leaves it unset by default", async () => {
+  const { client } = await setup();
+  const logins: LoginWithOtpParams[] = [];
+  client.loginWithOtp = async (params) => {
+    logins.push(params);
+    return { sessionToken: "session-1" };
+  };
+  let signupParams: Record<string, unknown> | undefined;
+  client.signUpWithOtp = async (params) => {
+    signupParams = params as Record<string, unknown>;
+    return { sessionToken: "session-2" };
+  };
+  const base = {
+    otpId: "otp-1",
+    otpCode: "123456",
+    otpEncryptionTargetBundle: "bundle",
+    contact: "person@example.test",
+    otpType: OtpType.Email,
+    publicKey: publicA,
+  };
+
+  client.verifyOtp = async () => ({
+    verificationToken: token(publicA),
+    subOrganizationId: "verified-org",
+  });
+  await client.completeOtp({ ...base, expirationSeconds: "3600" });
+  await client.completeOtp(base);
+  expect(logins[0]!.expirationSeconds).toBe("3600");
+  expect(logins[1]).not.toHaveProperty("expirationSeconds");
+
+  client.verifyOtp = async () => ({
+    verificationToken: token(publicA),
+    subOrganizationId: "",
+  });
+  await client.completeOtp({ ...base, expirationSeconds: "3600" });
+  expect(signupParams).toMatchObject({ expirationSeconds: "3600" });
+});
+
+test("signUpWithOtp applies expirationSeconds to the StampLogin that follows signup", async () => {
+  const { client } = await setup();
+  const verificationToken = token(publicA);
+  const stampLoginBodies: any[] = [];
+  global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+    if (new URL(String(url)).pathname === "/v1/signup_v2") {
+      return {
+        ok: true,
+        json: async () => ({ organizationId: "new-org", appProofs: [] }),
+      } as Response;
+    }
+    stampLoginBodies.push(JSON.parse(String(init?.body)));
+    return response("signup-session");
+  }) as typeof fetch;
+  await client.signUpWithOtp({
+    verificationToken,
+    contact: "person@example.test",
+    otpType: OtpType.Email,
+    expirationSeconds: "3600",
+  });
+  expect(stampLoginBodies).toHaveLength(1);
+  expect(stampLoginBodies[0].parameters.expirationSeconds).toBe("3600");
+});
+
+test.each(["0", "-5", "abc", "", "NaN"])(
+  "loginWithOtp treats expirationSeconds %p as unset and asks for 900 seconds",
+  async (value) => {
+    const { client } = await setup();
+    const verificationToken = token(publicA);
+    const stampLoginBodies: any[] = [];
+    global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url) === "https://auth.example.test/v1/account") {
+        return {
+          ok: true,
+          json: async () => ({ organizationId: "verified-org" }),
+        } as Response;
+      }
+      stampLoginBodies.push(JSON.parse(String(init?.body)));
+      return response("session-1");
+    }) as typeof fetch;
+    await client.loginWithOtp({ verificationToken, expirationSeconds: value });
+    expect(stampLoginBodies).toHaveLength(1);
+    expect(stampLoginBodies[0].parameters.expirationSeconds).toBe("900");
+  },
+);

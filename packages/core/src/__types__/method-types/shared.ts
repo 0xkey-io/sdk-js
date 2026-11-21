@@ -166,6 +166,8 @@ export type SignUpWithOtpParams = {
   otpType: OtpType;
   createSubOrgParams?: CreateSubOrgParams;
   invalidateExisting?: boolean;
+  /** Session lifetime in seconds for the login that follows sign-up. Defaults to 900. */
+  expirationSeconds?: string;
   publicKey?: string;
   sessionKey?: string;
 };
@@ -179,6 +181,8 @@ export type CompleteOtpParams = {
   otpType: OtpType;
   publicKey?: string;
   invalidateExisting?: boolean;
+  /** Session lifetime in seconds. Defaults to 900. */
+  expirationSeconds?: string;
   sessionKey?: string;
   createSubOrgParams?: CreateSubOrgParams;
 };

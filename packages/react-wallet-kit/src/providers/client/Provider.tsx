@@ -53,7 +53,8 @@ import {
   getAuthProxyConfig,
   getClientParams,
   Chain,
-  DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+  parseSessionExpirationSeconds,
+  resolveSessionExpirationSeconds,
   OtpType,
   StamperType,
   ZeroXKeyClient,
@@ -1324,9 +1325,13 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
 
     // These are settings that, if using the auth proxy, must be set in the dashboard. They override any local settings unless they are not using auth proxy or are not fetching the auth proxy config.
     const authProxyPrioSettings = {
+      // Dashboard value first, then the local config; an empty, unparsable or
+      // non-positive value counts as unset so the next layer applies.
       sessionExpirationSeconds:
-        proxyAuthConfig?.sessionExpirationSeconds ??
-        config.auth?.sessionExpirationSeconds,
+        parseSessionExpirationSeconds(
+          proxyAuthConfig?.sessionExpirationSeconds,
+        ) ??
+        parseSessionExpirationSeconds(config.auth?.sessionExpirationSeconds),
       otpAlphanumeric:
         proxyAuthConfig?.otpAlphanumeric ??
         config.auth?.otpAlphanumeric ??
@@ -2488,7 +2493,14 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
 
       const res = await withZeroXKeyErrorHandling(
-        () => client.refreshSession({ ...params }),
+        () =>
+          client.refreshSession({
+            ...params,
+            expirationSeconds: resolveSessionExpirationSeconds(
+              params?.expirationSeconds,
+              masterConfig?.auth?.sessionExpirationSeconds,
+            ),
+          }),
         () => logout(),
         callbacks,
         "Failed to refresh session",
@@ -2514,6 +2526,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       getSession,
       scheduleSessionExpiration,
       getAllSessions,
+      masterConfig,
     ],
   );
 
@@ -2526,10 +2539,10 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const res = await withZeroXKeyErrorHandling(
         () => client.loginWithPasskey({ ...params, expirationSeconds }),
         () => logout(),
@@ -2572,10 +2585,10 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
 
       const websiteName = window.location.hostname;
       const timestamp =
@@ -2737,10 +2750,10 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       return await withZeroXKeyErrorHandling(
         () => client.buildWalletLoginRequest({ ...params, expirationSeconds }),
         undefined,
@@ -2760,10 +2773,10 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const res = await withZeroXKeyErrorHandling(
         () => client.loginWithWallet({ ...params, expirationSeconds }),
         undefined,
@@ -2806,10 +2819,10 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const { captchaToken: _callerToken, ...coreParams } = params;
       const res = await withZeroXKeyErrorHandling(
         () =>
@@ -2862,10 +2875,10 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const { captchaToken: _callerToken, ...coreParams } = params;
       const res = await withZeroXKeyErrorHandling(
         () =>
@@ -2942,8 +2955,12 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
         );
       }
 
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const res = await withZeroXKeyErrorHandling(
-        () => client.loginWithOtp(params),
+        () => client.loginWithOtp({ ...params, expirationSeconds }),
         undefined,
         callbacks,
         "Failed to login with OTP",
@@ -2958,7 +2975,7 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
       }
       return res;
     },
-    [client, callbacks, handlePostAuth],
+    [client, callbacks, handlePostAuth, masterConfig],
   );
 
   const signUpWithOtp = useCallback(
@@ -2991,11 +3008,16 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           : { ...params };
 
       const { captchaToken: _callerToken, ...coreParams } = params;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const res = await withZeroXKeyErrorHandling(
         () =>
           runCaptchaProtected(client, (captchaToken) =>
             client.signUpWithOtp({
               ...coreParams,
+              expirationSeconds,
               ...(captchaToken !== undefined && { captchaToken }),
             }),
           ),
@@ -3050,8 +3072,13 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
+
       const res = await withZeroXKeyErrorHandling(
-        () => client.completeOtp(params),
+        () => client.completeOtp({ ...params, expirationSeconds }),
         undefined,
         callbacks,
         "Failed to complete OTP",
