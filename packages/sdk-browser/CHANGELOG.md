@@ -1,5 +1,30 @@
 # @0xkey-io/sdk-browser
 
+## 0.1.4
+
+### Patch Changes
+
+- [#57](https://github.com/0xkey-io/sdk-js/pull/57) [`9a9008c`](https://github.com/0xkey-io/sdk-js/commit/9a9008cd5926266e51e24eb53b29b2844282a224) Author [@torbensen](https://github.com/torbensen) - Use the canonical "0xkey" brand in user-visible strings. New passkeys added
+  without a name are called `0xkey Passkey-<timestamp>` (existing passkeys keep
+  their names), request errors read `0xkey error <code>: …`, and SDK warnings
+  say "0xkey SDK". Public identifiers such as `ZeroXKeyError` and
+  `ZeroXKeyProvider` are unchanged.
+
+- [#24](https://github.com/0xkey-io/sdk-js/pull/24) [`4155c24`](https://github.com/0xkey-io/sdk-js/commit/4155c249c1c012e5e98ab54d837d0163598007c3) Author [@torbensen](https://github.com/torbensen) - Upgrade browser/core `createSubOrganization` clients to the current V8 activity
+  contract and defensively flatten newer versioned result keys from completed
+  activities. The server SDK and shared types were released separately as the
+  tenant hotfix.
+
+- [#46](https://github.com/0xkey-io/sdk-js/pull/46) [`94137a0`](https://github.com/0xkey-io/sdk-js/commit/94137a059397ae3d70b141173a8d3c844705ac71) Author [@torbensen](https://github.com/torbensen) - Expose the Turnkey-aligned MFA policy, session profile, credential binding, and
+  `AUTHENTICATORS_NEEDED` identity contracts across every generated public client.
+- Updated dependencies [[`9a9008c`](https://github.com/0xkey-io/sdk-js/commit/9a9008cd5926266e51e24eb53b29b2844282a224), [`e21d0f6`](https://github.com/0xkey-io/sdk-js/commit/e21d0f6e5a1f6b092b60486877fed01b2c9a731e), [`f089d9f`](https://github.com/0xkey-io/sdk-js/commit/f089d9f58eca9754c4e973953751f4fb7b3e2ef8), [`7a09cd9`](https://github.com/0xkey-io/sdk-js/commit/7a09cd93c3dba20ac01e551196605e359dcaf20e), [`81a7f91`](https://github.com/0xkey-io/sdk-js/commit/81a7f91c6b9dbcdf3e98667a6b2aadc01a85032e), [`94137a0`](https://github.com/0xkey-io/sdk-js/commit/94137a059397ae3d70b141173a8d3c844705ac71), [`497a0cc`](https://github.com/0xkey-io/sdk-js/commit/497a0cc151b803b166eb443625682a1a4216e779)]:
+  - @0xkey-io/http@0.2.0
+  - @0xkey-io/crypto@0.4.0
+  - @0xkey-io/sdk-types@0.2.0
+  - @0xkey-io/wallet-stamper@0.1.4
+  - @0xkey-io/api-key-stamper@0.1.4
+  - @0xkey-io/indexed-db-stamper@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

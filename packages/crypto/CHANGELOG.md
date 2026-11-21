@@ -1,5 +1,26 @@
 # @0xkey-io/crypto
 
+## 0.4.0
+
+### Minor Changes
+
+- [#66](https://github.com/0xkey-io/sdk-js/pull/66) [`e21d0f6`](https://github.com/0xkey-io/sdk-js/commit/e21d0f6e5a1f6b092b60486877fed01b2c9a731e) Author [@torbensen](https://github.com/torbensen) - **Breaking**：`encryptOnRampSecret(secret, onRampEncryptionPublicKey)` 的第二个
+  参数改为必填，缺失或为空时抛出明确错误。同时删除导出常量
+  `PRODUCTION_ON_RAMP_CREDENTIALS_ENCRYPTION_PUBLIC_KEY`。
+
+  原来的默认值是从上游继承的、另一家服务商的生产 on-ramp 加密公钥。0xkey 没有发布
+  自己的 on-ramp 加密公钥，用那把公钥加密的凭证 0xkey 无法解密。依赖默认值的调用方
+  现在需要显式传入目标公钥（十六进制压缩 P-256 公钥）。
+
+- [#14](https://github.com/0xkey-io/sdk-js/pull/14) [`497a0cc`](https://github.com/0xkey-io/sdk-js/commit/497a0cc151b803b166eb443625682a1a4216e779) Author [@torbensen](https://github.com/torbensen) - `verify(appProof, bootProof)` now delegates its boot-proof checks to `verifyBootProof`, closing a security gap: it previously only checked the AWS attestation chain and `user_data`/manifest binding, but never checked PCR values or quorum multi-sig approvals — so a manifest that was never approved by 0xkey's quorum (or that declared different PCRs than what's actually running) would still pass. `verify()` now accepts an optional `anchor` parameter (defaults to `PRODUCTION_QUORUM_MANIFEST_SET`, same as `verifyBootProof`), and `@0xkey-io/core`'s `verifyAppProofs` accepts and forwards the same `anchor` option.
+
+### Patch Changes
+
+- [#14](https://github.com/0xkey-io/sdk-js/pull/14) [`81a7f91`](https://github.com/0xkey-io/sdk-js/commit/81a7f91c6b9dbcdf3e98667a6b2aadc01a85032e) Author [@torbensen](https://github.com/torbensen) - Add `STAGING_QUORUM_MANIFEST_SET`, a public trust anchor for verifying boot proofs from 0xkey's `staging-default` enclave environment (analogous to the existing `PRODUCTION_QUORUM_MANIFEST_SET`, but pinned to staging's own, separate quorum ceremony). Pass it explicitly to `verifyBootProof`/`verify` when verifying non-production enclaves.
+
+- Updated dependencies [[`f089d9f`](https://github.com/0xkey-io/sdk-js/commit/f089d9f58eca9754c4e973953751f4fb7b3e2ef8), [`94137a0`](https://github.com/0xkey-io/sdk-js/commit/94137a059397ae3d70b141173a8d3c844705ac71)]:
+  - @0xkey-io/sdk-types@0.2.0
+
 ## 0.3.0
 
 ### Minor Changes

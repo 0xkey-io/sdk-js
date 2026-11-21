@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/example-with-cosmjs",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "scripts": {
     "start": "tsx src/index.ts",

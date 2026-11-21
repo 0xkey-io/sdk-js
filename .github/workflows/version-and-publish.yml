@@ -21,6 +21,14 @@ on:
         required: false
         type: boolean
         default: false
+      # Leave empty for a normal release. Set to one package name, for example
+      # @0xkey-io/attested-stamper, to publish only that package's current
+      # version after a partial publish; see RELEASING.md.
+      republish_package:
+        description: "Publish only this package's current version (partial-publish recovery)"
+        required: false
+        type: string
+        default: ""
   push:
     tags:
       - "v*.*.*" # Tag pushes are intentionally guarded; they do not publish automatically.
@@ -34,7 +42,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_release }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_release && inputs.republish_package == '' }}
     steps:
       # https://github.com/actions/checkout
       - name: Checkout
@@ -49,6 +57,11 @@ jobs:
 
       - name: Enforce dedicated Pay release path
         run: node packages/pay/scripts/check-generic-release-exclusion.mjs
+
+      # npm checks repository.url against the provenance statement only when
+      # each package is uploaded, so a mismatch leaves a partial release.
+      - name: Require repository metadata for provenance
+        run: node scripts/release-guard.mjs assert-repository
 
       # Check if there are pending changesets
       - name: Check for pending releases
@@ -429,3 +442,104 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Partial-publish recovery: publish exactly one package's current version
+  # from the default branch, after the published versions are registered
+  # there. Nothing is versioned, and no other package is published.
+  republish:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_release && inputs.publish_to_npm && inputs.republish_package != '' }}
+    environment: production # require manual approval for production deployments
+    permissions:
+      contents: write # push the release tag
+      id-token: write # npm provenance
+    env:
+      PACKAGE: ${{ inputs.republish_package }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # required for git tags and history
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Configure Git User
+        run: |
+          git config user.name "0xkey-deploy"
+          git config user.email "github@0xkey.io"
+
+      - name: Setup Node, pnpm, and deps
+        uses: ./.github/actions/js-setup
+
+      - name: Install latest dependencies
+        run: pnpm install -r --frozen-lockfile
+
+      - name: Enforce dedicated Pay release path
+        run: node packages/pay/scripts/check-generic-release-exclusion.mjs
+
+      - name: Require repository metadata for provenance
+        run: node scripts/release-guard.mjs assert-repository
+
+      # The target version must be absent from npm, every other generic
+      # package must already be on npm at its workspace version, and each
+      # published dependent must pin a range the target version satisfies.
+      - name: Check the republish target
+        run: node scripts/release-guard.mjs assert-republishable "$PACKAGE"
+
+      - name: Build all packages
+        run: pnpm run build-all
+
+      - name: Pack and check the tarball
+        id: pack
+        run: |
+          packed=$(node scripts/release-guard.mjs pack-republish "$PACKAGE" "$RUNNER_TEMP/republish")
+          echo "$packed"
+          {
+            echo "name=$(jq -r .name <<<"$packed")"
+            echo "version=$(jq -r .version <<<"$packed")"
+            echo "tarball=$(jq -r .tarball <<<"$packed")"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "## Republish tarball"
+            echo "\`$(jq -r '.name + "@" + .version' <<<"$packed")\` sha256 \`$(jq -r .sha256 <<<"$packed")\`"
+            echo '```'
+            tar -tzf "$(jq -r .tarball <<<"$packed")"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refuse a tarball for another package
+        env:
+          PACKED_NAME: ${{ steps.pack.outputs.name }}
+        run: test "$PACKED_NAME" = "$PACKAGE"
+
+      - name: Confirm environment variables
+        run: |
+          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "NPM_TOKEN is set"
+          else
+            echo "NPM_TOKEN is not set"
+            exit 1
+          fi
+
+      - name: Publish to NPM (dry run)
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm publish "$TARBALL" --dry-run --provenance --access public
+
+      # Publishes the tarball checked above, not a fresh pack.
+      - name: Publish the checked tarball to NPM
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm publish "$TARBALL" --provenance --access public
+
+      - name: Push release tag
+        env:
+          TAG: ${{ steps.pack.outputs.name }}@${{ steps.pack.outputs.version }}
+        run: |
+          git tag "$TAG"
+          git push origin "refs/tags/$TAG"

@@ -4,6 +4,9 @@
 //   node scripts/release-guard.mjs assert-unpublished --changeset-status <file>
 //   node scripts/release-guard.mjs assert-unpublished --since-ref <git-ref>
 //   node scripts/release-guard.mjs pack-smoke
+//   node scripts/release-guard.mjs assert-repository
+//   node scripts/release-guard.mjs assert-republishable <name>
+//   node scripts/release-guard.mjs pack-republish <name> <out-dir>
 //
 // `changeset publish` silently skips any name@version that already exists on
 // npm. That is how a release from main can claim a version (in package.json,
@@ -14,8 +17,18 @@
 // `pack-smoke` packs every generic public package exactly as pnpm publishes it
 // and checks the tarball: manifest version, resolved internal dependency
 // ranges, and a small set of key exported symbols.
+//
+// npm rejects a provenance publish whose package.json `repository.url` does
+// not match the repository that built it, but only at upload time and per
+// package, which leaves a partial release. `assert-repository` checks this
+// before anything is published.
+//
+// `assert-republishable` and `pack-republish` back the single-package
+// republish path: publish one version that a partial release left out, from a
+// default branch whose other package versions are all on npm already.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -30,6 +43,15 @@ export const REPO_ROOT = path.resolve(
 // Packages with a dedicated release path are never published by the generic
 // workflow (see packages/pay/scripts/check-generic-release-exclusion.mjs).
 const GENERIC_RELEASE_EXCLUDED = new Set(["@0xkey-io/pay"]);
+
+// The repository npm compares against the provenance statement.
+export const RELEASE_REPOSITORY_URL = "https://github.com/0xkey-io/sdk-js";
+
+const DEPENDENCY_FIELDS = [
+  "dependencies",
+  "peerDependencies",
+  "optionalDependencies",
+];
 
 // Key exported symbols that must exist in the packed artifact. `runtime`
 // packages are loaded from the packed dist in Node; the others (React Native)
@@ -54,6 +76,10 @@ export const KEY_EXPORTS = Object.freeze({
   "@0xkey-io/eip-1193-provider": {
     runtime: true,
     symbols: ["createEIP1193Provider"],
+  },
+  "@0xkey-io/attested-stamper": {
+    runtime: true,
+    symbols: ["AttestedStamper", "AttestedScheme"],
   },
 });
 
@@ -171,6 +197,168 @@ export async function findCollisions(
     (versions.has(release.version) ? collisions : ok).push(release);
   }
   return { ok, collisions };
+}
+
+/** The forms npm accepts for a GitHub `repository.url`, reduced to https. */
+export function normalizeRepositoryUrl(url) {
+  return String(url ?? "")
+    .trim()
+    .replace(/^git\+/, "")
+    .replace(/^(git|ssh):\/\/(git@)?github\.com[/:]/, "https://github.com/")
+    .replace(/^git@github\.com:/, "https://github.com/")
+    .replace(/\.git$/, "")
+    .replace(/\/$/, "");
+}
+
+/**
+ * @param {any} manifest package.json (workspace or packed)
+ * @param {string} directory package directory relative to the repository root
+ * @returns {string[]}
+ */
+export function checkRepository(
+  manifest,
+  directory,
+  expected = RELEASE_REPOSITORY_URL,
+) {
+  const repository =
+    typeof manifest.repository === "string"
+      ? { url: manifest.repository }
+      : (manifest.repository ?? {});
+  const failures = [];
+  if (normalizeRepositoryUrl(repository.url) !== expected) {
+    failures.push(
+      `${manifest.name}: repository.url is ${JSON.stringify(repository.url ?? "")}, expected ${expected}`,
+    );
+  }
+  if (repository.directory !== directory) {
+    failures.push(
+      `${manifest.name}: repository.directory is ${JSON.stringify(repository.directory ?? "")}, expected ${directory}`,
+    );
+  }
+  return failures;
+}
+
+/** @returns {string[]} */
+export function checkAllRepositories(repoRoot = REPO_ROOT) {
+  return listGenericPackages(repoRoot).flatMap(({ manifest, dir }) =>
+    checkRepository(manifest, path.relative(repoRoot, dir)),
+  );
+}
+
+/**
+ * Registry manifest of one published version, or null if npm has none.
+ * @returns {Promise<any | null>}
+ */
+export async function fetchPublishedManifest(
+  name,
+  version,
+  { registry = "https://registry.npmjs.org", fetchImpl = fetch } = {},
+) {
+  const url = `${registry.replace(/\/$/, "")}/${name.replace("/", "%2f")}/${version}`;
+  const response = await fetchImpl(url, {
+    headers: { accept: "application/json" },
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(
+      `${name}@${version}: registry lookup failed (HTTP ${response.status})`,
+    );
+  }
+  return response.json();
+}
+
+/** Orders x.y.z[-pre] versions; a prerelease sorts below its release. */
+export function compareVersions(a, b) {
+  const parse = (value) => {
+    const [core, pre = ""] = String(value).split("-", 2);
+    return { parts: core.split(".").map(Number), pre };
+  };
+  const left = parse(a);
+  const right = parse(b);
+  for (let index = 0; index < 3; index += 1) {
+    const difference = (left.parts[index] ?? 0) - (right.parts[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  if (left.pre === right.pre) return 0;
+  if (!left.pre) return 1;
+  if (!right.pre) return -1;
+  return left.pre < right.pre ? -1 : 1;
+}
+
+/** @param {Iterable<string>} versions */
+function highestVersion(versions) {
+  let highest;
+  for (const version of versions) {
+    if (!highest || compareVersions(version, highest) > 0) highest = version;
+  }
+  return highest;
+}
+
+/**
+ * A single-package republish is only valid when every other generic package
+ * on the default branch is already on npm at its workspace version, no
+ * workspace version is behind the highest version on npm, the target version
+ * is not on npm, and each published dependent pins a range that the target
+ * version satisfies.
+ * @param {string} target package name
+ * @param {{ name: string, version: string }[]} packages generic packages
+ * @returns {Promise<{ failures: string[], dependents: { name: string, version: string, range: string }[] }>}
+ */
+export async function checkRepublishTarget(
+  target,
+  packages,
+  {
+    lookup = (name) => fetchRegistryVersions(name),
+    fetchManifest = (name, version) => fetchPublishedManifest(name, version),
+  } = {},
+) {
+  const source = packages.find(({ name }) => name === target);
+  if (!source) {
+    return {
+      failures: [`${target} is not a generic public workspace package`],
+      dependents: [],
+    };
+  }
+  const failures = [];
+  for (const { name, version } of packages) {
+    const versions = await lookup(name);
+    const published = versions.has(version);
+    if (name === target && published) {
+      failures.push(`${name}@${version} already exists on npm`);
+    }
+    if (name !== target && !published) {
+      failures.push(
+        `${name}@${version} is not on npm; the default branch does not match npm, use the generic release`,
+      );
+    }
+    const highest = highestVersion(versions);
+    if (highest && compareVersions(highest, version) > 0) {
+      failures.push(
+        `${name}@${version} is behind npm (${highest}); register the published versions on the default branch first`,
+      );
+    }
+  }
+  const dependents = [];
+  for (const { name, version, manifest } of packages) {
+    if (name === target) continue;
+    const declared = DEPENDENCY_FIELDS.some(
+      (field) => manifest?.[field]?.[target] !== undefined,
+    );
+    if (!declared) continue;
+    const published = await fetchManifest(name, version);
+    if (!published) continue; // already reported above
+    for (const field of DEPENDENCY_FIELDS) {
+      const range = published[field]?.[target];
+      if (range === undefined) continue;
+      dependents.push({ name, version, range: String(range) });
+      if (!satisfiesPackedRange(String(range), source.version)) {
+        failures.push(
+          `${name}@${version} on npm pins ${field}.${target}@${range}, which ${source.version} does not satisfy`,
+        );
+      }
+    }
+  }
+  return { failures, dependents };
 }
 
 /** Minimal range check for ranges pnpm writes when packing workspace deps. */
@@ -320,18 +508,22 @@ function pnpmPack(dir, destination) {
   return path.join(destination, created[0]);
 }
 
-/** @returns {{ checked: string[], failures: string[] }} */
-export function runPackSmoke({ repoRoot = REPO_ROOT, only } = {}) {
+/**
+ * With `destination`, the checked tarballs are kept there and returned.
+ * @returns {{ checked: string[], failures: string[], tarballs: string[] }}
+ */
+export function runPackSmoke({ repoRoot = REPO_ROOT, only, destination } = {}) {
   const packages = listGenericPackages(repoRoot);
   const workspaceVersions = new Map(packages.map((p) => [p.name, p.version]));
   const selected = only
     ? packages.filter((p) => only.includes(p.name))
     : packages;
-  const tarballs = fs.mkdtempSync(
-    path.join(os.tmpdir(), "0xkey-release-pack-"),
-  );
+  const tarballs =
+    destination ??
+    fs.mkdtempSync(path.join(os.tmpdir(), "0xkey-release-pack-"));
   const failures = [];
   const checked = [];
+  const kept = [];
   try {
     for (const source of selected) {
       // Extract inside the package directory so Node resolves the packed
@@ -348,6 +540,7 @@ export function runPackSmoke({ repoRoot = REPO_ROOT, only } = {}) {
         );
         failures.push(
           ...checkPackedManifest(packed, source, workspaceVersions),
+          ...checkRepository(packed, path.relative(repoRoot, source.dir)),
         );
         const key = KEY_EXPORTS[source.name];
         if (key) {
@@ -361,6 +554,7 @@ export function runPackSmoke({ repoRoot = REPO_ROOT, only } = {}) {
           }
         }
         checked.push(`${packed.name}@${packed.version}`);
+        kept.push(tarball);
       } catch (error) {
         failures.push(`${source.name}: ${error.message}`);
       } finally {
@@ -368,9 +562,9 @@ export function runPackSmoke({ repoRoot = REPO_ROOT, only } = {}) {
       }
     }
   } finally {
-    fs.rmSync(tarballs, { recursive: true, force: true });
+    if (!destination) fs.rmSync(tarballs, { recursive: true, force: true });
   }
-  return { checked, failures };
+  return { checked, failures, tarballs: destination ? kept : [] };
 }
 
 async function main(argv) {
@@ -425,8 +619,69 @@ async function main(argv) {
     return;
   }
 
+  if (command === "assert-repository") {
+    const failures = checkAllRepositories();
+    if (failures.length > 0) {
+      for (const failure of failures) console.error(`  - ${failure}`);
+      throw new Error(
+        `${failures.length} package(s) would fail npm provenance verification`,
+      );
+    }
+    console.log(`repository metadata matches ${RELEASE_REPOSITORY_URL}`);
+    return;
+  }
+
+  if (command === "assert-republishable") {
+    const [target] = rest;
+    if (!target) throw new Error("assert-republishable needs a package name");
+    const { failures, dependents } = await checkRepublishTarget(
+      target,
+      listGenericPackages(),
+    );
+    for (const { name, version, range } of dependents) {
+      console.log(
+        `published dependent: ${name}@${version} -> ${target}@${range}`,
+      );
+    }
+    if (failures.length > 0) {
+      for (const failure of failures) console.error(`  - ${failure}`);
+      throw new Error(`${target} cannot be republished alone`);
+    }
+    return;
+  }
+
+  // Prints one JSON line (name, version, tarball, sha256) on stdout.
+  if (command === "pack-republish") {
+    const [target, destination] = rest;
+    if (!target || !destination) {
+      throw new Error("pack-republish needs a package name and an output dir");
+    }
+    fs.mkdirSync(destination, { recursive: true });
+    const { checked, failures, tarballs } = runPackSmoke({
+      only: [target],
+      destination: path.resolve(destination),
+    });
+    if (failures.length > 0 || tarballs.length !== 1) {
+      for (const failure of failures) console.error(`  - ${failure}`);
+      throw new Error(`${target}: packed tarball failed its checks`);
+    }
+    const [id] = checked;
+    const at = id.lastIndexOf("@");
+    console.log(
+      JSON.stringify({
+        name: id.slice(0, at),
+        version: id.slice(at + 1),
+        tarball: tarballs[0],
+        sha256: createHash("sha256")
+          .update(fs.readFileSync(tarballs[0]))
+          .digest("hex"),
+      }),
+    );
+    return;
+  }
+
   throw new Error(
-    "usage: release-guard.mjs assert-unpublished (--changeset-status <file> | --since-ref <ref>) | pack-smoke [name...]",
+    "usage: release-guard.mjs assert-unpublished (--changeset-status <file> | --since-ref <ref>) | pack-smoke [name...] | assert-repository | assert-republishable <name> | pack-republish <name> <out-dir>",
   );
 }
 

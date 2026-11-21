@@ -1,5 +1,23 @@
 # @0xkey-io/sdk-types
 
+## 0.2.0
+
+### Minor Changes
+
+- [#47](https://github.com/0xkey-io/sdk-js/pull/47) [`f089d9f`](https://github.com/0xkey-io/sdk-js/commit/f089d9f58eca9754c4e973953751f4fb7b3e2ef8) Author [@torbensen](https://github.com/torbensen) - Prevent duplicate OTP sends and surface the server's resend cooldown.
+  `initOtp` now shares one in-flight request between concurrent calls for the
+  same contact and Auth Proxy target. A refused send is raised as
+  `ZeroXKeyRateLimitError` with code `OTP_RESEND_COOLDOWN` or
+  `OTP_INIT_RATE_LIMITED` and `retryAfterSeconds` taken from `Retry-After`.
+  The wallet kit disables OTP entry buttons while a send is in flight, counts
+  down before Resend is enabled (60 seconds, or the server's wait), and shows
+  the cooldown message.
+
+### Patch Changes
+
+- [#46](https://github.com/0xkey-io/sdk-js/pull/46) [`94137a0`](https://github.com/0xkey-io/sdk-js/commit/94137a059397ae3d70b141173a8d3c844705ac71) Author [@torbensen](https://github.com/torbensen) - Expose the Turnkey-aligned MFA policy, session profile, credential binding, and
+  `AUTHENTICATORS_NEEDED` identity contracts across every generated public client.
+
 ## 0.1.2
 
 ### Patch Changes

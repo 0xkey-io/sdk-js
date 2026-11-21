@@ -1,5 +1,13 @@
 # @0xkey-io/otp-auth-without-backend
 
+## 0.1.18
+
+### Patch Changes
+
+- Updated dependencies [[`21d3f61`](https://github.com/0xkey-io/sdk-js/commit/21d3f615fcb3ab5e9e745bb321e880323d0456d6), [`9a9008c`](https://github.com/0xkey-io/sdk-js/commit/9a9008cd5926266e51e24eb53b29b2844282a224), [`f089d9f`](https://github.com/0xkey-io/sdk-js/commit/f089d9f58eca9754c4e973953751f4fb7b3e2ef8), [`85e36d1`](https://github.com/0xkey-io/sdk-js/commit/85e36d1ca3b325a58b2a40ae44a929cd8985ad97), [`94137a0`](https://github.com/0xkey-io/sdk-js/commit/94137a059397ae3d70b141173a8d3c844705ac71), [`f089d9f`](https://github.com/0xkey-io/sdk-js/commit/f089d9f58eca9754c4e973953751f4fb7b3e2ef8), [`131ac3c`](https://github.com/0xkey-io/sdk-js/commit/131ac3cf2c8657dd320de872e4ea8a750b98d912)]:
+  - @0xkey-io/react-wallet-kit@0.4.0
+  - @0xkey-io/sdk-server@0.1.5
+
 ## 0.1.17
 
 ### Patch Changes

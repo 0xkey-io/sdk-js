@@ -1,6 +1,6 @@
 {
   "name": "@0xkey-io/example-gas-station",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Example demonstrating paymaster functionality with 0xkey SDK",
   "scripts": {
