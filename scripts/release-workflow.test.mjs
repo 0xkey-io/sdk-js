@@ -75,6 +75,46 @@ test("published versions return to the default branch only through a PR", () => 
   assert.match(jobs["sync-main"].if, /needs\.publish\.result == 'success'/);
 });
 
+test("repository metadata is checked before anything is versioned", () => {
+  const names = jobs.build.steps.map((item) => item.name);
+  const check = names.indexOf("Require repository metadata for provenance");
+  assert.ok(check !== -1, "build checks repository metadata");
+  assert.ok(check < names.indexOf("Build"));
+  assert.match(
+    step("build", "Require repository metadata for provenance").run,
+    /release-guard\.mjs assert-repository/,
+  );
+});
+
+test("a single-package republish is separate from the generic release", () => {
+  assert.equal(inputs.republish_package.type, "string");
+  assert.equal(inputs.republish_package.default, "");
+  assert.match(jobs.build.if, /inputs\.republish_package == ''/);
+
+  const republish = jobs.republish;
+  assert.equal(republish.needs, undefined);
+  assert.match(republish.if, /inputs\.publish_to_npm/);
+  assert.match(republish.if, /inputs\.republish_package != ''/);
+  assert.equal(republish.environment, "production");
+  assert.equal(republish.permissions["id-token"], "write");
+  assert.equal(republish.env.PACKAGE, "${{ inputs.republish_package }}");
+
+  const source = runs("republish");
+  assert.doesNotMatch(source, /changeset (version|publish)/);
+  assert.doesNotMatch(source, /\$\{\{ inputs\.republish_package \}\}/);
+  assert.match(
+    step("republish", "Check the republish target").run,
+    /assert-republishable "\$PACKAGE"/,
+  );
+  assert.match(
+    step("republish", "Pack and check the tarball").run,
+    /pack-republish "\$PACKAGE"/,
+  );
+  const publish = step("republish", "Publish the checked tarball to NPM");
+  assert.match(publish.run, /npm publish "\$TARBALL" --provenance/);
+  assert.equal(publish.env.TARBALL, "${{ steps.pack.outputs.tarball }}");
+});
+
 test("release tags are pushed after publish and never named after a branch", () => {
   const push = step("publish", "Push release tags");
   assert.match(push.run, /git tag --points-at HEAD/);

@@ -6,7 +6,10 @@ import { test } from "node:test";
 
 import {
   KEY_EXPORTS,
+  checkAllRepositories,
   checkPackedManifest,
+  checkRepository,
+  checkRepublishTarget,
   checkStaticExports,
   fetchRegistryVersions,
   findCollisions,
@@ -159,6 +162,134 @@ test("static export check finds declared and missing symbols", () => {
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("repository metadata must match the provenance repository", () => {
+  const RELEASE_URL = "git+https://github.com/0xkey-io/sdk-js.git";
+  const repository = (url, directory = "packages/core") => ({
+    name: "@0xkey-io/core",
+    repository: { type: "git", url, directory },
+  });
+  for (const url of [
+    "git+https://github.com/0xkey-io/sdk-js.git",
+    "https://github.com/0xkey-io/sdk-js",
+    "git+ssh://git@github.com/0xkey-io/sdk-js.git",
+    "git@github.com:0xkey-io/sdk-js.git",
+  ]) {
+    assert.deepEqual(
+      checkRepository(repository(url), "packages/core"),
+      [],
+      url,
+    );
+  }
+  assert.match(
+    checkRepository({ name: "@0xkey-io/attested-stamper" }, "packages/x")[0],
+    /repository\.url is ""/,
+  );
+  assert.match(
+    checkRepository(
+      repository("git+https://github.com/someone/fork.git"),
+      "packages/core",
+    )[0],
+    /expected https:\/\/github\.com\/0xkey-io\/sdk-js/,
+  );
+  assert.match(
+    checkRepository(
+      repository(RELEASE_URL, "packages/http"),
+      "packages/core",
+    )[0],
+    /repository\.directory/,
+  );
+  assert.deepEqual(checkAllRepositories(), []);
+});
+
+test("a single package is republishable only when everything else is on npm", async () => {
+  const packages = [
+    { name: "@0xkey-io/attested-stamper", version: "0.1.1", manifest: {} },
+    {
+      name: "@0xkey-io/core",
+      version: "0.3.0",
+      manifest: {
+        dependencies: { "@0xkey-io/attested-stamper": "workspace:*" },
+      },
+    },
+    { name: "@0xkey-io/http", version: "0.2.0", manifest: {} },
+  ];
+  const npm = new Map([
+    ["@0xkey-io/attested-stamper", new Set(["0.1.0"])],
+    ["@0xkey-io/core", new Set(["0.2.1", "0.3.0"])],
+    ["@0xkey-io/http", new Set(["0.2.0"])],
+  ]);
+  const options = (pinned = "0.1.1", registry = npm) => ({
+    lookup: async (name) => registry.get(name) ?? new Set(),
+    fetchManifest: async (name, version) =>
+      registry.get(name)?.has(version)
+        ? { dependencies: { "@0xkey-io/attested-stamper": pinned } }
+        : null,
+  });
+
+  const ok = await checkRepublishTarget(
+    "@0xkey-io/attested-stamper",
+    packages,
+    options(),
+  );
+  assert.deepEqual(ok.failures, []);
+  assert.deepEqual(ok.dependents, [
+    { name: "@0xkey-io/core", version: "0.3.0", range: "0.1.1" },
+  ]);
+
+  const mismatch = await checkRepublishTarget(
+    "@0xkey-io/attested-stamper",
+    packages,
+    options("0.1.2"),
+  );
+  assert.match(
+    mismatch.failures[0],
+    /pins dependencies\.@0xkey-io\/attested-stamper@0\.1\.2/,
+  );
+
+  const unsynced = new Map(npm);
+  unsynced.set("@0xkey-io/http", new Set(["0.1.3"]));
+  const behind = await checkRepublishTarget(
+    "@0xkey-io/attested-stamper",
+    packages,
+    options("0.1.1", unsynced),
+  );
+  assert.match(behind.failures[0], /@0xkey-io\/http@0\.2\.0 is not on npm/);
+
+  // A default branch that never registered core 0.3.0 has no dependent that
+  // pins the target, so only the highest-version check stops it.
+  const stale = packages.map((entry) =>
+    entry.name === "@0xkey-io/core"
+      ? { ...entry, version: "0.2.1", manifest: {} }
+      : entry,
+  );
+  const outdated = await checkRepublishTarget(
+    "@0xkey-io/attested-stamper",
+    stale,
+    options(),
+  );
+  assert.deepEqual(outdated.failures, [
+    "@0xkey-io/core@0.2.1 is behind npm (0.3.0); register the published versions on the default branch first",
+  ]);
+
+  const already = await checkRepublishTarget(
+    "@0xkey-io/http",
+    packages,
+    options(),
+  );
+  assert.ok(
+    already.failures.some((failure) =>
+      /@0xkey-io\/http@0\.2\.0 already exists on npm/.test(failure),
+    ),
+  );
+
+  const unknown = await checkRepublishTarget(
+    "@0xkey-io/pay",
+    packages,
+    options(),
+  );
+  assert.match(unknown.failures[0], /not a generic public workspace package/);
 });
 
 test("every key-export entry names a generic public package", () => {

@@ -160,6 +160,32 @@ and git tags. The workflow therefore runs `scripts/release-guard.mjs`:
   blind rerun after a partial publish. Inspect npm first, and register any
   versions that were published.
 
+- **Build job:** `assert-repository` fails if any generic package lacks a
+  `repository.url` matching `https://github.com/0xkey-io/sdk-js` or a
+  `repository.directory` matching its path. npm verifies this against the
+  provenance statement only when each package is uploaded, so a missing field
+  otherwise leaves a partial release. `pack-smoke` repeats the check on each
+  packed manifest.
+
+#### Republishing one package after a partial publish
+
+If `changeset publish` published some packages and rejected others, first
+register the published versions on `main`: merge the `release/<ref>` version
+commit through a PR (the `sync-main` job does not run after a failed publish).
+Then fix the cause and dispatch this workflow with `enable_release`,
+`publish_to_npm` and `republish_package=<package name>`. Only the `republish`
+job runs, behind the `production` environment. It:
+
+1. Runs `assert-repository`, then `assert-republishable <name>`. This
+   requires the target version to be absent from npm, every other generic
+   package to be on npm at its workspace version, and every published
+   dependent to pin a range that the target version satisfies.
+2. Builds, then packs only the target with `pack-republish` (the `pack-smoke`
+   checks plus key exports) and records the tarball sha256 and file list in
+   the run summary.
+3. Publishes that tarball with `npm publish --provenance` and pushes the
+   `<name>@<version>` tag.
+
 Run the same checks locally with:
 
 ```bash
