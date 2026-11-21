@@ -14,7 +14,8 @@ import {
 
 import {
   getAuthProxyConfig,
-  DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+  parseSessionExpirationSeconds,
+  resolveSessionExpirationSeconds,
   OtpType,
   ZeroXKeyClient,
   type AddOauthProviderParams,
@@ -274,9 +275,13 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
 
     // These are settings that can only be set via the auth proxy config
     const authProxyPrioSettings = {
+      // Dashboard value first, then the local config; an empty, unparsable or
+      // non-positive value counts as unset so the next layer applies.
       sessionExpirationSeconds:
-        proxyAuthConfig?.sessionExpirationSeconds ??
-        config.auth?.sessionExpirationSeconds,
+        parseSessionExpirationSeconds(
+          proxyAuthConfig?.sessionExpirationSeconds,
+        ) ??
+        parseSessionExpirationSeconds(config.auth?.sessionExpirationSeconds),
       otp: {
         alphanumeric:
           proxyAuthConfig?.otpAlphanumeric ??
@@ -772,10 +777,10 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         );
       }
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const res = await withZeroXKeyErrorHandling(
         () => client.loginWithPasskey({ ...params, expirationSeconds }),
         () => logout(),
@@ -817,10 +822,10 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
-      const expirationSeconds =
-        params.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
 
       const websiteName =
         Platform.OS === "web" && typeof window !== "undefined"
@@ -912,10 +917,10 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         );
       }
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const res = await withZeroXKeyErrorHandling(
         () => client.loginWithOtp({ ...params, expirationSeconds }),
         () => logout(),
@@ -963,10 +968,10 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
 
       const res = await withZeroXKeyErrorHandling(
         () => client.signUpWithOtp({ ...params, expirationSeconds }),
@@ -1020,10 +1025,10 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
           ? { ...params, createSubOrgParams }
           : { ...params };
 
-      const expirationSeconds =
-        params?.expirationSeconds ??
-        masterConfig?.auth?.sessionExpirationSeconds ??
-        DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
 
       const res = await withZeroXKeyErrorHandling(
         () => client.completeOtp({ ...params, expirationSeconds }),
@@ -2274,8 +2279,12 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
 
       const sessionKey = params?.sessionKey ?? activeSessionKey;
 
+      const expirationSeconds = resolveSessionExpirationSeconds(
+        params?.expirationSeconds,
+        masterConfig?.auth?.sessionExpirationSeconds,
+      );
       const res = await withZeroXKeyErrorHandling(
-        () => client.refreshSession({ ...params }),
+        () => client.refreshSession({ ...params, expirationSeconds }),
         () => logout(),
         callbacks,
         "Failed to refresh session",
@@ -2286,9 +2295,6 @@ export const ZeroXKeyProvider: React.FC<ZeroXKeyProviderProps> = ({
         await scheduleSessionExpiration({
           sessionKey,
           expiry: session.expiry,
-          ...(params?.expirationSeconds && {
-            expirationSeconds: params?.expirationSeconds,
-          }),
         });
       }
 
