@@ -834,3 +834,25 @@ test("signUpWithOtp applies expirationSeconds to the StampLogin that follows sig
   expect(stampLoginBodies).toHaveLength(1);
   expect(stampLoginBodies[0].parameters.expirationSeconds).toBe("3600");
 });
+
+test.each(["0", "-5", "abc", "", "NaN"])(
+  "loginWithOtp treats expirationSeconds %p as unset and asks for 900 seconds",
+  async (value) => {
+    const { client } = await setup();
+    const verificationToken = token(publicA);
+    const stampLoginBodies: any[] = [];
+    global.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url) === "https://auth.example.test/v1/account") {
+        return {
+          ok: true,
+          json: async () => ({ organizationId: "verified-org" }),
+        } as Response;
+      }
+      stampLoginBodies.push(JSON.parse(String(init?.body)));
+      return response("session-1");
+    }) as typeof fetch;
+    await client.loginWithOtp({ verificationToken, expirationSeconds: value });
+    expect(stampLoginBodies).toHaveLength(1);
+    expect(stampLoginBodies[0].parameters.expirationSeconds).toBe("900");
+  },
+);

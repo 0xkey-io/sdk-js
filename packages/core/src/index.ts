@@ -40,6 +40,8 @@ export {
   getClientSignatureMessageForLogin,
   getClientSignatureMessageForSignup,
   addressFormatConfig,
+  parseSessionExpirationSeconds,
+  resolveSessionExpirationSeconds,
 } from "./utils";
 
 export * from "@0xkey-io/sdk-types";

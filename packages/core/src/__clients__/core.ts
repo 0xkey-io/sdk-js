@@ -27,7 +27,6 @@ import {
   AuthAction,
 } from "@0xkey-io/sdk-types";
 import {
-  DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
   SignIntent,
   StamperType,
   OtpType,
@@ -148,6 +147,7 @@ import {
   otpRateLimitErrorFrom,
   isAttestedLoginUnavailable,
   getClientSignatureMessageForLogin,
+  resolveSessionExpirationSeconds,
 } from "../utils";
 import { createStorageManager } from "../__storage__/base";
 import {
@@ -1031,8 +1031,9 @@ export class ZeroXKeyClient {
           params?.publicKey || (await this.apiKeyStamper?.createKeyPair());
         const sessionKey = params?.sessionKey || SessionKey.DefaultSessionkey;
 
-        const expirationSeconds =
-          params?.expirationSeconds || DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+        const expirationSeconds = resolveSessionExpirationSeconds(
+          params?.expirationSeconds,
+        );
 
         if (!generatedPublicKey) {
           throw new ZeroXKeyError(
@@ -1121,12 +1122,15 @@ export class ZeroXKeyClient {
     const {
       passkeyDisplayName,
       challenge,
-      expirationSeconds = DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+      expirationSeconds: requestedExpirationSeconds,
       createSubOrgParams,
       sessionKey = SessionKey.DefaultSessionkey,
       organizationId,
       captchaToken,
     } = params || {};
+    const expirationSeconds = resolveSessionExpirationSeconds(
+      requestedExpirationSeconds,
+    );
 
     let generatedPublicKey: string | undefined = undefined;
     return withZeroXKeyErrorHandling(
@@ -1451,8 +1455,9 @@ export class ZeroXKeyClient {
     params: BuildWalletLoginRequestParams,
   ): Promise<BuildWalletLoginRequestResult> => {
     const { walletProvider, publicKey: providedPublicKey } = params;
-    const expirationSeconds =
-      params.expirationSeconds || DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+    const expirationSeconds = resolveSessionExpirationSeconds(
+      params.expirationSeconds,
+    );
 
     let generatedPublicKey: string | undefined = undefined;
     return withZeroXKeyErrorHandling(
@@ -2062,12 +2067,15 @@ export class ZeroXKeyClient {
     const {
       verificationToken,
       publicKey: legacyPublicKey,
-      expirationSeconds = DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+      expirationSeconds: requestedExpirationSeconds,
       sessionProfileId,
       invalidateExisting,
       organizationId,
       sessionKey = SessionKey.DefaultSessionkey,
     } = params;
+    const expirationSeconds = resolveSessionExpirationSeconds(
+      requestedExpirationSeconds,
+    );
 
     let loginStamper: AttestedStamper | undefined;
 
@@ -5738,11 +5746,14 @@ export class ZeroXKeyClient {
   ): Promise<TStampLoginResponse | undefined> => {
     const {
       sessionKey = await this.storageManager.getActiveSessionKey(),
-      expirationSeconds = DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+      expirationSeconds: requestedExpirationSeconds,
       publicKey,
       stampWith = this.config.defaultStamperType,
       invalidateExisitng = false,
     } = params || {};
+    const expirationSeconds = resolveSessionExpirationSeconds(
+      requestedExpirationSeconds,
+    );
     if (!sessionKey) {
       throw new ZeroXKeyError(
         "No session key provided or active session to refresh session",

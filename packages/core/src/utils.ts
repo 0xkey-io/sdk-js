@@ -35,6 +35,7 @@ import {
   EvmChainInfo,
   SolanaChainInfo,
   Curve,
+  DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
   EmbeddedWallet,
   WalletSource,
   StamperType,
@@ -1661,3 +1662,45 @@ export const withTimeoutFallback = <T>(
     new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeout)),
   ]);
 };
+
+/**
+ * @internal
+ *
+ * Reads a session length in seconds from a caller argument or a config layer.
+ * Returns the whole-second value as a string, or `undefined` when the layer is
+ * unset: empty, not a number, not finite, or below one second (so `"0"`,
+ * `"-5"` and `"abc"` all count as unset and let the next layer apply).
+ */
+export function parseSessionExpirationSeconds(
+  value: unknown,
+): string | undefined {
+  if (typeof value !== "string" && typeof value !== "number") {
+    return undefined;
+  }
+  if (typeof value === "string" && value.trim() === "") {
+    return undefined;
+  }
+  const seconds = Math.floor(Number(value));
+  if (!Number.isFinite(seconds) || seconds < 1) {
+    return undefined;
+  }
+  return String(seconds);
+}
+
+/**
+ * @internal
+ *
+ * Picks the session length in seconds. Candidates are listed from highest to
+ * lowest priority (caller argument, Dashboard value, local config); the first
+ * one that {@link parseSessionExpirationSeconds} accepts wins, otherwise the
+ * default of 900 seconds applies.
+ */
+export function resolveSessionExpirationSeconds(
+  ...candidates: unknown[]
+): string {
+  for (const candidate of candidates) {
+    const parsed = parseSessionExpirationSeconds(candidate);
+    if (parsed !== undefined) return parsed;
+  }
+  return DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+}
