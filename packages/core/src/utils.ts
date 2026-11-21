@@ -1236,9 +1236,11 @@ const ATTESTED_LOGIN_UNAVAILABLE_STATUSES = new Set([404, 501, 503]);
  *
  * Whether a StampLogin failure means the server cannot take attested logins
  * at all, as opposed to rejecting this login. Only the former may fall back
- * to `otp_login_v2`: a 403 or an `ATTESTED_LOGIN_*` reason can be an MFA
- * requirement that the fallback would bypass, and an `ATTESTED_STAMP_*`
- * reason means the server checked the stamp and refused it.
+ * to `otp_login_v2`. A 403 or an `ATTESTED_LOGIN_*` reason can be a refusal
+ * because the user has an MFA policy; `otp_login_v2` checks the OTP only and
+ * does not ask for the policy's additional factors, so switching to it is left
+ * to the caller. An `ATTESTED_STAMP_*` reason means the server checked the
+ * stamp and refused it.
  */
 export function isAttestedLoginUnavailable(error: unknown): boolean {
   if (error instanceof ZeroXKeyHttpError) {
