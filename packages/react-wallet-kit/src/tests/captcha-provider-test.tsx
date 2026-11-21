@@ -722,12 +722,10 @@ describe("mounted Provider Captcha gate", () => {
         await mountWith("7200", "3600");
         mockGetActiveSessionKey.mockResolvedValue("session-key");
         await act(async () => {
-          await mounted
-            .context()!
-            .loginWithOtp({
-              verificationToken: "v",
-              expirationSeconds: caller,
-            });
+          await mounted.context()!.loginWithOtp({
+            verificationToken: "v",
+            expirationSeconds: caller,
+          });
           await mounted
             .context()!
             .signUpWithPasskey({ expirationSeconds: caller });
