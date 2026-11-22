@@ -1,11 +1,11 @@
 import { p256 } from "@noble/curves/p256";
 import { AttestedScheme, AttestedStamper } from "./attested-stamper";
-import vector from "../../../internal/contract-guard/vectors/turnkey-attested-stamp.json";
+import vector from "../../../internal/contract-guard/vectors/attested-stamp.json";
 
 const body = vector.bodyUtf8;
 const highDer = vector.highDerHex;
 
-test("emits Turnkey-compatible unpadded X-Stamp-Attested JSON", async () => {
+test("emits wire-compatible unpadded X-Stamp-Attested JSON", async () => {
   const signer = { sign: jest.fn().mockResolvedValue(highDer) };
   const stamper = new AttestedStamper(signer);
   stamper.configure({

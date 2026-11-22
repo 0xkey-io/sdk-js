@@ -45,6 +45,9 @@ jobs:
       - name: Brand assets
         run: node --test internal/acceptance/brand-assets.test.mjs
 
+      - name: Check that no upstream brand name is left outside the allowlist
+        run: node scripts/check-brand-residue.mjs
+
       - name: Release guard
         run: node --test scripts/release-guard.test.mjs scripts/release-workflow.test.mjs
 

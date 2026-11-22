@@ -221,8 +221,8 @@ export async function verifyQosLiveMeasurements(
 
 /**
  * 0xkey production quorum trust anchor, pinned from the manifest-set that
- * approved the currently-deployed enclave manifests. See
- * `repos/enclave-releases/releases/2026.6.15/signer/manifest.json`.
+ * approved the currently-deployed enclave manifests (release 2026.6.15,
+ * signer manifest).
  */
 export const PRODUCTION_QUORUM_MANIFEST_SET: QuorumManifestSetAnchor = {
   threshold: PRODUCTION_QUORUM_MANIFEST_SET_THRESHOLD,
@@ -706,7 +706,7 @@ export async function verifyCertificateChain(
 
 /**
  * Parsed fields from a verified AWS Nitro attestation document.
- * This is the lightweight Turnkey-style "attestation-validator" surface —
+ * This is the lightweight "attestation-validator" surface —
  * COSE Sign1 + certificate chain only. For full pivot↔quorum-manifest
  * verification use {@link verifyBootProof} / `verifyLatestBootProof`.
  */

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "turnkey-alignment/v1",
+  "schemaVersion": "0xkey/qos-proof-policy-v1",
   "policy": {
     "environment": "test",
     "allowedManifestDigestsHex": [

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "turnkey-alignment/sdk-attested-v1",
+  "schemaVersion": "0xkey/sdk-attested-v1",
   "header": "X-Stamp-Attested",
   "headerEncoding": "base64url-unpadded-json",
   "signatureInput": "exact-http-request-body-bytes",

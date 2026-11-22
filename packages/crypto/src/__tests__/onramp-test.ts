@@ -5,7 +5,7 @@ import { join, relative, resolve } from "path";
 import * as cryptoExports from "../index";
 import { encryptOnRampSecret } from "../index";
 
-// SHA-256 of the lowercase compressed hex of the upstream Turnkey production
+// SHA-256 of the lowercase compressed hex of the upstream vendor's production
 // on-ramp encryption key. Only the fingerprint is kept so this file does not
 // match itself.
 const UPSTREAM_ON_RAMP_FINGERPRINT =
@@ -86,7 +86,7 @@ describe("encryptOnRampSecret", () => {
   });
 });
 
-test("the upstream Turnkey production on-ramp key appears nowhere in the repository", () => {
+test("the upstream production on-ramp key appears nowhere in the repository", () => {
   const hits: string[] = [];
   for (const file of sourceFiles(REPOSITORY_ROOT)) {
     const text = readFileSync(file, "utf8");
