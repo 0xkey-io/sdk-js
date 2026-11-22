@@ -74,7 +74,7 @@ API key stamper
 For a CLI version of the same flow, use:
 
 ```bash
-cd /Users/torben/codes/0xkey/repos/services
+cd path/to/services
 scripts/x402-smoke-base-sepolia.sh
 ```
 
@@ -85,7 +85,7 @@ The detailed runbook lives in `docs/strategy/pay/base-sepolia-settlement-smoke.m
 Start local services first:
 
 ```bash
-cd /Users/torben/codes/0xkey/repos/services
+cd path/to/services
 
 docker compose --env-file .env.x402.local \
   -f docker-compose.dev.yml \
@@ -109,7 +109,7 @@ cargo run --bin facilitator
 Configure the example app for fully local testing:
 
 ```bash
-cd /Users/torben/codes/0xkey/repos/sdk-js/examples/with-x402
+cd path/to/sdk-js/examples/with-x402
 cp .env.local.example .env.local
 ```
 
@@ -129,7 +129,7 @@ For staging Company Wallet signing, keep the Orchestrator local but point only
 wallet/signing requests at staging:
 
 ```bash
-cd /Users/torben/codes/0xkey/repos/sdk-js/examples/with-x402
+cd path/to/sdk-js/examples/with-x402
 cp .env.staging.example .env.staging.local
 cp .env.staging.local .env.local
 ```
@@ -167,7 +167,7 @@ the one-shot creation.
 Start the Next app:
 
 ```bash
-cd /Users/torben/codes/0xkey/repos/sdk-js
+cd path/to/sdk-js
 pnpm --filter with-x402 dev
 ```
 

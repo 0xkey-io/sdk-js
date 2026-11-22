@@ -1,9 +1,8 @@
 /**
  * 0xkey webhook signature verification.
  *
- * Mirrors the design of Turnkey's `verifyTurnkeyWebhookSignature` in
- * `@turnkey/crypto`, using the same signed-input format so the two
- * implementations remain structurally identical.
+ * Uses the widely adopted versioned signed-input format below, so webhook
+ * verifiers written for that format port over without structural changes.
  *
  * Signed-input format (shared with the Rust `webhook-contract` crate):
  *   `"{version}.{algorithm}.{keyId}.{timestampMs}.{eventId}." + rawBodyBytes`

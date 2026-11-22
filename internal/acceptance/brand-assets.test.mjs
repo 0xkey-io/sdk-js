@@ -11,8 +11,8 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const CANONICAL_FAVICON_SHA256 =
   "ccb86ee38212e79988032c7b9c0e1b62462235759e01f75c9629e52b4f11252c";
 
-// Path data of the upstream Turnkey glyph and "turnkey" wordmark.
-const TURNKEY_ARTWORK_MARKERS = [
+// Path data of the upstream vendor's glyph and wordmark.
+const UPSTREAM_ARTWORK_MARKERS = [
   "M265.8 237.605",
   "M256.337 209.86",
   "mask0_906_38",
@@ -34,11 +34,11 @@ const svgFiles = ["examples", "packages"]
   .flatMap((dir) => listFiles(join(root, dir)))
   .filter((file) => extname(file) === ".svg");
 
-test("example and package SVGs carry no Turnkey artwork", () => {
+test("example and package SVGs carry no upstream brand artwork", () => {
   const offenders = svgFiles
     .filter((file) => {
       const svg = readFileSync(file, "utf8");
-      return TURNKEY_ARTWORK_MARKERS.some((marker) => svg.includes(marker));
+      return UPSTREAM_ARTWORK_MARKERS.some((marker) => svg.includes(marker));
     })
     .map((file) => relative(root, file));
   assert.deepEqual(offenders, []);

@@ -82,7 +82,7 @@ for the exact conditions.
 
 ## OAuth client configuration
 
-OAuth providers accept Turnkey-compatible primary and secondary client ID
+OAuth providers accept the conventional primary and secondary client ID
 shapes. Google uses a browser client ID, while Apple's browser Services ID and
 native iOS bundle ID remain separate:
 

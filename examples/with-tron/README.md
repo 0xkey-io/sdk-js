@@ -80,5 +80,5 @@ The final example demonstrates how to create Tron policies for `TriggerSmartCont
 
 ## Notes on the policy conditions
 
-- Both policies use the singular `tron.tx.contract[0].*` accessor (aligned with Turnkey's policy examples). This alias requires an enclave/policy-engine release that includes the Tron `contract` singular alias — if you're running against an older 0xkey deployment that only exposes the plural `tron.tx.contracts[0].*` form, rewrite the condition accordingly.
+- Both policies use the singular `tron.tx.contract[0].*` accessor (the form used in common policy examples). This alias requires an enclave/policy-engine release that includes the Tron `contract` singular alias — if you're running against an older 0xkey deployment that only exposes the plural `tron.tx.contracts[0].*` form, rewrite the condition accordingly.
 - The policy language has **no** substring slicing (`data[0..8]`). To match a function selector, use `tron.tx.contract[0].data.startsWith('a9059cbb')` instead. See [the policy language docs](https://docs.0xkey.io/concepts/policies/language#grammar) for the full list of supported string methods.

@@ -60,7 +60,7 @@ test("swagger includes AUTHENTICATORS_NEEDED and get_mfa_status", () => {
   );
 });
 
-test("generated identity contract matches the Turnkey-aligned source", () => {
+test("generated identity contract exposes the MFA and session-profile fields", () => {
   const swagger = JSON.parse(fs.readFileSync(swaggerPath, "utf8")) as {
     definitions: {
       externaldatav1Credential: { properties: Record<string, unknown> };

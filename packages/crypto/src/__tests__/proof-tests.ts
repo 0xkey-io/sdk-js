@@ -121,7 +121,7 @@ describe("Proof verification tests", () => {
   });
 
   test("uses the frozen cross-repo PCR17 policy vector", async () => {
-    expect(qosProofPolicy.schemaVersion).toBe("turnkey-alignment/v1");
+    expect(qosProofPolicy.schemaVersion).toBe("0xkey/qos-proof-policy-v1");
     expect(qosProofPolicy.inputs.manifestHashHex).toBe(manifestHashHex);
     expect(qosProofPolicy.inputs.ephemeralPublicKeyHex).toBe(publicKeyHex);
 

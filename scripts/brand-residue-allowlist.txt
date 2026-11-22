@@ -1,0 +1,27 @@
+# Places that may name the upstream SDK (the fork origin in LICENSE). Checked by
+# scripts/check-brand-residue.mjs; anything else that names it fails CI. Keep entries narrow and say why.
+#
+#   <path glob>               whole file
+#   <path glob> :: <regex>    only the matching lines
+
+# Apache-2.0 §4(c): the upstream copyright notice in each LICENSE must be retained.
+LICENSE :: ^\s*Copyright 2023 Turnkey$
+packages/*/LICENSE :: ^\s*Copyright 202[345] Turnkey$
+
+# Wire value: the legacy upstream HPKE info string accepted by the compatibility branch.
+internal/crypto-core/src/primitives/crypto.ts :: "turnkey_hpke"
+
+# Released CHANGELOG entries are history and are not rewritten.
+packages/*/CHANGELOG.md :: ^- \[#46\]\(https://github\.com/0xkey-io/sdk-js/pull/46\)
+
+# Generated from the services OpenAPI source (`ump` alias description). Temporary: remove once the
+# services source text is neutral and `pnpm run codegen-all` has been re-run.
+contracts/services-public-api.swagger.json :: alias `ump` maps to
+packages/*/src/__inputs__/public_api.swagger.json :: alias `ump` maps to
+packages/*/src/__inputs__/public_api.types.ts :: alias `ump` maps to
+packages/http/src/__generated__/services/coordinator/public/v1/public_api.swagger.json :: alias `ump` maps to
+packages/http/src/__generated__/services/coordinator/public/v1/public_api.types.ts :: alias `ump` maps to
+packages/sdk-types/src/__generated__/types.ts :: alias `ump` maps to
+
+# Not the brand: the React Native `returnKeyType` prop matches case-insensitively.
+examples/**/*.tsx :: \breturnKeyType=

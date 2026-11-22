@@ -154,8 +154,7 @@ one-time token and passes it as `captchaToken` to that single call.
 - Passkey login and OAuth login of a known account are not challenged. OAuth
   first completes without a token; only a sign-up that the Auth Proxy rejects
   for a missing Captcha token is challenged and submitted again.
-- Sending an OTP is always challenged, also for an existing account, as with
-  Turnkey.
+- Sending an OTP is always challenged, also for an existing account.
 - Cancelling the sheet, sending the app to the background, an expired or failed
   challenge, or unreadable client params end the attempt before the protected
   request is sent.

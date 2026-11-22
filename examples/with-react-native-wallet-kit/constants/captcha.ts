@@ -27,7 +27,7 @@ export type CaptchaEnv = {
 
 export type ClientParams = { turnstileSiteKey?: string };
 
-// The Auth Proxy's missing-token rejection (same wire as Turnkey's).
+// The Auth Proxy's missing-token rejection message.
 const MISSING_TOKEN_MESSAGE =
   "X-Captcha-Token header is required when captcha is enabled";
 
