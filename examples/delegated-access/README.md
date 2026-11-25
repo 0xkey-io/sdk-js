@@ -1,6 +1,6 @@
 # Example: `delegated-access`
 
-A sample application that quickly configures a Delegated Access setup (see https://docs.0xkey.io/concepts/policies/delegated-access):
+A sample application that quickly configures a Delegated Access setup (see https://docs.0xkey.io/policies/delegated-access/overview):
 
 - Creates a Sub-Organization with a Delegated user account and an End User account
 - Creates a new Policy for the Delegated account

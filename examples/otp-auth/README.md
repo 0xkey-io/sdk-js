@@ -4,7 +4,7 @@ This example shows how to implement [email OTP authentication](https://docs.0xke
 
 It contains two separate implementations:
 
-- **without-backend** - Uses ZeroXKey’s managed [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy) to securely handle sign-up and login flows with origin enforcement and centralized configuration — no backend required. Your frontend interacts directly with 0xkey.
+- **without-backend** - Uses ZeroXKey’s managed [Auth Proxy](https://docs.0xkey.io/embedded-wallets/features/auth-proxy) to securely handle sign-up and login flows with origin enforcement and centralized configuration — no backend required. Your frontend interacts directly with 0xkey.
 - **with-backend** - Demonstrates how to run the same authentication flow through **your own backend**.
 
 **Auth Proxy Highlights**
