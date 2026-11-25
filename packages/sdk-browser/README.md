@@ -55,7 +55,7 @@ The Iframe client can be initialized to interact with 0xkey's hosted iframes for
 The `iframeContainer` parameter is required, and should be a reference to the DOM element that will host the iframe.
 The `iframeUrl` is the URL of the iframe you wish to interact with.
 
-The example below demonstrates how to initialize the Iframe client for use with [Email Auth](https://docs.0xkey.io/embedded-wallets/sub-organization-auth)
+The example below demonstrates how to initialize the Iframe client for use with [Email Auth](https://docs.0xkey.io/authentication/email-walkthrough)
 by passing in `https://authproxy.0xkey.io` as the `iframeUrl`.
 
 ```typescript
@@ -77,7 +77,7 @@ if (injectedResponse) {
 
 | Flow                                                                               | URL                                              |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------ |
-| [Email Auth](https://docs.0xkey.io/embedded-wallets/sub-organization-auth)         | [authproxy.0xkey.io](https://authproxy.0xkey.io) |
+| [Email Auth](https://docs.0xkey.io/authentication/email-walkthrough)               | [authproxy.0xkey.io](https://authproxy.0xkey.io) |
 | [Email Recovery](https://docs.0xkey.io/embedded-wallets/sub-organization-recovery) | [recovery.0xkey.io](https://recovery.0xkey.io)   |
 | [Import Wallet](https://docs.0xkey.io/features/import-wallets)                     | [import.0xkey.io](https://import.0xkey.io)       |
 | [Export Wallet](https://docs.0xkey.io/features/export-wallets)                     | [export.0xkey.io](https://export.0xkey.io)       |

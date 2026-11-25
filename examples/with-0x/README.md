@@ -2,7 +2,7 @@
 
 This demo application demonstrates EVM swapping with 0xkey and 0x between ETH and USDC.
 
-This example contains uses `@0xkey-io/react-wallet-kit` and `@0xkey-io/viem`, to handle authentication and signing with 0xkey wallets. To streamline authentication this example uses the ZeroXKey [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy) to serve as the backend for authentication purposes. To obtain prices/quotes for the swap as well as building the swap transaction the server queries `0x`. This example also uses `viem` and `wagmi` to obtain wallet balances, set approvals on ERC-20 tokens; just USDC in this case, and broadcast transactions.
+This example contains uses `@0xkey-io/react-wallet-kit` and `@0xkey-io/viem`, to handle authentication and signing with 0xkey wallets. To streamline authentication this example uses the ZeroXKey [Auth Proxy](https://docs.0xkey.io/embedded-wallets/features/auth-proxy) to serve as the backend for authentication purposes. To obtain prices/quotes for the swap as well as building the swap transaction the server queries `0x`. This example also uses `viem` and `wagmi` to obtain wallet balances, set approvals on ERC-20 tokens; just USDC in this case, and broadcast transactions.
 
 This example loosely follows this 0x guide: https://0x.org/docs/0x-swap-api/guides/swap-tokens-with-0x-swap-api.
 
@@ -29,7 +29,7 @@ The first step is to set up your 0xkey organization and account. By following th
 
 - An organization ID
 
-After you've set up your 0xkey account you need to enable [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy). Visit [Wallet Kit](https://app.0xkey.io/dashboard/walletKit) and enable Auth Proxy. Configure any authentication methods you'd like, for this example, I've used passkeys and numeric 6-digit email OTP. Save your Auth Proxy config ID.
+After you've set up your 0xkey account you need to enable [Auth Proxy](https://docs.0xkey.io/embedded-wallets/features/auth-proxy). Visit [Wallet Kit](https://app.0xkey.io/dashboard/walletKit) and enable Auth Proxy. Configure any authentication methods you'd like, for this example, I've used passkeys and numeric 6-digit email OTP. Save your Auth Proxy config ID.
 
 - Auth Proxy Config ID
 

@@ -735,5 +735,5 @@ src/
 - [Authentication Overview](https://docs.0xkey.io/sdks/react/auth)
 - [Using Embedded Wallets](https://docs.0xkey.io/sdks/react/using-embedded-wallets)
 - [Signing](https://docs.0xkey.io/sdks/react/signing)
-- [EWK Reference](https://docs.0xkey.io/reference/embedded-wallet-kit)
-- [Auth Proxy Reference](https://docs.0xkey.io/reference/auth-proxy)
+- [EWK Reference](https://docs.0xkey.io/embedded-wallets/features/embedded-wallet-kit)
+- [Auth Proxy Reference](https://docs.0xkey.io/embedded-wallets/features/auth-proxy)

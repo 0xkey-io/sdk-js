@@ -2,7 +2,7 @@
 
 This is a minimal Next.js app showing how to implement [email OTP authentication](https://docs.0xkey.io/authentication/email) with 0xkey using the [@0xkey-io/react-wallet-kit](https://docs.0xkey.io/sdks/react), wired up to **your own backend** via Next.js Server Actions (see: [Advanced backend authentication](https://docs.0xkey.io/sdks/react/advanced-backend-authentication)).
 
-> Using your own backend is **optional** — it’s an alternative to the ZeroXKey [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy) for teams that prefer to manage authentication themselves.
+> Using your own backend is **optional** — it’s an alternative to the ZeroXKey [Auth Proxy](https://docs.0xkey.io/embedded-wallets/features/auth-proxy) for teams that prefer to manage authentication themselves.
 
 ### What this demo shows
 

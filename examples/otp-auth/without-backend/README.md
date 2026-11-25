@@ -1,6 +1,6 @@
 # Example: `otp-auth-without-backend`
 
-This is a minimal Next.js app showing how to implement [email otp authentication](https://docs.0xkey.io/authentication/email) with 0xkey using the [@0xkey-io/react-wallet-kit](https://docs.0xkey.io/sdks/react) and [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy).
+This is a minimal Next.js app showing how to implement [email otp authentication](https://docs.0xkey.io/authentication/email) with 0xkey using the [@0xkey-io/react-wallet-kit](https://docs.0xkey.io/sdks/react) and [Auth Proxy](https://docs.0xkey.io/embedded-wallets/features/auth-proxy).
 
 > No backend required. This example uses ZeroXKey’s Auth Proxy behind the scenes, so your frontend can securely perform sign-up / login without hosting your own authentication server.
 

@@ -4,7 +4,7 @@ This is a minimal Next.js app showing how to implement **import and export for w
 
 - [@0xkey-io/react-wallet-kit](https://docs.0xkey.io/sdks/react)
 - 0xkey's [import/export iframe flow](https://docs.0xkey.io/embedded-wallets/code-examples/export#embedded-iframe)
-- 0xkey's managed [Auth Proxy](https://docs.0xkey.io/reference/auth-proxy) (no backend required, your frontend can securely perform sign-up / login without hosting your own authentication server)
+- 0xkey's managed [Auth Proxy](https://docs.0xkey.io/embedded-wallets/features/auth-proxy) (no backend required, your frontend can securely perform sign-up / login without hosting your own authentication server)
 
 ### What this demo shows
 

@@ -241,4 +241,4 @@ encryption-key-escrow/
 - [ZeroXKey + World App Blog Post](https://0xkey.io/blog/0xkey-announces-integration-tools-for-humanitys-world-app) - Case study on user-controlled recovery
 - [0xkey Secure Enclaves](https://docs.0xkey.io/security/secure-enclaves) - How 0xkey protects key material
 - [Export Private Keys](https://docs.0xkey.io/wallets/export-wallets) - API documentation for key export
-- [Policy Engine](https://docs.0xkey.io/concepts/policies/quickstart) - Configuring access controls
+- [Policy Engine](https://docs.0xkey.io/policies/quickstart) - Configuring access controls
