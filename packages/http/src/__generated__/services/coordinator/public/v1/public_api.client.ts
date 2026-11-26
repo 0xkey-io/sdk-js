@@ -592,7 +592,7 @@ export class ZeroXKeyClient {
   };
 
   /**
-   * Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.
+   * Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation from the enclave host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof.
    *
    * Sign the provided `TGetAttestationDocumentBody` with the client's `stamp` function, and submit the request (POST /public/v1/query/get_attestation).
    *

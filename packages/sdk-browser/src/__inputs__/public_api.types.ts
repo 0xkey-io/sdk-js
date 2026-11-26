@@ -22,7 +22,7 @@ export interface paths {
     post: operations["PublicApiService_GetApiKeys"];
   };
   "/public/v1/query/get_attestation": {
-    /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
+    /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation from the enclave host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
     post: operations["PublicApiService_GetAttestationDocument"];
   };
   "/public/v1/query/get_authenticator": {
@@ -1642,18 +1642,6 @@ export interface definitions {
      * @description Unique identifier for the root user object.
      */
     rootUserId?: string;
-    /**
-     * @description INTERNAL ONLY: import an already-registered authenticator's public key
-     * (no attestation) as this new root organization's sole root authenticator.
-     * Used for secondary-root-organization creation, where the same physical
-     * passkey already exists under another root org of the same tenant — see
-     * docs/strategy/billing/09-multi-org-billing.md §3.3. Coordinator rejects
-     * this field unless the call carries a valid internal M2M token
-     * (`SECONDARY_ORG_IMPORT_TOKEN`); the public API Gateway has no such
-     * token, so external callers can never reach this path even though the
-     * field is visible on the wire.
-     */
-    importedRootAuthenticator?: definitions["v1ImportedRootAuthenticatorParams"];
   };
   v1CreateOrganizationResult: {
     /** @description Unique identifier for a given Organization. */
@@ -3594,7 +3582,7 @@ export interface definitions {
   v1GetAttestationDocumentRequest: {
     /** @description Unique identifier for a given organization. */
     organizationId: string;
-    /** @description Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+    /** @description Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. The alias `ump` maps to `policy-engine`. */
     enclaveType: string;
   };
   v1GetAttestationDocumentResponse: {
@@ -4039,24 +4027,6 @@ export interface definitions {
     walletId: string;
     /** @description A list of account addresses. */
     addresses: string[];
-  };
-  /**
-   * @description See `CreateOrganizationIntentV2.imported_root_authenticator`. The public
-   * key / aaguid / transports MUST be resolved server-side from Coordinator's
-   * own authenticator store (never trusted verbatim from an HTTP client).
-   */
-  v1ImportedRootAuthenticatorParams: {
-    /** @inject_tag: validate:"required,tk_label,tk_label_length" */
-    authenticatorName: string;
-    /** @inject_tag: validate:"required,max=256" */
-    credentialId: string;
-    /**
-     * Uncompressed P-256 public key, hex-encoded (with or without "0x" prefix).
-     * @inject_tag: validate:"required"
-     */
-    publicKey: string;
-    aaguid?: string;
-    transports?: definitions["v1AuthenticatorTransport"][];
   };
   v1InitFiatOnRampIntent: {
     /**
@@ -7019,7 +6989,7 @@ export interface operations {
       };
     };
   };
-  /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
+  /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation from the enclave host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
   PublicApiService_GetAttestationDocument: {
     parameters: {
       body: {

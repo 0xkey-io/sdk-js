@@ -13,8 +13,8 @@ const swaggerPath = path.resolve(
 const pinPath = path.resolve(__dirname, "../contract-pin.yaml");
 
 const FROZEN_OPENAPI_SHA256 =
-  "cca6a179db09bb9ea1d01deabd0b9e7122f4dbc1f27735efdcf433700aee42e2"; // gitleaks:allow
-const FROZEN_SERVICES_COMMIT = "0eb6eb86a2ddb875552e97a33880d2c1c1eb4e4e";
+  "d4d8d48e23e9b9b11b90af853473872d3f569fb6c9cdfdf4f91804b9723957aa"; // gitleaks:allow
+const FROZEN_SERVICES_COMMIT = "634f3429c56b6662cc24e19270298c6a1152c2a2";
 
 test("pin records the frozen services OpenAPI hash", () => {
   const pin: Record<string, string> = {};
