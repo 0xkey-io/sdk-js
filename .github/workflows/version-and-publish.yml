@@ -327,6 +327,10 @@ jobs:
           cat publish-summary.json || echo "No NPM dry run summary generated"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Publish the files that "Build all packages" built and "Pack smoke"
+          # checked. Without this, every package's prepublishOnly (clean and
+          # build) runs again; see the same variable on the publish step below.
+          NPM_CONFIG_IGNORE_SCRIPTS: "true"
 
       - name: Publish packages to NPM
         id: publish
@@ -345,6 +349,14 @@ jobs:
           # changeset publish has no --provenance flag; pnpm passes npm config
           # from the environment to the npm publish it runs.
           NPM_CONFIG_PROVENANCE: "true"
+          # changeset publish publishes up to 10 packages at the same time, and
+          # each one's prepublishOnly runs `clean` and `build`. One package's
+          # `clean` removes the dist/ that another package is type-checking
+          # against, and the other package can be published without its .d.ts
+          # files (this happened to react-native-passkey-stamper 0.1.4). Skip
+          # the lifecycle scripts so that what is published is exactly what
+          # "Build all packages" built and "Pack smoke" checked.
+          NPM_CONFIG_IGNORE_SCRIPTS: "true"
 
       # changeset publish tags each published package on the release commit
       # (@0xkey-io/<pkg>@<version>). Push exactly those tags, also after a
