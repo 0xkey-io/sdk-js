@@ -526,62 +526,6 @@ export type v1Attestation = {
   transports: v1AuthenticatorTransport[];
 };
 
-export type v1AuthProxySecurityAudienceGrant = {
-  usage?: string;
-  clientIds?: string[];
-};
-
-export type v1AuthProxySecurityPolicy = {
-  piiProofRequired?: boolean;
-  allowedAuthMethods?: string[];
-  providers?: v1AuthProxySecurityProvider[];
-  registrations?: v1AuthProxySecurityRegistration[];
-};
-
-export type v1AuthProxySecurityProvider = {
-  key?: v1AuthProxySecurityProviderKey;
-  enabled?: boolean;
-  audienceGrants?: v1AuthProxySecurityAudienceGrant[];
-};
-
-export type v1AuthProxySecurityProviderKey = {
-  kind?: string;
-  issuer?: string;
-};
-
-export type v1AuthProxySecurityRegistration = {
-  registrationId?: string;
-  provider?: v1AuthProxySecurityProviderKey;
-  clientId?: string;
-  platform?: string;
-  enabled?: boolean;
-  callbackUri?: string;
-  returnUri?: string;
-};
-
-export type v1AuthProxySecuritySelector = {
-  configId?: string;
-  generation?: string;
-  /** 0xkey extension. Strict wire requires a JSON integer from 1 through 18446744073709551615. Generic protobuf acceptance of strings does not authorize string revision; default protojson output must not replace the original signed request. */
-  revision?: number;
-};
-
-export type v1AuthProxySecurityTransition = {
-  kind?: string;
-  piiProofRequired?: boolean;
-  allowedAuthMethods?: string[];
-  expected?: v1AuthProxySecuritySelector;
-  policy?: v1AuthProxySecurityPolicy;
-};
-
-export type v1AuthProxySecurityTransitionV2 = {
-  kind?: string;
-  expected?: v1AuthProxySecuritySelector;
-  captchaEnabled?: boolean;
-  captchaBinding?: v1CaptchaResourceBindingV1;
-  readyWitness?: v1CaptchaReadyWitnessV1;
-};
-
 export type v1AuthenticationMethod = {
   type: v1AuthenticationType;
   id?: string;
@@ -674,20 +618,6 @@ export type v1BootProof = {
 
 export type v1BootProofResponse = {
   bootProof: v1BootProof;
-};
-
-export type v1CaptchaReadyWitnessV1 = {
-  payload?: string;
-  signature?: string;
-};
-
-export type v1CaptchaResourceBindingV1 = {
-  environment?: string;
-  cloudflareAccountId?: string;
-  resourceVersion?: string;
-  siteKey?: string;
-  allowedHostnames?: string[];
-  secretArn?: string;
 };
 
 export type v1ClientSignature = {
@@ -1969,11 +1899,7 @@ export type v1DeleteWebhookEndpointResult = {
   endpointId: string;
 };
 
-export type v1DisableAuthProxyIntent = {
-  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
-  authProxySecurityTransition?: v1AuthProxySecurityTransition;
-};
-
+export type v1DisableAuthProxyIntent = {};
 export type v1DisableAuthProxyResult = {};
 export type v1DisablePrivateKeyIntent = {
   /** Unique identifier for a given Private Key. */
@@ -2106,11 +2032,7 @@ export type v1EmailCustomizationParamsV2 = {
   templateId?: string;
 };
 
-export type v1EnableAuthProxyIntent = {
-  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
-  authProxySecurityTransition?: v1AuthProxySecurityTransition;
-};
-
+export type v1EnableAuthProxyIntent = {};
 export type v1EnableAuthProxyResult = {
   /** A User ID with permission to initiate authentication. */
   userId: string;
@@ -4422,10 +4344,6 @@ export type v1UpdateAuthProxyConfigIntent = {
   socialLinkingClientIds?: string[];
   /** Whether captcha verification is required on sign up and OTP init. */
   captchaEnabled?: boolean;
-  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
-  authProxySecurityTransition?: v1AuthProxySecurityTransition;
-  /** 0xkey Captcha V2 extension. Default closed; legacy captchaEnabled does not authorize it. Strict validation of signed bytes and raw/typed comparison are required. */
-  authProxySecurityTransitionV2?: v1AuthProxySecurityTransitionV2;
 };
 
 export type v1UpdateAuthProxyConfigResult = {

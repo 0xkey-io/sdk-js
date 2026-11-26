@@ -22,7 +22,7 @@ export interface paths {
     post: operations["PublicApiService_GetApiKeys"];
   };
   "/public/v1/query/get_attestation": {
-    /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
+    /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation from the enclave host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
     post: operations["PublicApiService_GetAttestationDocument"];
   };
   "/public/v1/query/get_authenticator": {
@@ -1227,73 +1227,6 @@ export interface definitions {
      */
     transports: definitions["v1AuthenticatorTransport"][];
   };
-  /** @description 0xkey extension audience draft; business strings require the strict parser. */
-  v1AuthProxySecurityAudienceGrant: {
-    usage?: string;
-    clientIds?: string[];
-  };
-  /** @description 0xkey extension policy draft; unauthenticated until activation checks pass. */
-  v1AuthProxySecurityPolicy: {
-    piiProofRequired?: boolean;
-    allowedAuthMethods?: string[];
-    providers?: definitions["v1AuthProxySecurityProvider"][];
-    registrations?: definitions["v1AuthProxySecurityRegistration"][];
-  };
-  /** @description 0xkey extension provider draft; unauthenticated until activation checks pass. */
-  v1AuthProxySecurityProvider: {
-    key?: definitions["v1AuthProxySecurityProviderKey"];
-    enabled?: boolean;
-    audienceGrants?: definitions["v1AuthProxySecurityAudienceGrant"][];
-  };
-  /** @description 0xkey extension provider key; business strings require the strict parser. */
-  v1AuthProxySecurityProviderKey: {
-    kind?: string;
-    issuer?: string;
-  };
-  /** @description 0xkey extension registration draft; unauthenticated until activation checks pass. */
-  v1AuthProxySecurityRegistration: {
-    registrationId?: string;
-    provider?: definitions["v1AuthProxySecurityProviderKey"];
-    clientId?: string;
-    platform?: string;
-    enabled?: boolean;
-    callbackUri?: string;
-    returnUri?: string;
-  };
-  /** @description 0xkey extension selector; unauthenticated until strict entry and authorization. */
-  v1AuthProxySecuritySelector: {
-    configId?: string;
-    generation?: string;
-    /**
-     * Format: uint64
-     * @description 0xkey extension. Strict wire requires a JSON integer from 1 through 18446744073709551615. Generic protobuf acceptance of strings does not authorize string revision; default protojson output must not replace the original signed request.
-     */
-    revision?: number;
-  };
-  /**
-   * @description 0xkey extension carrying unauthenticated configuration input. Activation
-   * requires the strict raw entry to validate the original signed bytes and
-   * compare the complete typed intent before dispatch. Protobuf cannot preserve
-   * repeated-field presence or prove rejection of duplicates, unknowns or null.
-   */
-  v1AuthProxySecurityTransition: {
-    kind?: string;
-    piiProofRequired?: boolean;
-    allowedAuthMethods?: string[];
-    expected?: definitions["v1AuthProxySecuritySelector"];
-    policy?: definitions["v1AuthProxySecurityPolicy"];
-  };
-  /**
-   * @description 0xkey Captcha V2 input only. This transport does not authorize execution.
-   * Strict signed-JSON presence and complete raw/typed equivalence are required.
-   */
-  v1AuthProxySecurityTransitionV2: {
-    kind?: string;
-    expected?: definitions["v1AuthProxySecuritySelector"];
-    captchaEnabled?: boolean;
-    captchaBinding?: definitions["v1CaptchaResourceBindingV1"];
-    readyWitness?: definitions["v1CaptchaReadyWitnessV1"];
-  };
   v1AuthenticationMethod: {
     type: definitions["v1AuthenticationType"];
     id?: string;
@@ -1400,24 +1333,6 @@ export interface definitions {
   };
   v1BootProofResponse: {
     bootProof: definitions["v1BootProof"];
-  };
-  /**
-   * @description Signed Captcha ready witness, verified only against pinned issuer keys.
-   * Both fields are canonical unpadded base64url; signature is low-S DER.
-   */
-  v1CaptchaReadyWitnessV1: {
-    payload?: string;
-    signature?: string;
-  };
-  /** @description Non-secret resource reference; secret_arn names a secret, not its value. */
-  v1CaptchaResourceBindingV1: {
-    environment?: string;
-    cloudflareAccountId?: string;
-    /** Format: uint64 */
-    resourceVersion?: string;
-    siteKey?: string;
-    allowedHostnames?: string[];
-    secretArn?: string;
   };
   v1ClientSignature: {
     /** @description The public component of a cryptographic key pair used to create the signature. */
@@ -3009,10 +2924,7 @@ export interface definitions {
     /** @description Unique identifier for the deleted Webhook Endpoint. */
     endpointId: string;
   };
-  v1DisableAuthProxyIntent: {
-    /** @description 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
-    authProxySecurityTransition?: definitions["v1AuthProxySecurityTransition"];
-  };
+  v1DisableAuthProxyIntent: { [key: string]: unknown };
   v1DisableAuthProxyResult: { [key: string]: unknown };
   v1DisablePrivateKeyIntent: {
     /**
@@ -3210,10 +3122,7 @@ export interface definitions {
     /** @description Unique identifier for a given Email Template. If not specified, the default is the most recent Email Template. */
     templateId?: string;
   };
-  v1EnableAuthProxyIntent: {
-    /** @description 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
-    authProxySecurityTransition?: definitions["v1AuthProxySecurityTransition"];
-  };
+  v1EnableAuthProxyIntent: { [key: string]: unknown };
   v1EnableAuthProxyResult: {
     /** @description A User ID with permission to initiate authentication. */
     userId: string;
@@ -3421,8 +3330,8 @@ export interface definitions {
   };
   /**
    * @description  - FEATURE_NAME_ROOT_USER_EMAIL_RECOVERY: to be deprecated in favor of rename: `FEATURE_NAME_EMAIL_RECOVERY`
-   *  - FEATURE_NAME_SOLANA_RENT_PREFUND_ENABLED: 9-13 mirror Turnkey's FeatureName numbering. 0xkey does not implement
-   * them: SET_ORGANIZATION_FEATURE rejects them instead of persisting.
+   *  - FEATURE_NAME_SOLANA_RENT_PREFUND_ENABLED: 9-13 are reserved for API compatibility and are not implemented:
+   * SET_ORGANIZATION_FEATURE rejects them instead of persisting.
    * @default FEATURE_NAME_UNSPECIFIED
    * @enum {string}
    */
@@ -6090,10 +5999,6 @@ export interface definitions {
     socialLinkingClientIds?: string[];
     /** @description Whether captcha verification is required on sign up and OTP init. */
     captchaEnabled?: boolean;
-    /** @description 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
-    authProxySecurityTransition?: definitions["v1AuthProxySecurityTransition"];
-    /** @description 0xkey Captcha V2 extension. Default closed; legacy captchaEnabled does not authorize it. Strict validation of signed bytes and raw/typed comparison are required. */
-    authProxySecurityTransitionV2?: definitions["v1AuthProxySecurityTransitionV2"];
   };
   v1UpdateAuthProxyConfigResult: {
     /**
@@ -7091,7 +6996,7 @@ export interface operations {
       };
     };
   };
-  /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation via qos_host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
+  /** Get the raw AWS Nitro attestation document (COSE Sign1) for a live enclave app. Prefers a fresh NSM attestation from the enclave host; falls back to the latest stored boot proof. For full pivot↔quorum-manifest verification prefer get_latest_boot_proof + client-side verifyBootProof. */
   PublicApiService_GetAttestationDocument: {
     parameters: {
       body: {
