@@ -75,6 +75,12 @@ const getFormatConfig = (format, options = {}) => {
         : []),
       createTypescriptPlugin({
         tsconfig: options.tsconfig ?? "./tsconfig.json",
+        // Fail the build on any TypeScript error. Without this the plugin only
+        // warns and silently skips the declaration file of every module with
+        // an error (for example when a referenced package's dist/ is missing
+        // because another package's prepublishOnly `clean` is running), and
+        // the package is published without its types.
+        noEmitOnError: true,
         outputToFilesystem: false,
         compilerOptions: {
           outDir: "dist",

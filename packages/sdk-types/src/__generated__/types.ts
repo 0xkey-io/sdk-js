@@ -861,16 +861,6 @@ export type v1CreateOrganizationIntentV2 = {
   rootAuthenticator?: v1AuthenticatorParamsV2;
   /** Unique identifier for the root user object. */
   rootUserId?: string;
-  /** INTERNAL ONLY: import an already-registered authenticator's public key
-(no attestation) as this new root organization's sole root authenticator.
-Used for secondary-root-organization creation, where the same physical
-passkey already exists under another root org of the same tenant — see
-docs/strategy/billing/09-multi-org-billing.md §3.3. Coordinator rejects
-this field unless the call carries a valid internal M2M token
-(`SECONDARY_ORG_IMPORT_TOKEN`); the public API Gateway has no such
-token, so external callers can never reach this path even though the
-field is visible on the wire. */
-  importedRootAuthenticator?: v1ImportedRootAuthenticatorParams;
 };
 
 export type v1CreateOrganizationResult = {
@@ -2359,7 +2349,7 @@ export type v1GetAppProofsResponse = {
 export type v1GetAttestationDocumentRequest = {
   /** Unique identifier for a given organization. */
   organizationId: string;
-  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. The alias `ump` maps to `policy-engine`. */
   enclaveType: string;
 };
 
@@ -2829,14 +2819,6 @@ export type v1ImportWalletResult = {
   walletId: string;
   /** A list of account addresses. */
   addresses: string[];
-};
-
-export type v1ImportedRootAuthenticatorParams = {
-  authenticatorName: string;
-  credentialId: string;
-  publicKey: string;
-  aaguid?: string;
-  transports?: v1AuthenticatorTransport[];
 };
 
 export type v1InitFiatOnRampIntent = {
@@ -5097,7 +5079,7 @@ export type TGetAttestationDocumentResponse = {
 
 export type TGetAttestationDocumentBody = {
   organizationId?: string;
-  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. The alias `ump` maps to `policy-engine`. */
   enclaveType: string;
 };
 

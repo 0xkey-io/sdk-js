@@ -69,12 +69,18 @@ jobs:
           pnpm --filter @0xkey-io/crypto \
             --filter @0xkey-io/encoding \
             --filter @0xkey-io/api-key-stamper \
+            --filter @0xkey-io/http \
             --filter @0xkey-io/core \
             --filter @0xkey-io/react-wallet-kit \
             test
 
       - name: Contract guard
         run: pnpm run contract-guard
+
+      # Pack every generic package and check that each file its manifest
+      # points at (types, main, module, exports) is in the tarball.
+      - name: Pack smoke
+        run: node scripts/release-guard.mjs pack-smoke
 
       - name: Acceptance artifact tests
         run: pnpm exec tsx --test internal/acceptance/otp-v2-build-artifact.test.mts

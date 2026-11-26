@@ -1292,6 +1292,7 @@ export function otpRateLimitErrorFrom(
     message,
     typeof error.message === "string" ? error.message : "",
     String(error.code ?? ""),
+    typeof error.errorCode === "string" ? error.errorCode : "",
     safeStringify(body ?? error.details),
   ].join(" ");
 
