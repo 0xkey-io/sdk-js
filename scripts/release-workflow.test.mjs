@@ -56,6 +56,36 @@ test("the generic publish path publishes with npm provenance", () => {
   );
 });
 
+test("the generic publish path publishes the built, pack-smoked files without rebuilding", () => {
+  // changeset publish publishes packages concurrently, and each package's
+  // prepublishOnly runs clean and build. That rebuild must not run: it can
+  // delete a dependency's dist/ while another package type-checks against it.
+  for (const name of ["Publish to NPM (dry run)", "Publish packages to NPM"]) {
+    assert.equal(
+      step("publish", name).env.NPM_CONFIG_IGNORE_SCRIPTS,
+      "true",
+      `${name} must skip lifecycle scripts`,
+    );
+  }
+  const names = jobs.publish.steps.map((item) => item.name);
+  const index = (name) => {
+    const found = names.indexOf(name);
+    assert.notEqual(found, -1, `publish job needs a "${name}" step`);
+    return found;
+  };
+  assert.ok(index("Build all packages") < index("Pack smoke"));
+  assert.ok(index("Pack smoke") < index("Publish to NPM (dry run)"));
+  assert.ok(
+    index("Publish to NPM (dry run)") < index("Publish packages to NPM"),
+  );
+  // Nothing between the check and the publish may build again.
+  const between = jobs.publish.steps
+    .slice(index("Pack smoke") + 1, index("Publish packages to NPM"))
+    .map((item) => String(item.run ?? ""))
+    .join("\n");
+  assert.doesNotMatch(between, /build|rollup|tsc|clean/);
+});
+
 test("published versions return to the default branch only through a PR", () => {
   for (const name of Object.keys(jobs)) {
     const source = runs(name);
