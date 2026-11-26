@@ -105,3 +105,25 @@ test("JSON error responses from the coordinator carry the HTTP status", async ()
   expect(error).toBeInstanceOf(ZeroXKeyRequestError);
   expect(error).toMatchObject({ code: 14, status: 503, retryAfter: "7" });
 });
+
+test("Auth Proxy error bodies use `error` for the text and a string `code` as the reason", async () => {
+  mockFetch(
+    401,
+    "Unauthorized",
+    JSON.stringify({
+      error: "OIDC token has expired",
+      code: "OIDC_TOKEN_EXPIRED",
+    }),
+  );
+  const error = await caught(
+    client().proxyGetAccount({ filterType: "EMAIL", filterValue: "a@b.test" }),
+  );
+  expect(error).toBeInstanceOf(ZeroXKeyRequestError);
+  expect(error).toMatchObject({
+    message: "0xkey error OIDC_TOKEN_EXPIRED: OIDC token has expired",
+    code: 2,
+    reason: "OIDC_TOKEN_EXPIRED",
+    status: 401,
+    retryAfter: "7",
+  });
+});
