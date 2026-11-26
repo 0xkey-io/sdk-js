@@ -148,12 +148,18 @@ and git tags. The workflow therefore runs `scripts/release-guard.mjs`:
 - **Build job:** `assert-unpublished --changeset-status` fails if any generic
   package that the pending changesets would version already exists on npm.
   Private workspaces such as examples are not checked.
-- **Version job and publish job:** `pack-smoke` packs every generic package
-  with `pnpm pack`, then checks three things in each tarball. The manifest
-  version must match the workspace. Every `@0xkey-io/*` dependency must be
-  resolved (no `workspace:`) to a range that the current workspace version
-  satisfies. A short list of key exports, such as `ZeroXKeyClient` and
-  `permitsCaptchaNavigation`, must be present.
+- **Pull requests, version job and publish job:** `pack-smoke` packs every
+  generic package with `pnpm pack`, then checks four things in each tarball.
+  The manifest version must match the workspace. Every `@0xkey-io/*`
+  dependency must be resolved (no `workspace:`) to a range that the current
+  workspace version satisfies. A short list of key exports, such as
+  `ZeroXKeyClient` and `permitsCaptchaNavigation`, must be present. Every file
+  that `main`, `module`, `types`, `typings`, `browser`, `react-native` and
+  `exports` point at must be in the tarball (for a `*` pattern, its directory),
+  so a package cannot ship without its `.d.ts` files. A manifest shape the
+  check does not know fails the check instead of being skipped. The `js-build`
+  workflow runs it on every pull request after the build, and the release
+  workflow runs it again on the version and publish jobs.
 - **Publish job:** immediately before publishing,
   `assert-unpublished --since-ref origin/<default branch>` fails if any package
   that this release branch versioned already exists on npm. This also blocks a

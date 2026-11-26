@@ -447,36 +447,82 @@ function walkFiles(dir, filter, out = []) {
   return out;
 }
 
+/** Top-level manifest fields that name a single entry file. */
+const ENTRY_FILE_FIELDS = ["main", "module", "types", "typings"];
+
+/** Top-level fields that are either an entry file or a path-to-path map. */
+const ENTRY_MAP_FIELDS = ["browser", "react-native"];
+
+const isPlainObject = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
 /**
- * Every file path a manifest advertises to consumers: `main`, `module`,
- * `types`, `typings` and every string leaf of `exports`. Patterns (`*`) and
- * non-relative targets such as bare package names are skipped.
- * @returns {{ field: string, target: string }[]}
+ * Every file path a manifest advertises to consumers, from `main`, `module`,
+ * `types`, `typings`, `browser`, `react-native` and `exports`. A target that
+ * ends in a `*` pattern is returned as a pattern, to be checked as a
+ * directory. Throws on a shape this check does not know, so that a new
+ * manifest style cannot be skipped silently.
+ * @returns {{ field: string, target: string, pattern: boolean }[]}
  */
 export function manifestEntrypoints(manifest) {
   const found = [];
-  const add = (field, target) => {
-    if (typeof target !== "string" || target.includes("*")) return;
-    if (!target.startsWith("./") && !target.startsWith("dist/")) return;
-    found.push({ field, target });
+  const describe = (value) => JSON.stringify(value) ?? String(value);
+  const add = (field, target, { exportsTarget = false } = {}) => {
+    if (typeof target !== "string" || target === "") {
+      throw new Error(`${field}: unsupported target ${describe(target)}`);
+    }
+    if (exportsTarget && !target.startsWith("./")) {
+      throw new Error(`${field}: target ${target} must start with "./"`);
+    }
+    const pattern = target.includes("*");
+    if (pattern && target.indexOf("*") !== target.lastIndexOf("*")) {
+      throw new Error(`${field}: unsupported pattern ${target}`);
+    }
+    found.push({ field, target, pattern });
   };
-  for (const field of ["main", "module", "types", "typings"]) {
-    add(field, manifest[field]);
+  const label = (field, key) =>
+    key.startsWith(".") ? `${field}["${key}"]` : `${field}.${key}`;
+
+  for (const field of ENTRY_FILE_FIELDS) {
+    if (manifest[field] !== undefined) add(field, manifest[field]);
+  }
+  for (const field of ENTRY_MAP_FIELDS) {
+    const value = manifest[field];
+    if (value === undefined) continue;
+    if (typeof value === "string") {
+      add(field, value);
+    } else if (isPlainObject(value)) {
+      // Path-to-path (or module-to-path) replacement map. `false` removes a
+      // module, and a value that is not a relative path replaces a module by
+      // another package; neither names a file in this package.
+      for (const [key, target] of Object.entries(value)) {
+        if (target === false) continue;
+        if (typeof target !== "string") {
+          throw new Error(
+            `${label(field, key)}: unsupported target ${describe(target)}`,
+          );
+        }
+        if (target.startsWith("./")) add(label(field, key), target);
+      }
+    } else {
+      throw new Error(`${field}: unsupported value ${describe(value)}`);
+    }
   }
   const walk = (field, value) => {
-    if (typeof value === "string") add(field, value);
-    else if (Array.isArray(value)) {
+    if (value === null) return; // explicitly not exported
+    if (typeof value === "string") {
+      add(field, value, { exportsTarget: true });
+    } else if (Array.isArray(value)) {
       for (const item of value) walk(field, item);
-    } else if (value && typeof value === "object") {
+    } else if (isPlainObject(value)) {
       for (const [key, child] of Object.entries(value)) {
-        walk(
-          key.startsWith(".") ? `${field}["${key}"]` : `${field}.${key}`,
-          child,
-        );
+        walk(label(field, key), child);
       }
+    } else {
+      throw new Error(`${field}: unsupported value ${describe(value)}`);
     }
   };
-  walk("exports", manifest.exports);
+  if (manifest.exports !== undefined) walk("exports", manifest.exports);
   return found;
 }
 
@@ -484,17 +530,28 @@ export function manifestEntrypoints(manifest) {
  * Every file the packed manifest points consumers at (`types`, `main`,
  * `exports`, ...) must exist in the packed artifact. A missing declaration
  * file does not break a build or a runtime test, but leaves TypeScript
- * consumers without types.
+ * consumers without types. A manifest shape this check does not know is a
+ * failure too.
  * @returns {string[]}
  */
 export function checkPackedEntrypoints(packageRoot, manifest, name) {
+  let entrypoints;
+  try {
+    entrypoints = manifestEntrypoints(manifest);
+  } catch (error) {
+    return [`${name}: cannot check package.json entrypoints: ${error.message}`];
+  }
   const failures = [];
   const seen = new Set();
-  for (const { field, target } of manifestEntrypoints(manifest)) {
+  for (const { field, target, pattern } of entrypoints) {
     const key = `${field}\0${target}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    if (!fs.existsSync(path.join(packageRoot, target))) {
+    // A pattern such as ./styles/* has no single file: its directory must exist.
+    const relative = pattern
+      ? path.dirname(target.slice(0, target.indexOf("*") + 1))
+      : target;
+    if (!fs.existsSync(path.join(packageRoot, relative))) {
       failures.push(
         `${name}: ${field} points at ${target}, which is missing from the packed artifact`,
       );
