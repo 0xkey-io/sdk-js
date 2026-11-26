@@ -46,7 +46,7 @@ jobs:
         run: node --test internal/acceptance/brand-assets.test.mjs
 
       - name: Release guard
-        run: node --test scripts/release-guard.test.mjs scripts/release-workflow.test.mjs
+        run: node --test scripts/release-guard.test.mjs scripts/release-workflow.test.mjs scripts/workspace-deps.test.mjs
 
       - name: Auth Proxy codegen drift
         run: |

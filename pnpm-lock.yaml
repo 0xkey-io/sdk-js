@@ -2955,9 +2955,6 @@ importers:
       '@0xkey-io/http':
         specifier: workspace:*
         version: link:../http
-      '@0xkey-io/react-native-passkey-stamper':
-        specifier: workspace:*
-        version: link:../react-native-passkey-stamper
       '@0xkey-io/sdk-types':
         specifier: workspace:*
         version: link:../sdk-types
@@ -2998,6 +2995,9 @@ importers:
         specifier: ^2.33.1
         version: 2.34.0(bufferutil@4.0.9)(typescript@5.4.3)(utf-8-validate@5.0.10)(zod@3.25.76)
     devDependencies:
+      '@0xkey-io/react-native-passkey-stamper':
+        specifier: workspace:*
+        version: link:../react-native-passkey-stamper
       glob:
         specifier: '>=10.5.0'
         version: 13.0.0
