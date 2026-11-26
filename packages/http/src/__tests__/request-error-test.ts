@@ -9,7 +9,7 @@ describe("ZeroXKeyRequestError body parsing", () => {
       details: [{ field: "x" }],
     });
     expect(error.code).toBe(3);
-    expect(error.reason).toBeUndefined();
+    expect(error.errorCode).toBeUndefined();
     expect(error.details).toEqual([{ field: "x" }]);
     expect(error.message).toBe(
       '0xkey error 3: invalid request (Details: [{"field":"x"}])',
@@ -44,26 +44,33 @@ describe("ZeroXKeyRequestError body parsing", () => {
     expect(error.message).toBe("0xkey error 16: from message");
   });
 
-  test("a string code is kept as `reason`, and `code` stays a number", () => {
+  test("a string code is kept as `errorCode`, and `code` stays a number", () => {
     const error = new ZeroXKeyRequestError({
       error: "OIDC token has expired",
       code: "OIDC_TOKEN_EXPIRED",
     });
-    expect(error.reason).toBe("OIDC_TOKEN_EXPIRED");
+    expect(error.errorCode).toBe("OIDC_TOKEN_EXPIRED");
     expect(typeof error.code).toBe("number");
     expect(error.code).toBe(2);
     expect(error.details).toBeNull();
   });
 
-  test("a numeric string code is the gRPC code, not a reason", () => {
+  test("a numeric string code is the gRPC code, not an errorCode", () => {
     const error = new ZeroXKeyRequestError({ code: "16", message: "denied" });
     expect(error.code).toBe(16);
-    expect(error.reason).toBeUndefined();
+    expect(error.errorCode).toBeUndefined();
   });
 
   test("a body with neither message nor error does not print `undefined`", () => {
     const error = new ZeroXKeyRequestError({ code: 5 });
     expect(error.message).toBe("0xkey error 5: ");
     expect(error.message).not.toContain("undefined");
+  });
+  test("signed digits are not a gRPC code: they stay in `errorCode`", () => {
+    for (const code of ["+7", "-7", "7.5", " 7"]) {
+      const error = new ZeroXKeyRequestError({ code, message: "denied" });
+      expect(error.errorCode).toBe(code);
+      expect(error.code).toBe(2);
+    }
   });
 });

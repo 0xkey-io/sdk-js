@@ -41,13 +41,15 @@ const GRPC_CODE_UNKNOWN = 2;
 /**
  * Reads a gRPC status or Auth Proxy error body. The text comes from
  * `message`, or from `error` when `message` is empty. A numeric `code` (or a
- * numeric string) is the gRPC code; any other string `code` such as
- * `OIDC_TOKEN_EXPIRED` is kept as `reason` and the gRPC code is `UNKNOWN`.
+ * string of digits only) is the gRPC code; any other string `code` such as
+ * `OIDC_TOKEN_EXPIRED` is kept as `errorCode`. This class has no HTTP status,
+ * so without a numeric `code` the gRPC code is `UNKNOWN` (2); the `core`
+ * package derives it from the HTTP status instead.
  */
 function parseErrorBody(input: GrpcStatus): {
   message: string;
   code: number;
-  reason: string | undefined;
+  errorCode: string | undefined;
 } {
   const message =
     typeof input.message === "string" && input.message !== ""
@@ -56,14 +58,14 @@ function parseErrorBody(input: GrpcStatus): {
         ? input.error
         : "";
   if (typeof input.code === "number") {
-    return { message, code: input.code, reason: undefined };
+    return { message, code: input.code, errorCode: undefined };
   }
   if (typeof input.code === "string" && input.code !== "") {
     return /^\d+$/.test(input.code)
-      ? { message, code: Number(input.code), reason: undefined }
-      : { message, code: GRPC_CODE_UNKNOWN, reason: input.code };
+      ? { message, code: Number(input.code), errorCode: undefined }
+      : { message, code: GRPC_CODE_UNKNOWN, errorCode: input.code };
   }
-  return { message, code: GRPC_CODE_UNKNOWN, reason: undefined };
+  return { message, code: GRPC_CODE_UNKNOWN, errorCode: undefined };
 }
 
 export class ZeroXKeyRequestError extends Error {
@@ -71,11 +73,11 @@ export class ZeroXKeyRequestError extends Error {
   /** gRPC status code; `2` (UNKNOWN) when the body has no numeric code. */
   code: number;
   /** String `code` of the body (for example `OIDC_TOKEN_EXPIRED`), if any. */
-  reason: string | undefined;
+  errorCode: string | undefined;
 
   constructor(input: GrpcStatus) {
     const parsed = parseErrorBody(input);
-    let zeroXKeyErrorMessage = `0xkey error ${parsed.reason ?? parsed.code}: ${parsed.message}`;
+    let zeroXKeyErrorMessage = `0xkey error ${parsed.errorCode ?? parsed.code}: ${parsed.message}`;
 
     if (input.details != null) {
       zeroXKeyErrorMessage += ` (Details: ${JSON.stringify(input.details)})`;
@@ -86,7 +88,7 @@ export class ZeroXKeyRequestError extends Error {
     this.name = "ZeroXKeyRequestError";
     this.details = input.details ?? null;
     this.code = parsed.code;
-    this.reason = parsed.reason;
+    this.errorCode = parsed.errorCode;
   }
 }
 
