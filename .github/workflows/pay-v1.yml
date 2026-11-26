@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - "packages/pay/**"
+      # Pay's workspace:* dependencies. Their releases change the packed graph.
+      - "packages/crypto/**"
+      - "packages/viem/**"
+      - "packages/http/**"
+      - "packages/api-key-stamper/**"
       - ".github/workflows/pay-publish.yml"
       - ".github/scripts/check-pay-publish-*.mjs"
       - ".github/scripts/check-pay-publish-source.sh"
@@ -15,6 +20,11 @@ on:
     branches: [main]
     paths:
       - "packages/pay/**"
+      # Pay's workspace:* dependencies. Their releases change the packed graph.
+      - "packages/crypto/**"
+      - "packages/viem/**"
+      - "packages/http/**"
+      - "packages/api-key-stamper/**"
       - ".github/workflows/pay-publish.yml"
       - ".github/scripts/check-pay-publish-*.mjs"
       - ".github/scripts/check-pay-publish-source.sh"

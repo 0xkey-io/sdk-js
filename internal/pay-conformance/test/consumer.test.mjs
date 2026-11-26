@@ -234,7 +234,7 @@ test("content-only cache performs actual fixed offline ci with isolated config a
   t.diagnostic(`retained actual offline install evidence: ${evidence}`);
   assert.equal(outcome.code, 0, JSON.stringify(outcome));
   const after = await verifyRelease(binding, true);
-  assert.equal(after.packageCount, 336);
+  assert.equal(after.packageCount, 332);
   assert.equal(after.manifestSha256, before.manifestSha256);
   assert.equal(after.lockSha256, before.lockSha256);
   assert.ok(after.installed.ownerCount > 300);

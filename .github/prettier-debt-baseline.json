@@ -19,7 +19,7 @@
     },
     {
       "path": "internal/pay-conformance/fixtures/inventory.json",
-      "sha256": "e6395e9dffaee3ef0a1db9071e692d7b0284f0a3ce158b83c817c63bf53d4860"
+      "sha256": "5a17f25a308954a1e69be363bbfe1b856cc6a4734f1df476d7511b270dc1b061"
     },
     {
       "path": "internal/pay-conformance/fixtures/mpp-tools-generic/adapters/python/adapter.json",
@@ -71,7 +71,7 @@
     },
     {
       "path": "internal/pay-conformance/fixtures/packed-consumer/package-lock.template.json",
-      "sha256": "702f331e3ca8341198f87c56a0946b1d27bf926d7f1bc94280b4dc3206a66063"
+      "sha256": "ef75f175b14b1b82ef61ecd3695cdf090867667165117b4053e4211f63a4cfd4"
     },
     {
       "path": "internal/pay-conformance/fixtures/ruby-mpp/client.mjs",
@@ -183,7 +183,7 @@
     },
     {
       "path": "internal/pay-conformance/test/consumer.test.mjs",
-      "sha256": "79bc4b0f7aaadb4d2e2325ce7f4202e5275469df6b5863c388f65aed8b359d68"
+      "sha256": "a5cf5c900def7e6ccefa7361bc6f48c52da8ffe566b706cf1c41c48da9aa546a"
     },
     {
       "path": "internal/pay-conformance/test/execution-input.test.mjs",
@@ -423,7 +423,7 @@
     },
     {
       "path": "packages/pay/scripts/fixed-consumer.mjs",
-      "sha256": "cfa18adefa6a85f770936d0eed6654990c2c5f132bd9d75c2a416d60a8bc8691"
+      "sha256": "aa19ef135d8a67fef6b55a28870c5a0eb68d73eec1048e94c824745e1eb8cf65"
     },
     {
       "path": "packages/pay/scripts/fixtures/x402-next/route-require.js",
