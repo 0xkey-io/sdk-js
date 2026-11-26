@@ -448,6 +448,62 @@ function walkFiles(dir, filter, out = []) {
 }
 
 /**
+ * Every file path a manifest advertises to consumers: `main`, `module`,
+ * `types`, `typings` and every string leaf of `exports`. Patterns (`*`) and
+ * non-relative targets such as bare package names are skipped.
+ * @returns {{ field: string, target: string }[]}
+ */
+export function manifestEntrypoints(manifest) {
+  const found = [];
+  const add = (field, target) => {
+    if (typeof target !== "string" || target.includes("*")) return;
+    if (!target.startsWith("./") && !target.startsWith("dist/")) return;
+    found.push({ field, target });
+  };
+  for (const field of ["main", "module", "types", "typings"]) {
+    add(field, manifest[field]);
+  }
+  const walk = (field, value) => {
+    if (typeof value === "string") add(field, value);
+    else if (Array.isArray(value)) {
+      for (const item of value) walk(field, item);
+    } else if (value && typeof value === "object") {
+      for (const [key, child] of Object.entries(value)) {
+        walk(
+          key.startsWith(".") ? `${field}["${key}"]` : `${field}.${key}`,
+          child,
+        );
+      }
+    }
+  };
+  walk("exports", manifest.exports);
+  return found;
+}
+
+/**
+ * Every file the packed manifest points consumers at (`types`, `main`,
+ * `exports`, ...) must exist in the packed artifact. A missing declaration
+ * file does not break a build or a runtime test, but leaves TypeScript
+ * consumers without types.
+ * @returns {string[]}
+ */
+export function checkPackedEntrypoints(packageRoot, manifest, name) {
+  const failures = [];
+  const seen = new Set();
+  for (const { field, target } of manifestEntrypoints(manifest)) {
+    const key = `${field}\0${target}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!fs.existsSync(path.join(packageRoot, target))) {
+      failures.push(
+        `${name}: ${field} points at ${target}, which is missing from the packed artifact`,
+      );
+    }
+  }
+  return failures;
+}
+
+/**
  * Static check: each symbol is exported by name from some packed declaration
  * file and appears in the packed JavaScript.
  * @returns {string[]}
@@ -541,6 +597,7 @@ export function runPackSmoke({ repoRoot = REPO_ROOT, only, destination } = {}) {
         failures.push(
           ...checkPackedManifest(packed, source, workspaceVersions),
           ...checkRepository(packed, path.relative(repoRoot, source.dir)),
+          ...checkPackedEntrypoints(packageRoot, packed, source.name),
         );
         const key = KEY_EXPORTS[source.name];
         if (key) {
