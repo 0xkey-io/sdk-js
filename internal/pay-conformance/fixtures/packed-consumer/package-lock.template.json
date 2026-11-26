@@ -29,12 +29,12 @@
       }
     },
     "node_modules/@0xkey-io/api-key-stamper": {
-      "version": "0.1.3",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/api-key-stamper/-/api-key-stamper-0.1.3.tgz",
-      "integrity": "sha512-QOLyL3UdxQ4efV87eAwe6bwoe7mppASuqLd9jaP6uYETzqQQDQnXLcf4hfHcEQapzX0UHBHxv3Wvwe517Ef4Ug==",
+      "version": "0.1.4",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/api-key-stamper/-/api-key-stamper-0.1.4.tgz",
+      "integrity": "sha512-hhFbjaOAq/fxKaWpS/5AS0gSVHMxH+uFaj+2LynkVmp2kpSaSA4gv+GOLDURfdVA3IEV2wuqXIb3Ox7ZJLUgrg==",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/crypto": "0.3.0",
+        "@0xkey-io/crypto": "0.4.0",
         "@0xkey-io/encoding": "0.1.1",
         "@noble/curves": "^1.3.0",
         "sha256-uint8array": "^0.10.7"
@@ -43,129 +43,28 @@
         "node": ">=18.0.0"
       }
     },
-    "node_modules/@0xkey-io/core": {
-      "version": "0.2.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/core/-/core-0.2.0.tgz",
-      "integrity": "sha512-VM3FyuT0PxWvHa2+wN/vgFV04s/Vj6mqlAArKG1XX2hR1jjkH6dePHtJNzaSZbj89+XVlXr0eJAaMfXIVwq2Lw==",
-      "license": "MIT",
-      "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
-        "@0xkey-io/crypto": "0.2.0",
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/http": "0.1.2",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@0xkey-io/webauthn-stamper": "0.1.0",
-        "@wallet-standard/app": "^1.1.0",
-        "@wallet-standard/base": "^1.1.0",
-        "@walletconnect/sign-client": "^2.23.6",
-        "@walletconnect/types": "^2.23.0",
-        "cross-fetch": "^3.1.5",
-        "ethers": "^6.10.0",
-        "jwt-decode": "4.0.0",
-        "uuid": "^11.1.0",
-        "viem": "^2.33.1"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      },
-      "peerDependencies": {
-        "@0xkey-io/react-native-passkey-stamper": "0.1.2",
-        "@react-native-async-storage/async-storage": "^2.2.0",
-        "react-native-keychain": "^8.1.0 || ^9.2.2 || ^10.0.0"
-      },
-      "peerDependenciesMeta": {
-        "@0xkey-io/react-native-passkey-stamper": {
-          "optional": true
-        },
-        "@react-native-async-storage/async-storage": {
-          "optional": true
-        },
-        "react-native-keychain": {
-          "optional": true
-        }
-      }
-    },
-    "node_modules/@0xkey-io/core/node_modules/@0xkey-io/api-key-stamper": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/api-key-stamper/-/api-key-stamper-0.1.2.tgz",
-      "integrity": "sha512-vhL0duAEFF0HwIVj0VY5eS7HWQLmvy7lbGLW3zdMLQ3CUyg7aoR3y3jMN8XgmSAp5z0L01738Wil8I2NuGQeyA==",
+    "node_modules/@0xkey-io/attested-stamper": {
+      "version": "0.1.1",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/attested-stamper/-/attested-stamper-0.1.1.tgz",
+      "integrity": "sha512-SPER/LZtFH2W5iiSjx9xyQcwRuuIxU51zLqUr6O7NR3W6AWAH+GDn15We8v6OAnOaqTuN0eQnH5hVkHDNxZAiA==",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/crypto": "0.2.0",
+        "@0xkey-io/api-key-stamper": "0.1.4",
         "@0xkey-io/encoding": "0.1.1",
-        "@noble/curves": "^1.3.0",
-        "sha256-uint8array": "^0.10.7"
+        "@noble/curves": "^1.3.0"
       },
       "engines": {
         "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/core/node_modules/@0xkey-io/crypto": {
-      "version": "0.2.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/crypto/-/crypto-0.2.0.tgz",
-      "integrity": "sha512-j461F1VXYUlrmenA3Hp8EOC+QaEnqYzOFaaUOra7Yj2SEHHUB2KPgqaz1XqwRVdsOG6adAZWKGOCvUYUt1wxdA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@noble/ciphers": "1.3.0",
-        "@noble/curves": "1.9.0",
-        "@noble/hashes": "1.8.0",
-        "@peculiar/x509": "1.12.3",
-        "borsh": "2.0.0",
-        "cbor-js": "0.1.0"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/core/node_modules/@0xkey-io/http": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/http/-/http-0.1.2.tgz",
-      "integrity": "sha512-ZSqHd1T3y9hrH7mz+GTwVezJCnxD1DvV+xy/oJ260MvGGnfUNfe4+G0ZkTMy553yO9ar3Xdn3mUOruhIA27FWw==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/webauthn-stamper": "0.1.0",
-        "cross-fetch": "^3.1.5"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/core/node_modules/@0xkey-io/sdk-types": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-types/-/sdk-types-0.1.0.tgz",
-      "integrity": "sha512-T4JTPkR0bue2KN9ss/zYArze3GdLrlj433z9uTakYNlFgu7A+W3eM+PzMYZ4+cfFTAF7dXibmbl6AfBTKk25xg==",
-      "license": "Apache-2.0",
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/core/node_modules/@noble/curves": {
-      "version": "1.9.0",
-      "resolved": "https://registry.npmjs.org/@noble/curves/-/curves-1.9.0.tgz",
-      "integrity": "sha512-7YDlXiNMdO1YZeH6t/kvopHHbIZzlxrCV9WLqCY6QhcXOoXiNCMDqJIglZ9Yjx5+w7Dz30TITFrlTjnRg7sKEg==",
-      "license": "MIT",
-      "dependencies": {
-        "@noble/hashes": "1.8.0"
-      },
-      "engines": {
-        "node": "^14.21.3 || >=16"
-      },
-      "funding": {
-        "url": "https://paulmillr.com/funding/"
       }
     },
     "node_modules/@0xkey-io/crypto": {
-      "version": "0.3.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/crypto/-/crypto-0.3.0.tgz",
-      "integrity": "sha512-qEVC6ESlqtnWGzWhoNlIze8JW/TRVrSmOdgHfYGNIGae87sP8aAWxNYJmXVVo2pcJ+MrW+mp+bptbR6ctNfy+Q==",
+      "version": "0.4.0",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/crypto/-/crypto-0.4.0.tgz",
+      "integrity": "sha512-TxHvv2o3KAyMkzb8HmjJwuJz4CF9/KW1yFDdRFjCHJAhkPft+ddsAPo/I6IQGP1/CfmAVS5fgEP05FBfHC5e5A==",
       "license": "Apache-2.0",
       "dependencies": {
         "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/sdk-types": "0.1.1",
+        "@0xkey-io/sdk-types": "0.2.0",
         "@noble/ciphers": "1.3.0",
         "@noble/curves": "1.9.0",
         "@noble/hashes": "1.8.0",
@@ -206,12 +105,12 @@
       }
     },
     "node_modules/@0xkey-io/http": {
-      "version": "0.1.3",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/http/-/http-0.1.3.tgz",
-      "integrity": "sha512-gitSGSWzcHFcN4ousgQ+cIZ/OJNE7I0suPrJZSRM/iGYlaQDAUSGxWrnT4PcgwDOi+wCyI2CpQYnqi+J8h9VFA==",
+      "version": "0.2.0",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/http/-/http-0.2.0.tgz",
+      "integrity": "sha512-Pg43iFzVX+uOLeAeLGUqvaaOo7gfvaXSFrgzB2iTLBQ90UXX9jkyMBvVebkevPEP2DHPUjfE5s7TFF1lzf3pVQ==",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.3",
+        "@0xkey-io/api-key-stamper": "0.1.4",
         "@0xkey-io/encoding": "0.1.1",
         "@0xkey-io/webauthn-stamper": "0.1.0",
         "cross-fetch": "^3.1.5"
@@ -230,74 +129,16 @@
       }
     },
     "node_modules/@0xkey-io/indexed-db-stamper": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/indexed-db-stamper/-/indexed-db-stamper-0.1.2.tgz",
-      "integrity": "sha512-IeWAbSZ9MNuQhNRA6IzujhmByztbt9EN6QXrWGQK2VPKif7mhT79oOCdGwN3omQUSdCogFSIa9hjTwiuq2jSaA==",
+      "version": "0.1.4",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/indexed-db-stamper/-/indexed-db-stamper-0.1.4.tgz",
+      "integrity": "sha512-i1TC2FqaIfRC8YT6ywTzCgkQYWqJxZyhRh0Vfnxd9PQxwmM7GcUA+m/J1aAgTMR51jPThAC2d7vS7wWqAtvjtA==",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
+        "@0xkey-io/api-key-stamper": "0.1.4",
         "@0xkey-io/encoding": "0.1.1"
       },
       "engines": {
         "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/indexed-db-stamper/node_modules/@0xkey-io/api-key-stamper": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/api-key-stamper/-/api-key-stamper-0.1.2.tgz",
-      "integrity": "sha512-vhL0duAEFF0HwIVj0VY5eS7HWQLmvy7lbGLW3zdMLQ3CUyg7aoR3y3jMN8XgmSAp5z0L01738Wil8I2NuGQeyA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/crypto": "0.2.0",
-        "@0xkey-io/encoding": "0.1.1",
-        "@noble/curves": "^1.3.0",
-        "sha256-uint8array": "^0.10.7"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/indexed-db-stamper/node_modules/@0xkey-io/crypto": {
-      "version": "0.2.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/crypto/-/crypto-0.2.0.tgz",
-      "integrity": "sha512-j461F1VXYUlrmenA3Hp8EOC+QaEnqYzOFaaUOra7Yj2SEHHUB2KPgqaz1XqwRVdsOG6adAZWKGOCvUYUt1wxdA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@noble/ciphers": "1.3.0",
-        "@noble/curves": "1.9.0",
-        "@noble/hashes": "1.8.0",
-        "@peculiar/x509": "1.12.3",
-        "borsh": "2.0.0",
-        "cbor-js": "0.1.0"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/indexed-db-stamper/node_modules/@0xkey-io/sdk-types": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-types/-/sdk-types-0.1.0.tgz",
-      "integrity": "sha512-T4JTPkR0bue2KN9ss/zYArze3GdLrlj433z9uTakYNlFgu7A+W3eM+PzMYZ4+cfFTAF7dXibmbl6AfBTKk25xg==",
-      "license": "Apache-2.0",
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/indexed-db-stamper/node_modules/@noble/curves": {
-      "version": "1.9.0",
-      "resolved": "https://registry.npmjs.org/@noble/curves/-/curves-1.9.0.tgz",
-      "integrity": "sha512-7YDlXiNMdO1YZeH6t/kvopHHbIZzlxrCV9WLqCY6QhcXOoXiNCMDqJIglZ9Yjx5+w7Dz30TITFrlTjnRg7sKEg==",
-      "license": "MIT",
-      "dependencies": {
-        "@noble/hashes": "1.8.0"
-      },
-      "engines": {
-        "node": "^14.21.3 || >=16"
-      },
-      "funding": {
-        "url": "https://paulmillr.com/funding/"
       }
     },
     "node_modules/@0xkey-io/pay": {
@@ -306,10 +147,10 @@
       "integrity": "__PAY_ARTIFACT_SRI__",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.3",
-        "@0xkey-io/crypto": "0.3.0",
-        "@0xkey-io/http": "0.1.3",
-        "@0xkey-io/viem": "0.1.3",
+        "@0xkey-io/api-key-stamper": "0.1.4",
+        "@0xkey-io/crypto": "0.4.0",
+        "@0xkey-io/http": "0.2.0",
+        "@0xkey-io/viem": "0.1.5",
         "@x402/evm": "2.23.0",
         "@x402/fetch": "2.23.0",
         "ajv": "8.12.0"
@@ -324,19 +165,19 @@
       }
     },
     "node_modules/@0xkey-io/sdk-browser": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-browser/-/sdk-browser-0.1.2.tgz",
-      "integrity": "sha512-fCpmBov7p/FnPA9gACjhui91gTsBHd3snQVRv+W2PYWJXAd4Uj0pzpQVKTE2qOzm/bCzkO1BCpOzzcQZqTFG7Q==",
+      "version": "0.1.4",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-browser/-/sdk-browser-0.1.4.tgz",
+      "integrity": "sha512-Ayp5hmDAp44LQTzxzarH90i/REpjs4QMmCWQDAjQQL8G+rGPA7NIqS2aQCrDFpw6XsKs4H2dR05afzBkOnhYkg==",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
-        "@0xkey-io/crypto": "0.2.0",
+        "@0xkey-io/api-key-stamper": "0.1.4",
+        "@0xkey-io/crypto": "0.4.0",
         "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/http": "0.1.2",
+        "@0xkey-io/http": "0.2.0",
         "@0xkey-io/iframe-stamper": "0.1.0",
-        "@0xkey-io/indexed-db-stamper": "0.1.2",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@0xkey-io/wallet-stamper": "0.1.2",
+        "@0xkey-io/indexed-db-stamper": "0.1.4",
+        "@0xkey-io/sdk-types": "0.2.0",
+        "@0xkey-io/wallet-stamper": "0.1.4",
         "@0xkey-io/webauthn-stamper": "0.1.0",
         "buffer": "^6.0.3",
         "cross-fetch": "^3.1.5",
@@ -346,89 +187,16 @@
         "node": ">=18.0.0"
       }
     },
-    "node_modules/@0xkey-io/sdk-browser/node_modules/@0xkey-io/api-key-stamper": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/api-key-stamper/-/api-key-stamper-0.1.2.tgz",
-      "integrity": "sha512-vhL0duAEFF0HwIVj0VY5eS7HWQLmvy7lbGLW3zdMLQ3CUyg7aoR3y3jMN8XgmSAp5z0L01738Wil8I2NuGQeyA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/crypto": "0.2.0",
-        "@0xkey-io/encoding": "0.1.1",
-        "@noble/curves": "^1.3.0",
-        "sha256-uint8array": "^0.10.7"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/sdk-browser/node_modules/@0xkey-io/crypto": {
-      "version": "0.2.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/crypto/-/crypto-0.2.0.tgz",
-      "integrity": "sha512-j461F1VXYUlrmenA3Hp8EOC+QaEnqYzOFaaUOra7Yj2SEHHUB2KPgqaz1XqwRVdsOG6adAZWKGOCvUYUt1wxdA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@noble/ciphers": "1.3.0",
-        "@noble/curves": "1.9.0",
-        "@noble/hashes": "1.8.0",
-        "@peculiar/x509": "1.12.3",
-        "borsh": "2.0.0",
-        "cbor-js": "0.1.0"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/sdk-browser/node_modules/@0xkey-io/http": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/http/-/http-0.1.2.tgz",
-      "integrity": "sha512-ZSqHd1T3y9hrH7mz+GTwVezJCnxD1DvV+xy/oJ260MvGGnfUNfe4+G0ZkTMy553yO9ar3Xdn3mUOruhIA27FWw==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/webauthn-stamper": "0.1.0",
-        "cross-fetch": "^3.1.5"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/sdk-browser/node_modules/@0xkey-io/sdk-types": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-types/-/sdk-types-0.1.0.tgz",
-      "integrity": "sha512-T4JTPkR0bue2KN9ss/zYArze3GdLrlj433z9uTakYNlFgu7A+W3eM+PzMYZ4+cfFTAF7dXibmbl6AfBTKk25xg==",
-      "license": "Apache-2.0",
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/sdk-browser/node_modules/@noble/curves": {
-      "version": "1.9.0",
-      "resolved": "https://registry.npmjs.org/@noble/curves/-/curves-1.9.0.tgz",
-      "integrity": "sha512-7YDlXiNMdO1YZeH6t/kvopHHbIZzlxrCV9WLqCY6QhcXOoXiNCMDqJIglZ9Yjx5+w7Dz30TITFrlTjnRg7sKEg==",
-      "license": "MIT",
-      "dependencies": {
-        "@noble/hashes": "1.8.0"
-      },
-      "engines": {
-        "node": "^14.21.3 || >=16"
-      },
-      "funding": {
-        "url": "https://paulmillr.com/funding/"
-      }
-    },
     "node_modules/@0xkey-io/sdk-server": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-server/-/sdk-server-0.1.2.tgz",
-      "integrity": "sha512-2Gr4G7niT4ffjgXNWNWx2l0M/AM8c6N8cn6sfjIxVAA3htx+Ze6ZUo/RFqijzL2SoxZ4nL3xrxYCAAYvJAKOyQ==",
+      "version": "0.1.5",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-server/-/sdk-server-0.1.5.tgz",
+      "integrity": "sha512-hq3XBkmyxhP1H59IZwWYBBLoTcoHGgLrhNu3EzPmIu67V66eif5wqBISQDwF3k6jEoId58OIsCkEaSRwkil0jQ==",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
-        "@0xkey-io/http": "0.1.2",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@0xkey-io/wallet-stamper": "0.1.2",
+        "@0xkey-io/api-key-stamper": "0.1.4",
+        "@0xkey-io/http": "0.2.0",
+        "@0xkey-io/sdk-types": "0.2.0",
+        "@0xkey-io/wallet-stamper": "0.1.4",
         "buffer": "^6.0.3",
         "cross-fetch": "^3.1.5"
       },
@@ -436,99 +204,26 @@
         "node": ">=18.0.0"
       }
     },
-    "node_modules/@0xkey-io/sdk-server/node_modules/@0xkey-io/api-key-stamper": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/api-key-stamper/-/api-key-stamper-0.1.2.tgz",
-      "integrity": "sha512-vhL0duAEFF0HwIVj0VY5eS7HWQLmvy7lbGLW3zdMLQ3CUyg7aoR3y3jMN8XgmSAp5z0L01738Wil8I2NuGQeyA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/crypto": "0.2.0",
-        "@0xkey-io/encoding": "0.1.1",
-        "@noble/curves": "^1.3.0",
-        "sha256-uint8array": "^0.10.7"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/sdk-server/node_modules/@0xkey-io/crypto": {
-      "version": "0.2.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/crypto/-/crypto-0.2.0.tgz",
-      "integrity": "sha512-j461F1VXYUlrmenA3Hp8EOC+QaEnqYzOFaaUOra7Yj2SEHHUB2KPgqaz1XqwRVdsOG6adAZWKGOCvUYUt1wxdA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@noble/ciphers": "1.3.0",
-        "@noble/curves": "1.9.0",
-        "@noble/hashes": "1.8.0",
-        "@peculiar/x509": "1.12.3",
-        "borsh": "2.0.0",
-        "cbor-js": "0.1.0"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/sdk-server/node_modules/@0xkey-io/http": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/http/-/http-0.1.2.tgz",
-      "integrity": "sha512-ZSqHd1T3y9hrH7mz+GTwVezJCnxD1DvV+xy/oJ260MvGGnfUNfe4+G0ZkTMy553yO9ar3Xdn3mUOruhIA27FWw==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/webauthn-stamper": "0.1.0",
-        "cross-fetch": "^3.1.5"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/sdk-server/node_modules/@0xkey-io/sdk-types": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-types/-/sdk-types-0.1.0.tgz",
-      "integrity": "sha512-T4JTPkR0bue2KN9ss/zYArze3GdLrlj433z9uTakYNlFgu7A+W3eM+PzMYZ4+cfFTAF7dXibmbl6AfBTKk25xg==",
-      "license": "Apache-2.0",
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/sdk-server/node_modules/@noble/curves": {
-      "version": "1.9.0",
-      "resolved": "https://registry.npmjs.org/@noble/curves/-/curves-1.9.0.tgz",
-      "integrity": "sha512-7YDlXiNMdO1YZeH6t/kvopHHbIZzlxrCV9WLqCY6QhcXOoXiNCMDqJIglZ9Yjx5+w7Dz30TITFrlTjnRg7sKEg==",
-      "license": "MIT",
-      "dependencies": {
-        "@noble/hashes": "1.8.0"
-      },
-      "engines": {
-        "node": "^14.21.3 || >=16"
-      },
-      "funding": {
-        "url": "https://paulmillr.com/funding/"
-      }
-    },
     "node_modules/@0xkey-io/sdk-types": {
-      "version": "0.1.1",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-types/-/sdk-types-0.1.1.tgz",
-      "integrity": "sha512-X+Vd4YtIXp5E3r+Atk/MJAprAWe2N3hmius0hDzuTU/bpbu4ey4nFYR1RWfUAGXwolSxYjk/ZXlN5mDfgmpBZw==",
+      "version": "0.2.0",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-types/-/sdk-types-0.2.0.tgz",
+      "integrity": "sha512-9IYLb2v8uQHLlrN+fr58nyh134MplUAS8h9I8Wh/LdjH1gkA2zat0F0/J0H0SzO+xWKQ/V7TRD1mbQb38vmckA==",
       "license": "Apache-2.0",
       "engines": {
         "node": ">=18.0.0"
       }
     },
     "node_modules/@0xkey-io/viem": {
-      "version": "0.1.3",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/viem/-/viem-0.1.3.tgz",
-      "integrity": "sha512-g8wIIOiQawzLgBRTFsxKX17Fl7xstz5pzde6+OhheDey7yawY3/aZqKQOTkIAVgurF8Ku7coi1Qn+5zVQS5pEQ==",
+      "version": "0.1.5",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/viem/-/viem-0.1.5.tgz",
+      "integrity": "sha512-Vv2wHc5AevCk9wkMKZDWXnNrRYkTR3NkUu8qXOp9Hq9UW224gSzefy4ve3Yo2WESTVAyU2EFfbd+7kt/RmnzUg==",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
-        "@0xkey-io/core": "0.2.0",
-        "@0xkey-io/http": "0.1.2",
-        "@0xkey-io/sdk-browser": "0.1.2",
-        "@0xkey-io/sdk-server": "0.1.2",
+        "@0xkey-io/api-key-stamper": "0.1.4",
+        "@0xkey-io/core": "0.3.0",
+        "@0xkey-io/http": "0.2.0",
+        "@0xkey-io/sdk-browser": "0.1.4",
+        "@0xkey-io/sdk-server": "0.1.5",
         "@noble/curves": "1.8.0",
         "@openzeppelin/contracts": "^5.0.2",
         "cross-fetch": "^4.0.0"
@@ -540,86 +235,56 @@
         "viem": "^1.16.6 || ^2.24.2"
       }
     },
-    "node_modules/@0xkey-io/viem/node_modules/@0xkey-io/api-key-stamper": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/api-key-stamper/-/api-key-stamper-0.1.2.tgz",
-      "integrity": "sha512-vhL0duAEFF0HwIVj0VY5eS7HWQLmvy7lbGLW3zdMLQ3CUyg7aoR3y3jMN8XgmSAp5z0L01738Wil8I2NuGQeyA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/crypto": "0.2.0",
-        "@0xkey-io/encoding": "0.1.1",
-        "@noble/curves": "^1.3.0",
-        "sha256-uint8array": "^0.10.7"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/viem/node_modules/@0xkey-io/crypto": {
-      "version": "0.2.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/crypto/-/crypto-0.2.0.tgz",
-      "integrity": "sha512-j461F1VXYUlrmenA3Hp8EOC+QaEnqYzOFaaUOra7Yj2SEHHUB2KPgqaz1XqwRVdsOG6adAZWKGOCvUYUt1wxdA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@noble/ciphers": "1.3.0",
-        "@noble/curves": "1.9.0",
-        "@noble/hashes": "1.8.0",
-        "@peculiar/x509": "1.12.3",
-        "borsh": "2.0.0",
-        "cbor-js": "0.1.0"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/viem/node_modules/@0xkey-io/crypto/node_modules/@noble/curves": {
-      "version": "1.9.0",
-      "resolved": "https://registry.npmjs.org/@noble/curves/-/curves-1.9.0.tgz",
-      "integrity": "sha512-7YDlXiNMdO1YZeH6t/kvopHHbIZzlxrCV9WLqCY6QhcXOoXiNCMDqJIglZ9Yjx5+w7Dz30TITFrlTjnRg7sKEg==",
+    "node_modules/@0xkey-io/viem/node_modules/@0xkey-io/core": {
+      "version": "0.3.0",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/core/-/core-0.3.0.tgz",
+      "integrity": "sha512-mmD7Qrx6V+1E1Xkvi8F4A7+UAgefpqE7oXgfte50pfQbhb+NwEpjZAJ3mEVkBUqTljPwtqb+ok90CaBtS3RT7g==",
       "license": "MIT",
       "dependencies": {
-        "@noble/hashes": "1.8.0"
-      },
-      "engines": {
-        "node": "^14.21.3 || >=16"
-      },
-      "funding": {
-        "url": "https://paulmillr.com/funding/"
-      }
-    },
-    "node_modules/@0xkey-io/viem/node_modules/@0xkey-io/http": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/http/-/http-0.1.2.tgz",
-      "integrity": "sha512-ZSqHd1T3y9hrH7mz+GTwVezJCnxD1DvV+xy/oJ260MvGGnfUNfe4+G0ZkTMy553yO9ar3Xdn3mUOruhIA27FWw==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/api-key-stamper": "0.1.2",
+        "@0xkey-io/api-key-stamper": "0.1.4",
+        "@0xkey-io/attested-stamper": "0.1.1",
+        "@0xkey-io/crypto": "0.4.0",
         "@0xkey-io/encoding": "0.1.1",
+        "@0xkey-io/http": "0.2.0",
+        "@0xkey-io/sdk-types": "0.2.0",
         "@0xkey-io/webauthn-stamper": "0.1.0",
-        "cross-fetch": "^3.1.5"
+        "@wallet-standard/app": "^1.1.0",
+        "@wallet-standard/base": "^1.1.0",
+        "@walletconnect/sign-client": "^2.23.6",
+        "@walletconnect/types": "^2.23.0",
+        "cross-fetch": "^3.1.5",
+        "ethers": "^6.10.0",
+        "jwt-decode": "4.0.0",
+        "uuid": "^11.1.0",
+        "viem": "^2.33.1"
       },
       "engines": {
         "node": ">=18.0.0"
+      },
+      "peerDependencies": {
+        "@0xkey-io/react-native-passkey-stamper": "0.1.4",
+        "@react-native-async-storage/async-storage": "^2.2.0",
+        "react-native-keychain": "^8.1.0 || ^9.2.2 || ^10.0.0"
+      },
+      "peerDependenciesMeta": {
+        "@0xkey-io/react-native-passkey-stamper": {
+          "optional": true
+        },
+        "@react-native-async-storage/async-storage": {
+          "optional": true
+        },
+        "react-native-keychain": {
+          "optional": true
+        }
       }
     },
-    "node_modules/@0xkey-io/viem/node_modules/@0xkey-io/http/node_modules/cross-fetch": {
+    "node_modules/@0xkey-io/viem/node_modules/@0xkey-io/core/node_modules/cross-fetch": {
       "version": "3.2.0",
       "resolved": "https://registry.npmjs.org/cross-fetch/-/cross-fetch-3.2.0.tgz",
       "integrity": "sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==",
       "license": "MIT",
       "dependencies": {
         "node-fetch": "^2.7.0"
-      }
-    },
-    "node_modules/@0xkey-io/viem/node_modules/@0xkey-io/sdk-types": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-types/-/sdk-types-0.1.0.tgz",
-      "integrity": "sha512-T4JTPkR0bue2KN9ss/zYArze3GdLrlj433z9uTakYNlFgu7A+W3eM+PzMYZ4+cfFTAF7dXibmbl6AfBTKk25xg==",
-      "license": "Apache-2.0",
-      "engines": {
-        "node": ">=18.0.0"
       }
     },
     "node_modules/@0xkey-io/viem/node_modules/@noble/curves": {
@@ -637,7 +302,7 @@
         "url": "https://paulmillr.com/funding/"
       }
     },
-    "node_modules/@0xkey-io/viem/node_modules/@noble/curves/node_modules/@noble/hashes": {
+    "node_modules/@0xkey-io/viem/node_modules/@noble/hashes": {
       "version": "1.7.0",
       "resolved": "https://registry.npmjs.org/@noble/hashes/-/hashes-1.7.0.tgz",
       "integrity": "sha512-HXydb0DgzTpDPwbVeDGCG1gIu7X6+AuU6Zl6av/E/KG8LMsvPntvq+w17CHRpKBmN6Ybdrt1eP3k4cj8DJa78w==",
@@ -659,59 +324,16 @@
       }
     },
     "node_modules/@0xkey-io/wallet-stamper": {
-      "version": "0.1.2",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/wallet-stamper/-/wallet-stamper-0.1.2.tgz",
-      "integrity": "sha512-S55mYmrYfVNQZweg4rCX5kmCtZl6y7M+DBxFh3rBqz9lfQJ56+FhITCMafLvqmLSP1VBGkREhP8wD/XRemYDwg==",
+      "version": "0.1.4",
+      "resolved": "https://registry.npmjs.org/@0xkey-io/wallet-stamper/-/wallet-stamper-0.1.4.tgz",
+      "integrity": "sha512-1diPvIVozP3Zw28ebDx33P0jvDDn8mh3X2eVBv/oxT2dHp1k7W65czcqZH6t98oHCPIIyqAk6zZg98+NTixmFA==",
       "license": "Apache-2.0",
       "dependencies": {
-        "@0xkey-io/crypto": "0.2.0",
+        "@0xkey-io/crypto": "0.4.0",
         "@0xkey-io/encoding": "0.1.1"
       },
       "optionalDependencies": {
         "viem": "^2.21.35"
-      }
-    },
-    "node_modules/@0xkey-io/wallet-stamper/node_modules/@0xkey-io/crypto": {
-      "version": "0.2.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/crypto/-/crypto-0.2.0.tgz",
-      "integrity": "sha512-j461F1VXYUlrmenA3Hp8EOC+QaEnqYzOFaaUOra7Yj2SEHHUB2KPgqaz1XqwRVdsOG6adAZWKGOCvUYUt1wxdA==",
-      "license": "Apache-2.0",
-      "dependencies": {
-        "@0xkey-io/encoding": "0.1.1",
-        "@0xkey-io/sdk-types": "0.1.0",
-        "@noble/ciphers": "1.3.0",
-        "@noble/curves": "1.9.0",
-        "@noble/hashes": "1.8.0",
-        "@peculiar/x509": "1.12.3",
-        "borsh": "2.0.0",
-        "cbor-js": "0.1.0"
-      },
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/wallet-stamper/node_modules/@0xkey-io/sdk-types": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@0xkey-io/sdk-types/-/sdk-types-0.1.0.tgz",
-      "integrity": "sha512-T4JTPkR0bue2KN9ss/zYArze3GdLrlj433z9uTakYNlFgu7A+W3eM+PzMYZ4+cfFTAF7dXibmbl6AfBTKk25xg==",
-      "license": "Apache-2.0",
-      "engines": {
-        "node": ">=18.0.0"
-      }
-    },
-    "node_modules/@0xkey-io/wallet-stamper/node_modules/@noble/curves": {
-      "version": "1.9.0",
-      "resolved": "https://registry.npmjs.org/@noble/curves/-/curves-1.9.0.tgz",
-      "integrity": "sha512-7YDlXiNMdO1YZeH6t/kvopHHbIZzlxrCV9WLqCY6QhcXOoXiNCMDqJIglZ9Yjx5+w7Dz30TITFrlTjnRg7sKEg==",
-      "license": "MIT",
-      "dependencies": {
-        "@noble/hashes": "1.8.0"
-      },
-      "engines": {
-        "node": "^14.21.3 || >=16"
-      },
-      "funding": {
-        "url": "https://paulmillr.com/funding/"
       }
     },
     "node_modules/@0xkey-io/webauthn-stamper": {
@@ -749,60 +371,80 @@
       }
     },
     "node_modules/@hpke/chacha20poly1305": {
-      "version": "1.8.0",
-      "resolved": "https://registry.npmjs.org/@hpke/chacha20poly1305/-/chacha20poly1305-1.8.0.tgz",
-      "integrity": "sha512-FcBfAQ+Y99vMNJP2yrZ9wpL8V0GOwp1+zMyzvc6alasrBygfFjFm1yeUtyADJCu/27C3Lm5mJzx6u7pwg+cX5w==",
+      "version": "1.8.1",
+      "resolved": "https://registry.npmjs.org/@hpke/chacha20poly1305/-/chacha20poly1305-1.8.1.tgz",
+      "integrity": "sha512-EqIpqvybIQrdMMbVcrF9cr6q8PZWbKQ60428iZyESjGO8j9jJCsILNHaCyWWBwnJYAKT8nZko5sNIkIXmlHsuw==",
       "license": "MIT",
       "dependencies": {
-        "@hpke/common": "^1.10.0"
+        "@hpke/common": "^1.13.0"
       },
       "engines": {
         "node": ">=16.0.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/dajiaji"
       }
     },
     "node_modules/@hpke/common": {
-      "version": "1.10.1",
-      "resolved": "https://registry.npmjs.org/@hpke/common/-/common-1.10.1.tgz",
-      "integrity": "sha512-moJwhmtLtuxiUzzNp1jpfBfx8yefKoO9D/RCR9dmwrnc7qjJqId1rEtQz+lSlU5cabX8daToMSx/7HayXOiaFw==",
+      "version": "1.13.0",
+      "resolved": "https://registry.npmjs.org/@hpke/common/-/common-1.13.0.tgz",
+      "integrity": "sha512-PqaJR89RWJQmt/WOGuBLrcrtXtEMbWu91XIbxDjKDTDgKvqvhlxOzQ9BAf9a0Q+yqqbTtQ0pK6KUyVi2WMehbA==",
       "license": "MIT",
       "engines": {
         "node": ">=16.0.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/dajiaji"
       }
     },
     "node_modules/@hpke/core": {
-      "version": "1.9.0",
-      "resolved": "https://registry.npmjs.org/@hpke/core/-/core-1.9.0.tgz",
-      "integrity": "sha512-pFxWl1nNJeQCSUFs7+GAblHvXBCjn9EPN65vdKlYQil2aURaRxfGMO6vBKGqm1YHTKwiAxJQNEI70PbSowMP9Q==",
+      "version": "1.10.1",
+      "resolved": "https://registry.npmjs.org/@hpke/core/-/core-1.10.1.tgz",
+      "integrity": "sha512-VZOk0rHC4vPsbW/fIRz7Q2IviSl0+9dRhP9yi/PmkKVKjj4vZDs1ufkN47twBFLZmiw37YFtTqBrxKAI7dlOrg==",
       "license": "MIT",
       "dependencies": {
-        "@hpke/common": "^1.10.0"
+        "@hpke/common": "^1.13.0"
       },
       "engines": {
         "node": ">=16.0.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/dajiaji"
       }
     },
     "node_modules/@hpke/dhkem-x25519": {
-      "version": "1.8.0",
-      "resolved": "https://registry.npmjs.org/@hpke/dhkem-x25519/-/dhkem-x25519-1.8.0.tgz",
-      "integrity": "sha512-S1MWWkAfu+TFxySgv5+2P3O4Mx/jk7BsoplzQaA1s3sfUJVJ2UsZsSzSsMc+FXJumLXncoJFlO6mK6mDGspfmA==",
+      "version": "1.8.1",
+      "resolved": "https://registry.npmjs.org/@hpke/dhkem-x25519/-/dhkem-x25519-1.8.1.tgz",
+      "integrity": "sha512-bAshBoHmVKJY8MQdl09E8dRsfPUfWwniqCOCAOAN6IlUZzpZFI/QG6hAXqIQpu/XNDPSl0tXYBocq4423whXpg==",
       "license": "MIT",
       "dependencies": {
-        "@hpke/common": "^1.10.0"
+        "@hpke/common": "^1.13.0"
       },
       "engines": {
         "node": ">=16.0.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/dajiaji"
       }
     },
     "node_modules/@hpke/dhkem-x448": {
-      "version": "1.8.0",
-      "resolved": "https://registry.npmjs.org/@hpke/dhkem-x448/-/dhkem-x448-1.8.0.tgz",
-      "integrity": "sha512-mFfnZfgp4OKkUIS/FKikfUgdnDKRy25ytCKBQiV+N+HbYy3I4v4ZCPBQ69QL+TYmKmCZJeUEnYeS5K+OBRP+Eg==",
+      "version": "1.8.1",
+      "resolved": "https://registry.npmjs.org/@hpke/dhkem-x448/-/dhkem-x448-1.8.1.tgz",
+      "integrity": "sha512-gsrEQHJUKmN1TfenktFAnZozFs1fUYnHGa4xbggJHIf2sn5gTPDNZfmmJWvat6Kom4aBRWzldyAogtEg6jsXwA==",
       "license": "MIT",
       "dependencies": {
-        "@hpke/common": "^1.10.0"
+        "@hpke/common": "^1.13.0"
       },
       "engines": {
         "node": ">=16.0.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/dajiaji"
       }
     },
     "node_modules/@img/colour": {
@@ -1804,9 +1446,9 @@
       }
     },
     "node_modules/@walletconnect/core": {
-      "version": "2.23.10",
-      "resolved": "https://registry.npmjs.org/@walletconnect/core/-/core-2.23.10.tgz",
-      "integrity": "sha512-Qq2btHEoCgruvkZCWLSrVsvg/dYbM9Z045qeClwhJR4meL32jbIRT0mKWjf0HkRc2LA82MsnszVnfuZl3yWl5A==",
+      "version": "2.26.1",
+      "resolved": "https://registry.npmjs.org/@walletconnect/core/-/core-2.26.1.tgz",
+      "integrity": "sha512-0nSJopMTAoENHXcX0gUPyduRnktEVHKAXCeVgW+rhce7NGOPIADEbrITCTpCND94VsGVNLMhHvwVqJwRdUUvdg==",
       "license": "SEE LICENSE IN LICENSE.md",
       "dependencies": {
         "@walletconnect/heartbeat": "1.2.2",
@@ -1820,8 +1462,8 @@
         "@walletconnect/relay-auth": "1.1.0",
         "@walletconnect/safe-json": "1.0.2",
         "@walletconnect/time": "1.0.2",
-        "@walletconnect/types": "2.23.10",
-        "@walletconnect/utils": "2.23.10",
+        "@walletconnect/types": "2.26.1",
+        "@walletconnect/utils": "2.26.1",
         "@walletconnect/window-getters": "1.0.1",
         "es-toolkit": "1.45.1",
         "events": "3.3.0",
@@ -1829,6 +1471,121 @@
       },
       "engines": {
         "node": ">=18.20.8"
+      }
+    },
+    "node_modules/@walletconnect/core/node_modules/@walletconnect/keyvaluestorage": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/@walletconnect/keyvaluestorage/-/keyvaluestorage-1.1.1.tgz",
+      "integrity": "sha512-V7ZQq2+mSxAq7MrRqDxanTzu2RcElfK1PfNYiaVnJgJ7Q7G7hTVwF8voIBx92qsRyGHZihrwNPHuZd1aKkd0rA==",
+      "license": "MIT",
+      "dependencies": {
+        "@walletconnect/safe-json": "^1.0.1",
+        "idb-keyval": "^6.2.1",
+        "unstorage": "^1.9.0"
+      },
+      "peerDependencies": {
+        "@react-native-async-storage/async-storage": "1.x"
+      },
+      "peerDependenciesMeta": {
+        "@react-native-async-storage/async-storage": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/@walletconnect/core/node_modules/unstorage": {
+      "version": "1.17.6",
+      "resolved": "https://registry.npmjs.org/unstorage/-/unstorage-1.17.6.tgz",
+      "integrity": "sha512-gjKtcmn/KwZuJZO9o2sc0esAQnhmTw0LviDHwevTXbJMYs0dRTp8ZEEWXHU0vTpzbN3cA0yxlTeyXssMp3zDqw==",
+      "license": "MIT",
+      "dependencies": {
+        "anymatch": "^3.1.3",
+        "chokidar": "^5.0.0",
+        "destr": "^2.0.5",
+        "h3": "^1.15.11",
+        "lru-cache": "^11.5.3",
+        "node-fetch-native": "^1.6.7",
+        "ofetch": "^1.5.1",
+        "ufo": "^1.6.4"
+      },
+      "peerDependencies": {
+        "@azure/app-configuration": "^1.8.0",
+        "@azure/cosmos": "^4.2.0",
+        "@azure/data-tables": "^13.3.0",
+        "@azure/identity": "^4.6.0",
+        "@azure/keyvault-secrets": "^4.9.0",
+        "@azure/storage-blob": "^12.26.0",
+        "@capacitor/preferences": "^6 || ^7 || ^8",
+        "@deno/kv": ">=0.9.0",
+        "@netlify/blobs": "^6.5.0 || ^7.0.0 || ^8.1.0 || ^9.0.0 || ^10.0.0 || ^11.0.0",
+        "@planetscale/database": "^1.19.0",
+        "@upstash/redis": "^1.34.3",
+        "@vercel/blob": ">=0.27.1",
+        "@vercel/functions": "^2.2.12 || ^3.0.0",
+        "@vercel/kv": "^1 || ^2 || ^3",
+        "aws4fetch": "^1.0.20",
+        "db0": ">=0.2.1",
+        "idb-keyval": "^6.2.1",
+        "ioredis": "^5.4.2",
+        "uploadthing": "^7.4.4"
+      },
+      "peerDependenciesMeta": {
+        "@azure/app-configuration": {
+          "optional": true
+        },
+        "@azure/cosmos": {
+          "optional": true
+        },
+        "@azure/data-tables": {
+          "optional": true
+        },
+        "@azure/identity": {
+          "optional": true
+        },
+        "@azure/keyvault-secrets": {
+          "optional": true
+        },
+        "@azure/storage-blob": {
+          "optional": true
+        },
+        "@capacitor/preferences": {
+          "optional": true
+        },
+        "@deno/kv": {
+          "optional": true
+        },
+        "@netlify/blobs": {
+          "optional": true
+        },
+        "@planetscale/database": {
+          "optional": true
+        },
+        "@upstash/redis": {
+          "optional": true
+        },
+        "@vercel/blob": {
+          "optional": true
+        },
+        "@vercel/functions": {
+          "optional": true
+        },
+        "@vercel/kv": {
+          "optional": true
+        },
+        "aws4fetch": {
+          "optional": true
+        },
+        "db0": {
+          "optional": true
+        },
+        "idb-keyval": {
+          "optional": true
+        },
+        "ioredis": {
+          "optional": true
+        },
+        "uploadthing": {
+          "optional": true
+        }
       }
     },
     "node_modules/@walletconnect/environment": {
@@ -1923,121 +1680,6 @@
         "ws": "^7.5.1"
       }
     },
-    "node_modules/@walletconnect/keyvaluestorage": {
-      "version": "1.1.1",
-      "resolved": "https://registry.npmjs.org/@walletconnect/keyvaluestorage/-/keyvaluestorage-1.1.1.tgz",
-      "integrity": "sha512-V7ZQq2+mSxAq7MrRqDxanTzu2RcElfK1PfNYiaVnJgJ7Q7G7hTVwF8voIBx92qsRyGHZihrwNPHuZd1aKkd0rA==",
-      "license": "MIT",
-      "dependencies": {
-        "@walletconnect/safe-json": "^1.0.1",
-        "idb-keyval": "^6.2.1",
-        "unstorage": "^1.9.0"
-      },
-      "peerDependencies": {
-        "@react-native-async-storage/async-storage": "1.x"
-      },
-      "peerDependenciesMeta": {
-        "@react-native-async-storage/async-storage": {
-          "optional": true
-        }
-      }
-    },
-    "node_modules/@walletconnect/keyvaluestorage/node_modules/unstorage": {
-      "version": "1.17.5",
-      "resolved": "https://registry.npmjs.org/unstorage/-/unstorage-1.17.5.tgz",
-      "integrity": "sha512-0i3iqvRfx29hkNntHyQvJTpf5W9dQ9ZadSoRU8+xVlhVtT7jAX57fazYO9EHvcRCfBCyi5YRya7XCDOsbTgkPg==",
-      "license": "MIT",
-      "dependencies": {
-        "anymatch": "^3.1.3",
-        "chokidar": "^5.0.0",
-        "destr": "^2.0.5",
-        "h3": "^1.15.10",
-        "lru-cache": "^11.2.7",
-        "node-fetch-native": "^1.6.7",
-        "ofetch": "^1.5.1",
-        "ufo": "^1.6.3"
-      },
-      "peerDependencies": {
-        "@azure/app-configuration": "^1.8.0",
-        "@azure/cosmos": "^4.2.0",
-        "@azure/data-tables": "^13.3.0",
-        "@azure/identity": "^4.6.0",
-        "@azure/keyvault-secrets": "^4.9.0",
-        "@azure/storage-blob": "^12.26.0",
-        "@capacitor/preferences": "^6 || ^7 || ^8",
-        "@deno/kv": ">=0.9.0",
-        "@netlify/blobs": "^6.5.0 || ^7.0.0 || ^8.1.0 || ^9.0.0 || ^10.0.0",
-        "@planetscale/database": "^1.19.0",
-        "@upstash/redis": "^1.34.3",
-        "@vercel/blob": ">=0.27.1",
-        "@vercel/functions": "^2.2.12 || ^3.0.0",
-        "@vercel/kv": "^1 || ^2 || ^3",
-        "aws4fetch": "^1.0.20",
-        "db0": ">=0.2.1",
-        "idb-keyval": "^6.2.1",
-        "ioredis": "^5.4.2",
-        "uploadthing": "^7.4.4"
-      },
-      "peerDependenciesMeta": {
-        "@azure/app-configuration": {
-          "optional": true
-        },
-        "@azure/cosmos": {
-          "optional": true
-        },
-        "@azure/data-tables": {
-          "optional": true
-        },
-        "@azure/identity": {
-          "optional": true
-        },
-        "@azure/keyvault-secrets": {
-          "optional": true
-        },
-        "@azure/storage-blob": {
-          "optional": true
-        },
-        "@capacitor/preferences": {
-          "optional": true
-        },
-        "@deno/kv": {
-          "optional": true
-        },
-        "@netlify/blobs": {
-          "optional": true
-        },
-        "@planetscale/database": {
-          "optional": true
-        },
-        "@upstash/redis": {
-          "optional": true
-        },
-        "@vercel/blob": {
-          "optional": true
-        },
-        "@vercel/functions": {
-          "optional": true
-        },
-        "@vercel/kv": {
-          "optional": true
-        },
-        "aws4fetch": {
-          "optional": true
-        },
-        "db0": {
-          "optional": true
-        },
-        "idb-keyval": {
-          "optional": true
-        },
-        "ioredis": {
-          "optional": true
-        },
-        "uploadthing": {
-          "optional": true
-        }
-      }
-    },
     "node_modules/@walletconnect/logger": {
       "version": "3.0.2",
       "resolved": "https://registry.npmjs.org/@walletconnect/logger/-/logger-3.0.2.tgz",
@@ -2113,17 +1755,17 @@
       "license": "0BSD"
     },
     "node_modules/@walletconnect/sign-client": {
-      "version": "2.23.10",
-      "resolved": "https://registry.npmjs.org/@walletconnect/sign-client/-/sign-client-2.23.10.tgz",
-      "integrity": "sha512-vO7DGRRmKo+rykmjVyQR1aM4I2nbk9kJ6olbxgjFRR6Jdhy+Kz+zgN7Ce5xVhPfWYVu4bV/XhOQxhvnQw7S5ng==",
+      "version": "2.26.1",
+      "resolved": "https://registry.npmjs.org/@walletconnect/sign-client/-/sign-client-2.26.1.tgz",
+      "integrity": "sha512-whXnixyot8/8Nyw/TYdfDPmHlVJ7v0ez23sfKZbQOGQm15g5M4pSGfuZAAqRPNASFYLRX5Kwow/FaAaqPolyNg==",
       "license": "SEE LICENSE IN LICENSE.md",
       "dependencies": {
-        "@walletconnect/core": "2.23.10",
+        "@walletconnect/core": "2.26.1",
         "@walletconnect/jsonrpc-utils": "1.0.8",
         "@walletconnect/logger": "3.0.2",
         "@walletconnect/time": "1.0.2",
-        "@walletconnect/types": "2.23.10",
-        "@walletconnect/utils": "2.23.10",
+        "@walletconnect/types": "2.26.1",
+        "@walletconnect/utils": "2.26.1",
         "events": "3.3.0"
       }
     },
@@ -2143,9 +1785,9 @@
       "license": "0BSD"
     },
     "node_modules/@walletconnect/types": {
-      "version": "2.23.10",
-      "resolved": "https://registry.npmjs.org/@walletconnect/types/-/types-2.23.10.tgz",
-      "integrity": "sha512-XP8d41979anTrc1OJF3ISF+g81cvp1wim+ObdNnbcaT/jhwLwv+0T7rRe9VwRv+h8EaRgLyeb5YGy7oJ49vxVg==",
+      "version": "2.26.1",
+      "resolved": "https://registry.npmjs.org/@walletconnect/types/-/types-2.26.1.tgz",
+      "integrity": "sha512-oXwk0po9MChd3LKLyPGBAEbU4bbc/1SFGrRGmjlUDONaatr7cMARRrvFLEqGi5VPxrZFIv7CezD+e9FBt9uUzQ==",
       "license": "SEE LICENSE IN LICENSE.md",
       "dependencies": {
         "@walletconnect/events": "1.0.1",
@@ -2156,10 +1798,125 @@
         "events": "3.3.0"
       }
     },
+    "node_modules/@walletconnect/types/node_modules/@walletconnect/keyvaluestorage": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/@walletconnect/keyvaluestorage/-/keyvaluestorage-1.1.1.tgz",
+      "integrity": "sha512-V7ZQq2+mSxAq7MrRqDxanTzu2RcElfK1PfNYiaVnJgJ7Q7G7hTVwF8voIBx92qsRyGHZihrwNPHuZd1aKkd0rA==",
+      "license": "MIT",
+      "dependencies": {
+        "@walletconnect/safe-json": "^1.0.1",
+        "idb-keyval": "^6.2.1",
+        "unstorage": "^1.9.0"
+      },
+      "peerDependencies": {
+        "@react-native-async-storage/async-storage": "1.x"
+      },
+      "peerDependenciesMeta": {
+        "@react-native-async-storage/async-storage": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/@walletconnect/types/node_modules/unstorage": {
+      "version": "1.17.6",
+      "resolved": "https://registry.npmjs.org/unstorage/-/unstorage-1.17.6.tgz",
+      "integrity": "sha512-gjKtcmn/KwZuJZO9o2sc0esAQnhmTw0LviDHwevTXbJMYs0dRTp8ZEEWXHU0vTpzbN3cA0yxlTeyXssMp3zDqw==",
+      "license": "MIT",
+      "dependencies": {
+        "anymatch": "^3.1.3",
+        "chokidar": "^5.0.0",
+        "destr": "^2.0.5",
+        "h3": "^1.15.11",
+        "lru-cache": "^11.5.3",
+        "node-fetch-native": "^1.6.7",
+        "ofetch": "^1.5.1",
+        "ufo": "^1.6.4"
+      },
+      "peerDependencies": {
+        "@azure/app-configuration": "^1.8.0",
+        "@azure/cosmos": "^4.2.0",
+        "@azure/data-tables": "^13.3.0",
+        "@azure/identity": "^4.6.0",
+        "@azure/keyvault-secrets": "^4.9.0",
+        "@azure/storage-blob": "^12.26.0",
+        "@capacitor/preferences": "^6 || ^7 || ^8",
+        "@deno/kv": ">=0.9.0",
+        "@netlify/blobs": "^6.5.0 || ^7.0.0 || ^8.1.0 || ^9.0.0 || ^10.0.0 || ^11.0.0",
+        "@planetscale/database": "^1.19.0",
+        "@upstash/redis": "^1.34.3",
+        "@vercel/blob": ">=0.27.1",
+        "@vercel/functions": "^2.2.12 || ^3.0.0",
+        "@vercel/kv": "^1 || ^2 || ^3",
+        "aws4fetch": "^1.0.20",
+        "db0": ">=0.2.1",
+        "idb-keyval": "^6.2.1",
+        "ioredis": "^5.4.2",
+        "uploadthing": "^7.4.4"
+      },
+      "peerDependenciesMeta": {
+        "@azure/app-configuration": {
+          "optional": true
+        },
+        "@azure/cosmos": {
+          "optional": true
+        },
+        "@azure/data-tables": {
+          "optional": true
+        },
+        "@azure/identity": {
+          "optional": true
+        },
+        "@azure/keyvault-secrets": {
+          "optional": true
+        },
+        "@azure/storage-blob": {
+          "optional": true
+        },
+        "@capacitor/preferences": {
+          "optional": true
+        },
+        "@deno/kv": {
+          "optional": true
+        },
+        "@netlify/blobs": {
+          "optional": true
+        },
+        "@planetscale/database": {
+          "optional": true
+        },
+        "@upstash/redis": {
+          "optional": true
+        },
+        "@vercel/blob": {
+          "optional": true
+        },
+        "@vercel/functions": {
+          "optional": true
+        },
+        "@vercel/kv": {
+          "optional": true
+        },
+        "aws4fetch": {
+          "optional": true
+        },
+        "db0": {
+          "optional": true
+        },
+        "idb-keyval": {
+          "optional": true
+        },
+        "ioredis": {
+          "optional": true
+        },
+        "uploadthing": {
+          "optional": true
+        }
+      }
+    },
     "node_modules/@walletconnect/utils": {
-      "version": "2.23.10",
-      "resolved": "https://registry.npmjs.org/@walletconnect/utils/-/utils-2.23.10.tgz",
-      "integrity": "sha512-b1c9FRF2g7vNnz66oLW5WZD2VCMrbu9xhpmwJJwqGarBiGW7cY8NbUtS9/w2/qc0vsBVKJ/bzDn4TGjpELU6aQ==",
+      "version": "2.26.1",
+      "resolved": "https://registry.npmjs.org/@walletconnect/utils/-/utils-2.26.1.tgz",
+      "integrity": "sha512-eVv+wMOY6ls6Cxokdd+092LDCOrUy2lHZarsc69w223FhpQQC84CxaWO+s9vtcXkMVa2G8/cmUSrrd1zmyI1iQ==",
       "license": "SEE LICENSE IN LICENSE.md",
       "dependencies": {
         "@msgpack/msgpack": "3.1.3",
@@ -2172,15 +1929,129 @@
         "@walletconnect/logger": "3.0.2",
         "@walletconnect/relay-api": "1.0.11",
         "@walletconnect/relay-auth": "1.1.0",
-        "@walletconnect/safe-json": "1.0.2",
         "@walletconnect/time": "1.0.2",
-        "@walletconnect/types": "2.23.10",
+        "@walletconnect/types": "2.26.1",
         "@walletconnect/window-getters": "1.0.1",
         "@walletconnect/window-metadata": "1.0.1",
         "blakejs": "1.2.1",
         "detect-browser": "5.3.0",
         "ox": "0.9.3",
         "uint8arrays": "3.1.1"
+      }
+    },
+    "node_modules/@walletconnect/utils/node_modules/@walletconnect/keyvaluestorage": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/@walletconnect/keyvaluestorage/-/keyvaluestorage-1.1.1.tgz",
+      "integrity": "sha512-V7ZQq2+mSxAq7MrRqDxanTzu2RcElfK1PfNYiaVnJgJ7Q7G7hTVwF8voIBx92qsRyGHZihrwNPHuZd1aKkd0rA==",
+      "license": "MIT",
+      "dependencies": {
+        "@walletconnect/safe-json": "^1.0.1",
+        "idb-keyval": "^6.2.1",
+        "unstorage": "^1.9.0"
+      },
+      "peerDependencies": {
+        "@react-native-async-storage/async-storage": "1.x"
+      },
+      "peerDependenciesMeta": {
+        "@react-native-async-storage/async-storage": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/@walletconnect/utils/node_modules/unstorage": {
+      "version": "1.17.6",
+      "resolved": "https://registry.npmjs.org/unstorage/-/unstorage-1.17.6.tgz",
+      "integrity": "sha512-gjKtcmn/KwZuJZO9o2sc0esAQnhmTw0LviDHwevTXbJMYs0dRTp8ZEEWXHU0vTpzbN3cA0yxlTeyXssMp3zDqw==",
+      "license": "MIT",
+      "dependencies": {
+        "anymatch": "^3.1.3",
+        "chokidar": "^5.0.0",
+        "destr": "^2.0.5",
+        "h3": "^1.15.11",
+        "lru-cache": "^11.5.3",
+        "node-fetch-native": "^1.6.7",
+        "ofetch": "^1.5.1",
+        "ufo": "^1.6.4"
+      },
+      "peerDependencies": {
+        "@azure/app-configuration": "^1.8.0",
+        "@azure/cosmos": "^4.2.0",
+        "@azure/data-tables": "^13.3.0",
+        "@azure/identity": "^4.6.0",
+        "@azure/keyvault-secrets": "^4.9.0",
+        "@azure/storage-blob": "^12.26.0",
+        "@capacitor/preferences": "^6 || ^7 || ^8",
+        "@deno/kv": ">=0.9.0",
+        "@netlify/blobs": "^6.5.0 || ^7.0.0 || ^8.1.0 || ^9.0.0 || ^10.0.0 || ^11.0.0",
+        "@planetscale/database": "^1.19.0",
+        "@upstash/redis": "^1.34.3",
+        "@vercel/blob": ">=0.27.1",
+        "@vercel/functions": "^2.2.12 || ^3.0.0",
+        "@vercel/kv": "^1 || ^2 || ^3",
+        "aws4fetch": "^1.0.20",
+        "db0": ">=0.2.1",
+        "idb-keyval": "^6.2.1",
+        "ioredis": "^5.4.2",
+        "uploadthing": "^7.4.4"
+      },
+      "peerDependenciesMeta": {
+        "@azure/app-configuration": {
+          "optional": true
+        },
+        "@azure/cosmos": {
+          "optional": true
+        },
+        "@azure/data-tables": {
+          "optional": true
+        },
+        "@azure/identity": {
+          "optional": true
+        },
+        "@azure/keyvault-secrets": {
+          "optional": true
+        },
+        "@azure/storage-blob": {
+          "optional": true
+        },
+        "@capacitor/preferences": {
+          "optional": true
+        },
+        "@deno/kv": {
+          "optional": true
+        },
+        "@netlify/blobs": {
+          "optional": true
+        },
+        "@planetscale/database": {
+          "optional": true
+        },
+        "@upstash/redis": {
+          "optional": true
+        },
+        "@vercel/blob": {
+          "optional": true
+        },
+        "@vercel/functions": {
+          "optional": true
+        },
+        "@vercel/kv": {
+          "optional": true
+        },
+        "aws4fetch": {
+          "optional": true
+        },
+        "db0": {
+          "optional": true
+        },
+        "idb-keyval": {
+          "optional": true
+        },
+        "ioredis": {
+          "optional": true
+        },
+        "uploadthing": {
+          "optional": true
+        }
       }
     },
     "node_modules/@walletconnect/window-getters": {
@@ -3185,19 +3056,23 @@
       }
     },
     "node_modules/hpke-js": {
-      "version": "1.8.0",
-      "resolved": "https://registry.npmjs.org/hpke-js/-/hpke-js-1.8.0.tgz",
-      "integrity": "sha512-N0PFQlUQsIPS9++nUNn2ZsxTPSv8pONyyrXIGZl0iiherRfS0XW1SvTd+RmepD0TN1S9zzTJkEutMIWWYt0/4w==",
+      "version": "1.8.1",
+      "resolved": "https://registry.npmjs.org/hpke-js/-/hpke-js-1.8.1.tgz",
+      "integrity": "sha512-xwG8uJnfs58gDPiBRpgv7A5kG6uN4uydW5VPa2/lYgbRp+sR1Jbfud3y7B3T+SY56s/6QOBhyFNnG4Qn3PxhJg==",
       "license": "MIT",
       "dependencies": {
         "@hpke/chacha20poly1305": "^1.8.0",
-        "@hpke/common": "^1.10.0",
-        "@hpke/core": "^1.9.0",
-        "@hpke/dhkem-x25519": "^1.8.0",
-        "@hpke/dhkem-x448": "^1.8.0"
+        "@hpke/common": "^1.13.0",
+        "@hpke/core": "^1.10.1",
+        "@hpke/dhkem-x25519": "^1.8.1",
+        "@hpke/dhkem-x448": "^1.8.1"
       },
       "engines": {
         "node": ">=16.0.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/dajiaji"
       }
     },
     "node_modules/http-errors": {
@@ -3369,9 +3244,9 @@
       "license": "MIT"
     },
     "node_modules/lru-cache": {
-      "version": "11.5.2",
-      "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.2.tgz",
-      "integrity": "sha512-4pfM1Ff0x50o0tQwb5ucw/RzNyD0/YJME6IVcStalZuMWxdt3sR3huStTtxz4PUmvZfRguvDejasvQ2kifR11g==",
+      "version": "11.5.3",
+      "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.3.tgz",
+      "integrity": "sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg==",
       "license": "BlueOak-1.0.0",
       "engines": {
         "node": "20 || >=22"
@@ -4085,9 +3960,9 @@
       }
     },
     "node_modules/process-warning": {
-      "version": "5.1.0",
-      "resolved": "https://registry.npmjs.org/process-warning/-/process-warning-5.1.0.tgz",
-      "integrity": "sha512-jQSaVHsPgtyw60e1rQ/A+/ArPEj/S8pS/vFnyGa/gYFXrKk/6RuDkoqVDQ5NI5MmS01698ltlAk0NoDBNLujRw==",
+      "version": "5.1.1",
+      "resolved": "https://registry.npmjs.org/process-warning/-/process-warning-5.1.1.tgz",
+      "integrity": "sha512-oCkNVj4OKnKEcocVBcDfiIugN1/cE6rgfT3nCtzeqZPA8+rIxMaQ0xXzIkGP8Gj2qUaP1UR7uhJ1VD8lUCpzCg==",
       "funding": [
         {
           "type": "github",

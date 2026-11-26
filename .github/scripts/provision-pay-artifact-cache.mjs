@@ -64,7 +64,7 @@ for (const [owner, record] of Object.entries(lock.packages)) {
   }
   urls.add(record.resolved);
 }
-if (urls.size !== 310)
+if (urls.size !== 307)
   throw new Error("PAY_ARTIFACT_CACHE_PROVISION_INVENTORY");
 
 const childEnv = {};
