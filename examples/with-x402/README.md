@@ -78,8 +78,6 @@ cd /Users/torben/codes/0xkey/repos/services
 scripts/x402-smoke-base-sepolia.sh
 ```
 
-The detailed runbook lives in `docs/strategy/pay/base-sepolia-settlement-smoke.md`.
-
 ## Running The App
 
 Start local services first:
