@@ -7,6 +7,7 @@ import { test } from "node:test";
 import {
   KEY_EXPORTS,
   checkAllRepositories,
+  checkPackedEntrypoints,
   checkPackedManifest,
   checkRepository,
   checkRepublishTarget,
@@ -14,6 +15,7 @@ import {
   fetchRegistryVersions,
   findCollisions,
   listGenericPackages,
+  manifestEntrypoints,
   plannedFromChangesetStatus,
   satisfiesPackedRange,
 } from "./release-guard.mjs";
@@ -298,4 +300,168 @@ test("every key-export entry names a generic public package", () => {
   for (const name of Object.keys(KEY_EXPORTS)) {
     assert.equal(names.has(name), true, `${name} is not a generic package`);
   }
+});
+
+const writePackedFiles = (files) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "0xkey-entrypoints-"));
+  for (const file of files) {
+    const full = path.join(root, file);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, "");
+  }
+  return root;
+};
+
+const typedManifest = {
+  main: "./dist/index.js",
+  module: "./dist/index.mjs",
+  types: "./dist/index.d.ts",
+  exports: {
+    ".": {
+      types: "./dist/index.d.ts",
+      import: "./dist/index.mjs",
+      require: "./dist/index.js",
+      default: "./dist/index.mjs",
+    },
+    "./package.json": "./package.json",
+    "./styles/*": "./dist/styles/*",
+  },
+};
+
+test("manifest entrypoints cover main, types, browser, react-native and nested exports", () => {
+  const entrypoints = manifestEntrypoints({
+    ...typedManifest,
+    browser: { "./dist/index.js": "./dist/browser.js", "node-only": false },
+    "react-native": "dist/native.js",
+  });
+  const targets = entrypoints.map((e) => e.target);
+  assert.deepEqual([...new Set(targets)].sort(), [
+    "./dist/browser.js",
+    "./dist/index.d.ts",
+    "./dist/index.js",
+    "./dist/index.mjs",
+    "./dist/styles/*",
+    "./package.json",
+    "dist/native.js",
+  ]);
+  assert.equal(entrypoints.find((e) => e.target.endsWith("*")).pattern, true);
+  assert.deepEqual(
+    manifestEntrypoints({
+      exports: { ".": null, "./x": [null, "./x.js"] },
+    }).map((e) => e.target),
+    ["./x.js"],
+  );
+});
+
+test("a manifest shape the check does not know is an error, not a skip", () => {
+  assert.throws(() => manifestEntrypoints({ main: 5 }), /unsupported target 5/);
+  assert.throws(
+    () => manifestEntrypoints({ exports: { ".": 5 } }),
+    /unsupported value 5/,
+  );
+  assert.throws(
+    () => manifestEntrypoints({ exports: { ".": "dist/index.js" } }),
+    /must start with "\.\/"/,
+  );
+  assert.throws(
+    () => manifestEntrypoints({ browser: { "./a.js": 5 } }),
+    /unsupported target 5/,
+  );
+  assert.throws(
+    () => manifestEntrypoints({ browser: 5 }),
+    /unsupported value 5/,
+  );
+  assert.throws(
+    () => manifestEntrypoints({ exports: { "./*": "./dist/*/*.js" } }),
+    /unsupported pattern/,
+  );
+  const root = writePackedFiles(["package.json"]);
+  try {
+    const failures = checkPackedEntrypoints(
+      root,
+      { exports: { ".": { types: 5 } } },
+      "@0xkey-io/example",
+    );
+    assert.equal(failures.length, 1);
+    assert.match(failures[0], /cannot check package\.json entrypoints/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a packed artifact must contain every file its manifest points at", () => {
+  const complete = writePackedFiles([
+    "package.json",
+    "dist/index.js",
+    "dist/index.mjs",
+    "dist/index.d.ts",
+    "dist/styles/a.css",
+  ]);
+  const withoutTypes = writePackedFiles([
+    "package.json",
+    "dist/index.js",
+    "dist/index.mjs",
+    "dist/util.d.ts",
+    "dist/styles/a.css",
+  ]);
+  try {
+    assert.deepEqual(
+      checkPackedEntrypoints(complete, typedManifest, "@0xkey-io/example"),
+      [],
+    );
+    const failures = checkPackedEntrypoints(
+      withoutTypes,
+      typedManifest,
+      "@0xkey-io/example",
+    );
+    assert.equal(failures.length, 2);
+    assert.match(
+      failures[0],
+      /^@0xkey-io\/example: types points at \.\/dist\/index\.d\.ts/,
+    );
+    assert.match(
+      failures[1],
+      /exports\["\."\]\.types points at \.\/dist\/index\.d\.ts/,
+    );
+  } finally {
+    fs.rmSync(complete, { recursive: true, force: true });
+    fs.rmSync(withoutTypes, { recursive: true, force: true });
+  }
+});
+
+test("browser, react-native and pattern exports must exist in the packed artifact", () => {
+  const root = writePackedFiles([
+    "package.json",
+    "dist/index.js",
+    "dist/index.mjs",
+    "dist/index.d.ts",
+    "dist/browser.js",
+  ]);
+  try {
+    const failures = checkPackedEntrypoints(
+      root,
+      {
+        ...typedManifest,
+        browser: { "./dist/index.js": "./dist/browser.js" },
+        "react-native": "./dist/native.js",
+      },
+      "@0xkey-io/example",
+    );
+    // browser exists; react-native and the ./styles/* directory do not.
+    assert.equal(failures.length, 2);
+    assert.match(failures[0], /^@0xkey-io\/example: react-native points at/);
+    assert.match(failures[1], /exports\["\.\/styles\/\*"\] points at/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rollup base config fails the build on TypeScript errors", () => {
+  // A TypeScript error otherwise only warns, and the plugin skips the
+  // declaration file of the failing module while the build still exits 0.
+  const config = fs.readFileSync(
+    new URL("../rollup.config.base.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(config, /noEmitOnError:\s*true/);
 });
