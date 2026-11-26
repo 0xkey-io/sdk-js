@@ -22,7 +22,7 @@ test("ordinary PR CI runs Core Jest", () => {
   assert.ok(workflow.on.pull_request !== undefined);
   assert.equal(
     stepNamed("Core unit tests").run,
-    "pnpm --filter @0xkey-io/crypto \\\n  --filter @0xkey-io/encoding \\\n  --filter @0xkey-io/api-key-stamper \\\n  --filter @0xkey-io/core \\\n  --filter @0xkey-io/react-wallet-kit \\\n  test\n",
+    "pnpm --filter @0xkey-io/crypto \\\n  --filter @0xkey-io/encoding \\\n  --filter @0xkey-io/api-key-stamper \\\n  --filter @0xkey-io/http \\\n  --filter @0xkey-io/core \\\n  --filter @0xkey-io/react-wallet-kit \\\n  test\n",
   );
 });
 
