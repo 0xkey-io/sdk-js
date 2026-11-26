@@ -7203,7 +7203,7 @@
       "properties": {
         "providerName": {
           "type": "string",
-          "description": "Human-readable name to identify this Identity Provider (e.g. \"Zapry IdP\").",
+          "description": "Human-readable name to identify this Identity Provider (e.g. \"Example IdP\").",
           "title": "@inject_tag: validate:\"required\""
         },
         "issuer": {
