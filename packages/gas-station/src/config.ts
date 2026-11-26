@@ -4,7 +4,7 @@ import { base, baseSepolia, mainnet, sepolia } from "viem/chains";
 
 // Default contract addresses — 0xkey self-deployed instances (fork of Turnkey's
 // MIT gas-station). Deterministic CREATE2 addresses, identical across all EVM
-// chains. See repos/gas-station-contracts/deployments/ for on-chain records.
+// chains. See the gas-station contract deployment records for on-chain details.
 export const DEFAULT_DELEGATE_CONTRACT: Hex =
   "0xb575Fe98d8D8aeb6F20c7C5aC9CdE153b4AA39d0";
 export const DEFAULT_EXECUTION_CONTRACT: Hex =

@@ -55,7 +55,7 @@ Sample output from a successful execution:
 ```
 $ pnpm start
 
-> @0xkey-io/example-with-porto@0.1.0 start /Users/struong/0xkey-sdk/examples/with-porto
+> @0xkey-io/example-with-porto@0.1.0 start /path/to/sdk-js/examples/with-porto
 > tsx src/viem.ts
 
 [*] Setup complete, preparing to upgrade EOA to a Porto wallet... { zeroXKeyEoa: '0x5154D11253AE4a21e03b2eaF7E80A5D3aA451f24' }
