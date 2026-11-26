@@ -27,13 +27,35 @@ allowlist cannot undo hostile code already executed by a parent Node preload.
 
 The release-owned `scripts/fixed-consumer.mjs` independently pins the raw
 manifest SHA256 `1f3543f2a003fc27902a0af42d9b36cee315f6d0d92a110f2f60a20d74595cac`
-and lock SHA256 `2e0e1a8025e0168efd5c48b86f316ba59edc61dc7bb3a11572355638b057eb65`.
+and lock SHA256 `ef75f175b14b1b82ef61ecd3695cdf090867667165117b4053e4211f63a4cfd4`.
 The existing templates stay in `internal/pay-conformance/fixtures/packed-consumer/`;
 the private conformance adapter retains its stricter canonical ASCII bindings.
-No harness/matrix code runs in the release checker. The 358-record graph has
+No harness/matrix code runs in the release checker. The 332-record graph has
 only four mutable Pay slots: manifest file reference, root lock file reference,
 installed Pay resolved reference and SHA512 SRI derived from actual tar bytes.
 Source workspace versions and packed metadata must match that graph.
+
+Refreshing the graph: Pay's `workspace:*` dependencies (`crypto`, `viem`, `http`,
+`api-key-stamper`) resolve to the sibling package versions at pack time, so any
+release of one of them makes the pinned graph stale and the guard fails with
+`CONSUMER_MANIFEST_MISMATCH`. This is intended: a new graph is a new approval, and
+it is not accepted silently. The `pay-v1` workflow's path filter includes
+those sibling packages, so a release pull request fails the guard until the
+graph is refreshed in the same change. To refresh, in a scratch directory, lock the template manifest against a
+tarball whose `package.json` is the packed Pay manifest (workspace versions
+substituted), starting from the current lock template and using
+`npm install --package-lock-only --ignore-scripts --registry https://registry.npmjs.org/`.
+Compare the result record by record with the old lock: only the sibling
+packages and the dependencies they newly require may change. Do not let npm
+re-resolve unrelated transitive dependencies; restore their old records and
+layout, then check that npm reports the lock as up to date. Restore the
+`__PAY_ARTIFACT__` and `__PAY_ARTIFACT_SRI__` placeholders and review the
+record diff. Then update, in the same change, the lock SHA256 above,
+`pins` in `scripts/fixed-consumer.mjs`, `fixtures/inventory.json`,
+`.github/prettier-debt-baseline.json`, the unique registry URL count in
+`.github/scripts/provision-pay-artifact-cache.mjs`, and the record count in
+`internal/pay-conformance/test/consumer.test.mjs`. The graph was last refreshed
+for `crypto` 0.4.0, `viem` 0.1.5, `http` 0.2.0 and `api-key-stamper` 0.1.4.
 
 `offline-consumer.mjs` reads required cache content through the selected npm's
 bundled `cacache.get.stream.byDigest`, the same verified-integrity lookup used
