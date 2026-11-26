@@ -1,2 +1,2 @@
-openapi_sha256: "51bbd0129ec359ec8b931922164364ae67c12e90aa16c8321bf39c0351234a3d" # gitleaks:allow
-services_commit: "c5feb876176e8edbe0cdfdc0b0bf6eac7755942c"
+openapi_sha256: "d4d8d48e23e9b9b11b90af853473872d3f569fb6c9cdfdf4f91804b9723957aa" # gitleaks:allow
+services_commit: "634f3429c56b6662cc24e19270298c6a1152c2a2"

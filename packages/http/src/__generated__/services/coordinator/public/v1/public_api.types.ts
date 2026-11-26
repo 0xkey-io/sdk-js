@@ -3329,9 +3329,7 @@ export interface definitions {
     value?: string;
   };
   /**
-   * @description  - FEATURE_NAME_ROOT_USER_EMAIL_RECOVERY: to be deprecated in favor of rename: `FEATURE_NAME_EMAIL_RECOVERY`
-   *  - FEATURE_NAME_SOLANA_RENT_PREFUND_ENABLED: 9-13 are reserved for API compatibility and are not implemented:
-   * SET_ORGANIZATION_FEATURE rejects them instead of persisting.
+   * - FEATURE_NAME_ROOT_USER_EMAIL_RECOVERY: to be deprecated in favor of rename: `FEATURE_NAME_EMAIL_RECOVERY`
    * @default FEATURE_NAME_UNSPECIFIED
    * @enum {string}
    */
@@ -3344,12 +3342,7 @@ export interface definitions {
     | "FEATURE_NAME_WEBHOOK"
     | "FEATURE_NAME_SMS_AUTH"
     | "FEATURE_NAME_OTP_EMAIL_AUTH"
-    | "FEATURE_NAME_AUTH_PROXY"
-    | "FEATURE_NAME_SOLANA_RENT_PREFUND_ENABLED"
-    | "FEATURE_NAME_SWAP_CONFIG"
-    | "FEATURE_NAME_EARN_CONFIG"
-    | "FEATURE_NAME_SWAP_FEE_SPONSORSHIP"
-    | "FEATURE_NAME_SWAP_FIXED_RATE";
+    | "FEATURE_NAME_AUTH_PROXY";
   /**
    * - FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_UNSPECIFIED: Unspecified
    *  - FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_BITCOIN: bitcoin
