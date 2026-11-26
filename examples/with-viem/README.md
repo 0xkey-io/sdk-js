@@ -59,11 +59,11 @@ Sample output from a successful execution:
 $ pnpm start
 Fetching Node.js 18.0.0 ...
 
-> @0xkey-io/example-with-viem@0.0.0 start /Users/rno/0xkey/code/sdk-js/examples/with-viem
+> @0xkey-io/example-with-viem@0.0.0 start /path/to/sdk-js/examples/with-viem
 > pnpm -w run build-all && tsx src/index.ts
 
 
-> @0xkey-io/oss@ build-all /Users/rno/0xkey/code/sdk-js
+> @0xkey-io/oss@ build-all /path/to/sdk-js
 > tsc --build tsconfig.mono.json
 
 Source address

@@ -146,7 +146,7 @@ Updated transaction with nonce 116 sent 0.0 Ether to 0x2Ad9eA1E677949a536A270CEC
 Updated transaction with nonce 116 sent 0.0 Ether to 0x2Ad9eA1E677949a536A270CEC812D6e868C88108:
 	https://goerli.etherscan.io/tx/0x2aee4780b4437b122da25d03a40b0dfd1038cf69bd2005328a9cce15ea233bc8
 
-Encountered error: /Users/andrew/0xkey/code/sdk-js/node_modules/.pnpm/@ethersproject+logger@5.7.0/node_modules/@ethersproject/logger/lib/index.js:238
+Encountered error: /path/to/sdk-js/node_modules/.pnpm/@ethersproject+logger@5.7.0/node_modules/@ethersproject/logger/lib/index.js:238
 	var error = new Error(message);
                     ^
 
@@ -155,7 +155,7 @@ Error: nonce has already been used (...ethers error details...)
 Updated transaction with nonce 117 sent 0.0 Ether to 0x2Ad9eA1E677949a536A270CEC812D6e868C88108:
 	https://goerli.etherscan.io/tx/0x596fa7a5d84fab4ae3591ab93f4ed8bc754b7c1fb95174a7dc2d6cae7cceaa25
 
-Encountered error: /Users/andrew/0xkey/code/sdk-js/node_modules/.pnpm/@ethersproject+logger@5.7.0/node_modules/@ethersproject/logger/lib/index.js:238
+Encountered error: /path/to/sdk-js/node_modules/.pnpm/@ethersproject+logger@5.7.0/node_modules/@ethersproject/logger/lib/index.js:238
 	var error = new Error(message);
                     ^
 

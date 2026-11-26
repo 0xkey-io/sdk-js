@@ -40,7 +40,7 @@ export const PRODUCTION_TLS_FETCHER_ENCRYPT_PUBLIC_KEY =
 // the manifest-set members + threshold + quorum key that approved the
 // currently-deployed 0xkey production manifests. Pinned from the quorum
 // ceremony's signed manifest — see
-// repos/enclave-releases/releases/2026.6.15/signer/manifest.json (all 5
+// the signer manifest of the 2026.6.15 enclave release (all 5
 // enclave apps in a given release share the same manifestSet/quorumKey).
 // Update this pin whenever quorum membership changes (new ceremony that
 // rotates manifest-set members, not routine per-app manifest updates).
