@@ -5297,6 +5297,171 @@
         "transports"
       ]
     },
+    "v1AuthProxySecurityAudienceGrant": {
+      "type": "object",
+      "properties": {
+        "usage": {
+          "type": "string"
+        },
+        "clientIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "0xkey extension audience draft; business strings require the strict parser."
+    },
+    "v1AuthProxySecurityPolicy": {
+      "type": "object",
+      "properties": {
+        "piiProofRequired": {
+          "type": "boolean"
+        },
+        "allowedAuthMethods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthProxySecurityProvider"
+          }
+        },
+        "registrations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthProxySecurityRegistration"
+          }
+        }
+      },
+      "description": "0xkey extension policy draft; unauthenticated until activation checks pass."
+    },
+    "v1AuthProxySecurityProvider": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "$ref": "#/definitions/v1AuthProxySecurityProviderKey"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "audienceGrants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuthProxySecurityAudienceGrant"
+          }
+        }
+      },
+      "description": "0xkey extension provider draft; unauthenticated until activation checks pass."
+    },
+    "v1AuthProxySecurityProviderKey": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "issuer": {
+          "type": "string"
+        }
+      },
+      "description": "0xkey extension provider key; business strings require the strict parser."
+    },
+    "v1AuthProxySecurityRegistration": {
+      "type": "object",
+      "properties": {
+        "registrationId": {
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/definitions/v1AuthProxySecurityProviderKey"
+        },
+        "clientId": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "callbackUri": {
+          "type": "string"
+        },
+        "returnUri": {
+          "type": "string"
+        }
+      },
+      "description": "0xkey extension registration draft; unauthenticated until activation checks pass."
+    },
+    "v1AuthProxySecuritySelector": {
+      "type": "object",
+      "properties": {
+        "configId": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint64",
+          "description": "0xkey extension. Strict wire requires a JSON integer from 1 through 18446744073709551615. Generic protobuf acceptance of strings does not authorize string revision; default protojson output must not replace the original signed request.",
+          "minimum": 1
+        }
+      },
+      "description": "0xkey extension selector; unauthenticated until strict entry and authorization."
+    },
+    "v1AuthProxySecurityTransition": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "piiProofRequired": {
+          "type": "boolean"
+        },
+        "allowedAuthMethods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expected": {
+          "$ref": "#/definitions/v1AuthProxySecuritySelector"
+        },
+        "policy": {
+          "$ref": "#/definitions/v1AuthProxySecurityPolicy"
+        }
+      },
+      "description": "0xkey extension carrying unauthenticated configuration input. Activation\nrequires the strict raw entry to validate the original signed bytes and\ncompare the complete typed intent before dispatch. Protobuf cannot preserve\nrepeated-field presence or prove rejection of duplicates, unknowns or null."
+    },
+    "v1AuthProxySecurityTransitionV2": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "expected": {
+          "$ref": "#/definitions/v1AuthProxySecuritySelector"
+        },
+        "captchaEnabled": {
+          "type": "boolean"
+        },
+        "captchaBinding": {
+          "$ref": "#/definitions/v1CaptchaResourceBindingV1"
+        },
+        "readyWitness": {
+          "$ref": "#/definitions/v1CaptchaReadyWitnessV1"
+        }
+      },
+      "description": "0xkey Captcha V2 input only. This transport does not authorize execution.\nStrict signed-JSON presence and complete raw/typed equivalence are required."
+    },
     "v1AuthenticationMethod": {
       "type": "object",
       "properties": {
@@ -5545,6 +5710,46 @@
       "required": [
         "bootProof"
       ]
+    },
+    "v1CaptchaReadyWitnessV1": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        }
+      },
+      "description": "Signed Captcha ready witness, verified only against pinned issuer keys.\nBoth fields are canonical unpadded base64url; signature is low-S DER."
+    },
+    "v1CaptchaResourceBindingV1": {
+      "type": "object",
+      "properties": {
+        "environment": {
+          "type": "string"
+        },
+        "cloudflareAccountId": {
+          "type": "string"
+        },
+        "resourceVersion": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "siteKey": {
+          "type": "string"
+        },
+        "allowedHostnames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "secretArn": {
+          "type": "string"
+        }
+      },
+      "description": "Non-secret resource reference; secret_arn names a secret, not its value."
     },
     "v1ClientSignature": {
       "type": "object",
@@ -6267,10 +6472,6 @@
           "type": "string",
           "description": "Unique identifier for the root user object.",
           "title": "@inject_tag: validate:\"uuid\""
-        },
-        "importedRootAuthenticator": {
-          "$ref": "#/definitions/v1ImportedRootAuthenticatorParams",
-          "description": "INTERNAL ONLY: import an already-registered authenticator's public key\n(no attestation) as this new root organization's sole root authenticator.\nUsed for secondary-root-organization creation, where the same physical\npasskey already exists under another root org of the same tenant — see\ndocs/strategy/billing/09-multi-org-billing.md §3.3. Coordinator rejects\nthis field unless the call carries a valid internal M2M token\n(`SECONDARY_ORG_IMPORT_TOKEN`); the public API Gateway has no such\ntoken, so external callers can never reach this path even though the\nfield is visible on the wire."
         }
       },
       "required": [
@@ -9305,7 +9506,13 @@
       ]
     },
     "v1DisableAuthProxyIntent": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "authProxySecurityTransition": {
+          "$ref": "#/definitions/v1AuthProxySecurityTransition",
+          "description": "0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch."
+        }
+      }
     },
     "v1DisableAuthProxyResult": {
       "type": "object"
@@ -9629,7 +9836,13 @@
       "description": "This proto message is to be used for newer email-related activities (OTP).\nNote that app_name is no longer a parameter here, as it is required in the top-level intent for these activities.\nAll other fields remain optional and will fall back to defaults."
     },
     "v1EnableAuthProxyIntent": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "authProxySecurityTransition": {
+          "$ref": "#/definitions/v1AuthProxySecurityTransition",
+          "description": "0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch."
+        }
+      }
     },
     "v1EnableAuthProxyResult": {
       "type": "object",
@@ -10059,10 +10272,15 @@
         "FEATURE_NAME_WEBHOOK",
         "FEATURE_NAME_SMS_AUTH",
         "FEATURE_NAME_OTP_EMAIL_AUTH",
-        "FEATURE_NAME_AUTH_PROXY"
+        "FEATURE_NAME_AUTH_PROXY",
+        "FEATURE_NAME_SOLANA_RENT_PREFUND_ENABLED",
+        "FEATURE_NAME_SWAP_CONFIG",
+        "FEATURE_NAME_EARN_CONFIG",
+        "FEATURE_NAME_SWAP_FEE_SPONSORSHIP",
+        "FEATURE_NAME_SWAP_FIXED_RATE"
       ],
       "default": "FEATURE_NAME_UNSPECIFIED",
-      "title": "- FEATURE_NAME_ROOT_USER_EMAIL_RECOVERY: to be deprecated in favor of rename: `FEATURE_NAME_EMAIL_RECOVERY`"
+      "description": " - FEATURE_NAME_ROOT_USER_EMAIL_RECOVERY: to be deprecated in favor of rename: `FEATURE_NAME_EMAIL_RECOVERY`\n - FEATURE_NAME_SOLANA_RENT_PREFUND_ENABLED: 9-13 mirror Turnkey's FeatureName numbering. 0xkey does not implement\nthem: SET_ORGANIZATION_FEATURE rejects them instead of persisting."
     },
     "v1FiatOnRampBlockchainNetwork": {
       "type": "string",
@@ -10384,7 +10602,7 @@
         },
         "enclaveType": {
           "type": "string",
-          "description": "Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`."
+          "description": "Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. The alias `ump` maps to `policy-engine`."
         }
       },
       "required": [
@@ -11610,38 +11828,6 @@
       "required": [
         "walletId",
         "addresses"
-      ]
-    },
-    "v1ImportedRootAuthenticatorParams": {
-      "type": "object",
-      "properties": {
-        "authenticatorName": {
-          "type": "string",
-          "title": "@inject_tag: validate:\"required,tk_label,tk_label_length\""
-        },
-        "credentialId": {
-          "type": "string",
-          "title": "@inject_tag: validate:\"required,max=256\""
-        },
-        "publicKey": {
-          "type": "string",
-          "title": "Uncompressed P-256 public key, hex-encoded (with or without \"0x\" prefix).\n@inject_tag: validate:\"required\""
-        },
-        "aaguid": {
-          "type": "string"
-        },
-        "transports": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1AuthenticatorTransport"
-          }
-        }
-      },
-      "description": "See `CreateOrganizationIntentV2.imported_root_authenticator`. The public\nkey / aaguid / transports MUST be resolved server-side from Coordinator's\nown authenticator store (never trusted verbatim from an HTTP client).",
-      "required": [
-        "authenticatorName",
-        "credentialId",
-        "publicKey"
       ]
     },
     "v1InitFiatOnRampIntent": {
@@ -15833,6 +16019,14 @@
         "captchaEnabled": {
           "type": "boolean",
           "description": "Whether captcha verification is required on sign up and OTP init."
+        },
+        "authProxySecurityTransition": {
+          "$ref": "#/definitions/v1AuthProxySecurityTransition",
+          "description": "0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch."
+        },
+        "authProxySecurityTransitionV2": {
+          "$ref": "#/definitions/v1AuthProxySecurityTransitionV2",
+          "description": "0xkey Captcha V2 extension. Default closed; legacy captchaEnabled does not authorize it. Strict validation of signed bytes and raw/typed comparison are required."
         }
       }
     },

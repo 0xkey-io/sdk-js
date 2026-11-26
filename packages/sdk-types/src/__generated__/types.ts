@@ -526,6 +526,62 @@ export type v1Attestation = {
   transports: v1AuthenticatorTransport[];
 };
 
+export type v1AuthProxySecurityAudienceGrant = {
+  usage?: string;
+  clientIds?: string[];
+};
+
+export type v1AuthProxySecurityPolicy = {
+  piiProofRequired?: boolean;
+  allowedAuthMethods?: string[];
+  providers?: v1AuthProxySecurityProvider[];
+  registrations?: v1AuthProxySecurityRegistration[];
+};
+
+export type v1AuthProxySecurityProvider = {
+  key?: v1AuthProxySecurityProviderKey;
+  enabled?: boolean;
+  audienceGrants?: v1AuthProxySecurityAudienceGrant[];
+};
+
+export type v1AuthProxySecurityProviderKey = {
+  kind?: string;
+  issuer?: string;
+};
+
+export type v1AuthProxySecurityRegistration = {
+  registrationId?: string;
+  provider?: v1AuthProxySecurityProviderKey;
+  clientId?: string;
+  platform?: string;
+  enabled?: boolean;
+  callbackUri?: string;
+  returnUri?: string;
+};
+
+export type v1AuthProxySecuritySelector = {
+  configId?: string;
+  generation?: string;
+  /** 0xkey extension. Strict wire requires a JSON integer from 1 through 18446744073709551615. Generic protobuf acceptance of strings does not authorize string revision; default protojson output must not replace the original signed request. */
+  revision?: number;
+};
+
+export type v1AuthProxySecurityTransition = {
+  kind?: string;
+  piiProofRequired?: boolean;
+  allowedAuthMethods?: string[];
+  expected?: v1AuthProxySecuritySelector;
+  policy?: v1AuthProxySecurityPolicy;
+};
+
+export type v1AuthProxySecurityTransitionV2 = {
+  kind?: string;
+  expected?: v1AuthProxySecuritySelector;
+  captchaEnabled?: boolean;
+  captchaBinding?: v1CaptchaResourceBindingV1;
+  readyWitness?: v1CaptchaReadyWitnessV1;
+};
+
 export type v1AuthenticationMethod = {
   type: v1AuthenticationType;
   id?: string;
@@ -618,6 +674,20 @@ export type v1BootProof = {
 
 export type v1BootProofResponse = {
   bootProof: v1BootProof;
+};
+
+export type v1CaptchaReadyWitnessV1 = {
+  payload?: string;
+  signature?: string;
+};
+
+export type v1CaptchaResourceBindingV1 = {
+  environment?: string;
+  cloudflareAccountId?: string;
+  resourceVersion?: string;
+  siteKey?: string;
+  allowedHostnames?: string[];
+  secretArn?: string;
 };
 
 export type v1ClientSignature = {
@@ -861,16 +931,6 @@ export type v1CreateOrganizationIntentV2 = {
   rootAuthenticator?: v1AuthenticatorParamsV2;
   /** Unique identifier for the root user object. */
   rootUserId?: string;
-  /** INTERNAL ONLY: import an already-registered authenticator's public key
-(no attestation) as this new root organization's sole root authenticator.
-Used for secondary-root-organization creation, where the same physical
-passkey already exists under another root org of the same tenant — see
-docs/strategy/billing/09-multi-org-billing.md §3.3. Coordinator rejects
-this field unless the call carries a valid internal M2M token
-(`SECONDARY_ORG_IMPORT_TOKEN`); the public API Gateway has no such
-token, so external callers can never reach this path even though the
-field is visible on the wire. */
-  importedRootAuthenticator?: v1ImportedRootAuthenticatorParams;
 };
 
 export type v1CreateOrganizationResult = {
@@ -1909,7 +1969,11 @@ export type v1DeleteWebhookEndpointResult = {
   endpointId: string;
 };
 
-export type v1DisableAuthProxyIntent = {};
+export type v1DisableAuthProxyIntent = {
+  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+  authProxySecurityTransition?: v1AuthProxySecurityTransition;
+};
+
 export type v1DisableAuthProxyResult = {};
 export type v1DisablePrivateKeyIntent = {
   /** Unique identifier for a given Private Key. */
@@ -2042,7 +2106,11 @@ export type v1EmailCustomizationParamsV2 = {
   templateId?: string;
 };
 
-export type v1EnableAuthProxyIntent = {};
+export type v1EnableAuthProxyIntent = {
+  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+  authProxySecurityTransition?: v1AuthProxySecurityTransition;
+};
+
 export type v1EnableAuthProxyResult = {
   /** A User ID with permission to initiate authentication. */
   userId: string;
@@ -2203,7 +2271,12 @@ export type v1FeatureName =
   | "FEATURE_NAME_WEBHOOK"
   | "FEATURE_NAME_SMS_AUTH"
   | "FEATURE_NAME_OTP_EMAIL_AUTH"
-  | "FEATURE_NAME_AUTH_PROXY";
+  | "FEATURE_NAME_AUTH_PROXY"
+  | "FEATURE_NAME_SOLANA_RENT_PREFUND_ENABLED"
+  | "FEATURE_NAME_SWAP_CONFIG"
+  | "FEATURE_NAME_EARN_CONFIG"
+  | "FEATURE_NAME_SWAP_FEE_SPONSORSHIP"
+  | "FEATURE_NAME_SWAP_FIXED_RATE";
 
 export type v1FiatOnRampBlockchainNetwork =
   | "FIAT_ON_RAMP_BLOCKCHAIN_NETWORK_UNSPECIFIED"
@@ -2359,7 +2432,7 @@ export type v1GetAppProofsResponse = {
 export type v1GetAttestationDocumentRequest = {
   /** Unique identifier for a given organization. */
   organizationId: string;
-  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. The alias `ump` maps to `policy-engine`. */
   enclaveType: string;
 };
 
@@ -2829,14 +2902,6 @@ export type v1ImportWalletResult = {
   walletId: string;
   /** A list of account addresses. */
   addresses: string[];
-};
-
-export type v1ImportedRootAuthenticatorParams = {
-  authenticatorName: string;
-  credentialId: string;
-  publicKey: string;
-  aaguid?: string;
-  transports?: v1AuthenticatorTransport[];
 };
 
 export type v1InitFiatOnRampIntent = {
@@ -4357,6 +4422,10 @@ export type v1UpdateAuthProxyConfigIntent = {
   socialLinkingClientIds?: string[];
   /** Whether captcha verification is required on sign up and OTP init. */
   captchaEnabled?: boolean;
+  /** 0xkey extension, not a Turnkey native field. Unauthenticated transport only; strict validation of original signed bytes and full raw/typed comparison are required before activation and dispatch. */
+  authProxySecurityTransition?: v1AuthProxySecurityTransition;
+  /** 0xkey Captcha V2 extension. Default closed; legacy captchaEnabled does not authorize it. Strict validation of signed bytes and raw/typed comparison are required. */
+  authProxySecurityTransitionV2?: v1AuthProxySecurityTransitionV2;
 };
 
 export type v1UpdateAuthProxyConfigResult = {
@@ -5097,7 +5166,7 @@ export type TGetAttestationDocumentResponse = {
 
 export type TGetAttestationDocumentBody = {
   organizationId?: string;
-  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. Turnkey alias `ump` maps to 0xkey `policy-engine`. */
+  /** Enclave app to attest. Accepted values (case-insensitive): signer; notarizer; tls-fetcher|fetcher; evm-parser|transaction-parser|parser; ump|policy-engine|policy. The alias `ump` maps to `policy-engine`. */
   enclaveType: string;
 };
 
