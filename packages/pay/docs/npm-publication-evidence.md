@@ -27,7 +27,7 @@ allowlist cannot undo hostile code already executed by a parent Node preload.
 
 The release-owned `scripts/fixed-consumer.mjs` independently pins the raw
 manifest SHA256 `1f3543f2a003fc27902a0af42d9b36cee315f6d0d92a110f2f60a20d74595cac`
-and lock SHA256 `ef75f175b14b1b82ef61ecd3695cdf090867667165117b4053e4211f63a4cfd4`.
+and lock SHA256 `3a970e3d4bacf3b5d99adefb2a025980ac44432e97613e9ae110b1cb5fd0b358`.
 The existing templates stay in `internal/pay-conformance/fixtures/packed-consumer/`;
 the private conformance adapter retains its stricter canonical ASCII bindings.
 No harness/matrix code runs in the release checker. The 332-record graph has
@@ -55,7 +55,7 @@ record diff. Then update, in the same change, the lock SHA256 above,
 `.github/prettier-debt-baseline.json`, the unique registry URL count in
 `.github/scripts/provision-pay-artifact-cache.mjs`, and the record count in
 `internal/pay-conformance/test/consumer.test.mjs`. The graph was last refreshed
-for `crypto` 0.4.0, `viem` 0.1.5, `http` 0.2.0 and `api-key-stamper` 0.1.4.
+for `crypto` 0.4.0, `viem` 0.1.6, `http` 0.2.1 and `api-key-stamper` 0.1.4.
 
 `offline-consumer.mjs` reads required cache content through the selected npm's
 bundled `cacache.get.stream.byDigest`, the same verified-integrity lookup used

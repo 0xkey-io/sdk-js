@@ -4,7 +4,7 @@
     "manager": "npm",
     "inputs": [
       { "path": "fixtures/packed-consumer/package.template.json", "sha256": "1f3543f2a003fc27902a0af42d9b36cee315f6d0d92a110f2f60a20d74595cac" },
-      { "path": "fixtures/packed-consumer/package-lock.template.json", "sha256": "ef75f175b14b1b82ef61ecd3695cdf090867667165117b4053e4211f63a4cfd4" }
+      { "path": "fixtures/packed-consumer/package-lock.template.json", "sha256": "3a970e3d4bacf3b5d99adefb2a025980ac44432e97613e9ae110b1cb5fd0b358" }
     ],
     "originalInputs": [
       { "path": "package.json", "sha256": "83c60678de8efa3f96515abb1cd9406c35553d5703528e6fcb9f8e367d949703" },
