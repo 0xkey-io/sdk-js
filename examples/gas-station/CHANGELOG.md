@@ -1,5 +1,15 @@
 # @0xkey-io/example-gas-station
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`caf6478`](https://github.com/0xkey-io/sdk-js/commit/caf6478c237dcebae650ff85de2a7241227c600e)]:
+  - @0xkey-io/sdk-server@0.1.6
+  - @0xkey-io/ethers@0.1.6
+  - @0xkey-io/viem@0.1.6
+  - @0xkey-io/gas-station@0.1.5
+
 ## 0.1.4
 
 ### Patch Changes

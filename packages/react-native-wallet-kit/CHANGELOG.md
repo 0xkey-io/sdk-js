@@ -1,5 +1,13 @@
 # @0xkey-io/react-native-wallet-kit
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`caf6478`](https://github.com/0xkey-io/sdk-js/commit/caf6478c237dcebae650ff85de2a7241227c600e), [`bed9806`](https://github.com/0xkey-io/sdk-js/commit/bed9806331d1db91bdfe58f8d211d6515a60143e)]:
+  - @0xkey-io/core@0.3.1
+  - @0xkey-io/react-native-passkey-stamper@0.1.5
+
 ## 0.2.0
 
 ### Minor Changes

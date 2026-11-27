@@ -1,5 +1,12 @@
 # with-export-and-sign-escrow
 
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/react-wallet-kit@0.4.1
+
 ## 0.1.7
 
 ### Patch Changes

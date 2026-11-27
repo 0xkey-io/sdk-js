@@ -1,5 +1,14 @@
 # @0xkey-io/with-jupiter
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`caf6478`](https://github.com/0xkey-io/sdk-js/commit/caf6478c237dcebae650ff85de2a7241227c600e)]:
+  - @0xkey-io/core@0.3.1
+  - @0xkey-io/solana@0.1.6
+  - @0xkey-io/react-wallet-kit@0.4.1
+
 ## 0.1.4
 
 ### Patch Changes

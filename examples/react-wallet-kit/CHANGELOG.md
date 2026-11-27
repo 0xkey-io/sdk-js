@@ -1,5 +1,12 @@
 # @0xkey-io/example-demo-react-wallet-kit
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @0xkey-io/react-wallet-kit@0.4.1
+
 ## 0.1.4
 
 ### Patch Changes
