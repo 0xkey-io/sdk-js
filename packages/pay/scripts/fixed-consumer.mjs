@@ -11,7 +11,7 @@ const repository = resolve(fileURLToPath(new URL("../../../", import.meta.url)))
 const templates = new URL("../../../internal/pay-conformance/fixtures/packed-consumer/", import.meta.url);
 // Independently reviewed raw pins: inventory/template co-tampering is not a
 // new approved graph. Keep these constants outside the private harness.
-const pins = ["1f3543f2a003fc27902a0af42d9b36cee315f6d0d92a110f2f60a20d74595cac", "ef75f175b14b1b82ef61ecd3695cdf090867667165117b4053e4211f63a4cfd4"];
+const pins = ["1f3543f2a003fc27902a0af42d9b36cee315f6d0d92a110f2f60a20d74595cac", "3a970e3d4bacf3b5d99adefb2a025980ac44432e97613e9ae110b1cb5fd0b358"];
 export async function readFixedTemplates() {
   const bytes = await Promise.all(["package.template.json", "package-lock.template.json"].map(name => readFile(new URL(name, templates))));
   if (bytes.some((value, index) => sha256(value) !== pins[index])) reject("CONSUMER_TEMPLATE_INTEGRITY");

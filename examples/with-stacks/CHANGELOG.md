@@ -1,5 +1,12 @@
 # @0xkey-io/with-stacks
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`caf6478`](https://github.com/0xkey-io/sdk-js/commit/caf6478c237dcebae650ff85de2a7241227c600e)]:
+  - @0xkey-io/sdk-server@0.1.6
+
 ## 0.0.5
 
 ### Patch Changes
