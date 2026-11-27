@@ -43,6 +43,14 @@
     },
     {
       "kind": "re-export",
+      "name": "parseSessionExpirationSeconds"
+    },
+    {
+      "kind": "re-export",
+      "name": "resolveSessionExpirationSeconds"
+    },
+    {
+      "kind": "re-export",
       "name": "sendSignedRequest"
     },
     {

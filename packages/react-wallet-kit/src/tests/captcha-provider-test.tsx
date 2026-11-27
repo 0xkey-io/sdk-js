@@ -54,6 +54,12 @@ const mockLoginOrSignupWithWallet = jest.fn(
 );
 const mockSignUpWithOtp = jest.fn(async (_params: unknown) => undefined);
 const mockLoginWithOtp = jest.fn(async (_params: unknown) => undefined);
+const mockCompleteOtp = jest.fn(async (_params: unknown) => undefined);
+const mockLoginWithPasskey = jest.fn(async (_params: unknown) => undefined);
+const mockRefreshSession = jest.fn(async (_params: unknown) => undefined);
+const mockGetActiveSessionKey = jest.fn(
+  async (): Promise<string | undefined> => undefined,
+);
 const mockSignUpWithOauth = jest.fn(async (_params: unknown) => ({
   sessionToken: "oauth-session",
 }));
@@ -92,7 +98,7 @@ const mockZeroXKeyClient = jest.fn((config: ZeroXKeyProviderConfig) => {
     restrictPersistedCredentialsToNewSessions: () => undefined,
     setAuthContextGuard: () => undefined,
     getAllSessions: async () => ({}),
-    getActiveSessionKey: async () => undefined,
+    getActiveSessionKey: mockGetActiveSessionKey,
     getSession: async () => undefined,
     get httpClient() {
       return httpClient;
@@ -103,6 +109,9 @@ const mockZeroXKeyClient = jest.fn((config: ZeroXKeyProviderConfig) => {
     loginOrSignupWithWallet: mockLoginOrSignupWithWallet,
     signUpWithOtp: mockSignUpWithOtp,
     loginWithOtp: mockLoginWithOtp,
+    completeOtp: mockCompleteOtp,
+    loginWithPasskey: mockLoginWithPasskey,
+    refreshSession: mockRefreshSession,
     signUpWithOauth: mockSignUpWithOauth,
     loginWithOauth: mockLoginWithOauth,
     completeOauth: mockCompleteOauth,
@@ -189,6 +198,11 @@ beforeEach(() => {
   mockLoginOrSignupWithWallet.mockReset();
   mockSignUpWithOtp.mockClear();
   mockLoginWithOtp.mockClear();
+  mockCompleteOtp.mockClear();
+  mockLoginWithPasskey.mockClear();
+  mockRefreshSession.mockClear();
+  mockGetActiveSessionKey.mockReset();
+  mockGetActiveSessionKey.mockResolvedValue(undefined);
   mockSignUpWithOauth.mockClear();
   mockLoginWithOauth.mockClear();
   mockCompleteOauth.mockClear();
@@ -546,6 +560,7 @@ describe("mounted Provider Captcha gate", () => {
       otpType: "OTP_TYPE_EMAIL",
       contact: "signup@example.test",
       verificationToken: "verified-otp",
+      expirationSeconds: "900",
       captchaToken: "widget-token",
     });
     expect(reset).toHaveBeenCalledTimes(1);
@@ -575,9 +590,170 @@ describe("mounted Provider Captcha gate", () => {
       otpType: "OTP_TYPE_EMAIL",
       contact: "signup@example.test",
       verificationToken: "verified-otp",
+      expirationSeconds: "900",
     });
     expect(mockLoginWithOtp).toHaveBeenCalledWith({
       verificationToken: "verified-otp",
+      expirationSeconds: "900",
+    });
+  });
+
+  it("applies the configured session length to OTP login and signup unless the call sets one", async () => {
+    mockGetClientParams.mockResolvedValue({});
+    mounted = await mountReady({
+      ...baseConfig,
+      auth: { ...baseConfig.auth, sessionExpirationSeconds: "3600" },
+    });
+    await act(async () => {
+      await mounted.context()!.loginWithOtp({
+        verificationToken: "verified-otp",
+      });
+      await mounted.context()!.loginWithOtp({
+        verificationToken: "verified-otp",
+        expirationSeconds: "120",
+      });
+      await mounted.context()!.signUpWithOtp(otpSignup());
+    });
+    expect(mockLoginWithOtp).toHaveBeenNthCalledWith(1, {
+      verificationToken: "verified-otp",
+      expirationSeconds: "3600",
+    });
+    expect(mockLoginWithOtp).toHaveBeenNthCalledWith(2, {
+      verificationToken: "verified-otp",
+      expirationSeconds: "120",
+    });
+    expect(mockSignUpWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({ expirationSeconds: "3600" }),
+    );
+  });
+
+  describe("session length precedence", () => {
+    const UNSET = ["0", "-5", "abc", "", "NaN"];
+    const proxyConfig = (sessionExpirationSeconds: string | undefined) => ({
+      enabledProviders: [],
+      organizationId: "org-captcha",
+      ...(sessionExpirationSeconds !== undefined && {
+        sessionExpirationSeconds,
+      }),
+    });
+    const mountWith = async (
+      dashboard: string | undefined | "no-dashboard",
+      local: string | undefined,
+    ) => {
+      mockGetClientParams.mockResolvedValue({});
+      const config: ZeroXKeyProviderConfig = {
+        ...baseConfig,
+        auth: {
+          ...baseConfig.auth,
+          ...(local !== undefined && { sessionExpirationSeconds: local }),
+        },
+        ...(dashboard !== "no-dashboard" && { autoFetchWalletKitConfig: true }),
+      };
+      if (dashboard !== "no-dashboard") {
+        dom.observations.getAuthProxyConfig.mockResolvedValue(
+          proxyConfig(dashboard) as never,
+        );
+      }
+      mounted = await mountReady(config);
+    };
+    // Every sign-in and refresh entry point that applies a session length.
+    const run = async () => {
+      mockGetActiveSessionKey.mockResolvedValue("session-key");
+      await act(async () => {
+        await mounted.context()!.loginWithOtp({ verificationToken: "v" });
+        await mounted.context()!.completeOtp({
+          otpId: "o",
+          otpCode: "1",
+          contact: "a@example.test",
+          otpType: publicExports.OtpType.Email,
+        } as never);
+        await mounted.context()!.signUpWithOtp(otpSignup());
+        await mounted.context()!.signUpWithPasskey({});
+        await mounted.context()!.loginWithPasskey({});
+        await mounted.context()!.refreshSession({});
+      });
+    };
+    const lengths = () =>
+      [
+        mockLoginWithOtp,
+        mockCompleteOtp,
+        mockSignUpWithOtp,
+        mockSignUpWithPasskey,
+        mockLoginWithPasskey,
+        mockRefreshSession,
+      ].map((mock) => (mock.mock.calls[0]![0] as any).expirationSeconds);
+
+    it.each(UNSET)(
+      "local value %p is unset and the default of 900 applies",
+      async (local) => {
+        await mountWith("no-dashboard", local);
+        await run();
+        expect(lengths()).toEqual(Array(6).fill("900"));
+      },
+    );
+
+    it.each(UNSET)(
+      "Dashboard value %p is unset and the local value applies",
+      async (dashboard) => {
+        await mountWith(dashboard, "3600");
+        await run();
+        expect(lengths()).toEqual(Array(6).fill("3600"));
+      },
+    );
+
+    it.each(UNSET)(
+      "Dashboard value %p with no local value falls back to 900",
+      async (dashboard) => {
+        await mountWith(dashboard, undefined);
+        await run();
+        expect(lengths()).toEqual(Array(6).fill("900"));
+      },
+    );
+
+    it("a valid Dashboard value beats the local value", async () => {
+      await mountWith("7200", "3600");
+      await run();
+      expect(lengths()).toEqual(Array(6).fill("7200"));
+    });
+
+    it.each(UNSET)(
+      "caller value %p is unset and the Dashboard value applies",
+      async (caller) => {
+        await mountWith("7200", "3600");
+        mockGetActiveSessionKey.mockResolvedValue("session-key");
+        await act(async () => {
+          await mounted.context()!.loginWithOtp({
+            verificationToken: "v",
+            expirationSeconds: caller,
+          });
+          await mounted
+            .context()!
+            .signUpWithPasskey({ expirationSeconds: caller });
+          await mounted
+            .context()!
+            .refreshSession({ expirationSeconds: caller });
+        });
+        expect(mockLoginWithOtp.mock.calls[0]![0]).toMatchObject({
+          expirationSeconds: "7200",
+        });
+        expect(mockSignUpWithPasskey.mock.calls[0]![0]).toMatchObject({
+          expirationSeconds: "7200",
+        });
+        expect(mockRefreshSession.mock.calls[0]![0]).toMatchObject({
+          expirationSeconds: "7200",
+        });
+      },
+    );
+
+    it("a valid caller value beats the Dashboard value", async () => {
+      await mountWith("7200", "3600");
+      mockGetActiveSessionKey.mockResolvedValue("session-key");
+      await act(async () => {
+        await mounted.context()!.refreshSession({ expirationSeconds: "60" });
+      });
+      expect(mockRefreshSession.mock.calls[0]![0]).toMatchObject({
+        expirationSeconds: "60",
+      });
     });
   });
 

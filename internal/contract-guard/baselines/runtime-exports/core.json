@@ -216,9 +216,19 @@
       "arity": 1
     },
     {
+      "name": "parseSessionExpirationSeconds",
+      "kind": "class",
+      "arity": 1
+    },
+    {
       "name": "pollOnRampTransactionStatus",
       "kind": "function",
       "arity": 1
+    },
+    {
+      "name": "resolveSessionExpirationSeconds",
+      "kind": "class",
+      "arity": 0
     },
     {
       "name": "sendSignedRequest",

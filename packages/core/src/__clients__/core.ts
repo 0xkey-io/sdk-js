@@ -27,7 +27,6 @@ import {
   AuthAction,
 } from "@0xkey-io/sdk-types";
 import {
-  DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
   SignIntent,
   StamperType,
   OtpType,
@@ -148,6 +147,7 @@ import {
   otpRateLimitErrorFrom,
   isAttestedLoginUnavailable,
   getClientSignatureMessageForLogin,
+  resolveSessionExpirationSeconds,
 } from "../utils";
 import { createStorageManager } from "../__storage__/base";
 import {
@@ -1031,8 +1031,9 @@ export class ZeroXKeyClient {
           params?.publicKey || (await this.apiKeyStamper?.createKeyPair());
         const sessionKey = params?.sessionKey || SessionKey.DefaultSessionkey;
 
-        const expirationSeconds =
-          params?.expirationSeconds || DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+        const expirationSeconds = resolveSessionExpirationSeconds(
+          params?.expirationSeconds,
+        );
 
         if (!generatedPublicKey) {
           throw new ZeroXKeyError(
@@ -1121,12 +1122,15 @@ export class ZeroXKeyClient {
     const {
       passkeyDisplayName,
       challenge,
-      expirationSeconds = DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+      expirationSeconds: requestedExpirationSeconds,
       createSubOrgParams,
       sessionKey = SessionKey.DefaultSessionkey,
       organizationId,
       captchaToken,
     } = params || {};
+    const expirationSeconds = resolveSessionExpirationSeconds(
+      requestedExpirationSeconds,
+    );
 
     let generatedPublicKey: string | undefined = undefined;
     return withZeroXKeyErrorHandling(
@@ -1451,8 +1455,9 @@ export class ZeroXKeyClient {
     params: BuildWalletLoginRequestParams,
   ): Promise<BuildWalletLoginRequestResult> => {
     const { walletProvider, publicKey: providedPublicKey } = params;
-    const expirationSeconds =
-      params.expirationSeconds || DEFAULT_SESSION_EXPIRATION_IN_SECONDS;
+    const expirationSeconds = resolveSessionExpirationSeconds(
+      params.expirationSeconds,
+    );
 
     let generatedPublicKey: string | undefined = undefined;
     return withZeroXKeyErrorHandling(
@@ -2062,12 +2067,15 @@ export class ZeroXKeyClient {
     const {
       verificationToken,
       publicKey: legacyPublicKey,
-      expirationSeconds = DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+      expirationSeconds: requestedExpirationSeconds,
       sessionProfileId,
       invalidateExisting,
       organizationId,
       sessionKey = SessionKey.DefaultSessionkey,
     } = params;
+    const expirationSeconds = resolveSessionExpirationSeconds(
+      requestedExpirationSeconds,
+    );
 
     let loginStamper: AttestedStamper | undefined;
 
@@ -2245,6 +2253,7 @@ export class ZeroXKeyClient {
    * @param params.otpType - type of OTP being used (OtpType.Email or OtpType.Sms).
    * @param params.createSubOrgParams - parameters for creating a sub-organization (e.g., authenticators, user metadata).
    * @param params.invalidateExisting - flag to invalidate existing session for the user.
+   * @param params.expirationSeconds - session expiration time in seconds for the login that follows sign-up (defaults to 900).
    * @param params.sessionKey - session key to use for session creation (defaults to the default session key).
    * @returns A promise that resolves to a {@link BaseAuthResult}, which includes:
    *          - `sessionToken`: the signed JWT session token.
@@ -2259,6 +2268,7 @@ export class ZeroXKeyClient {
       otpType,
       createSubOrgParams,
       invalidateExisting,
+      expirationSeconds,
       sessionKey,
       publicKey: legacyPublicKey,
       captchaToken,
@@ -2352,6 +2362,7 @@ export class ZeroXKeyClient {
           verificationToken,
           publicKey,
           organizationId: signupRes.organizationId,
+          ...(expirationSeconds && { expirationSeconds }),
           ...(invalidateExisting && { invalidateExisting }),
           ...(sessionKey && { sessionKey }),
         });
@@ -2383,6 +2394,7 @@ export class ZeroXKeyClient {
    * @param params.otpType - type of OTP being completed (OtpType.Email or OtpType.Sms).
    * @param params.publicKey - public key to use for authentication. If not provided, a new key pair may be generated.
    * @param params.invalidateExisting - flag to invalidate existing sessions for the user.
+   * @param params.expirationSeconds - session expiration time in seconds (defaults to 900).
    * @param params.sessionKey - session key to use for session creation (defaults to the default session key).
    * @param params.createSubOrgParams - parameters for sub-organization creation (e.g., authenticators, user metadata).
    * @returns A promise that resolves to an object containing:
@@ -2408,6 +2420,7 @@ export class ZeroXKeyClient {
       otpType,
       publicKey = await this.apiKeyStamper?.createKeyPair(),
       invalidateExisting = false,
+      expirationSeconds,
       sessionKey,
       createSubOrgParams,
       captchaToken,
@@ -2440,6 +2453,7 @@ export class ZeroXKeyClient {
             otpType,
             ...(createSubOrgParams && { createSubOrgParams }),
             ...(invalidateExisting && { invalidateExisting }),
+            ...(expirationSeconds && { expirationSeconds }),
             ...(sessionKey && { sessionKey }),
             publicKey: publicKey!,
             ...(captchaToken !== undefined && { captchaToken }),
@@ -2456,6 +2470,7 @@ export class ZeroXKeyClient {
             publicKey: publicKey!,
             organizationId: subOrganizationId,
             ...(invalidateExisting && { invalidateExisting }),
+            ...(expirationSeconds && { expirationSeconds }),
             ...(sessionKey && { sessionKey }),
           });
 
@@ -2726,6 +2741,7 @@ export class ZeroXKeyClient {
                 providerName,
                 oidcToken,
               },
+              ...(createSubOrgParams?.oauthProviders ?? []),
             ],
           },
         });
@@ -5730,11 +5746,14 @@ export class ZeroXKeyClient {
   ): Promise<TStampLoginResponse | undefined> => {
     const {
       sessionKey = await this.storageManager.getActiveSessionKey(),
-      expirationSeconds = DEFAULT_SESSION_EXPIRATION_IN_SECONDS,
+      expirationSeconds: requestedExpirationSeconds,
       publicKey,
       stampWith = this.config.defaultStamperType,
       invalidateExisitng = false,
     } = params || {};
+    const expirationSeconds = resolveSessionExpirationSeconds(
+      requestedExpirationSeconds,
+    );
     if (!sessionKey) {
       throw new ZeroXKeyError(
         "No session key provided or active session to refresh session",
