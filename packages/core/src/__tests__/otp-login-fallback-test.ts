@@ -195,7 +195,7 @@ describe("loginWithOtp falls back to otp_login_v2 when Attested StampLogin is un
   });
 });
 
-describe("loginWithOtp does not fall back where it could bypass MFA or hide a real failure", () => {
+describe("loginWithOtp does not fall back on an MFA refusal or a real failure", () => {
   test.each<[string, StampLoginReply]>([
     ["plain-text 403", plain(403)],
     ["JSON 403", grpc(403)],

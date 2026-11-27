@@ -29,8 +29,12 @@ with:
 
 It never happens on HTTP 403 (whatever the reason), on an `ATTESTED_LOGIN_*`
 reason, on any other `ATTESTED_STAMP_*` reason, on a JSON 401, on other statuses
-or on network errors. Those errors are thrown as before, so a single-factor
-login that an MFA policy refuses is not retried another way.
+or on network errors. Those errors are thrown as before. In particular, a login
+refused because the user has an MFA policy is not retried through
+`otp_login_v2`: that login checks the OTP only and does not ask for the
+additional factors in the user's MFA policy, so whether to offer it to such
+users is the application's decision. Actions taken with a Session obtained
+through `otp_login_v2` are still checked against the user's MFA policy.
 
 The fallback also requires a configured Auth Proxy (`authProxyUrl` and
 `authProxyConfigId`) and no `sessionProfileId`, which `otp_login_v2` cannot
